@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'ui/screens/auth/lock_screen.dart';
+import 'ui/screens/auth/pin_setup_screen.dart';
+import 'ui/screens/home/home_shell.dart';
+import 'ui/widgets/inactivity_listener.dart';
 import 'ui/screens/splash_screen.dart';
 
 final themeProvider = Provider<ThemeData>((ref) {
@@ -9,14 +13,6 @@ final themeProvider = Provider<ThemeData>((ref) {
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4A148C)),
     visualDensity: VisualDensity.adaptivePlatformDensity,
-  );
-});
-
-final routerConfigProvider = Provider<RouterConfig<Object>>((ref) {
-  return RouterConfig(
-    routerDelegate: _PlaceholderRouterDelegate(
-      initialRoute: const SplashScreen(),
-    ),
   );
 });
 
@@ -41,43 +37,11 @@ class BookSharingApp extends ConsumerWidget {
         Locale('es'),
       ],
       home: const SplashScreen(),
+      routes: {
+        LockScreen.routeName: (context) => const LockScreen(),
+        PinSetupScreen.routeName: (context) => const PinSetupScreen(),
+        HomeShell.routeName: (context) => const InactivityListener(child: HomeShell()),
+      },
     );
-  }
-}
-
-/// Placeholder router delegate until navigation is implemented.
-class _PlaceholderRouterDelegate extends RouterDelegate<Object>
-    with ChangeNotifier, PopNavigatorRouterDelegateMixin<Object> {
-  _PlaceholderRouterDelegate({required this.initialRoute});
-
-  final Widget initialRoute;
-
-  @override
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
-  @override
-  Widget build(BuildContext context) {
-    return Navigator(
-      key: navigatorKey,
-      pages: [
-        MaterialPage<void>(child: initialRoute),
-      ],
-      onPopPage: (route, result) => route.didPop(result),
-    );
-  }
-
-  @override
-  Future<bool> popRoute() {
-    final navigator = navigatorKey.currentState;
-    if (navigator?.canPop() ?? false) {
-      navigator!.pop();
-      return Future.value(true);
-    }
-    return Future.value(false);
-  }
-
-  @override
-  Future<void> setNewRoutePath(Object configuration) async {
-    // No-op for now; will be expanded when navigation is implemented.
   }
 }

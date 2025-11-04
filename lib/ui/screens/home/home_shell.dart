@@ -1,11 +1,66 @@
+import 'dart:async';
+
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
+import '../../../data/local/database.dart';
+import '../../../providers/api_providers.dart';
 import '../../../providers/auth_providers.dart';
+import '../../../providers/book_providers.dart';
+import '../../../services/cover_image_service_base.dart';
+import '../../../services/google_books_client.dart';
+import '../../../services/open_library_client.dart';
+import '../../widgets/cover_preview.dart';
 import '../auth/pin_setup_screen.dart';
 
 final _currentTabProvider = StateProvider<int>((ref) => 0);
+
+enum _BookFormResult { saved, deleted }
+
+class _BookCandidate {
+  const _BookCandidate({
+    required this.title,
+    this.author,
+    this.isbn,
+    this.description,
+    this.coverUrl,
+  });
+
+  factory _BookCandidate.fromOpenLibrary(OpenLibraryBookResult result) {
+    return _BookCandidate(
+      title: result.title,
+      author: result.author,
+      isbn: result.isbn,
+      coverUrl: result.coverUrl,
+    );
+  }
+
+  factory _BookCandidate.fromGoogleBooks(GoogleBooksVolume volume) {
+    return _BookCandidate(
+      title: volume.title,
+      author: volume.primaryAuthor,
+      isbn: volume.isbn,
+      description: volume.description,
+      coverUrl: volume.thumbnailUrl,
+    );
+  }
+
+  final String title;
+  final String? author;
+  final String? isbn;
+  final String? description;
+  final String? coverUrl;
+}
+
+class _ReviewDraft {
+  const _ReviewDraft({required this.rating, this.review});
+
+  final int rating;
+  final String? review;
+}
 
 class HomeShell extends ConsumerWidget {
   const HomeShell({super.key});
@@ -19,12 +74,12 @@ class HomeShell extends ConsumerWidget {
     return Scaffold(
       body: IndexedStack(
         index: currentIndex,
-        children: const [
-          _LibraryTab(),
-          _CommunityTab(),
-          _LoansTab(),
-          _StatsTab(),
-          _SettingsTab(),
+        children: [
+          _LibraryTab(onOpenForm: ({Book? book}) => _showBookFormSheet(context, ref, book: book)),
+          const _CommunityTab(),
+          const _LoansTab(),
+          const _StatsTab(),
+          const _SettingsTab(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -60,15 +115,56 @@ class HomeShell extends ConsumerWidget {
           ref.read(_currentTabProvider.notifier).state = value;
         },
       ),
-      floatingActionButton: Visibility(
-        visible: kDebugMode,
-        child: FloatingActionButton.extended(
-          onPressed: () => _clearPin(context, ref),
-          icon: const Icon(Icons.dangerous_outlined),
-          label: const Text('Debug: reset PIN'),
-        ),
-      ),
+      floatingActionButton: _buildFab(context, ref, currentIndex),
     );
+  }
+
+  Widget? _buildFab(BuildContext context, WidgetRef ref, int currentIndex) {
+    if (currentIndex == 0) {
+      return FloatingActionButton.extended(
+        onPressed: () => _showBookFormSheet(context, ref),
+        icon: const Icon(Icons.add),
+        label: const Text('Añadir libro'),
+      );
+    }
+
+    if (kDebugMode) {
+      return FloatingActionButton.extended(
+        onPressed: () => _clearPin(context, ref),
+        icon: const Icon(Icons.dangerous_outlined),
+        label: const Text('Debug: reset PIN'),
+      );
+    }
+
+    return null;
+  }
+
+  Future<void> _showBookFormSheet(BuildContext context, WidgetRef ref, {Book? book}) async {
+    final result = await showModalBottomSheet<_BookFormResult>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => _BookFormSheet(initialBook: book),
+    );
+
+    if (!context.mounted || result == null) return;
+
+    switch (result) {
+      case _BookFormResult.saved:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(book == null
+                ? 'Libro añadido a tu biblioteca.'
+                : 'Libro actualizado correctamente.'),
+          ),
+        );
+        break;
+      case _BookFormResult.deleted:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Libro eliminado.')),
+        );
+        break;
+    }
   }
 
   Future<void> _clearPin(BuildContext context, WidgetRef ref) async {
@@ -80,18 +176,1054 @@ class HomeShell extends ConsumerWidget {
     Navigator.of(context)
         .pushNamedAndRemoveUntil(PinSetupScreen.routeName, (route) => false);
   }
+
 }
 
-class _LibraryTab extends StatelessWidget {
-  const _LibraryTab();
+class _EmptyLibraryState extends StatelessWidget {
+  const _EmptyLibraryState({required this.onAddBook});
+
+  final VoidCallback onAddBook;
 
   @override
   Widget build(BuildContext context) {
-    return const _PlaceholderTab(
-      title: 'Mi Biblioteca',
-      description:
-          'Aquí mostraremos los libros guardados, filtros y acceso al escaneo.',
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.menu_book_outlined,
+              size: 96, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 16),
+          const Text(
+            'No tienes libros guardados todavía.',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Escanea códigos, busca en catálogos o añade datos manualmente.\nMientras tanto, puedes registrar uno a mano.',
+            style: Theme.of(context).textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: onAddBook,
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Añadir primer libro'),
+          ),
+        ],
+      ),
     );
+  }
+}
+
+class _RatingStars extends StatelessWidget {
+  const _RatingStars({required this.average});
+
+  final double average;
+
+  @override
+  Widget build(BuildContext context) {
+    final stars = List<Widget>.generate(5, (index) {
+      final starValue = index + 1;
+      IconData icon;
+      if (average >= starValue) {
+        icon = Icons.star;
+      } else if (average >= starValue - 0.5) {
+        icon = Icons.star_half;
+      } else {
+        icon = Icons.star_border;
+      }
+      return Icon(icon, color: Colors.amber, size: 18);
+    });
+
+    return Row(mainAxisSize: MainAxisSize.min, children: stars);
+  }
+}
+
+class _BookListTile extends ConsumerWidget {
+  const _BookListTile({
+    required this.book,
+    required this.onTap,
+    required this.onAddReview,
+  });
+
+  final Book book;
+  final VoidCallback onTap;
+  final VoidCallback onAddReview;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statusLabel = _statusLabel(book.status);
+    final subtitleParts = [
+      if (book.author?.isNotEmpty == true) book.author,
+      if (book.isbn?.isNotEmpty == true) 'ISBN ${book.isbn}',
+      if (book.barcode?.isNotEmpty == true) 'Código ${book.barcode}',
+    ].whereType<String>().toList();
+
+    final reviewsAsync = ref.watch(bookReviewsProvider(book.id));
+    final theme = Theme.of(context);
+
+    final subtitleWidgets = <Widget>[];
+    if (subtitleParts.isNotEmpty) {
+      subtitleWidgets.add(Text(subtitleParts.join(' · ')));
+    }
+
+    subtitleWidgets.add(
+      Padding(
+        padding: EdgeInsets.only(top: subtitleParts.isNotEmpty ? 4 : 0),
+        child: reviewsAsync.when(
+          data: (reviews) {
+            if (reviews.isEmpty) {
+              return Text(
+                'Sin reseñas todavía',
+                style: theme.textTheme.bodySmall,
+              );
+            }
+            final avg = reviews
+                    .map((r) => r.rating)
+                    .fold<double>(0, (prev, value) => prev + value) /
+                reviews.length;
+            return Row(
+              children: [
+                _RatingStars(average: avg),
+                const SizedBox(width: 8),
+                Text(
+                  '${avg.toStringAsFixed(1)} / 5 · ${reviews.length} reseñas',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            );
+          },
+          loading: () => const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          error: (err, _) => Text(
+            'Error cargando reseñas',
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.error),
+          ),
+        ),
+      ),
+    );
+
+    return Card(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: buildCoverPreview(
+              book.coverPath,
+              size: 48,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            title: Text(book.title),
+            subtitle: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: subtitleWidgets,
+            ),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Chip(
+                  label: Text(statusLabel),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  labelStyle: theme.textTheme.labelSmall
+                      ?.copyWith(color: theme.colorScheme.primary),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  DateFormat.yMMMd().format(book.updatedAt),
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+            onTap: onTap,
+          ),
+          ButtonBar(
+            alignment: MainAxisAlignment.end,
+            children: [
+              OutlinedButton.icon(
+                onPressed: onAddReview,
+                icon: const Icon(Icons.rate_review_outlined),
+                label: const Text('Añadir reseña'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'available':
+        return 'Disponible';
+      case 'loaned':
+        return 'Prestado';
+      case 'archived':
+        return 'Archivado';
+      default:
+        return status;
+    }
+  }
+}
+
+class _BookFormSheet extends ConsumerStatefulWidget {
+  const _BookFormSheet({this.initialBook});
+
+  final Book? initialBook;
+
+  @override
+  ConsumerState<_BookFormSheet> createState() => _BookFormSheetState();
+}
+
+class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _authorController = TextEditingController();
+  final _isbnController = TextEditingController();
+  final _barcodeController = TextEditingController();
+  final _notesController = TextEditingController();
+  String _status = 'available';
+  bool _submitting = false;
+  String? _coverPath;
+  late final String? _initialCoverPath;
+  final Set<String> _temporaryCoverPaths = <String>{};
+  bool _didSubmit = false;
+  bool _shouldDeleteInitialOnSave = false;
+  bool _isSearching = false;
+  String? _searchError;
+
+  bool get _isEditing => widget.initialBook != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final book = widget.initialBook;
+    _initialCoverPath = book?.coverPath;
+    _coverPath = _initialCoverPath;
+    if (book != null) {
+      _titleController.text = book.title;
+      _authorController.text = book.author ?? '';
+      _isbnController.text = book.isbn ?? '';
+      _barcodeController.text = book.barcode ?? '';
+      _notesController.text = book.notes ?? '';
+      _status = book.status;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (!_didSubmit) {
+      final service = ref.read(coverImageServiceProvider);
+      for (final path in _temporaryCoverPaths) {
+        unawaited(service.deleteCover(path));
+      }
+    }
+    _titleController.dispose();
+    _authorController.dispose();
+    _isbnController.dispose();
+    _barcodeController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final coverService = ref.watch(coverImageServiceProvider);
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _isEditing ? 'Editar libro' : 'Añadir libro',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _titleController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Título',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'El título es obligatorio.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _authorController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Autor',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _isbnController,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'ISBN',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _barcodeController,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Código barras',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _isSearching ? null : () => _handleSearch(context),
+                      icon: _isSearching
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.search),
+                      label: Text(_isSearching ? 'Buscando…' : 'Buscar datos del libro'),
+                    ),
+                    if (_searchError != null)
+                      Text(
+                        _searchError!,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Theme.of(context).colorScheme.error),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              _CoverField(
+                coverPath: _coverPath,
+                onPick: coverService.supportsPicking ? _handlePickCover : null,
+                onRemove: _coverPath != null ? _handleRemoveCover : null,
+                pickingSupported: coverService.supportsPicking,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: 'Estado',
+                  border: OutlineInputBorder(),
+                ),
+                value: _status,
+                items: const [
+                  DropdownMenuItem(value: 'available', child: Text('Disponible')),
+                  DropdownMenuItem(value: 'loaned', child: Text('Prestado')),
+                  DropdownMenuItem(value: 'archived', child: Text('Archivado')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _status = value;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _notesController,
+                minLines: 3,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  labelText: 'Notas',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (_isEditing) ...[
+                    TextButton.icon(
+                      onPressed: _submitting ? null : () => _delete(context),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Eliminar'),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  TextButton(
+                    onPressed: _submitting
+                        ? null
+                        : () => Navigator.of(context).maybePop(false),
+                    child: const Text('Cancelar'),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton(
+                    onPressed: _submitting ? null : () => _submit(context),
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Guardar'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit(BuildContext context) async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+    });
+
+    final repository = ref.read(bookRepositoryProvider);
+    final coverService = ref.read(coverImageServiceProvider);
+
+    try {
+      final title = _titleController.text.trim();
+      final author = _authorController.text.trim();
+      final isbn = _isbnController.text.trim();
+      final barcode = _barcodeController.text.trim();
+      final notes = _notesController.text.trim();
+
+      if (_isEditing) {
+        final book = widget.initialBook!;
+        final updated = book.copyWith(
+          title: title,
+          author: Value(author.isEmpty ? null : author),
+          isbn: Value(isbn.isEmpty ? null : isbn),
+          barcode: Value(barcode.isEmpty ? null : barcode),
+          coverPath: Value(_coverPath),
+          notes: Value(notes.isEmpty ? null : notes),
+          status: _status,
+          updatedAt: DateTime.now(),
+        );
+
+        await repository.updateBook(updated);
+      } else {
+        await repository.addBook(
+          title: title,
+          author: author.isEmpty ? null : author,
+          isbn: isbn.isEmpty ? null : isbn,
+          barcode: barcode.isEmpty ? null : barcode,
+          coverPath: _coverPath,
+          notes: notes.isEmpty ? null : notes,
+          status: _status,
+        );
+      }
+
+      final initialPath = _initialCoverPath;
+      if (_shouldDeleteInitialOnSave && initialPath != null) {
+        await coverService.deleteCover(initialPath);
+      }
+
+      _didSubmit = true;
+      if (_coverPath != null) {
+        _temporaryCoverPaths.remove(_coverPath);
+      }
+
+      if (mounted) {
+        Navigator.of(context).pop(_BookFormResult.saved);
+      }
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al guardar el libro: $err')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final book = widget.initialBook;
+    if (book == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar libro'),
+        content: Text('¿Seguro que deseas eliminar "${book.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _submitting = true;
+    });
+
+    final repository = ref.read(bookRepositoryProvider);
+    final coverService = ref.read(coverImageServiceProvider);
+
+    try {
+      await repository.deleteBook(book.id);
+      final existingCover = book.coverPath;
+      if (existingCover != null) {
+        await coverService.deleteCover(existingCover);
+      }
+      if (mounted) {
+        Navigator.of(context).pop(_BookFormResult.deleted);
+      }
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo eliminar: $err')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handlePickCover() async {
+    final coverService = ref.read(coverImageServiceProvider);
+    final newPath = await coverService.pickCover();
+    if (newPath == null) return;
+
+    final previousPath = _coverPath;
+
+    if (previousPath != null && previousPath != _initialCoverPath) {
+      _temporaryCoverPaths.remove(previousPath);
+      unawaited(coverService.deleteCover(previousPath));
+    }
+
+    if (previousPath == _initialCoverPath) {
+      _shouldDeleteInitialOnSave = true;
+    }
+
+    setState(() {
+      _coverPath = newPath;
+      if (newPath != _initialCoverPath) {
+        _temporaryCoverPaths.add(newPath);
+      }
+    });
+  }
+
+  Future<void> _handleRemoveCover() async {
+    final coverService = ref.read(coverImageServiceProvider);
+    final current = _coverPath;
+    if (current == null) return;
+
+    if (current == _initialCoverPath) {
+      _shouldDeleteInitialOnSave = true;
+    } else {
+      _temporaryCoverPaths.remove(current);
+      unawaited(coverService.deleteCover(current));
+    }
+
+    setState(() {
+      _coverPath = null;
+    });
+  }
+
+  Future<void> _handleSearch(BuildContext context) async {
+    final query = _titleController.text.trim();
+    final isbnInput = _isbnController.text.trim();
+    final barcodeInput = _barcodeController.text.trim();
+    final isbn = isbnInput.isNotEmpty
+        ? isbnInput
+        : (barcodeInput.length >= 10 ? barcodeInput : null);
+
+    if (query.isEmpty && (isbn == null || isbn.isEmpty)) {
+      setState(() {
+        _searchError = 'Introduce al menos un título o ISBN.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _searchError = null;
+    });
+
+    final openLibrary = ref.read(openLibraryClientProvider);
+    final googleBooks = ref.read(googleBooksClientProvider);
+    final coverService = ref.read(coverImageServiceProvider);
+
+    try {
+      final candidates = <_BookCandidate>[];
+
+      try {
+        final olResults = await openLibrary.search(
+          query: query.isEmpty ? null : query,
+          isbn: isbn,
+          limit: 10,
+        );
+        candidates.addAll(olResults.map((result) => _BookCandidate.fromOpenLibrary(result)));
+      } catch (err) {
+        // Guardamos el error pero no rompemos el flujo.
+        debugPrint('OpenLibrary search failed: $err');
+      }
+
+      try {
+        final gbResults = await googleBooks.search(
+          query: query.isEmpty ? null : query,
+          isbn: isbn,
+          maxResults: 10,
+        );
+        candidates.addAll(gbResults.map((result) => _BookCandidate.fromGoogleBooks(result)));
+      } on GoogleBooksMissingApiKeyException {
+        // Sin API key, simplemente ignoramos Google Books.
+      } catch (err) {
+        debugPrint('GoogleBooks search failed: $err');
+      }
+
+      if (candidates.isEmpty) {
+        setState(() {
+          _searchError = 'Sin resultados en los catálogos consultados.';
+        });
+        return;
+      }
+
+      final candidate = await _pickCandidate(context, candidates);
+      if (candidate == null) {
+        return;
+      }
+
+      await _applyCandidate(candidate, coverService);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSearching = false;
+        });
+      }
+    }
+  }
+
+  Future<_BookCandidate?> _pickCandidate(
+    BuildContext context,
+    List<_BookCandidate> candidates,
+  ) async {
+    if (candidates.length == 1) {
+      return candidates.first;
+    }
+
+    return showModalBottomSheet<_BookCandidate>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Selecciona un resultado',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: candidates.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final candidate = candidates[index];
+                      return ListTile(
+                        leading: candidate.coverUrl != null
+                            ? SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: Image.network(
+                                  candidate.coverUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(Icons.book_outlined),
+                                ),
+                              )
+                            : const Icon(Icons.book_outlined),
+                        title: Text(candidate.title),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (candidate.author != null && candidate.author!.isNotEmpty)
+                              Text(candidate.author!),
+                            if (candidate.isbn != null && candidate.isbn!.isNotEmpty)
+                              Text('ISBN: ${candidate.isbn}'),
+                          ],
+                        ),
+                        onTap: () => Navigator.of(context).pop(candidate),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _applyCandidate(
+    _BookCandidate candidate,
+    CoverImageService coverService,
+  ) async {
+    String? newCoverPath = _coverPath;
+
+    if (candidate.coverUrl != null && candidate.coverUrl!.isNotEmpty) {
+      final downloaded = await coverService.saveRemoteCover(candidate.coverUrl!);
+      if (downloaded != null) {
+        if (newCoverPath != null && newCoverPath != _initialCoverPath) {
+          _temporaryCoverPaths.remove(newCoverPath);
+          unawaited(coverService.deleteCover(newCoverPath));
+        }
+        if (newCoverPath == _initialCoverPath) {
+          _shouldDeleteInitialOnSave = true;
+        }
+
+        newCoverPath = downloaded;
+        if (downloaded != _initialCoverPath) {
+          _temporaryCoverPaths.add(downloaded);
+        }
+      }
+    }
+
+    setState(() {
+      _titleController.text = candidate.title;
+      if (candidate.author != null) {
+        _authorController.text = candidate.author!;
+      }
+      if (candidate.isbn != null) {
+        _isbnController.text = candidate.isbn!;
+      }
+      if (candidate.description != null && candidate.description!.isNotEmpty) {
+        _notesController.text = candidate.description!;
+      }
+      _coverPath = newCoverPath;
+      _searchError = null;
+    });
+  }
+}
+
+class _CoverField extends StatelessWidget {
+  const _CoverField({
+    required this.coverPath,
+    required this.pickingSupported,
+    this.onPick,
+    this.onRemove,
+  });
+
+  final String? coverPath;
+  final bool pickingSupported;
+  final Future<void> Function()? onPick;
+  final Future<void> Function()? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        buildCoverPreview(
+          coverPath,
+          size: 72,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                coverPath == null ? 'Sin portada' : 'Portada seleccionada',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                coverPath ?? 'Añade una imagen para identificar mejor tus libros.',
+                style: Theme.of(context).textTheme.bodySmall,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  if (pickingSupported)
+                    FilledButton.icon(
+                      onPressed: onPick,
+                      icon: const Icon(Icons.photo_library_outlined),
+                      label: Text(coverPath == null ? 'Seleccionar' : 'Cambiar'),
+                    ),
+                  if (!pickingSupported)
+                    Chip(
+                      avatar: const Icon(Icons.info_outline, size: 18),
+                      label: const Text('Portadas no disponibles en esta plataforma'),
+                    ),
+                  if (coverPath != null && onRemove != null)
+                    OutlinedButton.icon(
+                      onPressed: onRemove,
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Eliminar'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LibraryTab extends ConsumerStatefulWidget {
+  const _LibraryTab({required this.onOpenForm});
+
+  final Future<void> Function({Book? book}) onOpenForm;
+
+  @override
+  ConsumerState<_LibraryTab> createState() => _LibraryTabState();
+}
+
+class _LibraryTabState extends ConsumerState<_LibraryTab> {
+  @override
+  Widget build(BuildContext context) {
+    final booksAsync = ref.watch(bookListProvider);
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: booksAsync.when(
+          data: (books) {
+            if (books.isEmpty) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Mi biblioteca', style: theme.textTheme.headlineMedium),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Añade tus libros para gestionarlos desde aquí.',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 24),
+                  Expanded(
+                    child: _EmptyLibraryState(
+                      onAddBook: () => widget.onOpenForm(),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Mi biblioteca', style: theme.textTheme.headlineMedium),
+                const SizedBox(height: 8),
+                Text(
+                  'Gestiona tus libros guardados y prepara los préstamos.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: books.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final book = books[index];
+                      return _BookListTile(
+                        book: book,
+                        onTap: () => widget.onOpenForm(book: book),
+                        onAddReview: () => _showAddReviewDialog(context, book),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stackTrace) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 48),
+                const SizedBox(height: 12),
+                Text(
+                  'No pudimos cargar tu biblioteca.',
+                  style: theme.textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  error.toString(),
+                  style: theme.textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => ref.refresh(bookListProvider),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAddReviewDialog(BuildContext context, Book book) async {
+    final repository = ref.read(bookRepositoryProvider);
+    final theme = Theme.of(context);
+    final controller = TextEditingController();
+    var rating = 5;
+
+    _ReviewDraft? draft;
+
+    try {
+      draft = await showDialog<_ReviewDraft>(
+        context: context,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                title: Text('Añadir reseña a "${book.title}"'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Puntuación',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(5, (index) {
+                        final starValue = index + 1;
+                        final isActive = starValue <= rating;
+                        return IconButton(
+                          onPressed: () => setState(() {
+                            rating = starValue;
+                          }),
+                          icon: Icon(
+                            isActive ? Icons.star : Icons.star_border,
+                            color: Colors.amber,
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: controller,
+                      minLines: 2,
+                      maxLines: 5,
+                      decoration: const InputDecoration(
+                        labelText: 'Escribe una reseña (opcional)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancelar'),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(
+                        _ReviewDraft(
+                          rating: rating,
+                          review: controller.text.trim().isEmpty
+                              ? null
+                              : controller.text.trim(),
+                        ),
+                      );
+                    },
+                    child: const Text('Guardar'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      controller.dispose();
+    }
+
+    if (draft == null) {
+      return;
+    }
+
+    try {
+      await repository.addReview(
+        bookId: book.id,
+        rating: draft.rating,
+        review: draft.review,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reseña añadida.')),
+      );
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al guardar reseña: $err')),
+      );
+    }
   }
 }
 
@@ -207,6 +1339,15 @@ class _SettingsTab extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 24),
+              Text(
+                'Integraciones externas',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 12),
+              _GoogleBooksApiCard(onConfigure: () =>
+                  _handleConfigureGoogleBooksKey(context, ref), onClear: () =>
+                  _handleClearGoogleBooksKey(context, ref)),
+              const SizedBox(height: 24),
               const _PlaceholderTab(
                 title: 'Más configuraciones próximamente',
                 description:
@@ -216,6 +1357,357 @@ class _SettingsTab extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _handleConfigureGoogleBooksKey(
+      BuildContext context, WidgetRef ref) async {
+    final currentValue = ref.read(googleBooksApiKeyControllerProvider).valueOrNull;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => _GoogleBooksApiDialog(
+        initialValue: currentValue,
+        ref: ref,
+      ),
+    );
+
+    if (result == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('API key de Google Books guardada.')),
+      );
+    }
+  }
+
+  Future<void> _handleClearGoogleBooksKey(
+      BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Eliminar API key'),
+        content: const Text(
+          '¿Seguro que deseas eliminar la API key de Google Books? Las búsquedas que dependan de ella dejarán de funcionar hasta que añadas una nueva.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final controller =
+        ref.read(googleBooksApiKeyControllerProvider.notifier);
+    await controller.clearApiKey();
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('API key eliminada.')),
+      );
+    }
+  }
+}
+
+class _GoogleBooksApiCard extends ConsumerWidget {
+  const _GoogleBooksApiCard({
+    required this.onConfigure,
+    required this.onClear,
+  });
+
+  final Future<void> Function() onConfigure;
+  final Future<void> Function() onClear;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final apiKeyState = ref.watch(googleBooksApiKeyControllerProvider);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: apiKeyState.when(
+          data: (key) {
+            final hasKey = key != null && key.isNotEmpty;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.menu_book_outlined,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Google Books API',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  hasKey
+                      ? 'Lista para realizar búsquedas en Google Books.'
+                      : 'Agrega tu API key para habilitar búsquedas en Google Books.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                if (hasKey) ...[
+                  Text(
+                    'Clave almacenada: ${_maskApiKey(key)}',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: onConfigure,
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Actualizar clave'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: onClear,
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Eliminar'),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  FilledButton.icon(
+                    onPressed: onConfigure,
+                    icon: const Icon(Icons.add_circle_outline),
+                    label: const Text('Agregar API key de Google Books'),
+                  ),
+                ],
+              ],
+            );
+          },
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (error, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'No se pudo cargar la API key.',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '$error',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () =>
+                    ref.invalidate(googleBooksApiKeyControllerProvider),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _maskApiKey(String key) {
+    if (key.length <= 6) {
+      return '*' * key.length;
+    }
+    final prefix = key.substring(0, 4);
+    final suffix = key.substring(key.length - 2);
+    return '$prefix***$suffix';
+  }
+}
+
+class _GoogleBooksApiDialog extends StatefulWidget {
+  const _GoogleBooksApiDialog({
+    this.initialValue,
+    required this.ref,
+  });
+
+  final String? initialValue;
+  final WidgetRef ref;
+
+  @override
+  State<_GoogleBooksApiDialog> createState() => _GoogleBooksApiDialogState();
+}
+
+class _GoogleBooksApiDialogState extends State<_GoogleBooksApiDialog> {
+  late final TextEditingController _controller;
+  String? _errorText;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue ?? '');
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Configurar API key de Google Books'),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Sigue estos pasos para generar tu API key:',
+            ),
+            const SizedBox(height: 8),
+            const _InstructionList(),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'API key',
+                hintText: 'AIza...'
+                    ' (pega aquí tu clave)',
+                border: const OutlineInputBorder(),
+                errorText: _errorText,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving
+              ? null
+              : () {
+                  Navigator.of(context).pop(false);
+                },
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _submit,
+          child: _saving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    final value = _controller.text.trim();
+    if (value.isEmpty) {
+      setState(() {
+        _errorText = 'Introduce una API key válida.';
+      });
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _errorText = null;
+    });
+
+    try {
+      await widget.ref
+          .read(googleBooksApiKeyControllerProvider.notifier)
+          .saveApiKey(value);
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (err) {
+      setState(() {
+        _saving = false;
+        _errorText = 'No se pudo guardar: $err';
+      });
+    }
+  }
+}
+
+class _InstructionList extends StatelessWidget {
+  const _InstructionList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        _InstructionItem(
+          index: 1,
+          text: 'Accede a https://console.cloud.google.com e inicia sesión.',
+        ),
+        _InstructionItem(
+          index: 2,
+          text:
+              'Crea un proyecto nuevo o usa uno existente para la aplicación.',
+        ),
+        _InstructionItem(
+          index: 3,
+          text: 'Habilita la "Books API" desde Biblioteca de APIs.',
+        ),
+        _InstructionItem(
+          index: 4,
+          text: 'Genera unas credenciales tipo "API key" para el proyecto.',
+        ),
+        _InstructionItem(
+          index: 5,
+          text:
+              'Copia la clave generada y pégala en el campo inferior para guardarla.',
+        ),
+      ],
+    );
+  }
+}
+
+class _InstructionItem extends StatelessWidget {
+  const _InstructionItem({required this.index, required this.text});
+
+  final int index;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = Theme.of(context).textTheme.bodyMedium;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$index.', style: textStyle),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: textStyle)),
+        ],
       ),
     );
   }

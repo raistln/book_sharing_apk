@@ -11,6 +11,7 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+book_sharing_app_friends/
 
 # IntelliJ related
 *.iml

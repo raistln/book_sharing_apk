@@ -387,9 +387,9 @@
     },
     {
       "name": "http",
-      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/http-1.5.0",
+      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/http-0.13.6",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "2.19"
     },
     {
       "name": "http_multi_server",
@@ -885,9 +885,9 @@
     },
     {
       "name": "uuid",
-      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/uuid-4.5.2",
+      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/uuid-3.0.7",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "2.12"
     },
     {
       "name": "vector_math",

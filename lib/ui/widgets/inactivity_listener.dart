@@ -53,8 +53,8 @@ class _InactivityListenerState extends ConsumerState<InactivityListener>
   }
 
   void _registerActivity() {
-    final status = ref.read(authControllerProvider);
-    if (status == AuthStatus.unlocked) {
+    final authState = ref.read(authControllerProvider);
+    if (authState.status == AuthStatus.unlocked) {
       _manager.registerActivity();
     }
   }

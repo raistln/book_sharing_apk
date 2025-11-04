@@ -7,8 +7,29 @@ import 'package:path_provider/path_provider.dart';
 
 part 'database.g.dart';
 
+class LocalUsers extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get username => text().withLength(min: 3, max: 64).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 class Books extends Table {
   IntColumn get id => integer().autoIncrement()();
+
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get ownerUserId => integer().references(LocalUsers, #id).nullable()();
+  TextColumn get ownerRemoteId => text().nullable()();
 
   TextColumn get title => text().withLength(min: 1, max: 255)();
   TextColumn get author => text().withLength(min: 1, max: 255).nullable()();
@@ -20,6 +41,10 @@ class Books extends Table {
   TextColumn get status => text().withDefault(const Constant('available'))();
   TextColumn get notes => text().nullable()();
 
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
@@ -27,36 +52,52 @@ class Books extends Table {
 class BookReviews extends Table {
   IntColumn get id => integer().autoIncrement()();
 
-  IntColumn get bookId => integer().references(Books, #id, onDelete: KeyAction.cascade)();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get bookId =>
+      integer().references(Books, #id, onDelete: KeyAction.cascade)();
+  TextColumn get bookUuid => text().withLength(min: 1, max: 36)();
+
+  IntColumn get authorUserId => integer().references(LocalUsers, #id).nullable()();
+  TextColumn get authorRemoteId => text().nullable()();
 
   IntColumn get rating =>
       integer().customConstraint('NOT NULL CHECK (rating BETWEEN 1 AND 5)')();
   TextColumn get review => text().nullable()();
 
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
-@DriftDatabase(tables: [Books, BookReviews])
+@DriftDatabase(tables: [LocalUsers, Books, BookReviews])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         beforeOpen: (details) async {
-          if (details.wasCreated) {
-            await customStatement('PRAGMA foreign_keys = ON');
-          }
+          await customStatement('PRAGMA foreign_keys = ON');
         },
         onCreate: (Migrator m) async {
           await m.createAll();
         },
         onUpgrade: (Migrator m, int from, int to) async {
-          if (from < 2) {
+          if (from < 3) {
+            await customStatement('DROP TABLE IF EXISTS book_reviews');
+            await customStatement('DROP TABLE IF EXISTS books');
+
+            await m.createTable(localUsers);
+            await m.createTable(books);
             await m.createTable(bookReviews);
           }
         },

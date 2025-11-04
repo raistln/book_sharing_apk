@@ -343,7 +343,7 @@ class _BookListTile extends ConsumerWidget {
             ),
             onTap: onTap,
           ),
-          ButtonBar(
+          OverflowBar(
             alignment: MainAxisAlignment.end,
             children: [
               OutlinedButton.icon(
@@ -543,7 +543,7 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
                   labelText: 'Estado',
                   border: OutlineInputBorder(),
                 ),
-                value: _status,
+                initialValue: _status,
                 items: const [
                   DropdownMenuItem(value: 'available', child: Text('Disponible')),
                   DropdownMenuItem(value: 'loaned', child: Text('Prestado')),
@@ -606,9 +606,12 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
   }
 
   Future<void> _submit(BuildContext context) async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    if (_submitting) return;
+
+    final valid = _formKey.currentState?.validate() ?? false;
+    if (!valid) return;
 
     setState(() {
       _submitting = true;
@@ -660,12 +663,11 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
         _temporaryCoverPaths.remove(_coverPath);
       }
 
-      if (mounted) {
-        Navigator.of(context).pop(_BookFormResult.saved);
-      }
+      if (!mounted) return;
+      navigator.pop(_BookFormResult.saved);
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(content: Text('Error al guardar el libro: $err')),
       );
     } finally {
@@ -681,6 +683,8 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
     final book = widget.initialBook;
     if (book == null) return;
 
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -709,21 +713,20 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
     final coverService = ref.read(coverImageServiceProvider);
 
     try {
-      await repository.deleteBook(book.id);
+      await repository.deleteBook(book);
       final existingCover = book.coverPath;
       if (existingCover != null) {
         await coverService.deleteCover(existingCover);
       }
-      if (mounted) {
-        Navigator.of(context).pop(_BookFormResult.deleted);
-      }
+      if (!context.mounted) return;
+      navigator.pop(_BookFormResult.deleted);
     } catch (err) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!context.mounted) return;
+      messenger.showSnackBar(
         SnackBar(content: Text('No se pudo eliminar: $err')),
       );
     } finally {
-      if (mounted) {
+      if (context.mounted) {
         setState(() {
           _submitting = false;
         });
@@ -773,6 +776,7 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
   }
 
   Future<void> _handleSearch(BuildContext context) async {
+    final pickerContext = context;
     final query = _titleController.text.trim();
     final isbnInput = _isbnController.text.trim();
     final barcodeInput = _barcodeController.text.trim();
@@ -825,13 +829,15 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
       }
 
       if (candidates.isEmpty) {
+        if (!mounted) return;
         setState(() {
           _searchError = 'Sin resultados en los catálogos consultados.';
         });
         return;
       }
 
-      final candidate = await _pickCandidate(context, candidates);
+      if (!mounted || !pickerContext.mounted) return;
+      final candidate = await _pickCandidate(pickerContext, candidates);
       if (candidate == null) {
         return;
       }
@@ -1004,9 +1010,9 @@ class _CoverField extends StatelessWidget {
                       label: Text(coverPath == null ? 'Seleccionar' : 'Cambiar'),
                     ),
                   if (!pickingSupported)
-                    Chip(
-                      avatar: const Icon(Icons.info_outline, size: 18),
-                      label: const Text('Portadas no disponibles en esta plataforma'),
+                    const Chip(
+                      avatar: Icon(Icons.info_outline, size: 18),
+                      label: Text('Portadas no disponibles en esta plataforma'),
                     ),
                   if (coverPath != null && onRemove != null)
                     OutlinedButton.icon(
@@ -1210,16 +1216,16 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
 
     try {
       await repository.addReview(
-        bookId: book.id,
+        book: book,
         rating: draft.rating,
         review: draft.review,
       );
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Reseña añadida.')),
       );
     } catch (err) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al guardar reseña: $err')),
       );
@@ -1660,9 +1666,9 @@ class _InstructionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         _InstructionItem(
           index: 1,
           text: 'Accede a https://console.cloud.google.com e inicia sesión.',

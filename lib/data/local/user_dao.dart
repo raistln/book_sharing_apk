@@ -30,6 +30,18 @@ class UserDao extends DatabaseAccessor<AppDatabase> with _$UserDaoMixin {
 
   Future<int> insertUser(LocalUsersCompanion entry) => into(localUsers).insert(entry);
 
+  Future<LocalUser?> findByRemoteId(String remoteId) {
+    return (select(localUsers)..where((tbl) => tbl.remoteId.equals(remoteId))).getSingleOrNull();
+  }
+
+  Future<LocalUser?> findByUsername(String username) {
+    return (select(localUsers)..where((tbl) => tbl.username.equals(username))).getSingleOrNull();
+  }
+
+  Future<int> updateUserFields({required int userId, required LocalUsersCompanion entry}) {
+    return (update(localUsers)..where((tbl) => tbl.id.equals(userId))).write(entry);
+  }
+
   Future<void> markAllDeleted({required DateTime timestamp}) {
     return (update(localUsers)..where((tbl) => tbl.isDeleted.equals(false))).write(
       LocalUsersCompanion(

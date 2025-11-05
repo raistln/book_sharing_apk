@@ -28,6 +28,7 @@ class Books extends Table {
   TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
   TextColumn get remoteId => text().nullable()();
 
+  @ReferenceName('ownedBooks')
   IntColumn get ownerUserId => integer().references(LocalUsers, #id).nullable()();
   TextColumn get ownerRemoteId => text().nullable()();
 
@@ -79,14 +80,138 @@ class BookReviews extends Table {
       ];
 }
 
-@DriftDatabase(tables: [LocalUsers, Books, BookReviews])
+class Groups extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  TextColumn get name => text().withLength(min: 1, max: 128)();
+
+  IntColumn get ownerUserId => integer().references(LocalUsers, #id).nullable()();
+  TextColumn get ownerRemoteId => text().nullable()();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class GroupMembers extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get groupId =>
+      integer().references(Groups, #id, onDelete: KeyAction.cascade)();
+  TextColumn get groupUuid => text().withLength(min: 1, max: 36)();
+
+  @ReferenceName('groupMemberships')
+  IntColumn get memberUserId => integer().references(LocalUsers, #id)();
+  TextColumn get memberRemoteId => text().nullable()();
+
+  TextColumn get role => text().withDefault(const Constant('member'))();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column<Object>>>? get uniqueKeys => [
+        {groupId, memberUserId},
+      ];
+}
+
+class SharedBooks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get groupId =>
+      integer().references(Groups, #id, onDelete: KeyAction.cascade)();
+  TextColumn get groupUuid => text().withLength(min: 1, max: 36)();
+
+  IntColumn get bookId =>
+      integer().references(Books, #id, onDelete: KeyAction.cascade)();
+  TextColumn get bookUuid => text().withLength(min: 1, max: 36)();
+
+  @ReferenceName('sharedBooksOwned')
+  IntColumn get ownerUserId => integer().references(LocalUsers, #id)();
+  TextColumn get ownerRemoteId => text().nullable()();
+
+  TextColumn get visibility =>
+      text().withDefault(const Constant('group')).withLength(min: 1, max: 32)();
+  BoolColumn get isAvailable =>
+      boolean().withDefault(const Constant(true))();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class Loans extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get sharedBookId => integer()
+      .references(SharedBooks, #id, onDelete: KeyAction.cascade)();
+  TextColumn get sharedBookUuid => text().withLength(min: 1, max: 36)();
+
+  @ReferenceName('loansRequested')
+  IntColumn get fromUserId => integer().references(LocalUsers, #id)();
+  TextColumn get fromRemoteId => text().nullable()();
+
+  @ReferenceName('loansReceived')
+  IntColumn get toUserId => integer().references(LocalUsers, #id)();
+  TextColumn get toRemoteId => text().nullable()();
+
+  TextColumn get status => text()
+      .withDefault(const Constant('pending'))
+      .withLength(min: 1, max: 32)();
+
+  DateTimeColumn get startDate =>
+      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get dueDate => dateTime().nullable()();
+  DateTimeColumn get returnedAt => dateTime().nullable()();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+@DriftDatabase(
+  tables: [
+    LocalUsers,
+    Books,
+    BookReviews,
+    Groups,
+    GroupMembers,
+    SharedBooks,
+    Loans,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -107,6 +232,13 @@ class AppDatabase extends _$AppDatabase {
           } else if (from < 4) {
             await customStatement('DROP TABLE IF EXISTS book_reviews');
             await m.createTable(bookReviews);
+          }
+
+          if (from < 5) {
+            await m.createTable(groups);
+            await m.createTable(groupMembers);
+            await m.createTable(sharedBooks);
+            await m.createTable(loans);
           }
         },
       );

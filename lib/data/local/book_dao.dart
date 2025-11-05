@@ -23,6 +23,10 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
         .get();
   }
 
+  Future<Book?> findByUuid(String uuid) {
+    return (select(books)..where((tbl) => tbl.uuid.equals(uuid))).getSingleOrNull();
+  }
+
   Future<int> insertBook(BooksCompanion entry) => into(books).insert(entry);
 
   Future<bool> updateBook(BooksCompanion entry) => update(books).replace(entry);

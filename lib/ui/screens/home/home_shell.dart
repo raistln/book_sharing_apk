@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../config/supabase_defaults.dart';
 import '../../../data/local/database.dart';
+import '../../../data/local/group_dao.dart';
 import '../../../providers/api_providers.dart';
 import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
@@ -15,6 +17,7 @@ import '../../../services/book_export_service.dart';
 import '../../../services/cover_image_service_base.dart';
 import '../../../services/google_books_client.dart';
 import '../../../services/open_library_client.dart';
+import '../../../services/supabase_config_service.dart';
 import '../../widgets/cover_preview.dart';
 import '../auth/pin_setup_screen.dart';
 
@@ -214,6 +217,287 @@ class _EmptyLibraryState extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _SupabaseConfigCard extends ConsumerWidget {
+  const _SupabaseConfigCard({
+    required this.onConfigure,
+    required this.onReset,
+  });
+
+  final Future<void> Function() onConfigure;
+  final Future<void> Function() onReset;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final configState = ref.watch(supabaseConfigControllerProvider);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: configState.when(
+          data: (config) {
+            final theme = Theme.of(context);
+            final usingDefaults = config.url == kSupabaseDefaultUrl &&
+                config.anonKey == kSupabaseDefaultAnonKey;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.cloud_outlined,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Supabase',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  usingDefaults
+                      ? 'Usando la configuración predeterminada del proyecto.'
+                      : 'Usando una configuración personalizada.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'URL: ${config.url}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Anon key: ${_maskSupabaseAnonKey(config.anonKey)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () => unawaited(onConfigure()),
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Configurar Supabase'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: usingDefaults
+                          ? null
+                          : () => unawaited(onReset()),
+                      icon: const Icon(Icons.settings_backup_restore_outlined),
+                      label: const Text('Restaurar valores por defecto'),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (error, _) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'No se pudo cargar la configuración de Supabase.',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '$error',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      ref.invalidate(supabaseConfigControllerProvider),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reintentar'),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+String _maskSupabaseAnonKey(String key) {
+  if (key.length <= 8) {
+    return '*' * key.length;
+  }
+  final prefix = key.substring(0, 6);
+  final suffix = key.substring(key.length - 4);
+  return '$prefix***$suffix';
+}
+
+class _SupabaseConfigDialog extends StatefulWidget {
+  const _SupabaseConfigDialog({
+    required this.ref,
+    this.initialConfig,
+  });
+
+  final WidgetRef ref;
+  final SupabaseConfig? initialConfig;
+
+  @override
+  State<_SupabaseConfigDialog> createState() => _SupabaseConfigDialogState();
+}
+
+class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
+  late final TextEditingController _urlController;
+  late final TextEditingController _anonKeyController;
+  String? _urlError;
+  String? _anonKeyError;
+  String? _formError;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialConfig ??
+        const SupabaseConfig(
+          url: kSupabaseDefaultUrl,
+          anonKey: kSupabaseDefaultAnonKey,
+        );
+    _urlController = TextEditingController(text: initial.url);
+    _anonKeyController = TextEditingController(text: initial.anonKey);
+  }
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    _anonKeyController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AlertDialog(
+      title: const Text('Configurar Supabase'),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Introduce la URL y la anon key de tu proyecto. Si no tienes una propia, puedes conservar la configuración predeterminada.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _urlController,
+              decoration: InputDecoration(
+                labelText: 'Supabase URL',
+                hintText: 'https://your-project.supabase.co',
+                border: const OutlineInputBorder(),
+                errorText: _urlError,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _anonKeyController,
+              decoration: InputDecoration(
+                labelText: 'Anon key',
+                hintText: 'eyJhbGciOiJI...',
+                border: const OutlineInputBorder(),
+                errorText: _anonKeyError,
+              ),
+              maxLines: 3,
+              minLines: 1,
+            ),
+            if (_formError != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _formError!,
+                style:
+                    theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving
+              ? null
+              : () {
+                  Navigator.of(context).pop(false);
+                },
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _submit,
+          child: _saving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    final url = _urlController.text.trim();
+    final anonKey = _anonKeyController.text.trim();
+
+    setState(() {
+      _urlError = url.isEmpty ? 'Introduce una URL válida.' : null;
+      _anonKeyError = anonKey.isEmpty ? 'Introduce una anon key válida.' : null;
+      _formError = null;
+    });
+
+    if (_urlError != null || _anonKeyError != null) {
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+    });
+
+    final controller = widget.ref.read(supabaseConfigControllerProvider.notifier);
+    await controller.saveConfig(url: url, anonKey: anonKey);
+
+    final state = widget.ref.read(supabaseConfigControllerProvider);
+    if (!mounted) {
+      return;
+    }
+
+    if (state.hasError) {
+      setState(() {
+        _saving = false;
+        _formError = 'No se pudo guardar: ${state.error}';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(true);
   }
 }
 
@@ -1152,71 +1436,69 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
     try {
       draft = await showDialog<_ReviewDraft>(
         context: context,
-        builder: (dialogContext) {
-          return StatefulBuilder(
-            builder: (context, setState) {
-              return AlertDialog(
-                title: Text('Añadir reseña a "${book.title}"'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Puntuación',
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(5, (index) {
-                        final starValue = index + 1;
-                        final isActive = starValue <= rating;
-                        return IconButton(
-                          onPressed: () => setState(() {
-                            rating = starValue;
-                          }),
-                          icon: Icon(
-                            isActive ? Icons.star : Icons.star_border,
-                            color: Colors.amber,
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: controller,
-                      minLines: 2,
-                      maxLines: 5,
-                      decoration: const InputDecoration(
-                        labelText: 'Escribe una reseña (opcional)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancelar'),
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Añadir reseña a "${book.title}"'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Puntuación',
+                    style: theme.textTheme.titleMedium,
                   ),
-                  FilledButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(
-                        _ReviewDraft(
-                          rating: rating,
-                          review: controller.text.trim().isEmpty
-                              ? null
-                              : controller.text.trim(),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(5, (index) {
+                      final starValue = index + 1;
+                      final isActive = starValue <= rating;
+                      return IconButton(
+                        onPressed: () => setState(() {
+                          rating = starValue;
+                        }),
+                        icon: Icon(
+                          isActive ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
                         ),
                       );
-                    },
-                    child: const Text('Guardar'),
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    minLines: 2,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'Escribe una reseña (opcional)',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                 ],
-              );
-            },
-          );
-        },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(
+                      _ReviewDraft(
+                        rating: rating,
+                        review: controller.text.trim().isEmpty
+                            ? null
+                            : controller.text.trim(),
+                      ),
+                    );
+                  },
+                  child: const Text('Guardar'),
+                ),
+              ],
+            );
+          },
+        ),
       );
     } finally {
       controller.dispose();
@@ -1275,30 +1557,28 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
       if (!mounted) return;
       final format = await showModalBottomSheet<BookExportFormat>(
         context: context,
-        builder: (sheetContext) {
-          return SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.table_rows_outlined),
-                  title: const Text('Exportar como CSV'),
-                  onTap: () => Navigator.of(sheetContext).pop(BookExportFormat.csv),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.code),
-                  title: const Text('Exportar como JSON'),
-                  onTap: () => Navigator.of(sheetContext).pop(BookExportFormat.json),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.picture_as_pdf_outlined),
-                  title: const Text('Exportar como PDF'),
-                  onTap: () => Navigator.of(sheetContext).pop(BookExportFormat.pdf),
-                ),
-              ],
-            ),
-          );
-        },
+        builder: (sheetContext) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.table_rows_outlined),
+                title: const Text('Exportar como CSV'),
+                onTap: () => Navigator.of(sheetContext).pop(BookExportFormat.csv),
+              ),
+              ListTile(
+                leading: const Icon(Icons.code),
+                title: const Text('Exportar como JSON'),
+                onTap: () => Navigator.of(sheetContext).pop(BookExportFormat.json),
+              ),
+              ListTile(
+                leading: const Icon(Icons.picture_as_pdf_outlined),
+                title: const Text('Exportar como PDF'),
+                onTap: () => Navigator.of(sheetContext).pop(BookExportFormat.pdf),
+              ),
+            ],
+          ),
+        ),
       );
 
       if (format == null) {
@@ -1346,15 +1626,340 @@ class _ExportButton extends StatelessWidget {
   }
 }
 
-class _CommunityTab extends StatelessWidget {
+class _CommunityTab extends ConsumerWidget {
   const _CommunityTab();
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final groupsAsync = ref.watch(groupListProvider);
+
+    return SafeArea(
+      child: groupsAsync.when(
+        data: (groups) {
+          if (groups.isEmpty) {
+            return _EmptyCommunityState(onSync: () => _syncNow(context, ref));
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async => _syncNow(context, ref),
+            child: ListView.separated(
+              padding: const EdgeInsets.all(24),
+              itemCount: groups.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 16),
+              itemBuilder: (context, index) {
+                final group = groups[index];
+                return _GroupCard(group: group, onSync: () => _syncNow(context, ref));
+              },
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => _ErrorCommunityState(
+          message: '$error',
+          onRetry: () => _syncNow(context, ref),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _syncNow(BuildContext context, WidgetRef ref) async {
+    final controller = ref.read(groupSyncControllerProvider.notifier);
+    await controller.syncGroups();
+    if (!context.mounted) return;
+
+    final state = ref.read(groupSyncControllerProvider);
+    if (state.lastError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error de sincronización: ${state.lastError}')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sincronización completada.')),
+    );
+  }
+}
+
+class _EmptyCommunityState extends StatelessWidget {
+  const _EmptyCommunityState({required this.onSync});
+
+  final Future<void> Function() onSync;
+
+  @override
   Widget build(BuildContext context) {
-    return const _PlaceholderTab(
-      title: 'Comunidad',
-      description:
-          'Vista para grupos y sincronización con Supabase cuando esté habilitado.',
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.groups_outlined, size: 88, color: theme.colorScheme.primary),
+            const SizedBox(height: 16),
+            Text(
+              'Todavía no tienes grupos sincronizados.',
+              style: theme.textTheme.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Sincroniza con Supabase para traer tus comunidades, miembros y libros compartidos.',
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: onSync,
+              icon: const Icon(Icons.sync_outlined),
+              label: const Text('Sincronizar ahora'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorCommunityState extends StatelessWidget {
+  const _ErrorCommunityState({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+            const SizedBox(height: 12),
+            Text(
+              'No pudimos cargar tus grupos.',
+              style: theme.textTheme.titleLarge?.copyWith(color: theme.colorScheme.error),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar sincronización'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupCard extends ConsumerWidget {
+  const _GroupCard({required this.group, required this.onSync});
+
+  final Group group;
+  final Future<void> Function() onSync;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
+    final sharedBooksAsync = ref.watch(sharedBookDetailsProvider(group.id));
+    final loansAsync = ref.watch(groupLoanDetailsProvider(group.id));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(group.name, style: theme.textTheme.titleMedium),
+                      if (group.ownerRemoteId != null) ...[
+                        const SizedBox(height: 4),
+                        Text('Propietario remoto: ${group.ownerRemoteId}',
+                            style: theme.textTheme.bodySmall),
+                      ],
+                      const SizedBox(height: 4),
+                      Text('Última actualización: ${DateFormat.yMd().add_Hm().format(group.updatedAt)}',
+                          style: theme.textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => onSync(),
+                  icon: const Icon(Icons.sync_outlined),
+                  tooltip: 'Sincronizar grupo',
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              children: [
+                _AsyncCountChip(
+                  icon: Icons.people_outline,
+                  label: 'Miembros',
+                  value: membersAsync,
+                ),
+                _AsyncCountChip(
+                  icon: Icons.menu_book_outlined,
+                  label: 'Libros compartidos',
+                  value: sharedBooksAsync,
+                ),
+                _AsyncCountChip(
+                  icon: Icons.swap_horiz_outlined,
+                  label: 'Préstamos',
+                  value: loansAsync,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _SharedBooksSection(sharedBooksAsync: sharedBooksAsync),
+            const SizedBox(height: 12),
+            _LoansSection(loansAsync: loansAsync),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AsyncCountChip<T> extends StatelessWidget {
+  const _AsyncCountChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final AsyncValue<List<T>> value;
+
+  @override
+  Widget build(BuildContext context) {
+    return value.when(
+      data: (items) => Chip(
+        avatar: Icon(icon, size: 18),
+        label: Text('$label: ${items.length}'),
+      ),
+      loading: () => const Chip(
+        avatar: SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        label: Text('Cargando...'),
+      ),
+      error: (error, _) => Chip(
+        avatar: const Icon(Icons.error_outline, size: 18),
+        label: Text('Error $label'),
+      ),
+    );
+  }
+}
+
+class _SharedBooksSection extends StatelessWidget {
+  const _SharedBooksSection({required this.sharedBooksAsync});
+
+  final AsyncValue<List<SharedBookDetail>> sharedBooksAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return sharedBooksAsync.when(
+      data: (books) {
+        if (books.isEmpty) {
+          return Text('No hay libros compartidos todavía.',
+              style: theme.textTheme.bodyMedium);
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Libros compartidos', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            ...books.map((detail) {
+              final bookTitle = detail.book?.title ?? 'Libro sin título';
+              final visibility = detail.sharedBook.visibility;
+              final availability = detail.sharedBook.isAvailable ? 'Disponible' : 'No disponible';
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.menu_book_outlined),
+                title: Text(bookTitle),
+                subtitle: Text('Visibilidad: $visibility · $availability'),
+              );
+            }),
+          ],
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: LinearProgressIndicator(),
+      ),
+      error: (error, _) => Text('Error cargando libros compartidos: $error',
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+    );
+  }
+}
+
+class _LoansSection extends StatelessWidget {
+  const _LoansSection({required this.loansAsync});
+
+  final AsyncValue<List<LoanDetail>> loansAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return loansAsync.when(
+      data: (loans) {
+        if (loans.isEmpty) {
+          return Text('Sin préstamos registrados por ahora.',
+              style: theme.textTheme.bodyMedium);
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Préstamos', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            ...loans.map((detail) {
+              final loan = detail.loan;
+              final bookTitle = detail.book?.title ?? 'Libro';
+              final status = loan.status;
+              final start = DateFormat.yMd().format(loan.startDate);
+              final due = loan.dueDate != null
+                  ? DateFormat.yMd().format(loan.dueDate!)
+                  : 'Sin fecha límite';
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.swap_horiz_outlined),
+                title: Text('$bookTitle · $status'),
+                subtitle: Text('Inicio: $start · Vence: $due'),
+              );
+            }),
+          ],
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: LinearProgressIndicator(),
+      ),
+      error: (error, _) => Text('Error cargando préstamos: $error',
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
     );
   }
 }
@@ -1458,11 +2063,20 @@ class _SettingsTab extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 24),
+              _buildSyncStatusBanner(context, ref),
+              const SizedBox(height: 16),
               Text(
                 'Integraciones externas',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 12),
+              _SupabaseConfigCard(
+                onConfigure: () => _handleConfigureSupabase(context, ref),
+                onReset: () => _handleResetSupabase(context, ref),
+              ),
+              const SizedBox(height: 16),
+              _buildSyncActionsCard(context, ref),
+              const SizedBox(height: 16),
               _GoogleBooksApiCard(onConfigure: () =>
                   _handleConfigureGoogleBooksKey(context, ref), onClear: () =>
                   _handleClearGoogleBooksKey(context, ref)),
@@ -1477,6 +2091,207 @@ class _SettingsTab extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSyncStatusBanner(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(groupSyncControllerProvider);
+    final theme = Theme.of(context);
+
+    final statusText = state.isSyncing
+        ? 'Sincronizando grupos con Supabase...'
+        : state.lastError != null
+            ? 'Último error de sincronización: ${state.lastError}'
+            : state.lastSyncedAt != null
+                ? 'Última sincronización: ${DateFormat.yMd().add_Hm().format(state.lastSyncedAt!)}'
+                : 'Aún no se ha sincronizado con Supabase.';
+
+    final color = state.isSyncing
+        ? theme.colorScheme.primaryContainer
+        : state.lastError != null
+            ? theme.colorScheme.errorContainer
+            : theme.colorScheme.surfaceVariant;
+
+    final icon = state.isSyncing
+        ? const Icon(Icons.sync, color: Colors.white)
+        : state.lastError != null
+            ? const Icon(Icons.error_outline, color: Colors.white)
+            : const Icon(Icons.cloud_done_outlined, color: Colors.white);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          icon,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Estado de sincronización',
+                  style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  statusText,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white),
+                ),
+                if (state.hasPendingChanges && !state.isSyncing) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Hay cambios pendientes por sincronizar.',
+                    style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSyncActionsCard(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(groupSyncControllerProvider);
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.groups_outlined, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Sincronización de grupos',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Trae de Supabase la información más reciente de tus grupos, miembros y libros compartidos. '
+              'Este paso es necesario antes de habilitar la colaboración en la app.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  onPressed: state.isSyncing ? null : () => _handleSyncGroups(context, ref),
+                  icon: state.isSyncing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.sync_outlined),
+                  label: Text(state.isSyncing ? 'Sincronizando...' : 'Sincronizar ahora'),
+                ),
+                if (state.lastError != null)
+                  OutlinedButton.icon(
+                    onPressed: state.isSyncing
+                        ? null
+                        : () =>
+                            ref.read(groupSyncControllerProvider.notifier).clearError(),
+                    icon: const Icon(Icons.clear_all_outlined),
+                    label: const Text('Limpiar error'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleSyncGroups(BuildContext context, WidgetRef ref) async {
+    final controller = ref.read(groupSyncControllerProvider.notifier);
+    await controller.syncGroups();
+    if (!context.mounted) return;
+
+    final state = ref.read(groupSyncControllerProvider);
+    if (state.lastError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error de sincronización: ${state.lastError}')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sincronización completada.')),
+    );
+  }
+
+  Future<void> _handleConfigureSupabase(
+      BuildContext context, WidgetRef ref) async {
+    final currentConfig = ref.read(supabaseConfigControllerProvider).valueOrNull;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => _SupabaseConfigDialog(
+        ref: ref,
+        initialConfig: currentConfig,
+      ),
+    );
+
+    if (result == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Configuración de Supabase guardada.')),
+      );
+    }
+  }
+
+  Future<void> _handleResetSupabase(
+      BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Restablecer Supabase'),
+        content: const Text(
+          'Se restaurarán la URL y la anon key predeterminadas. ¿Deseas continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Restablecer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final controller = ref.read(supabaseConfigControllerProvider.notifier);
+    await controller.resetToDefaults();
+
+    if (!context.mounted) return;
+
+    final state = ref.read(supabaseConfigControllerProvider);
+    if (state.hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo restablecer: ${state.error}')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Configuración de Supabase restablecida.')),
     );
   }
 

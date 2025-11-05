@@ -4036,6 +4036,12 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
   late final GeneratedColumn<DateTime> returnedAt = GeneratedColumn<DateTime>(
       'returned_at', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _cancelledAtMeta =
+      const VerificationMeta('cancelledAt');
+  @override
+  late final GeneratedColumn<DateTime> cancelledAt = GeneratedColumn<DateTime>(
+      'cancelled_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
   @override
@@ -4093,6 +4099,7 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
         startDate,
         dueDate,
         returnedAt,
+        cancelledAt,
         isDirty,
         isDeleted,
         syncedAt,
@@ -4182,6 +4189,12 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
           returnedAt.isAcceptableOrUnknown(
               data['returned_at']!, _returnedAtMeta));
     }
+    if (data.containsKey('cancelled_at')) {
+      context.handle(
+          _cancelledAtMeta,
+          cancelledAt.isAcceptableOrUnknown(
+              data['cancelled_at']!, _cancelledAtMeta));
+    }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
           isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
@@ -4237,6 +4250,8 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}due_date']),
       returnedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}returned_at']),
+      cancelledAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}cancelled_at']),
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -4270,6 +4285,7 @@ class Loan extends DataClass implements Insertable<Loan> {
   final DateTime startDate;
   final DateTime? dueDate;
   final DateTime? returnedAt;
+  final DateTime? cancelledAt;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -4289,6 +4305,7 @@ class Loan extends DataClass implements Insertable<Loan> {
       required this.startDate,
       this.dueDate,
       this.returnedAt,
+      this.cancelledAt,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -4318,7 +4335,10 @@ class Loan extends DataClass implements Insertable<Loan> {
       map['due_date'] = Variable<DateTime>(dueDate);
     }
     if (!nullToAbsent || returnedAt != null) {
-      map['returned_at'] = Variable<DateTime>(returnedAt);
+      map['returned_at'] = Variable<DateTime>(returnedAt!);
+    }
+    if (!nullToAbsent || cancelledAt != null) {
+      map['cancelled_at'] = Variable<DateTime>(cancelledAt!);
     }
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
@@ -4355,6 +4375,9 @@ class Loan extends DataClass implements Insertable<Loan> {
       returnedAt: returnedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(returnedAt),
+      cancelledAt: cancelledAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cancelledAt),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -4382,6 +4405,7 @@ class Loan extends DataClass implements Insertable<Loan> {
       startDate: serializer.fromJson<DateTime>(json['startDate']),
       dueDate: serializer.fromJson<DateTime?>(json['dueDate']),
       returnedAt: serializer.fromJson<DateTime?>(json['returnedAt']),
+      cancelledAt: serializer.fromJson<DateTime?>(json['cancelledAt']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -4406,6 +4430,7 @@ class Loan extends DataClass implements Insertable<Loan> {
       'startDate': serializer.toJson<DateTime>(startDate),
       'dueDate': serializer.toJson<DateTime?>(dueDate),
       'returnedAt': serializer.toJson<DateTime?>(returnedAt),
+      'cancelledAt': serializer.toJson<DateTime?>(cancelledAt),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -4428,6 +4453,7 @@ class Loan extends DataClass implements Insertable<Loan> {
           DateTime? startDate,
           Value<DateTime?> dueDate = const Value.absent(),
           Value<DateTime?> returnedAt = const Value.absent(),
+          Value<DateTime?> cancelledAt = const Value.absent(),
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -4448,6 +4474,8 @@ class Loan extends DataClass implements Insertable<Loan> {
         startDate: startDate ?? this.startDate,
         dueDate: dueDate.present ? dueDate.value : this.dueDate,
         returnedAt: returnedAt.present ? returnedAt.value : this.returnedAt,
+        cancelledAt:
+            cancelledAt.present ? cancelledAt.value : this.cancelledAt,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -4478,6 +4506,8 @@ class Loan extends DataClass implements Insertable<Loan> {
       dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
       returnedAt:
           data.returnedAt.present ? data.returnedAt.value : this.returnedAt,
+      cancelledAt:
+          data.cancelledAt.present ? data.cancelledAt.value : this.cancelledAt,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -4569,6 +4599,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
   final Value<DateTime> startDate;
   final Value<DateTime?> dueDate;
   final Value<DateTime?> returnedAt;
+  final Value<DateTime?> cancelledAt;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -4588,6 +4619,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     this.startDate = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.returnedAt = const Value.absent(),
+    this.cancelledAt = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -4608,6 +4640,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     this.startDate = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.returnedAt = const Value.absent(),
+    this.cancelledAt = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -4632,6 +4665,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     Expression<DateTime>? startDate,
     Expression<DateTime>? dueDate,
     Expression<DateTime>? returnedAt,
+    Expression<DateTime>? cancelledAt,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -4652,6 +4686,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       if (startDate != null) 'start_date': startDate,
       if (dueDate != null) 'due_date': dueDate,
       if (returnedAt != null) 'returned_at': returnedAt,
+      if (cancelledAt != null) 'cancelled_at': cancelledAt,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -4674,6 +4709,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       Value<DateTime>? startDate,
       Value<DateTime?>? dueDate,
       Value<DateTime?>? returnedAt,
+      Value<DateTime?>? cancelledAt,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -4693,6 +4729,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       startDate: startDate ?? this.startDate,
       dueDate: dueDate ?? this.dueDate,
       returnedAt: returnedAt ?? this.returnedAt,
+      cancelledAt: cancelledAt ?? this.cancelledAt,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,

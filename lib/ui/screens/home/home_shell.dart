@@ -16,6 +16,7 @@ import '../../../providers/book_providers.dart';
 import '../../../services/book_export_service.dart';
 import '../../../services/cover_image_service_base.dart';
 import '../../../services/google_books_client.dart';
+import '../../../services/loan_controller.dart';
 import '../../../services/open_library_client.dart';
 import '../../../services/supabase_config_service.dart';
 import '../../widgets/cover_preview.dart';
@@ -1626,58 +1627,160 @@ class _ExportButton extends StatelessWidget {
   }
 }
 
+class _LoanFeedbackBanner extends StatelessWidget {
+  const _LoanFeedbackBanner({
+    required this.message,
+    required this.isError,
+    required this.onDismiss,
+  });
+
+  final String message;
+  final bool isError;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final background =
+        isError ? colorScheme.errorContainer : colorScheme.primaryContainer;
+    final textColor =
+        isError ? colorScheme.onErrorContainer : colorScheme.onPrimaryContainer;
+    final icon = isError ? Icons.error_outline : Icons.check_circle_outline;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+      child: Container(
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: textColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: theme.textTheme.bodyMedium?.copyWith(color: textColor),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.close, color: textColor),
+              onPressed: onDismiss,
+              tooltip: 'Cerrar',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _performSync(BuildContext context, WidgetRef ref) async {
+  final controller = ref.read(groupSyncControllerProvider.notifier);
+  await controller.syncGroups();
+  if (!context.mounted) return;
+
+  final state = ref.read(groupSyncControllerProvider);
+  if (state.lastError != null) {
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'Error de sincronización: ${state.lastError}',
+      isError: true,
+    );
+    return;
+  }
+
+  _showFeedbackSnackBar(
+    context: context,
+    message: 'Sincronización completada.',
+    isError: false,
+  );
+}
+
+void _showFeedbackSnackBar({
+  required BuildContext context,
+  required String message,
+  required bool isError,
+}) {
+  final theme = Theme.of(context);
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor:
+          isError ? theme.colorScheme.error : theme.colorScheme.primary,
+    ),
+  );
+}
+
+String _resolveUserName(LocalUser? user) {
+  return user?.username ?? 'Usuario desconocido';
+}
+
 class _CommunityTab extends ConsumerWidget {
   const _CommunityTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groupsAsync = ref.watch(groupListProvider);
+    final loanActionState = ref.watch(loanControllerProvider);
 
     return SafeArea(
-      child: groupsAsync.when(
-        data: (groups) {
-          if (groups.isEmpty) {
-            return _EmptyCommunityState(onSync: () => _syncNow(context, ref));
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async => _syncNow(context, ref),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(24),
-              itemCount: groups.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (context, index) {
-                final group = groups[index];
-                return _GroupCard(group: group, onSync: () => _syncNow(context, ref));
-              },
+      child: Column(
+        children: [
+          if (loanActionState.lastError != null)
+            _LoanFeedbackBanner(
+              message: loanActionState.lastError!,
+              isError: true,
+              onDismiss: () => ref.read(loanControllerProvider.notifier).dismissError(),
+            )
+          else if (loanActionState.lastSuccess != null)
+            _LoanFeedbackBanner(
+              message: loanActionState.lastSuccess!,
+              isError: false,
+              onDismiss: () =>
+                  ref.read(loanControllerProvider.notifier).dismissSuccess(),
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _ErrorCommunityState(
-          message: '$error',
-          onRetry: () => _syncNow(context, ref),
-        ),
+          Expanded(
+            child: groupsAsync.when(
+              data: (groups) {
+                if (groups.isEmpty) {
+                  return _EmptyCommunityState(onSync: () => _syncNow(context, ref));
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async => _syncNow(context, ref),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(24),
+                    itemCount: groups.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      final group = groups[index];
+                      return _GroupCard(
+                        group: group,
+                        onSync: () => _syncNow(context, ref),
+                      );
+                    },
+                  ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => _ErrorCommunityState(
+                message: '$error',
+                onRetry: () => _syncNow(context, ref),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Future<void> _syncNow(BuildContext context, WidgetRef ref) async {
-    final controller = ref.read(groupSyncControllerProvider.notifier);
-    await controller.syncGroups();
-    if (!context.mounted) return;
-
-    final state = ref.read(groupSyncControllerProvider);
-    if (state.lastError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error de sincronización: ${state.lastError}')),
-      );
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sincronización completada.')),
-    );
+    await _performSync(context, ref);
   }
 }
 
@@ -1774,6 +1877,10 @@ class _GroupCard extends ConsumerWidget {
     final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
     final sharedBooksAsync = ref.watch(sharedBookDetailsProvider(group.id));
     final loansAsync = ref.watch(groupLoanDetailsProvider(group.id));
+    final activeUserAsync = ref.watch(activeUserProvider);
+    final activeUser = activeUserAsync.value;
+    final loanController = ref.watch(loanControllerProvider.notifier);
+    final loanState = ref.watch(loanControllerProvider);
 
     return Card(
       child: Padding(
@@ -1832,7 +1939,19 @@ class _GroupCard extends ConsumerWidget {
             const SizedBox(height: 16),
             _SharedBooksSection(sharedBooksAsync: sharedBooksAsync),
             const SizedBox(height: 12),
-            _LoansSection(loansAsync: loansAsync),
+            _LoansSection(
+              loansAsync: loansAsync,
+              activeUser: activeUser,
+              loanController: loanController,
+              loanState: loanState,
+              onFeedback: (message, isError) {
+                _showFeedbackSnackBar(
+                  context: context,
+                  message: message,
+                  isError: isError,
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -1918,9 +2037,19 @@ class _SharedBooksSection extends StatelessWidget {
 }
 
 class _LoansSection extends StatelessWidget {
-  const _LoansSection({required this.loansAsync});
+  const _LoansSection({
+    required this.loansAsync,
+    required this.activeUser,
+    required this.loanController,
+    required this.loanState,
+    required this.onFeedback,
+  });
 
   final AsyncValue<List<LoanDetail>> loansAsync;
+  final LocalUser? activeUser;
+  final LoanController loanController;
+  final LoanActionState loanState;
+  final void Function(String message, bool isError) onFeedback;
 
   @override
   Widget build(BuildContext context) {
@@ -1944,11 +2073,100 @@ class _LoansSection extends StatelessWidget {
               final due = loan.dueDate != null
                   ? DateFormat.yMd().format(loan.dueDate!)
                   : 'Sin fecha límite';
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.swap_horiz_outlined),
-                title: Text('$bookTitle · $status'),
-                subtitle: Text('Inicio: $start · Vence: $due'),
+              final isBorrower = activeUser != null && loan.fromUserId == activeUser!.id;
+              final isOwner = activeUser != null && loan.toUserId == activeUser!.id;
+
+              return Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.swap_horiz_outlined),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '$bookTitle · ${status.toUpperCase()}',
+                              style: theme.textTheme.titleSmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Inicio: $start · Vence: $due',
+                          style: theme.textTheme.bodySmall),
+                      if (detail.borrower != null || detail.owner != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Solicitante: ${_resolveUserName(detail.borrower)} · '
+                          'Propietario: ${_resolveUserName(detail.owner)}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (isBorrower && loan.status == 'pending')
+                            OutlinedButton.icon(
+                              onPressed: loanState.isLoading
+                                  ? null
+                                  : () => _cancelLoan(context, detail),
+                              icon: const Icon(Icons.cancel_outlined),
+                              label: const Text('Cancelar solicitud'),
+                            ),
+                          if (isOwner && loan.status == 'pending') ...[
+                            FilledButton.icon(
+                              onPressed: loanState.isLoading
+                                  ? null
+                                  : () => _acceptLoan(context, detail),
+                              icon: const Icon(Icons.check_circle_outlined),
+                              label: const Text('Aceptar'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: loanState.isLoading
+                                  ? null
+                                  : () => _rejectLoan(context, detail),
+                              icon: const Icon(Icons.cancel_schedule_send_outlined),
+                              label: const Text('Rechazar'),
+                            ),
+                          ],
+                          if ((isOwner || isBorrower) && loan.status == 'accepted') ...[
+                            FilledButton.icon(
+                              onPressed: loanState.isLoading
+                                  ? null
+                                  : () => _markReturned(context, detail),
+                              icon: const Icon(Icons.assignment_turned_in_outlined),
+                              label: const Text('Marcar devuelto'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: loanState.isLoading
+                                  ? null
+                                  : () => _expireLoan(context, detail),
+                              icon: const Icon(Icons.hourglass_top_outlined),
+                              label: const Text('Marcar expirado'),
+                            ),
+                          ],
+                          if (detail.sharedBook != null &&
+                              detail.sharedBook!.ownerUserId != activeUser?.id &&
+                              detail.sharedBook!.isAvailable &&
+                              loan.status == 'pending')
+                            FilledButton.icon(
+                              onPressed: loanState.isLoading
+                                  ? null
+                                  : () => _requestLoan(context, detail),
+                              icon: const Icon(Icons.handshake_outlined),
+                              label: const Text('Solicitar préstamo'),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               );
             }),
           ],
@@ -1962,18 +2180,167 @@ class _LoansSection extends StatelessWidget {
           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
     );
   }
+
+  Future<void> _cancelLoan(BuildContext context, LoanDetail detail) async {
+    final borrower = detail.borrower;
+    if (borrower == null) {
+      onFeedback('No pudimos identificar al solicitante.', true);
+      return;
+    }
+
+    try {
+      await loanController.cancelLoan(loan: detail.loan, borrower: borrower);
+      if (!context.mounted) return;
+      onFeedback('Solicitud cancelada.', false);
+    } catch (error) {
+      if (!context.mounted) return;
+      onFeedback('No se pudo cancelar la solicitud: $error', true);
+    }
+  }
+
+  Future<void> _acceptLoan(BuildContext context, LoanDetail detail) async {
+    final owner = detail.owner;
+    if (owner == null) {
+      onFeedback('No pudimos identificar al propietario.', true);
+      return;
+    }
+
+    try {
+      await loanController.acceptLoan(loan: detail.loan, owner: owner);
+      if (!context.mounted) return;
+      onFeedback('Préstamo aceptado.', false);
+    } catch (error) {
+      if (!context.mounted) return;
+      onFeedback('No se pudo aceptar el préstamo: $error', true);
+    }
+  }
+
+  Future<void> _rejectLoan(BuildContext context, LoanDetail detail) async {
+    final owner = detail.owner;
+    if (owner == null) {
+      onFeedback('No pudimos identificar al propietario.', true);
+      return;
+    }
+
+    try {
+      await loanController.rejectLoan(loan: detail.loan, owner: owner);
+      if (!context.mounted) return;
+      onFeedback('Solicitud rechazada.', false);
+    } catch (error) {
+      if (!context.mounted) return;
+      onFeedback('No se pudo rechazar la solicitud: $error', true);
+    }
+  }
+
+  Future<void> _markReturned(BuildContext context, LoanDetail detail) async {
+    final actor = activeUser;
+    if (actor == null) {
+      onFeedback('No pudimos identificar al usuario activo.', true);
+      return;
+    }
+
+    try {
+      await loanController.markReturned(loan: detail.loan, actor: actor);
+      if (!context.mounted) return;
+      onFeedback('Préstamo marcado como devuelto.', false);
+    } catch (error) {
+      if (!context.mounted) return;
+      onFeedback('No se pudo marcar como devuelto: $error', true);
+    }
+  }
+
+  Future<void> _expireLoan(BuildContext context, LoanDetail detail) async {
+    try {
+      await loanController.expireLoan(loan: detail.loan);
+      if (!context.mounted) return;
+      onFeedback('Préstamo marcado como expirado.', false);
+    } catch (error) {
+      if (!context.mounted) return;
+      onFeedback('No se pudo marcar como expirado: $error', true);
+    }
+  }
+
+  Future<void> _requestLoan(BuildContext context, LoanDetail detail) async {
+    final sharedBook = detail.sharedBook;
+    final borrower = activeUser;
+    if (sharedBook == null || borrower == null) {
+      onFeedback('No pudimos preparar la solicitud para este libro.', true);
+      return;
+    }
+
+    try {
+      await loanController.requestLoan(sharedBook: sharedBook, borrower: borrower);
+      if (!context.mounted) return;
+      onFeedback('Solicitud enviada.', false);
+    } catch (error) {
+      if (!context.mounted) return;
+      onFeedback('No se pudo enviar la solicitud: $error', true);
+    }
+  }
 }
 
-class _LoansTab extends StatelessWidget {
+class _LoansTab extends ConsumerWidget {
   const _LoansTab();
 
   @override
-  Widget build(BuildContext context) {
-    return const _PlaceholderTab(
-      title: 'Préstamos',
-      description:
-          'Gestiona solicitudes, estados y recordatorios de préstamos de libros.',
+  Widget build(BuildContext context, WidgetRef ref) {
+    final groupsAsync = ref.watch(groupListProvider);
+    final loanActionState = ref.watch(loanControllerProvider);
+
+    return SafeArea(
+      child: Column(
+        children: [
+          if (loanActionState.lastError != null)
+            _LoanFeedbackBanner(
+              message: loanActionState.lastError!,
+              isError: true,
+              onDismiss: () =>
+                  ref.read(loanControllerProvider.notifier).dismissError(),
+            )
+          else if (loanActionState.lastSuccess != null)
+            _LoanFeedbackBanner(
+              message: loanActionState.lastSuccess!,
+              isError: false,
+              onDismiss: () =>
+                  ref.read(loanControllerProvider.notifier).dismissSuccess(),
+            ),
+          Expanded(
+            child: groupsAsync.when(
+              data: (groups) {
+                if (groups.isEmpty) {
+                  return _EmptyCommunityState(onSync: () => _syncNow(context, ref));
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async => _syncNow(context, ref),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(24),
+                    itemCount: groups.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      final group = groups[index];
+                      return _GroupCard(
+                        group: group,
+                        onSync: () => _syncNow(context, ref),
+                      );
+                    },
+                  ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => _ErrorCommunityState(
+                message: '$error',
+                onRetry: () => _syncNow(context, ref),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
+  }
+
+  Future<void> _syncNow(BuildContext context, WidgetRef ref) async {
+    await _performSync(context, ref);
   }
 }
 
@@ -2110,7 +2477,7 @@ class _SettingsTab extends ConsumerWidget {
         ? theme.colorScheme.primaryContainer
         : state.lastError != null
             ? theme.colorScheme.errorContainer
-            : theme.colorScheme.surfaceVariant;
+            : theme.colorScheme.surfaceContainerHighest;
 
     final icon = state.isSyncing
         ? const Icon(Icons.sync, color: Colors.white)

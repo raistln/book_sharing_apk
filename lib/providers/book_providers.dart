@@ -6,11 +6,13 @@ import '../data/local/database.dart';
 import '../data/local/group_dao.dart';
 import '../data/local/user_dao.dart';
 import '../data/repositories/book_repository.dart';
+import '../data/repositories/loan_repository.dart';
 import '../data/repositories/supabase_group_repository.dart';
 import '../data/repositories/user_repository.dart';
 import '../services/book_export_service.dart';
 import '../services/cover_image_service.dart';
 import '../services/group_sync_controller.dart';
+import '../services/loan_controller.dart';
 import '../services/sync_service.dart';
 import '../services/supabase_config_service.dart';
 import '../services/supabase_group_service.dart';
@@ -68,6 +70,17 @@ final userDaoProvider = Provider<UserDao>((ref) {
 final userRepositoryProvider = Provider<UserRepository>((ref) {
   final dao = ref.watch(userDaoProvider);
   return UserRepository(dao);
+});
+
+final loanRepositoryProvider = Provider<LoanRepository>((ref) {
+  final groupDao = ref.watch(groupDaoProvider);
+  final bookDao = ref.watch(bookDaoProvider);
+  final userDao = ref.watch(userDaoProvider);
+  return LoanRepository(
+    groupDao: groupDao,
+    bookDao: bookDao,
+    userDao: userDao,
+  );
 });
 
 final activeUserProvider = StreamProvider.autoDispose<LocalUser?>((ref) {
@@ -144,6 +157,16 @@ final groupSyncControllerProvider =
     groupRepository: repository,
     userRepository: userRepository,
     configService: configService,
+  );
+});
+
+final loanControllerProvider =
+    StateNotifierProvider<LoanController, LoanActionState>((ref) {
+  final repository = ref.watch(loanRepositoryProvider);
+  final syncController = ref.watch(groupSyncControllerProvider.notifier);
+  return LoanController(
+    loanRepository: repository,
+    groupSyncController: syncController,
   );
 });
 

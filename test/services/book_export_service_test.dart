@@ -51,7 +51,7 @@ BookReview _createReview({
     remoteId: null,
     bookId: bookId,
     bookUuid: 'book-uuid-$bookId',
-    authorUserId: null,
+    authorUserId: 1000 + id,
     authorRemoteId: null,
     rating: rating,
     review: review,
@@ -64,7 +64,7 @@ BookReview _createReview({
 }
 
 void main() {
-  final service = const BookExportService();
+  const service = BookExportService();
 
   final book = _createBook(
     id: 1,

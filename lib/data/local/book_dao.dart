@@ -31,6 +31,10 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
 
   Future<bool> updateBook(BooksCompanion entry) => update(books).replace(entry);
 
+  Future<int> updateBookFields({required int bookId, required BooksCompanion entry}) {
+    return (update(books)..where((tbl) => tbl.id.equals(bookId))).write(entry);
+  }
+
   Future<void> softDeleteBook({required int bookId, required DateTime timestamp}) {
     return (update(books)..where((tbl) => tbl.id.equals(bookId))).write(
       BooksCompanion(

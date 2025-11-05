@@ -19,11 +19,19 @@ class SharedBookDetail {
 }
 
 class LoanDetail {
-  LoanDetail({required this.loan, required this.sharedBook, required this.book});
+  LoanDetail({
+    required this.loan,
+    required this.sharedBook,
+    required this.book,
+    this.borrower,
+    this.owner,
+  });
 
   final Loan loan;
   final SharedBook? sharedBook;
   final Book? book;
+  final LocalUser? borrower;
+  final LocalUser? owner;
 }
 
 @DriftAccessor(tables: [
@@ -172,6 +180,10 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
         .getSingleOrNull();
   }
 
+  Future<SharedBook?> findSharedBookById(int id) {
+    return (select(sharedBooks)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+  }
+
   Future<SharedBook?> findSharedBookByRemoteId(String remoteId) {
     return (select(sharedBooks)..where((tbl) => tbl.remoteId.equals(remoteId))).getSingleOrNull();
   }
@@ -208,9 +220,13 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
   }
 
   Stream<List<LoanDetail>> watchLoanDetailsForGroup(int groupId) {
+    final borrowers = alias(localUsers, 'borrowers');
+    final owners = alias(localUsers, 'owners');
     final query = select(loans).join([
       leftOuterJoin(sharedBooks, sharedBooks.id.equalsExp(loans.sharedBookId)),
       leftOuterJoin(books, books.id.equalsExp(sharedBooks.bookId)),
+      leftOuterJoin(borrowers, borrowers.id.equalsExp(loans.fromUserId)),
+      leftOuterJoin(owners, owners.id.equalsExp(loans.toUserId)),
     ])
       ..where(sharedBooks.groupId.equals(groupId) &
           (loans.isDeleted.equals(false) | loans.isDeleted.isNull()));
@@ -222,6 +238,8 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
               loan: row.readTable(loans),
               sharedBook: row.readTableOrNull(sharedBooks),
               book: row.readTableOrNull(books),
+              borrower: row.readTableOrNull(borrowers),
+              owner: row.readTableOrNull(owners),
             ),
           )
           .toList(),
@@ -238,7 +256,15 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
     return (select(loans)..where((tbl) => tbl.remoteId.equals(remoteId))).getSingleOrNull();
   }
 
+  Future<Loan?> findLoanById(int id) {
+    return (select(loans)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+  }
+
   Future<int> updateLoanFields({required int loanId, required LoansCompanion entry}) {
+    return (update(loans)..where((tbl) => tbl.id.equals(loanId))).write(entry);
+  }
+
+  Future<int> updateLoanStatus({required int loanId, required LoansCompanion entry}) {
     return (update(loans)..where((tbl) => tbl.id.equals(loanId))).write(entry);
   }
 

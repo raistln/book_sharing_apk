@@ -87,7 +87,7 @@ class BookRepository {
         uuid: _uuid.v4(),
         bookId: book.id,
         bookUuid: book.uuid,
-        authorUserId: Value(author.id),
+        authorUserId: author.id,
         authorRemoteId: author.remoteId != null
             ? Value(author.remoteId)
             : const Value.absent(),

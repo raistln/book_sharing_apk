@@ -185,6 +185,7 @@ class Loans extends Table {
       dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get dueDate => dateTime().nullable()();
   DateTimeColumn get returnedAt => dateTime().nullable()();
+  DateTimeColumn get cancelledAt => dateTime().nullable()();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();

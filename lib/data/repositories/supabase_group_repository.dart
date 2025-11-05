@@ -208,6 +208,9 @@ class SupabaseGroupSyncRepository {
             final returnedAtValue = remoteLoan.returnedAt != null
                 ? Value(remoteLoan.returnedAt)
                 : const Value<DateTime?>.absent();
+            final cancelledAtValue = remoteLoan.cancelledAt != null
+                ? Value(remoteLoan.cancelledAt)
+                : const Value<DateTime?>.absent();
             final loanUpdatedValue =
                 Value(remoteLoan.updatedAt ?? remoteLoan.createdAt);
 
@@ -222,6 +225,7 @@ class SupabaseGroupSyncRepository {
               startDate: Value(remoteLoan.startDate),
               dueDate: dueDateValue,
               returnedAt: returnedAtValue,
+              cancelledAt: cancelledAtValue,
               isDeleted: const Value(false),
               isDirty: const Value(false),
               syncedAt: Value(now),
@@ -248,6 +252,7 @@ class SupabaseGroupSyncRepository {
                   startDate: Value(remoteLoan.startDate),
                   dueDate: dueDateValue,
                   returnedAt: returnedAtValue,
+                  cancelledAt: cancelledAtValue,
                   isDeleted: const Value(false),
                   isDirty: const Value(false),
                   syncedAt: Value(now),

@@ -127,6 +127,7 @@ class SupabaseLoanRecord {
     required this.startDate,
     required this.dueDate,
     required this.returnedAt,
+    required this.cancelledAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -139,6 +140,7 @@ class SupabaseLoanRecord {
   final DateTime startDate;
   final DateTime? dueDate;
   final DateTime? returnedAt;
+  final DateTime? cancelledAt;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -155,6 +157,7 @@ class SupabaseLoanRecord {
       startDate: DateTime.parse(json['start_date'] as String),
       dueDate: tryParse(json['due_date'] as String?),
       returnedAt: tryParse(json['returned_at'] as String?),
+      cancelledAt: tryParse(json['cancelled_at'] as String?),
       createdAt:
           DateTime.parse((json['created_at'] ?? json['start_date']) as String),
       updatedAt: tryParse(json['updated_at'] as String?),
@@ -182,7 +185,7 @@ class SupabaseGroupService {
             'id,name,owner_id,created_at,'
             'group_members(id,user_id,role,created_at),'
             'shared_books(id,group_id,book_uuid,owner_id,visibility,is_available,created_at,updated_at,'
-            'loans(id,shared_book_id,from_user,to_user,status,start_date,due_date,returned_at,created_at,updated_at))',
+            'loans(id,shared_book_id,from_user,to_user,status,start_date,due_date,returned_at,cancelled_at,created_at,updated_at))',
       },
     );
 

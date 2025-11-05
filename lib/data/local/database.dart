@@ -59,7 +59,7 @@ class BookReviews extends Table {
       integer().references(Books, #id, onDelete: KeyAction.cascade)();
   TextColumn get bookUuid => text().withLength(min: 1, max: 36)();
 
-  IntColumn get authorUserId => integer().references(LocalUsers, #id).nullable()();
+  IntColumn get authorUserId => integer().references(LocalUsers, #id)();
   TextColumn get authorRemoteId => text().nullable()();
 
   IntColumn get rating =>
@@ -72,6 +72,11 @@ class BookReviews extends Table {
 
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column<Object>>>? get uniqueKeys => [
+        {bookId, authorUserId},
+      ];
 }
 
 @DriftDatabase(tables: [LocalUsers, Books, BookReviews])
@@ -81,7 +86,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -98,6 +103,9 @@ class AppDatabase extends _$AppDatabase {
 
             await m.createTable(localUsers);
             await m.createTable(books);
+            await m.createTable(bookReviews);
+          } else if (from < 4) {
+            await customStatement('DROP TABLE IF EXISTS book_reviews');
             await m.createTable(bookReviews);
           }
         },

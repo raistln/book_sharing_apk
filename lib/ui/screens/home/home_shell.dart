@@ -5,11 +5,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../data/local/database.dart';
 import '../../../providers/api_providers.dart';
 import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
+import '../../../services/book_export_service.dart';
 import '../../../services/cover_image_service_base.dart';
 import '../../../services/google_books_client.dart';
 import '../../../services/open_library_client.dart';
@@ -1060,7 +1062,12 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
                     'Añade tus libros para gestionarlos desde aquí.',
                     style: theme.textTheme.bodyMedium,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: _ExportButton(onExport: () => _handleExport()),
+                  ),
+                  const SizedBox(height: 16),
                   Expanded(
                     child: _EmptyLibraryState(
                       onAddBook: () => widget.onOpenForm(),
@@ -1080,6 +1087,11 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _ExportButton(onExport: () => _handleExport()),
+                ),
+                const SizedBox(height: 12),
                 Expanded(
                   child: ListView.separated(
                     itemCount: books.length,
@@ -1214,11 +1226,21 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
       return;
     }
 
+    final activeUser = await ref.read(userRepositoryProvider).getActiveUser();
+    if (activeUser == null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Crea un usuario antes de añadir reseñas.')),
+      );
+      return;
+    }
+
     try {
       await repository.addReview(
         book: book,
         rating: draft.rating,
         review: draft.review,
+        author: activeUser,
       );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1230,6 +1252,97 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
         SnackBar(content: Text('Error al guardar reseña: $err')),
       );
     }
+  }
+
+  Future<void> _handleExport() async {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final repository = ref.read(bookRepositoryProvider);
+      final exportService = ref.read(bookExportServiceProvider);
+
+      final books = await repository.fetchActiveBooks();
+      if (books.isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('No hay libros para exportar.')),
+        );
+        return;
+      }
+
+      final reviews = await repository.fetchActiveReviews();
+
+      if (!mounted) return;
+      final format = await showModalBottomSheet<BookExportFormat>(
+        context: context,
+        builder: (sheetContext) {
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.table_rows_outlined),
+                  title: const Text('Exportar como CSV'),
+                  onTap: () => Navigator.of(sheetContext).pop(BookExportFormat.csv),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.code),
+                  title: const Text('Exportar como JSON'),
+                  onTap: () => Navigator.of(sheetContext).pop(BookExportFormat.json),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.picture_as_pdf_outlined),
+                  title: const Text('Exportar como PDF'),
+                  onTap: () => Navigator.of(sheetContext).pop(BookExportFormat.pdf),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+
+      if (format == null) {
+        return;
+      }
+
+      final result = await exportService.export(
+        books: books,
+        reviews: reviews,
+        format: format,
+      );
+
+      final file = XFile.fromData(
+        result.bytes,
+        mimeType: result.mimeType,
+        name: result.fileName,
+      );
+
+      await Share.shareXFiles(
+        [file],
+        subject: 'Mi biblioteca exportada',
+        text: 'Te comparto mi biblioteca en formato ${format.name.toUpperCase()}.',
+      );
+    } catch (err) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('No se pudo exportar: $err')),
+      );
+    }
+  }
+}
+
+class _ExportButton extends StatelessWidget {
+  const _ExportButton({required this.onExport});
+
+  final VoidCallback onExport;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onExport,
+      icon: const Icon(Icons.file_upload_outlined),
+      label: const Text('Exportar biblioteca'),
+    );
   }
 }
 

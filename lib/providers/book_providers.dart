@@ -5,6 +5,7 @@ import '../data/local/database.dart';
 import '../data/local/user_dao.dart';
 import '../data/repositories/book_repository.dart';
 import '../data/repositories/user_repository.dart';
+import '../services/book_export_service.dart';
 import '../services/cover_image_service.dart';
 import '../services/supabase_config_service.dart';
 import '../services/supabase_user_service.dart';
@@ -70,4 +71,8 @@ final bookReviewsProvider =
     StreamProvider.autoDispose.family<List<BookReview>, int>((ref, bookId) {
   final repository = ref.watch(bookRepositoryProvider);
   return repository.watchReviews(bookId);
+});
+
+final bookExportServiceProvider = Provider<BookExportService>((ref) {
+  return const BookExportService();
 });

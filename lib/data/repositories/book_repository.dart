@@ -12,8 +12,12 @@ class BookRepository {
 
   Stream<List<Book>> watchAll() => _dao.watchActiveBooks();
 
+  Future<List<Book>> fetchActiveBooks() => _dao.getActiveBooks();
+
   Stream<List<BookReview>> watchReviews(int bookId) =>
       _dao.watchReviewsForBook(bookId);
+
+  Future<List<BookReview>> fetchActiveReviews() => _dao.getActiveReviews();
 
   Future<int> addBook({
     required String title,
@@ -51,21 +55,46 @@ class BookRepository {
     required Book book,
     required int rating,
     String? review,
-    LocalUser? author,
-  }) {
+    required LocalUser author,
+  }) async {
     final now = DateTime.now();
+
+    final existing = await _dao.findReviewForUser(
+      bookId: book.id,
+      authorUserId: author.id,
+    );
+
+    if (existing != null) {
+      await _dao.updateReview(
+        reviewId: existing.id,
+        entry: BookReviewsCompanion(
+          rating: Value(rating),
+          review: Value(review),
+          authorRemoteId: author.remoteId != null
+              ? Value(author.remoteId)
+              : const Value.absent(),
+          isDeleted: const Value(false),
+          isDirty: const Value(true),
+          syncedAt: const Value(null),
+          updatedAt: Value(now),
+        ),
+      );
+      return existing.id;
+    }
+
     return _dao.insertReview(
       BookReviewsCompanion.insert(
         uuid: _uuid.v4(),
         bookId: book.id,
         bookUuid: book.uuid,
+        authorUserId: Value(author.id),
+        authorRemoteId: author.remoteId != null
+            ? Value(author.remoteId)
+            : const Value.absent(),
         rating: rating,
         review: Value(review),
-        authorUserId:
-            author != null ? Value(author.id) : const Value.absent(),
-        authorRemoteId: author?.remoteId != null
-            ? Value(author!.remoteId)
-            : const Value.absent(),
+        isDirty: const Value(true),
+        isDeleted: const Value(false),
         createdAt: Value(now),
         updatedAt: Value(now),
       ),

@@ -8,25 +8,31 @@ class SupabaseGroupRecord {
   SupabaseGroupRecord({
     required this.id,
     required this.name,
+    required this.description,
     required this.ownerId,
     required this.createdAt,
     required this.members,
     required this.sharedBooks,
+    required this.invitations,
   });
 
   final String id;
   final String name;
+  final String? description;
   final String? ownerId;
   final DateTime createdAt;
   final List<SupabaseGroupMemberRecord> members;
   final List<SupabaseSharedBookRecord> sharedBooks;
+  final List<SupabaseGroupInvitationRecord> invitations;
 
   factory SupabaseGroupRecord.fromJson(Map<String, dynamic> json) {
     final membersJson = json['group_members'] as List<dynamic>?;
     final sharedBooksJson = json['shared_books'] as List<dynamic>?;
+    final invitationsJson = json['group_invitations'] as List<dynamic>?;
     return SupabaseGroupRecord(
       id: json['id'] as String,
       name: json['name'] as String,
+      description: json['description'] as String?,
       ownerId: json['owner_id'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       members: membersJson == null
@@ -40,6 +46,12 @@ class SupabaseGroupRecord {
           : sharedBooksJson
               .whereType<Map<String, dynamic>>()
               .map(SupabaseSharedBookRecord.fromJson)
+              .toList(growable: false),
+      invitations: invitationsJson == null
+          ? const []
+          : invitationsJson
+              .whereType<Map<String, dynamic>>()
+              .map(SupabaseGroupInvitationRecord.fromJson)
               .toList(growable: false),
     );
   }
@@ -165,6 +177,53 @@ class SupabaseLoanRecord {
   }
 }
 
+class SupabaseGroupInvitationRecord {
+  SupabaseGroupInvitationRecord({
+    required this.id,
+    required this.groupId,
+    required this.inviterId,
+    required this.acceptedUserId,
+    required this.role,
+    required this.code,
+    required this.status,
+    required this.expiresAt,
+    required this.respondedAt,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String groupId;
+  final String inviterId;
+  final String? acceptedUserId;
+  final String role;
+  final String code;
+  final String status;
+  final DateTime expiresAt;
+  final DateTime? respondedAt;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+
+  factory SupabaseGroupInvitationRecord.fromJson(Map<String, dynamic> json) {
+    DateTime? tryParse(String? value) =>
+        value != null ? DateTime.tryParse(value) : null;
+
+    return SupabaseGroupInvitationRecord(
+      id: json['id'] as String,
+      groupId: json['group_id'] as String,
+      inviterId: json['inviter_id'] as String,
+      acceptedUserId: json['accepted_user_id'] as String?,
+      role: (json['role'] as String?) ?? 'member',
+      code: json['code'] as String,
+      status: (json['status'] as String?) ?? 'pending',
+      expiresAt: DateTime.parse(json['expires_at'] as String),
+      respondedAt: tryParse(json['responded_at'] as String?),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: tryParse(json['updated_at'] as String?),
+    );
+  }
+}
+
 class SupabaseGroupService {
   SupabaseGroupService({
     http.Client? client,
@@ -182,10 +241,11 @@ class SupabaseGroupService {
     final uri = Uri.parse('${config.url}/rest/v1/groups').replace(
       queryParameters: {
         'select':
-            'id,name,owner_id,created_at,'
+            'id,name,description,owner_id,created_at,'
             'group_members(id,user_id,role,created_at),'
             'shared_books(id,group_id,book_uuid,owner_id,visibility,is_available,created_at,updated_at,'
-            'loans(id,shared_book_id,from_user,to_user,status,start_date,due_date,returned_at,cancelled_at,created_at,updated_at))',
+            'loans(id,shared_book_id,from_user,to_user,status,start_date,due_date,returned_at,cancelled_at,created_at,updated_at)),'
+            'group_invitations(id,group_id,inviter_id,accepted_user_id,role,code,status,expires_at,responded_at,created_at,updated_at)',
       },
     );
 

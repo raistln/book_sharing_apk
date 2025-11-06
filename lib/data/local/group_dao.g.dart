@@ -10,4 +10,6 @@ mixin _$GroupDaoMixin on DatabaseAccessor<AppDatabase> {
   $BooksTable get books => attachedDatabase.books;
   $SharedBooksTable get sharedBooks => attachedDatabase.sharedBooks;
   $LoansTable get loans => attachedDatabase.loans;
+  $GroupInvitationsTable get groupInvitations =>
+      attachedDatabase.groupInvitations;
 }

@@ -16,6 +16,8 @@ class UserRepository {
 
   Future<LocalUser?> getById(int id) => _dao.getById(id);
 
+  Future<List<LocalUser>> getActiveUsers() => _dao.getActiveUsers();
+
   Future<LocalUser> createUser({required String username}) async {
     final now = DateTime.now();
     return _dao.attachedDatabase.transaction(() async {

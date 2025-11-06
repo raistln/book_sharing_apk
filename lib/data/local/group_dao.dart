@@ -34,6 +34,18 @@ class LoanDetail {
   final LocalUser? owner;
 }
 
+class GroupInvitationDetail {
+  GroupInvitationDetail({
+    required this.invitation,
+    this.inviter,
+    this.acceptedUser,
+  });
+
+  final GroupInvitation invitation;
+  final LocalUser? inviter;
+  final LocalUser? acceptedUser;
+}
+
 @DriftAccessor(tables: [
   Groups,
   GroupMembers,
@@ -41,6 +53,7 @@ class LoanDetail {
   Loans,
   Books,
   LocalUsers,
+  GroupInvitations,
 ])
 class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
   GroupDao(super.db);
@@ -201,6 +214,76 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
   Future<void> softDeleteSharedBook({required int sharedBookId, required DateTime timestamp}) {
     return (update(sharedBooks)..where((tbl) => tbl.id.equals(sharedBookId))).write(
       SharedBooksCompanion(
+        isDeleted: const Value(true),
+        isDirty: const Value(true),
+        updatedAt: Value(timestamp),
+      ),
+    );
+  }
+
+  // Invitations ---------------------------------------------------------
+  Stream<List<GroupInvitation>> watchInvitationsForGroup(int groupId) {
+    return (select(groupInvitations)
+          ..where((tbl) =>
+              tbl.groupId.equals(groupId) &
+              (tbl.isDeleted.equals(false) | tbl.isDeleted.isNull())))
+        .watch();
+  }
+
+  Stream<List<GroupInvitationDetail>> watchInvitationDetailsForGroup(int groupId) {
+    final acceptedAlias = alias(localUsers, 'accepted_users');
+    final inviterAlias = alias(localUsers, 'inviter_users');
+    final joined = select(groupInvitations).join([
+      leftOuterJoin(inviterAlias, inviterAlias.id.equalsExp(groupInvitations.inviterUserId)),
+      leftOuterJoin(
+        acceptedAlias,
+        acceptedAlias.id.equalsExp(groupInvitations.acceptedUserId),
+      ),
+    ])
+      ..where(groupInvitations.groupId.equals(groupId) &
+          (groupInvitations.isDeleted.equals(false) | groupInvitations.isDeleted.isNull()));
+
+    return joined.watch().map(
+          (rows) => rows
+              .map(
+                (row) => GroupInvitationDetail(
+                  invitation: row.readTable(groupInvitations),
+                  inviter: row.readTableOrNull(inviterAlias),
+                  acceptedUser: row.readTableOrNull(acceptedAlias),
+                ),
+              )
+              .toList(),
+        );
+  }
+
+  Future<GroupInvitation?> findInvitationById(int id) {
+    return (select(groupInvitations)
+          ..where((tbl) => tbl.id.equals(id) &
+              (tbl.isDeleted.equals(false) | tbl.isDeleted.isNull())))
+        .getSingleOrNull();
+  }
+
+  Future<GroupInvitation?> findInvitationByRemoteId(String remoteId) {
+    return (select(groupInvitations)..where((tbl) => tbl.remoteId.equals(remoteId))).getSingleOrNull();
+  }
+
+  Future<GroupInvitation?> findInvitationByCode(String code) {
+    return (select(groupInvitations)
+          ..where((tbl) => tbl.code.equals(code) &
+              (tbl.isDeleted.equals(false) | tbl.isDeleted.isNull())))
+        .getSingleOrNull();
+  }
+
+  Future<int> insertInvitation(GroupInvitationsCompanion entry) =>
+      into(groupInvitations).insert(entry);
+
+  Future<int> updateInvitation({required int invitationId, required GroupInvitationsCompanion entry}) {
+    return (update(groupInvitations)..where((tbl) => tbl.id.equals(invitationId))).write(entry);
+  }
+
+  Future<void> softDeleteInvitation({required int invitationId, required DateTime timestamp}) {
+    return (update(groupInvitations)..where((tbl) => tbl.id.equals(invitationId))).write(
+      GroupInvitationsCompanion(
         isDeleted: const Value(true),
         isDirty: const Value(true),
         updatedAt: Value(timestamp),

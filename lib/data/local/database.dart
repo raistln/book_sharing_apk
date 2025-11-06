@@ -87,6 +87,7 @@ class Groups extends Table {
   TextColumn get remoteId => text().nullable()();
 
   TextColumn get name => text().withLength(min: 1, max: 128)();
+  TextColumn get description => text().nullable().withLength(min: 0, max: 512)();
 
   IntColumn get ownerUserId => integer().references(LocalUsers, #id).nullable()();
   TextColumn get ownerRemoteId => text().nullable()();
@@ -159,6 +160,42 @@ class SharedBooks extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+class GroupInvitations extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get groupId =>
+      integer().references(Groups, #id, onDelete: KeyAction.cascade)();
+  TextColumn get groupUuid => text().withLength(min: 1, max: 36)();
+
+  @ReferenceName('groupInvitationsSent')
+  IntColumn get inviterUserId => integer().references(LocalUsers, #id)();
+  TextColumn get inviterRemoteId => text().nullable()();
+
+  @ReferenceName('groupInvitationsAccepted')
+  IntColumn get acceptedUserId => integer().references(LocalUsers, #id).nullable()();
+  TextColumn get acceptedUserRemoteId => text().nullable()();
+
+  TextColumn get role =>
+      text().withDefault(const Constant('member')).withLength(min: 1, max: 32)();
+
+  TextColumn get code => text().withLength(min: 1, max: 64).unique()();
+  TextColumn get status =>
+      text().withDefault(const Constant('pending')).withLength(min: 1, max: 32)();
+
+  DateTimeColumn get expiresAt => dateTime()();
+  DateTimeColumn get respondedAt => dateTime().nullable()();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 class Loans extends Table {
   IntColumn get id => integer().autoIncrement()();
 
@@ -203,6 +240,7 @@ class Loans extends Table {
     Groups,
     GroupMembers,
     SharedBooks,
+    GroupInvitations,
     Loans,
   ],
 )
@@ -212,7 +250,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -240,6 +278,11 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(groupMembers);
             await m.createTable(sharedBooks);
             await m.createTable(loans);
+          }
+
+          if (from < 6) {
+            await m.addColumn(groups, groups.description);
+            await m.createTable(groupInvitations);
           }
         },
       );

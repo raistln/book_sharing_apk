@@ -56,7 +56,8 @@ create table if not exists book_reviews (
 create table if not exists groups (
   id uuid default uuid_generate_v4() primary key,
   name text not null,
-  owner_id uuid references auth.users(id) on delete cascade,
+  description text,
+  owner_id uuid references local_users(id) on delete set null,
   created_at timestamptz default now()
 );
 
@@ -68,6 +69,21 @@ create table if not exists group_members (
   role text default 'member',
   created_at timestamptz default now(),
   unique (group_id, user_id)
+);
+
+-- Group invitations
+create table if not exists group_invitations (
+  id uuid default uuid_generate_v4() primary key,
+  group_id uuid not null references groups(id) on delete cascade,
+  inviter_id uuid not null references local_users(id),
+  accepted_user_id uuid references local_users(id),
+  role text not null default 'member' check (role in ('member', 'admin')),
+  code uuid not null unique,
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'rejected', 'cancelled', 'expired')),
+  expires_at timestamptz not null,
+  responded_at timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
 -- Shared books

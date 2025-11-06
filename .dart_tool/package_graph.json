@@ -26,6 +26,7 @@
         "path",
         "path_provider",
         "pdf",
+        "qr_flutter",
         "share_plus",
         "sqlite3_flutter_libs",
         "uuid",
@@ -212,6 +213,14 @@
         "async",
         "http_parser",
         "meta"
+      ]
+    },
+    {
+      "name": "qr_flutter",
+      "version": "4.1.0",
+      "dependencies": [
+        "flutter",
+        "qr"
       ]
     },
     {
@@ -884,6 +893,13 @@
       ]
     },
     {
+      "name": "qr",
+      "version": "3.0.2",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
       "name": "url_launcher_platform_interface",
       "version": "2.3.2",
       "dependencies": [
@@ -1377,13 +1393,6 @@
       "version": "7.0.1",
       "dependencies": [
         "collection",
-        "meta"
-      ]
-    },
-    {
-      "name": "qr",
-      "version": "3.0.2",
-      "dependencies": [
         "meta"
       ]
     },

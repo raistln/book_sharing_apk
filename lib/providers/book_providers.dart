@@ -17,6 +17,8 @@ import '../services/sync_service.dart';
 import '../services/supabase_config_service.dart';
 import '../services/supabase_group_service.dart';
 import '../services/supabase_user_service.dart';
+import '../data/repositories/group_push_repository.dart';
+import '../services/group_push_controller.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -60,6 +62,12 @@ final groupLoanDetailsProvider = StreamProvider.autoDispose
     .family<List<LoanDetail>, int>((ref, groupId) {
   final dao = ref.watch(groupDaoProvider);
   return dao.watchLoanDetailsForGroup(groupId);
+});
+
+final groupInvitationDetailsProvider = StreamProvider.autoDispose
+    .family<List<GroupInvitationDetail>, int>((ref, groupId) {
+  final dao = ref.watch(groupDaoProvider);
+  return dao.watchInvitationDetailsForGroup(groupId);
 });
 
 final userDaoProvider = Provider<UserDao>((ref) {
@@ -116,6 +124,19 @@ final supabaseGroupServiceProvider = Provider<SupabaseGroupService>((ref) {
   return service;
 });
 
+final groupPushRepositoryProvider = Provider<GroupPushRepository>((ref) {
+  final groupDao = ref.watch(groupDaoProvider);
+  final userDao = ref.watch(userDaoProvider);
+  final configService = ref.watch(supabaseConfigServiceProvider);
+  final repository = GroupPushRepository(
+    groupDao: groupDao,
+    userDao: userDao,
+    configService: configService,
+  );
+  ref.onDispose(repository.dispose);
+  return repository;
+});
+
 final coverImageServiceProvider = Provider<CoverImageService>((ref) {
   return createCoverImageService();
 });
@@ -166,6 +187,16 @@ final loanControllerProvider =
   final syncController = ref.watch(groupSyncControllerProvider.notifier);
   return LoanController(
     loanRepository: repository,
+    groupSyncController: syncController,
+  );
+});
+
+final groupPushControllerProvider =
+    StateNotifierProvider<GroupPushController, GroupActionState>((ref) {
+  final repository = ref.watch(groupPushRepositoryProvider);
+  final syncController = ref.watch(groupSyncControllerProvider.notifier);
+  return GroupPushController(
+    groupPushRepository: repository,
     groupSyncController: syncController,
   );
 });

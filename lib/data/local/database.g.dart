@@ -1994,6 +1994,15 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
           GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 128),
       type: DriftSqlType.string,
       requiredDuringInsert: true);
+  static const VerificationMeta _descriptionMeta =
+      const VerificationMeta('description');
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+      'description', aliasedName, true,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 0, maxTextLength: 512),
+      type: DriftSqlType.string,
+      requiredDuringInsert: false);
   static const VerificationMeta _ownerUserIdMeta =
       const VerificationMeta('ownerUserId');
   @override
@@ -2057,6 +2066,7 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
         uuid,
         remoteId,
         name,
+        description,
         ownerUserId,
         ownerRemoteId,
         isDirty,
@@ -2093,6 +2103,12 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
           _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+          _descriptionMeta,
+          description.isAcceptableOrUnknown(
+              data['description']!, _descriptionMeta));
     }
     if (data.containsKey('owner_user_id')) {
       context.handle(
@@ -2143,6 +2159,8 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
           .read(DriftSqlType.string, data['${effectivePrefix}remote_id']),
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      description: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}description']),
       ownerUserId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}owner_user_id']),
       ownerRemoteId: attachedDatabase.typeMapping
@@ -2171,6 +2189,7 @@ class Group extends DataClass implements Insertable<Group> {
   final String uuid;
   final String? remoteId;
   final String name;
+  final String? description;
   final int? ownerUserId;
   final String? ownerRemoteId;
   final bool isDirty;
@@ -2183,6 +2202,7 @@ class Group extends DataClass implements Insertable<Group> {
       required this.uuid,
       this.remoteId,
       required this.name,
+      this.description,
       this.ownerUserId,
       this.ownerRemoteId,
       required this.isDirty,
@@ -2199,6 +2219,9 @@ class Group extends DataClass implements Insertable<Group> {
       map['remote_id'] = Variable<String>(remoteId);
     }
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
     if (!nullToAbsent || ownerUserId != null) {
       map['owner_user_id'] = Variable<int>(ownerUserId);
     }
@@ -2223,6 +2246,9 @@ class Group extends DataClass implements Insertable<Group> {
           ? const Value.absent()
           : Value(remoteId),
       name: Value(name),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
       ownerUserId: ownerUserId == null && nullToAbsent
           ? const Value.absent()
           : Value(ownerUserId),
@@ -2247,6 +2273,7 @@ class Group extends DataClass implements Insertable<Group> {
       uuid: serializer.fromJson<String>(json['uuid']),
       remoteId: serializer.fromJson<String?>(json['remoteId']),
       name: serializer.fromJson<String>(json['name']),
+      description: serializer.fromJson<String?>(json['description']),
       ownerUserId: serializer.fromJson<int?>(json['ownerUserId']),
       ownerRemoteId: serializer.fromJson<String?>(json['ownerRemoteId']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
@@ -2264,6 +2291,7 @@ class Group extends DataClass implements Insertable<Group> {
       'uuid': serializer.toJson<String>(uuid),
       'remoteId': serializer.toJson<String?>(remoteId),
       'name': serializer.toJson<String>(name),
+      'description': serializer.toJson<String?>(description),
       'ownerUserId': serializer.toJson<int?>(ownerUserId),
       'ownerRemoteId': serializer.toJson<String?>(ownerRemoteId),
       'isDirty': serializer.toJson<bool>(isDirty),
@@ -2279,6 +2307,7 @@ class Group extends DataClass implements Insertable<Group> {
           String? uuid,
           Value<String?> remoteId = const Value.absent(),
           String? name,
+          Value<String?> description = const Value.absent(),
           Value<int?> ownerUserId = const Value.absent(),
           Value<String?> ownerRemoteId = const Value.absent(),
           bool? isDirty,
@@ -2291,6 +2320,7 @@ class Group extends DataClass implements Insertable<Group> {
         uuid: uuid ?? this.uuid,
         remoteId: remoteId.present ? remoteId.value : this.remoteId,
         name: name ?? this.name,
+        description: description.present ? description.value : this.description,
         ownerUserId: ownerUserId.present ? ownerUserId.value : this.ownerUserId,
         ownerRemoteId:
             ownerRemoteId.present ? ownerRemoteId.value : this.ownerRemoteId,
@@ -2306,6 +2336,8 @@ class Group extends DataClass implements Insertable<Group> {
       uuid: data.uuid.present ? data.uuid.value : this.uuid,
       remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
       name: data.name.present ? data.name.value : this.name,
+      description:
+          data.description.present ? data.description.value : this.description,
       ownerUserId:
           data.ownerUserId.present ? data.ownerUserId.value : this.ownerUserId,
       ownerRemoteId: data.ownerRemoteId.present
@@ -2326,6 +2358,7 @@ class Group extends DataClass implements Insertable<Group> {
           ..write('uuid: $uuid, ')
           ..write('remoteId: $remoteId, ')
           ..write('name: $name, ')
+          ..write('description: $description, ')
           ..write('ownerUserId: $ownerUserId, ')
           ..write('ownerRemoteId: $ownerRemoteId, ')
           ..write('isDirty: $isDirty, ')
@@ -2338,8 +2371,19 @@ class Group extends DataClass implements Insertable<Group> {
   }
 
   @override
-  int get hashCode => Object.hash(id, uuid, remoteId, name, ownerUserId,
-      ownerRemoteId, isDirty, isDeleted, syncedAt, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+      id,
+      uuid,
+      remoteId,
+      name,
+      description,
+      ownerUserId,
+      ownerRemoteId,
+      isDirty,
+      isDeleted,
+      syncedAt,
+      createdAt,
+      updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2348,6 +2392,7 @@ class Group extends DataClass implements Insertable<Group> {
           other.uuid == this.uuid &&
           other.remoteId == this.remoteId &&
           other.name == this.name &&
+          other.description == this.description &&
           other.ownerUserId == this.ownerUserId &&
           other.ownerRemoteId == this.ownerRemoteId &&
           other.isDirty == this.isDirty &&
@@ -2362,6 +2407,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
   final Value<String> uuid;
   final Value<String?> remoteId;
   final Value<String> name;
+  final Value<String?> description;
   final Value<int?> ownerUserId;
   final Value<String?> ownerRemoteId;
   final Value<bool> isDirty;
@@ -2374,6 +2420,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.uuid = const Value.absent(),
     this.remoteId = const Value.absent(),
     this.name = const Value.absent(),
+    this.description = const Value.absent(),
     this.ownerUserId = const Value.absent(),
     this.ownerRemoteId = const Value.absent(),
     this.isDirty = const Value.absent(),
@@ -2387,6 +2434,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     required String uuid,
     this.remoteId = const Value.absent(),
     required String name,
+    this.description = const Value.absent(),
     this.ownerUserId = const Value.absent(),
     this.ownerRemoteId = const Value.absent(),
     this.isDirty = const Value.absent(),
@@ -2401,6 +2449,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     Expression<String>? uuid,
     Expression<String>? remoteId,
     Expression<String>? name,
+    Expression<String>? description,
     Expression<int>? ownerUserId,
     Expression<String>? ownerRemoteId,
     Expression<bool>? isDirty,
@@ -2414,6 +2463,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       if (uuid != null) 'uuid': uuid,
       if (remoteId != null) 'remote_id': remoteId,
       if (name != null) 'name': name,
+      if (description != null) 'description': description,
       if (ownerUserId != null) 'owner_user_id': ownerUserId,
       if (ownerRemoteId != null) 'owner_remote_id': ownerRemoteId,
       if (isDirty != null) 'is_dirty': isDirty,
@@ -2429,6 +2479,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       Value<String>? uuid,
       Value<String?>? remoteId,
       Value<String>? name,
+      Value<String?>? description,
       Value<int?>? ownerUserId,
       Value<String?>? ownerRemoteId,
       Value<bool>? isDirty,
@@ -2441,6 +2492,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       uuid: uuid ?? this.uuid,
       remoteId: remoteId ?? this.remoteId,
       name: name ?? this.name,
+      description: description ?? this.description,
       ownerUserId: ownerUserId ?? this.ownerUserId,
       ownerRemoteId: ownerRemoteId ?? this.ownerRemoteId,
       isDirty: isDirty ?? this.isDirty,
@@ -2465,6 +2517,9 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
     }
     if (ownerUserId.present) {
       map['owner_user_id'] = Variable<int>(ownerUserId.value);
@@ -2497,6 +2552,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
           ..write('uuid: $uuid, ')
           ..write('remoteId: $remoteId, ')
           ..write('name: $name, ')
+          ..write('description: $description, ')
           ..write('ownerUserId: $ownerUserId, ')
           ..write('ownerRemoteId: $ownerRemoteId, ')
           ..write('isDirty: $isDirty, ')
@@ -3930,6 +3986,913 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
   }
 }
 
+class $GroupInvitationsTable extends GroupInvitations
+    with TableInfo<$GroupInvitationsTable, GroupInvitation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GroupInvitationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+      'uuid', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _remoteIdMeta =
+      const VerificationMeta('remoteId');
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+      'remote_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _groupIdMeta =
+      const VerificationMeta('groupId');
+  @override
+  late final GeneratedColumn<int> groupId = GeneratedColumn<int>(
+      'group_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES "groups" (id) ON DELETE CASCADE'));
+  static const VerificationMeta _groupUuidMeta =
+      const VerificationMeta('groupUuid');
+  @override
+  late final GeneratedColumn<String> groupUuid = GeneratedColumn<String>(
+      'group_uuid', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _inviterUserIdMeta =
+      const VerificationMeta('inviterUserId');
+  @override
+  late final GeneratedColumn<int> inviterUserId = GeneratedColumn<int>(
+      'inviter_user_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES local_users (id)'));
+  static const VerificationMeta _inviterRemoteIdMeta =
+      const VerificationMeta('inviterRemoteId');
+  @override
+  late final GeneratedColumn<String> inviterRemoteId = GeneratedColumn<String>(
+      'inviter_remote_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _acceptedUserIdMeta =
+      const VerificationMeta('acceptedUserId');
+  @override
+  late final GeneratedColumn<int> acceptedUserId = GeneratedColumn<int>(
+      'accepted_user_id', aliasedName, true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES local_users (id)'));
+  static const VerificationMeta _acceptedUserRemoteIdMeta =
+      const VerificationMeta('acceptedUserRemoteId');
+  @override
+  late final GeneratedColumn<String> acceptedUserRemoteId =
+      GeneratedColumn<String>('accepted_user_remote_id', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+      'role', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 32),
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('member'));
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+      'code', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 64),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 32),
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('pending'));
+  static const VerificationMeta _expiresAtMeta =
+      const VerificationMeta('expiresAt');
+  @override
+  late final GeneratedColumn<DateTime> expiresAt = GeneratedColumn<DateTime>(
+      'expires_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _respondedAtMeta =
+      const VerificationMeta('respondedAt');
+  @override
+  late final GeneratedColumn<DateTime> respondedAt = GeneratedColumn<DateTime>(
+      'responded_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _isDirtyMeta =
+      const VerificationMeta('isDirty');
+  @override
+  late final GeneratedColumn<bool> isDirty = GeneratedColumn<bool>(
+      'is_dirty', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_dirty" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _isDeletedMeta =
+      const VerificationMeta('isDeleted');
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+      'is_deleted', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_deleted" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _syncedAtMeta =
+      const VerificationMeta('syncedAt');
+  @override
+  late final GeneratedColumn<DateTime> syncedAt = GeneratedColumn<DateTime>(
+      'synced_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        uuid,
+        remoteId,
+        groupId,
+        groupUuid,
+        inviterUserId,
+        inviterRemoteId,
+        acceptedUserId,
+        acceptedUserRemoteId,
+        role,
+        code,
+        status,
+        expiresAt,
+        respondedAt,
+        isDirty,
+        isDeleted,
+        syncedAt,
+        createdAt,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'group_invitations';
+  @override
+  VerificationContext validateIntegrity(Insertable<GroupInvitation> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+          _uuidMeta, uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta));
+    } else if (isInserting) {
+      context.missing(_uuidMeta);
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(_remoteIdMeta,
+          remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta));
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(_groupIdMeta,
+          groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta));
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('group_uuid')) {
+      context.handle(_groupUuidMeta,
+          groupUuid.isAcceptableOrUnknown(data['group_uuid']!, _groupUuidMeta));
+    } else if (isInserting) {
+      context.missing(_groupUuidMeta);
+    }
+    if (data.containsKey('inviter_user_id')) {
+      context.handle(
+          _inviterUserIdMeta,
+          inviterUserId.isAcceptableOrUnknown(
+              data['inviter_user_id']!, _inviterUserIdMeta));
+    } else if (isInserting) {
+      context.missing(_inviterUserIdMeta);
+    }
+    if (data.containsKey('inviter_remote_id')) {
+      context.handle(
+          _inviterRemoteIdMeta,
+          inviterRemoteId.isAcceptableOrUnknown(
+              data['inviter_remote_id']!, _inviterRemoteIdMeta));
+    }
+    if (data.containsKey('accepted_user_id')) {
+      context.handle(
+          _acceptedUserIdMeta,
+          acceptedUserId.isAcceptableOrUnknown(
+              data['accepted_user_id']!, _acceptedUserIdMeta));
+    }
+    if (data.containsKey('accepted_user_remote_id')) {
+      context.handle(
+          _acceptedUserRemoteIdMeta,
+          acceptedUserRemoteId.isAcceptableOrUnknown(
+              data['accepted_user_remote_id']!, _acceptedUserRemoteIdMeta));
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+          _roleMeta, role.isAcceptableOrUnknown(data['role']!, _roleMeta));
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+          _codeMeta, code.isAcceptableOrUnknown(data['code']!, _codeMeta));
+    } else if (isInserting) {
+      context.missing(_codeMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    }
+    if (data.containsKey('expires_at')) {
+      context.handle(_expiresAtMeta,
+          expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta));
+    } else if (isInserting) {
+      context.missing(_expiresAtMeta);
+    }
+    if (data.containsKey('responded_at')) {
+      context.handle(
+          _respondedAtMeta,
+          respondedAt.isAcceptableOrUnknown(
+              data['responded_at']!, _respondedAtMeta));
+    }
+    if (data.containsKey('is_dirty')) {
+      context.handle(_isDirtyMeta,
+          isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(_isDeletedMeta,
+          isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta));
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(_syncedAtMeta,
+          syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GroupInvitation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GroupInvitation(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      uuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
+      remoteId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}remote_id']),
+      groupId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}group_id'])!,
+      groupUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}group_uuid'])!,
+      inviterUserId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}inviter_user_id'])!,
+      inviterRemoteId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}inviter_remote_id']),
+      acceptedUserId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}accepted_user_id']),
+      acceptedUserRemoteId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}accepted_user_remote_id']),
+      role: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}role'])!,
+      code: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}code'])!,
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      expiresAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}expires_at'])!,
+      respondedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}responded_at']),
+      isDirty: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
+      isDeleted: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_deleted'])!,
+      syncedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}synced_at']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $GroupInvitationsTable createAlias(String alias) {
+    return $GroupInvitationsTable(attachedDatabase, alias);
+  }
+}
+
+class GroupInvitation extends DataClass implements Insertable<GroupInvitation> {
+  final int id;
+  final String uuid;
+  final String? remoteId;
+  final int groupId;
+  final String groupUuid;
+  final int inviterUserId;
+  final String? inviterRemoteId;
+  final int? acceptedUserId;
+  final String? acceptedUserRemoteId;
+  final String role;
+  final String code;
+  final String status;
+  final DateTime expiresAt;
+  final DateTime? respondedAt;
+  final bool isDirty;
+  final bool isDeleted;
+  final DateTime? syncedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const GroupInvitation(
+      {required this.id,
+      required this.uuid,
+      this.remoteId,
+      required this.groupId,
+      required this.groupUuid,
+      required this.inviterUserId,
+      this.inviterRemoteId,
+      this.acceptedUserId,
+      this.acceptedUserRemoteId,
+      required this.role,
+      required this.code,
+      required this.status,
+      required this.expiresAt,
+      this.respondedAt,
+      required this.isDirty,
+      required this.isDeleted,
+      this.syncedAt,
+      required this.createdAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    map['group_id'] = Variable<int>(groupId);
+    map['group_uuid'] = Variable<String>(groupUuid);
+    map['inviter_user_id'] = Variable<int>(inviterUserId);
+    if (!nullToAbsent || inviterRemoteId != null) {
+      map['inviter_remote_id'] = Variable<String>(inviterRemoteId);
+    }
+    if (!nullToAbsent || acceptedUserId != null) {
+      map['accepted_user_id'] = Variable<int>(acceptedUserId);
+    }
+    if (!nullToAbsent || acceptedUserRemoteId != null) {
+      map['accepted_user_remote_id'] = Variable<String>(acceptedUserRemoteId);
+    }
+    map['role'] = Variable<String>(role);
+    map['code'] = Variable<String>(code);
+    map['status'] = Variable<String>(status);
+    map['expires_at'] = Variable<DateTime>(expiresAt);
+    if (!nullToAbsent || respondedAt != null) {
+      map['responded_at'] = Variable<DateTime>(respondedAt);
+    }
+    map['is_dirty'] = Variable<bool>(isDirty);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<DateTime>(syncedAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  GroupInvitationsCompanion toCompanion(bool nullToAbsent) {
+    return GroupInvitationsCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+      groupId: Value(groupId),
+      groupUuid: Value(groupUuid),
+      inviterUserId: Value(inviterUserId),
+      inviterRemoteId: inviterRemoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(inviterRemoteId),
+      acceptedUserId: acceptedUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(acceptedUserId),
+      acceptedUserRemoteId: acceptedUserRemoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(acceptedUserRemoteId),
+      role: Value(role),
+      code: Value(code),
+      status: Value(status),
+      expiresAt: Value(expiresAt),
+      respondedAt: respondedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(respondedAt),
+      isDirty: Value(isDirty),
+      isDeleted: Value(isDeleted),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory GroupInvitation.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GroupInvitation(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+      groupId: serializer.fromJson<int>(json['groupId']),
+      groupUuid: serializer.fromJson<String>(json['groupUuid']),
+      inviterUserId: serializer.fromJson<int>(json['inviterUserId']),
+      inviterRemoteId: serializer.fromJson<String?>(json['inviterRemoteId']),
+      acceptedUserId: serializer.fromJson<int?>(json['acceptedUserId']),
+      acceptedUserRemoteId:
+          serializer.fromJson<String?>(json['acceptedUserRemoteId']),
+      role: serializer.fromJson<String>(json['role']),
+      code: serializer.fromJson<String>(json['code']),
+      status: serializer.fromJson<String>(json['status']),
+      expiresAt: serializer.fromJson<DateTime>(json['expiresAt']),
+      respondedAt: serializer.fromJson<DateTime?>(json['respondedAt']),
+      isDirty: serializer.fromJson<bool>(json['isDirty']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'remoteId': serializer.toJson<String?>(remoteId),
+      'groupId': serializer.toJson<int>(groupId),
+      'groupUuid': serializer.toJson<String>(groupUuid),
+      'inviterUserId': serializer.toJson<int>(inviterUserId),
+      'inviterRemoteId': serializer.toJson<String?>(inviterRemoteId),
+      'acceptedUserId': serializer.toJson<int?>(acceptedUserId),
+      'acceptedUserRemoteId': serializer.toJson<String?>(acceptedUserRemoteId),
+      'role': serializer.toJson<String>(role),
+      'code': serializer.toJson<String>(code),
+      'status': serializer.toJson<String>(status),
+      'expiresAt': serializer.toJson<DateTime>(expiresAt),
+      'respondedAt': serializer.toJson<DateTime?>(respondedAt),
+      'isDirty': serializer.toJson<bool>(isDirty),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'syncedAt': serializer.toJson<DateTime?>(syncedAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  GroupInvitation copyWith(
+          {int? id,
+          String? uuid,
+          Value<String?> remoteId = const Value.absent(),
+          int? groupId,
+          String? groupUuid,
+          int? inviterUserId,
+          Value<String?> inviterRemoteId = const Value.absent(),
+          Value<int?> acceptedUserId = const Value.absent(),
+          Value<String?> acceptedUserRemoteId = const Value.absent(),
+          String? role,
+          String? code,
+          String? status,
+          DateTime? expiresAt,
+          Value<DateTime?> respondedAt = const Value.absent(),
+          bool? isDirty,
+          bool? isDeleted,
+          Value<DateTime?> syncedAt = const Value.absent(),
+          DateTime? createdAt,
+          DateTime? updatedAt}) =>
+      GroupInvitation(
+        id: id ?? this.id,
+        uuid: uuid ?? this.uuid,
+        remoteId: remoteId.present ? remoteId.value : this.remoteId,
+        groupId: groupId ?? this.groupId,
+        groupUuid: groupUuid ?? this.groupUuid,
+        inviterUserId: inviterUserId ?? this.inviterUserId,
+        inviterRemoteId: inviterRemoteId.present
+            ? inviterRemoteId.value
+            : this.inviterRemoteId,
+        acceptedUserId:
+            acceptedUserId.present ? acceptedUserId.value : this.acceptedUserId,
+        acceptedUserRemoteId: acceptedUserRemoteId.present
+            ? acceptedUserRemoteId.value
+            : this.acceptedUserRemoteId,
+        role: role ?? this.role,
+        code: code ?? this.code,
+        status: status ?? this.status,
+        expiresAt: expiresAt ?? this.expiresAt,
+        respondedAt: respondedAt.present ? respondedAt.value : this.respondedAt,
+        isDirty: isDirty ?? this.isDirty,
+        isDeleted: isDeleted ?? this.isDeleted,
+        syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  GroupInvitation copyWithCompanion(GroupInvitationsCompanion data) {
+    return GroupInvitation(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      groupUuid: data.groupUuid.present ? data.groupUuid.value : this.groupUuid,
+      inviterUserId: data.inviterUserId.present
+          ? data.inviterUserId.value
+          : this.inviterUserId,
+      inviterRemoteId: data.inviterRemoteId.present
+          ? data.inviterRemoteId.value
+          : this.inviterRemoteId,
+      acceptedUserId: data.acceptedUserId.present
+          ? data.acceptedUserId.value
+          : this.acceptedUserId,
+      acceptedUserRemoteId: data.acceptedUserRemoteId.present
+          ? data.acceptedUserRemoteId.value
+          : this.acceptedUserRemoteId,
+      role: data.role.present ? data.role.value : this.role,
+      code: data.code.present ? data.code.value : this.code,
+      status: data.status.present ? data.status.value : this.status,
+      expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
+      respondedAt:
+          data.respondedAt.present ? data.respondedAt.value : this.respondedAt,
+      isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GroupInvitation(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('groupId: $groupId, ')
+          ..write('groupUuid: $groupUuid, ')
+          ..write('inviterUserId: $inviterUserId, ')
+          ..write('inviterRemoteId: $inviterRemoteId, ')
+          ..write('acceptedUserId: $acceptedUserId, ')
+          ..write('acceptedUserRemoteId: $acceptedUserRemoteId, ')
+          ..write('role: $role, ')
+          ..write('code: $code, ')
+          ..write('status: $status, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('respondedAt: $respondedAt, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      uuid,
+      remoteId,
+      groupId,
+      groupUuid,
+      inviterUserId,
+      inviterRemoteId,
+      acceptedUserId,
+      acceptedUserRemoteId,
+      role,
+      code,
+      status,
+      expiresAt,
+      respondedAt,
+      isDirty,
+      isDeleted,
+      syncedAt,
+      createdAt,
+      updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GroupInvitation &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.remoteId == this.remoteId &&
+          other.groupId == this.groupId &&
+          other.groupUuid == this.groupUuid &&
+          other.inviterUserId == this.inviterUserId &&
+          other.inviterRemoteId == this.inviterRemoteId &&
+          other.acceptedUserId == this.acceptedUserId &&
+          other.acceptedUserRemoteId == this.acceptedUserRemoteId &&
+          other.role == this.role &&
+          other.code == this.code &&
+          other.status == this.status &&
+          other.expiresAt == this.expiresAt &&
+          other.respondedAt == this.respondedAt &&
+          other.isDirty == this.isDirty &&
+          other.isDeleted == this.isDeleted &&
+          other.syncedAt == this.syncedAt &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class GroupInvitationsCompanion extends UpdateCompanion<GroupInvitation> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<String?> remoteId;
+  final Value<int> groupId;
+  final Value<String> groupUuid;
+  final Value<int> inviterUserId;
+  final Value<String?> inviterRemoteId;
+  final Value<int?> acceptedUserId;
+  final Value<String?> acceptedUserRemoteId;
+  final Value<String> role;
+  final Value<String> code;
+  final Value<String> status;
+  final Value<DateTime> expiresAt;
+  final Value<DateTime?> respondedAt;
+  final Value<bool> isDirty;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> syncedAt;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const GroupInvitationsCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.groupUuid = const Value.absent(),
+    this.inviterUserId = const Value.absent(),
+    this.inviterRemoteId = const Value.absent(),
+    this.acceptedUserId = const Value.absent(),
+    this.acceptedUserRemoteId = const Value.absent(),
+    this.role = const Value.absent(),
+    this.code = const Value.absent(),
+    this.status = const Value.absent(),
+    this.expiresAt = const Value.absent(),
+    this.respondedAt = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  GroupInvitationsCompanion.insert({
+    this.id = const Value.absent(),
+    required String uuid,
+    this.remoteId = const Value.absent(),
+    required int groupId,
+    required String groupUuid,
+    required int inviterUserId,
+    this.inviterRemoteId = const Value.absent(),
+    this.acceptedUserId = const Value.absent(),
+    this.acceptedUserRemoteId = const Value.absent(),
+    this.role = const Value.absent(),
+    required String code,
+    this.status = const Value.absent(),
+    required DateTime expiresAt,
+    this.respondedAt = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  })  : uuid = Value(uuid),
+        groupId = Value(groupId),
+        groupUuid = Value(groupUuid),
+        inviterUserId = Value(inviterUserId),
+        code = Value(code),
+        expiresAt = Value(expiresAt);
+  static Insertable<GroupInvitation> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<String>? remoteId,
+    Expression<int>? groupId,
+    Expression<String>? groupUuid,
+    Expression<int>? inviterUserId,
+    Expression<String>? inviterRemoteId,
+    Expression<int>? acceptedUserId,
+    Expression<String>? acceptedUserRemoteId,
+    Expression<String>? role,
+    Expression<String>? code,
+    Expression<String>? status,
+    Expression<DateTime>? expiresAt,
+    Expression<DateTime>? respondedAt,
+    Expression<bool>? isDirty,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? syncedAt,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (groupId != null) 'group_id': groupId,
+      if (groupUuid != null) 'group_uuid': groupUuid,
+      if (inviterUserId != null) 'inviter_user_id': inviterUserId,
+      if (inviterRemoteId != null) 'inviter_remote_id': inviterRemoteId,
+      if (acceptedUserId != null) 'accepted_user_id': acceptedUserId,
+      if (acceptedUserRemoteId != null)
+        'accepted_user_remote_id': acceptedUserRemoteId,
+      if (role != null) 'role': role,
+      if (code != null) 'code': code,
+      if (status != null) 'status': status,
+      if (expiresAt != null) 'expires_at': expiresAt,
+      if (respondedAt != null) 'responded_at': respondedAt,
+      if (isDirty != null) 'is_dirty': isDirty,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  GroupInvitationsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? uuid,
+      Value<String?>? remoteId,
+      Value<int>? groupId,
+      Value<String>? groupUuid,
+      Value<int>? inviterUserId,
+      Value<String?>? inviterRemoteId,
+      Value<int?>? acceptedUserId,
+      Value<String?>? acceptedUserRemoteId,
+      Value<String>? role,
+      Value<String>? code,
+      Value<String>? status,
+      Value<DateTime>? expiresAt,
+      Value<DateTime?>? respondedAt,
+      Value<bool>? isDirty,
+      Value<bool>? isDeleted,
+      Value<DateTime?>? syncedAt,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt}) {
+    return GroupInvitationsCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      remoteId: remoteId ?? this.remoteId,
+      groupId: groupId ?? this.groupId,
+      groupUuid: groupUuid ?? this.groupUuid,
+      inviterUserId: inviterUserId ?? this.inviterUserId,
+      inviterRemoteId: inviterRemoteId ?? this.inviterRemoteId,
+      acceptedUserId: acceptedUserId ?? this.acceptedUserId,
+      acceptedUserRemoteId: acceptedUserRemoteId ?? this.acceptedUserRemoteId,
+      role: role ?? this.role,
+      code: code ?? this.code,
+      status: status ?? this.status,
+      expiresAt: expiresAt ?? this.expiresAt,
+      respondedAt: respondedAt ?? this.respondedAt,
+      isDirty: isDirty ?? this.isDirty,
+      isDeleted: isDeleted ?? this.isDeleted,
+      syncedAt: syncedAt ?? this.syncedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<int>(groupId.value);
+    }
+    if (groupUuid.present) {
+      map['group_uuid'] = Variable<String>(groupUuid.value);
+    }
+    if (inviterUserId.present) {
+      map['inviter_user_id'] = Variable<int>(inviterUserId.value);
+    }
+    if (inviterRemoteId.present) {
+      map['inviter_remote_id'] = Variable<String>(inviterRemoteId.value);
+    }
+    if (acceptedUserId.present) {
+      map['accepted_user_id'] = Variable<int>(acceptedUserId.value);
+    }
+    if (acceptedUserRemoteId.present) {
+      map['accepted_user_remote_id'] =
+          Variable<String>(acceptedUserRemoteId.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (expiresAt.present) {
+      map['expires_at'] = Variable<DateTime>(expiresAt.value);
+    }
+    if (respondedAt.present) {
+      map['responded_at'] = Variable<DateTime>(respondedAt.value);
+    }
+    if (isDirty.present) {
+      map['is_dirty'] = Variable<bool>(isDirty.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<DateTime>(syncedAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GroupInvitationsCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('groupId: $groupId, ')
+          ..write('groupUuid: $groupUuid, ')
+          ..write('inviterUserId: $inviterUserId, ')
+          ..write('inviterRemoteId: $inviterRemoteId, ')
+          ..write('acceptedUserId: $acceptedUserId, ')
+          ..write('acceptedUserRemoteId: $acceptedUserRemoteId, ')
+          ..write('role: $role, ')
+          ..write('code: $code, ')
+          ..write('status: $status, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('respondedAt: $respondedAt, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -4335,10 +5298,10 @@ class Loan extends DataClass implements Insertable<Loan> {
       map['due_date'] = Variable<DateTime>(dueDate);
     }
     if (!nullToAbsent || returnedAt != null) {
-      map['returned_at'] = Variable<DateTime>(returnedAt!);
+      map['returned_at'] = Variable<DateTime>(returnedAt);
     }
     if (!nullToAbsent || cancelledAt != null) {
-      map['cancelled_at'] = Variable<DateTime>(cancelledAt!);
+      map['cancelled_at'] = Variable<DateTime>(cancelledAt);
     }
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
@@ -4474,8 +5437,7 @@ class Loan extends DataClass implements Insertable<Loan> {
         startDate: startDate ?? this.startDate,
         dueDate: dueDate.present ? dueDate.value : this.dueDate,
         returnedAt: returnedAt.present ? returnedAt.value : this.returnedAt,
-        cancelledAt:
-            cancelledAt.present ? cancelledAt.value : this.cancelledAt,
+        cancelledAt: cancelledAt.present ? cancelledAt.value : this.cancelledAt,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -4532,6 +5494,7 @@ class Loan extends DataClass implements Insertable<Loan> {
           ..write('startDate: $startDate, ')
           ..write('dueDate: $dueDate, ')
           ..write('returnedAt: $returnedAt, ')
+          ..write('cancelledAt: $cancelledAt, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -4556,6 +5519,7 @@ class Loan extends DataClass implements Insertable<Loan> {
       startDate,
       dueDate,
       returnedAt,
+      cancelledAt,
       isDirty,
       isDeleted,
       syncedAt,
@@ -4578,6 +5542,7 @@ class Loan extends DataClass implements Insertable<Loan> {
           other.startDate == this.startDate &&
           other.dueDate == this.dueDate &&
           other.returnedAt == this.returnedAt &&
+          other.cancelledAt == this.cancelledAt &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -4780,6 +5745,9 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     if (returnedAt.present) {
       map['returned_at'] = Variable<DateTime>(returnedAt.value);
     }
+    if (cancelledAt.present) {
+      map['cancelled_at'] = Variable<DateTime>(cancelledAt.value);
+    }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
     }
@@ -4814,6 +5782,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
           ..write('startDate: $startDate, ')
           ..write('dueDate: $dueDate, ')
           ..write('returnedAt: $returnedAt, ')
+          ..write('cancelledAt: $cancelledAt, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -4833,6 +5802,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $GroupsTable groups = $GroupsTable(this);
   late final $GroupMembersTable groupMembers = $GroupMembersTable(this);
   late final $SharedBooksTable sharedBooks = $SharedBooksTable(this);
+  late final $GroupInvitationsTable groupInvitations =
+      $GroupInvitationsTable(this);
   late final $LoansTable loans = $LoansTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -4845,6 +5816,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         groups,
         groupMembers,
         sharedBooks,
+        groupInvitations,
         loans
       ];
   @override
@@ -4876,6 +5848,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
                 limitUpdateKind: UpdateKind.delete),
             result: [
               TableUpdate('shared_books', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('groups',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('group_invitations', kind: UpdateKind.delete),
             ],
           ),
           WritePropagation(
@@ -4987,6 +5966,40 @@ final class $$LocalUsersTableReferences
         .filter((f) => f.ownerUserId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_sharedBooksOwnedTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$GroupInvitationsTable, List<GroupInvitation>>
+      _groupInvitationsSentTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.groupInvitations,
+              aliasName: $_aliasNameGenerator(
+                  db.localUsers.id, db.groupInvitations.inviterUserId));
+
+  $$GroupInvitationsTableProcessedTableManager get groupInvitationsSent {
+    final manager = $$GroupInvitationsTableTableManager(
+            $_db, $_db.groupInvitations)
+        .filter((f) => f.inviterUserId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_groupInvitationsSentTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$GroupInvitationsTable, List<GroupInvitation>>
+      _groupInvitationsAcceptedTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.groupInvitations,
+              aliasName: $_aliasNameGenerator(
+                  db.localUsers.id, db.groupInvitations.acceptedUserId));
+
+  $$GroupInvitationsTableProcessedTableManager get groupInvitationsAccepted {
+    final manager = $$GroupInvitationsTableTableManager(
+            $_db, $_db.groupInvitations)
+        .filter((f) => f.acceptedUserId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_groupInvitationsAcceptedTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -5154,6 +6167,48 @@ class $$LocalUsersTableFilterComposer
             $$SharedBooksTableFilterComposer(
               $db: $db,
               $table: $db.sharedBooks,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> groupInvitationsSent(
+      Expression<bool> Function($$GroupInvitationsTableFilterComposer f) f) {
+    final $$GroupInvitationsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.groupInvitations,
+        getReferencedColumn: (t) => t.inviterUserId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$GroupInvitationsTableFilterComposer(
+              $db: $db,
+              $table: $db.groupInvitations,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> groupInvitationsAccepted(
+      Expression<bool> Function($$GroupInvitationsTableFilterComposer f) f) {
+    final $$GroupInvitationsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.groupInvitations,
+        getReferencedColumn: (t) => t.acceptedUserId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$GroupInvitationsTableFilterComposer(
+              $db: $db,
+              $table: $db.groupInvitations,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -5383,6 +6438,48 @@ class $$LocalUsersTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> groupInvitationsSent<T extends Object>(
+      Expression<T> Function($$GroupInvitationsTableAnnotationComposer a) f) {
+    final $$GroupInvitationsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.groupInvitations,
+        getReferencedColumn: (t) => t.inviterUserId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$GroupInvitationsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.groupInvitations,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> groupInvitationsAccepted<T extends Object>(
+      Expression<T> Function($$GroupInvitationsTableAnnotationComposer a) f) {
+    final $$GroupInvitationsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.groupInvitations,
+        getReferencedColumn: (t) => t.acceptedUserId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$GroupInvitationsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.groupInvitations,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
   Expression<T> loansRequested<T extends Object>(
       Expression<T> Function($$LoansTableAnnotationComposer a) f) {
     final $$LoansTableAnnotationComposer composer = $composerBuilder(
@@ -5443,6 +6540,8 @@ class $$LocalUsersTableTableManager extends RootTableManager<
         bool groupsRefs,
         bool groupMemberships,
         bool sharedBooksOwned,
+        bool groupInvitationsSent,
+        bool groupInvitationsAccepted,
         bool loansRequested,
         bool loansReceived})> {
   $$LocalUsersTableTableManager(_$AppDatabase db, $LocalUsersTable table)
@@ -5511,6 +6610,8 @@ class $$LocalUsersTableTableManager extends RootTableManager<
               groupsRefs = false,
               groupMemberships = false,
               sharedBooksOwned = false,
+              groupInvitationsSent = false,
+              groupInvitationsAccepted = false,
               loansRequested = false,
               loansReceived = false}) {
             return PrefetchHooks(
@@ -5521,6 +6622,8 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                 if (groupsRefs) db.groups,
                 if (groupMemberships) db.groupMembers,
                 if (sharedBooksOwned) db.sharedBooks,
+                if (groupInvitationsSent) db.groupInvitations,
+                if (groupInvitationsAccepted) db.groupInvitations,
                 if (loansRequested) db.loans,
                 if (loansReceived) db.loans
               ],
@@ -5592,6 +6695,32 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.ownerUserId == item.id),
                         typedResults: items),
+                  if (groupInvitationsSent)
+                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
+                            GroupInvitation>(
+                        currentTable: table,
+                        referencedTable: $$LocalUsersTableReferences
+                            ._groupInvitationsSentTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LocalUsersTableReferences(db, table, p0)
+                                .groupInvitationsSent,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.inviterUserId == item.id),
+                        typedResults: items),
+                  if (groupInvitationsAccepted)
+                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
+                            GroupInvitation>(
+                        currentTable: table,
+                        referencedTable: $$LocalUsersTableReferences
+                            ._groupInvitationsAcceptedTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LocalUsersTableReferences(db, table, p0)
+                                .groupInvitationsAccepted,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.acceptedUserId == item.id),
+                        typedResults: items),
                   if (loansRequested)
                     await $_getPrefetchedData<LocalUser, $LocalUsersTable,
                             Loan>(
@@ -5642,6 +6771,8 @@ typedef $$LocalUsersTableProcessedTableManager = ProcessedTableManager<
         bool groupsRefs,
         bool groupMemberships,
         bool sharedBooksOwned,
+        bool groupInvitationsSent,
+        bool groupInvitationsAccepted,
         bool loansRequested,
         bool loansReceived})>;
 typedef $$BooksTableCreateCompanionBuilder = BooksCompanion Function({
@@ -6720,6 +7851,7 @@ typedef $$GroupsTableCreateCompanionBuilder = GroupsCompanion Function({
   required String uuid,
   Value<String?> remoteId,
   required String name,
+  Value<String?> description,
   Value<int?> ownerUserId,
   Value<String?> ownerRemoteId,
   Value<bool> isDirty,
@@ -6733,6 +7865,7 @@ typedef $$GroupsTableUpdateCompanionBuilder = GroupsCompanion Function({
   Value<String> uuid,
   Value<String?> remoteId,
   Value<String> name,
+  Value<String?> description,
   Value<int?> ownerUserId,
   Value<String?> ownerRemoteId,
   Value<bool> isDirty,
@@ -6790,6 +7923,23 @@ final class $$GroupsTableReferences
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
+
+  static MultiTypedResultKey<$GroupInvitationsTable, List<GroupInvitation>>
+      _groupInvitationsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.groupInvitations,
+              aliasName: $_aliasNameGenerator(
+                  db.groups.id, db.groupInvitations.groupId));
+
+  $$GroupInvitationsTableProcessedTableManager get groupInvitationsRefs {
+    final manager =
+        $$GroupInvitationsTableTableManager($_db, $_db.groupInvitations)
+            .filter((f) => f.groupId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_groupInvitationsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
 }
 
 class $$GroupsTableFilterComposer
@@ -6812,6 +7962,9 @@ class $$GroupsTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get ownerRemoteId => $composableBuilder(
       column: $table.ownerRemoteId, builder: (column) => ColumnFilters(column));
@@ -6892,6 +8045,27 @@ class $$GroupsTableFilterComposer
             ));
     return f(composer);
   }
+
+  Expression<bool> groupInvitationsRefs(
+      Expression<bool> Function($$GroupInvitationsTableFilterComposer f) f) {
+    final $$GroupInvitationsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.groupInvitations,
+        getReferencedColumn: (t) => t.groupId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$GroupInvitationsTableFilterComposer(
+              $db: $db,
+              $table: $db.groupInvitations,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$GroupsTableOrderingComposer
@@ -6914,6 +8088,9 @@ class $$GroupsTableOrderingComposer
 
   ColumnOrderings<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get ownerRemoteId => $composableBuilder(
       column: $table.ownerRemoteId,
@@ -6975,6 +8152,9 @@ class $$GroupsTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => column);
 
   GeneratedColumn<String> get ownerRemoteId => $composableBuilder(
       column: $table.ownerRemoteId, builder: (column) => column);
@@ -7055,6 +8235,27 @@ class $$GroupsTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> groupInvitationsRefs<T extends Object>(
+      Expression<T> Function($$GroupInvitationsTableAnnotationComposer a) f) {
+    final $$GroupInvitationsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.groupInvitations,
+        getReferencedColumn: (t) => t.groupId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$GroupInvitationsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.groupInvitations,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$GroupsTableTableManager extends RootTableManager<
@@ -7069,7 +8270,10 @@ class $$GroupsTableTableManager extends RootTableManager<
     (Group, $$GroupsTableReferences),
     Group,
     PrefetchHooks Function(
-        {bool ownerUserId, bool groupMembersRefs, bool sharedBooksRefs})> {
+        {bool ownerUserId,
+        bool groupMembersRefs,
+        bool sharedBooksRefs,
+        bool groupInvitationsRefs})> {
   $$GroupsTableTableManager(_$AppDatabase db, $GroupsTable table)
       : super(TableManagerState(
           db: db,
@@ -7085,6 +8289,7 @@ class $$GroupsTableTableManager extends RootTableManager<
             Value<String> uuid = const Value.absent(),
             Value<String?> remoteId = const Value.absent(),
             Value<String> name = const Value.absent(),
+            Value<String?> description = const Value.absent(),
             Value<int?> ownerUserId = const Value.absent(),
             Value<String?> ownerRemoteId = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
@@ -7098,6 +8303,7 @@ class $$GroupsTableTableManager extends RootTableManager<
             uuid: uuid,
             remoteId: remoteId,
             name: name,
+            description: description,
             ownerUserId: ownerUserId,
             ownerRemoteId: ownerRemoteId,
             isDirty: isDirty,
@@ -7111,6 +8317,7 @@ class $$GroupsTableTableManager extends RootTableManager<
             required String uuid,
             Value<String?> remoteId = const Value.absent(),
             required String name,
+            Value<String?> description = const Value.absent(),
             Value<int?> ownerUserId = const Value.absent(),
             Value<String?> ownerRemoteId = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
@@ -7124,6 +8331,7 @@ class $$GroupsTableTableManager extends RootTableManager<
             uuid: uuid,
             remoteId: remoteId,
             name: name,
+            description: description,
             ownerUserId: ownerUserId,
             ownerRemoteId: ownerRemoteId,
             isDirty: isDirty,
@@ -7139,12 +8347,14 @@ class $$GroupsTableTableManager extends RootTableManager<
           prefetchHooksCallback: (
               {ownerUserId = false,
               groupMembersRefs = false,
-              sharedBooksRefs = false}) {
+              sharedBooksRefs = false,
+              groupInvitationsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
                 if (groupMembersRefs) db.groupMembers,
-                if (sharedBooksRefs) db.sharedBooks
+                if (sharedBooksRefs) db.sharedBooks,
+                if (groupInvitationsRefs) db.groupInvitations
               ],
               addJoins: <
                   T extends TableManagerState<
@@ -7197,6 +8407,19 @@ class $$GroupsTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem: (item,
                                 referencedItems) =>
                             referencedItems.where((e) => e.groupId == item.id),
+                        typedResults: items),
+                  if (groupInvitationsRefs)
+                    await $_getPrefetchedData<Group, $GroupsTable,
+                            GroupInvitation>(
+                        currentTable: table,
+                        referencedTable: $$GroupsTableReferences
+                            ._groupInvitationsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$GroupsTableReferences(db, table, p0)
+                                .groupInvitationsRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.groupId == item.id),
                         typedResults: items)
                 ];
               },
@@ -7217,7 +8440,10 @@ typedef $$GroupsTableProcessedTableManager = ProcessedTableManager<
     (Group, $$GroupsTableReferences),
     Group,
     PrefetchHooks Function(
-        {bool ownerUserId, bool groupMembersRefs, bool sharedBooksRefs})>;
+        {bool ownerUserId,
+        bool groupMembersRefs,
+        bool sharedBooksRefs,
+        bool groupInvitationsRefs})>;
 typedef $$GroupMembersTableCreateCompanionBuilder = GroupMembersCompanion
     Function({
   Value<int> id,
@@ -8346,6 +9572,649 @@ typedef $$SharedBooksTableProcessedTableManager = ProcessedTableManager<
     SharedBook,
     PrefetchHooks Function(
         {bool groupId, bool bookId, bool ownerUserId, bool loansRefs})>;
+typedef $$GroupInvitationsTableCreateCompanionBuilder
+    = GroupInvitationsCompanion Function({
+  Value<int> id,
+  required String uuid,
+  Value<String?> remoteId,
+  required int groupId,
+  required String groupUuid,
+  required int inviterUserId,
+  Value<String?> inviterRemoteId,
+  Value<int?> acceptedUserId,
+  Value<String?> acceptedUserRemoteId,
+  Value<String> role,
+  required String code,
+  Value<String> status,
+  required DateTime expiresAt,
+  Value<DateTime?> respondedAt,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+typedef $$GroupInvitationsTableUpdateCompanionBuilder
+    = GroupInvitationsCompanion Function({
+  Value<int> id,
+  Value<String> uuid,
+  Value<String?> remoteId,
+  Value<int> groupId,
+  Value<String> groupUuid,
+  Value<int> inviterUserId,
+  Value<String?> inviterRemoteId,
+  Value<int?> acceptedUserId,
+  Value<String?> acceptedUserRemoteId,
+  Value<String> role,
+  Value<String> code,
+  Value<String> status,
+  Value<DateTime> expiresAt,
+  Value<DateTime?> respondedAt,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+
+final class $$GroupInvitationsTableReferences extends BaseReferences<
+    _$AppDatabase, $GroupInvitationsTable, GroupInvitation> {
+  $$GroupInvitationsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $GroupsTable _groupIdTable(_$AppDatabase db) => db.groups.createAlias(
+      $_aliasNameGenerator(db.groupInvitations.groupId, db.groups.id));
+
+  $$GroupsTableProcessedTableManager get groupId {
+    final $_column = $_itemColumn<int>('group_id')!;
+
+    final manager = $$GroupsTableTableManager($_db, $_db.groups)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $LocalUsersTable _inviterUserIdTable(_$AppDatabase db) =>
+      db.localUsers.createAlias($_aliasNameGenerator(
+          db.groupInvitations.inviterUserId, db.localUsers.id));
+
+  $$LocalUsersTableProcessedTableManager get inviterUserId {
+    final $_column = $_itemColumn<int>('inviter_user_id')!;
+
+    final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_inviterUserIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $LocalUsersTable _acceptedUserIdTable(_$AppDatabase db) =>
+      db.localUsers.createAlias($_aliasNameGenerator(
+          db.groupInvitations.acceptedUserId, db.localUsers.id));
+
+  $$LocalUsersTableProcessedTableManager? get acceptedUserId {
+    final $_column = $_itemColumn<int>('accepted_user_id');
+    if ($_column == null) return null;
+    final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_acceptedUserIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$GroupInvitationsTableFilterComposer
+    extends Composer<_$AppDatabase, $GroupInvitationsTable> {
+  $$GroupInvitationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get groupUuid => $composableBuilder(
+      column: $table.groupUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get inviterRemoteId => $composableBuilder(
+      column: $table.inviterRemoteId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get acceptedUserRemoteId => $composableBuilder(
+      column: $table.acceptedUserRemoteId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get role => $composableBuilder(
+      column: $table.role, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get code => $composableBuilder(
+      column: $table.code, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get expiresAt => $composableBuilder(
+      column: $table.expiresAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get respondedAt => $composableBuilder(
+      column: $table.respondedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  $$GroupsTableFilterComposer get groupId {
+    final $$GroupsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.groupId,
+        referencedTable: $db.groups,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$GroupsTableFilterComposer(
+              $db: $db,
+              $table: $db.groups,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableFilterComposer get inviterUserId {
+    final $$LocalUsersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.inviterUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableFilterComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableFilterComposer get acceptedUserId {
+    final $$LocalUsersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.acceptedUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableFilterComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$GroupInvitationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $GroupInvitationsTable> {
+  $$GroupInvitationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get groupUuid => $composableBuilder(
+      column: $table.groupUuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get inviterRemoteId => $composableBuilder(
+      column: $table.inviterRemoteId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get acceptedUserRemoteId => $composableBuilder(
+      column: $table.acceptedUserRemoteId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get role => $composableBuilder(
+      column: $table.role, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get code => $composableBuilder(
+      column: $table.code, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get expiresAt => $composableBuilder(
+      column: $table.expiresAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get respondedAt => $composableBuilder(
+      column: $table.respondedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  $$GroupsTableOrderingComposer get groupId {
+    final $$GroupsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.groupId,
+        referencedTable: $db.groups,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$GroupsTableOrderingComposer(
+              $db: $db,
+              $table: $db.groups,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableOrderingComposer get inviterUserId {
+    final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.inviterUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableOrderingComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableOrderingComposer get acceptedUserId {
+    final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.acceptedUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableOrderingComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$GroupInvitationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GroupInvitationsTable> {
+  $$GroupInvitationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get groupUuid =>
+      $composableBuilder(column: $table.groupUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get inviterRemoteId => $composableBuilder(
+      column: $table.inviterRemoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get acceptedUserRemoteId => $composableBuilder(
+      column: $table.acceptedUserRemoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get expiresAt =>
+      $composableBuilder(column: $table.expiresAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get respondedAt => $composableBuilder(
+      column: $table.respondedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDirty =>
+      $composableBuilder(column: $table.isDirty, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$GroupsTableAnnotationComposer get groupId {
+    final $$GroupsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.groupId,
+        referencedTable: $db.groups,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$GroupsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.groups,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableAnnotationComposer get inviterUserId {
+    final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.inviterUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableAnnotationComposer get acceptedUserId {
+    final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.acceptedUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$GroupInvitationsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $GroupInvitationsTable,
+    GroupInvitation,
+    $$GroupInvitationsTableFilterComposer,
+    $$GroupInvitationsTableOrderingComposer,
+    $$GroupInvitationsTableAnnotationComposer,
+    $$GroupInvitationsTableCreateCompanionBuilder,
+    $$GroupInvitationsTableUpdateCompanionBuilder,
+    (GroupInvitation, $$GroupInvitationsTableReferences),
+    GroupInvitation,
+    PrefetchHooks Function(
+        {bool groupId, bool inviterUserId, bool acceptedUserId})> {
+  $$GroupInvitationsTableTableManager(
+      _$AppDatabase db, $GroupInvitationsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GroupInvitationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GroupInvitationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GroupInvitationsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> uuid = const Value.absent(),
+            Value<String?> remoteId = const Value.absent(),
+            Value<int> groupId = const Value.absent(),
+            Value<String> groupUuid = const Value.absent(),
+            Value<int> inviterUserId = const Value.absent(),
+            Value<String?> inviterRemoteId = const Value.absent(),
+            Value<int?> acceptedUserId = const Value.absent(),
+            Value<String?> acceptedUserRemoteId = const Value.absent(),
+            Value<String> role = const Value.absent(),
+            Value<String> code = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<DateTime> expiresAt = const Value.absent(),
+            Value<DateTime?> respondedAt = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              GroupInvitationsCompanion(
+            id: id,
+            uuid: uuid,
+            remoteId: remoteId,
+            groupId: groupId,
+            groupUuid: groupUuid,
+            inviterUserId: inviterUserId,
+            inviterRemoteId: inviterRemoteId,
+            acceptedUserId: acceptedUserId,
+            acceptedUserRemoteId: acceptedUserRemoteId,
+            role: role,
+            code: code,
+            status: status,
+            expiresAt: expiresAt,
+            respondedAt: respondedAt,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String uuid,
+            Value<String?> remoteId = const Value.absent(),
+            required int groupId,
+            required String groupUuid,
+            required int inviterUserId,
+            Value<String?> inviterRemoteId = const Value.absent(),
+            Value<int?> acceptedUserId = const Value.absent(),
+            Value<String?> acceptedUserRemoteId = const Value.absent(),
+            Value<String> role = const Value.absent(),
+            required String code,
+            Value<String> status = const Value.absent(),
+            required DateTime expiresAt,
+            Value<DateTime?> respondedAt = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              GroupInvitationsCompanion.insert(
+            id: id,
+            uuid: uuid,
+            remoteId: remoteId,
+            groupId: groupId,
+            groupUuid: groupUuid,
+            inviterUserId: inviterUserId,
+            inviterRemoteId: inviterRemoteId,
+            acceptedUserId: acceptedUserId,
+            acceptedUserRemoteId: acceptedUserRemoteId,
+            role: role,
+            code: code,
+            status: status,
+            expiresAt: expiresAt,
+            respondedAt: respondedAt,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$GroupInvitationsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: (
+              {groupId = false,
+              inviterUserId = false,
+              acceptedUserId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (groupId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.groupId,
+                    referencedTable:
+                        $$GroupInvitationsTableReferences._groupIdTable(db),
+                    referencedColumn:
+                        $$GroupInvitationsTableReferences._groupIdTable(db).id,
+                  ) as T;
+                }
+                if (inviterUserId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.inviterUserId,
+                    referencedTable: $$GroupInvitationsTableReferences
+                        ._inviterUserIdTable(db),
+                    referencedColumn: $$GroupInvitationsTableReferences
+                        ._inviterUserIdTable(db)
+                        .id,
+                  ) as T;
+                }
+                if (acceptedUserId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.acceptedUserId,
+                    referencedTable: $$GroupInvitationsTableReferences
+                        ._acceptedUserIdTable(db),
+                    referencedColumn: $$GroupInvitationsTableReferences
+                        ._acceptedUserIdTable(db)
+                        .id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$GroupInvitationsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $GroupInvitationsTable,
+    GroupInvitation,
+    $$GroupInvitationsTableFilterComposer,
+    $$GroupInvitationsTableOrderingComposer,
+    $$GroupInvitationsTableAnnotationComposer,
+    $$GroupInvitationsTableCreateCompanionBuilder,
+    $$GroupInvitationsTableUpdateCompanionBuilder,
+    (GroupInvitation, $$GroupInvitationsTableReferences),
+    GroupInvitation,
+    PrefetchHooks Function(
+        {bool groupId, bool inviterUserId, bool acceptedUserId})>;
 typedef $$LoansTableCreateCompanionBuilder = LoansCompanion Function({
   Value<int> id,
   required String uuid,
@@ -8360,6 +10229,7 @@ typedef $$LoansTableCreateCompanionBuilder = LoansCompanion Function({
   Value<DateTime> startDate,
   Value<DateTime?> dueDate,
   Value<DateTime?> returnedAt,
+  Value<DateTime?> cancelledAt,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -8380,6 +10250,7 @@ typedef $$LoansTableUpdateCompanionBuilder = LoansCompanion Function({
   Value<DateTime> startDate,
   Value<DateTime?> dueDate,
   Value<DateTime?> returnedAt,
+  Value<DateTime?> cancelledAt,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -8473,6 +10344,9 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
 
   ColumnFilters<DateTime> get returnedAt => $composableBuilder(
       column: $table.returnedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get cancelledAt => $composableBuilder(
+      column: $table.cancelledAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -8591,6 +10465,9 @@ class $$LoansTableOrderingComposer
   ColumnOrderings<DateTime> get returnedAt => $composableBuilder(
       column: $table.returnedAt, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<DateTime> get cancelledAt => $composableBuilder(
+      column: $table.cancelledAt, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
 
@@ -8706,6 +10583,9 @@ class $$LoansTableAnnotationComposer
   GeneratedColumn<DateTime> get returnedAt => $composableBuilder(
       column: $table.returnedAt, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get cancelledAt => $composableBuilder(
+      column: $table.cancelledAt, builder: (column) => column);
+
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
 
@@ -8819,6 +10699,7 @@ class $$LoansTableTableManager extends RootTableManager<
             Value<DateTime> startDate = const Value.absent(),
             Value<DateTime?> dueDate = const Value.absent(),
             Value<DateTime?> returnedAt = const Value.absent(),
+            Value<DateTime?> cancelledAt = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -8839,6 +10720,7 @@ class $$LoansTableTableManager extends RootTableManager<
             startDate: startDate,
             dueDate: dueDate,
             returnedAt: returnedAt,
+            cancelledAt: cancelledAt,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -8859,6 +10741,7 @@ class $$LoansTableTableManager extends RootTableManager<
             Value<DateTime> startDate = const Value.absent(),
             Value<DateTime?> dueDate = const Value.absent(),
             Value<DateTime?> returnedAt = const Value.absent(),
+            Value<DateTime?> cancelledAt = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -8879,6 +10762,7 @@ class $$LoansTableTableManager extends RootTableManager<
             startDate: startDate,
             dueDate: dueDate,
             returnedAt: returnedAt,
+            cancelledAt: cancelledAt,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -8976,6 +10860,8 @@ class $AppDatabaseManager {
       $$GroupMembersTableTableManager(_db, _db.groupMembers);
   $$SharedBooksTableTableManager get sharedBooks =>
       $$SharedBooksTableTableManager(_db, _db.sharedBooks);
+  $$GroupInvitationsTableTableManager get groupInvitations =>
+      $$GroupInvitationsTableTableManager(_db, _db.groupInvitations);
   $$LoansTableTableManager get loans =>
       $$LoansTableTableManager(_db, _db.loans);
 }

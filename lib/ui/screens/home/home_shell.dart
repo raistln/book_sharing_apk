@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../config/supabase_defaults.dart';
@@ -25,6 +27,16 @@ import '../auth/pin_setup_screen.dart';
 final _currentTabProvider = StateProvider<int>((ref) => 0);
 
 enum _BookFormResult { saved, deleted }
+
+GroupMemberDetail? _findMemberDetail(List<GroupMemberDetail> members, int userId) {
+  for (final detail in members) {
+    final user = detail.user;
+    if (user != null && user.id == userId) {
+      return detail;
+    }
+  }
+  return null;
+}
 
 class _BookCandidate {
   const _BookCandidate({
@@ -67,6 +79,45 @@ class _ReviewDraft {
   final int rating;
   final String? review;
 }
+
+class _GroupFormResult {
+  const _GroupFormResult({required this.name, this.description});
+
+  final String name;
+  final String? description;
+}
+
+class _AddMemberResult {
+  const _AddMemberResult({required this.user, required this.role});
+
+  final LocalUser user;
+  final String role;
+}
+
+class _InvitationFormResult {
+  const _InvitationFormResult({required this.role, required this.expiresAt});
+
+  final String role;
+  final DateTime expiresAt;
+}
+
+enum _GroupMenuAction {
+  edit,
+  transferOwnership,
+  manageMembers,
+  manageInvitations,
+  delete,
+}
+
+enum _MemberAction {
+  promoteToAdmin,
+  demoteToMember,
+  remove,
+}
+
+const _kRoleAdmin = 'admin';
+const _kRoleMember = 'member';
+const _kInvitationStatusPending = 'pending';
 
 class HomeShell extends ConsumerWidget {
   const HomeShell({super.key});
@@ -219,6 +270,7 @@ class _EmptyLibraryState extends StatelessWidget {
       ),
     );
   }
+
 }
 
 class _SupabaseConfigCard extends ConsumerWidget {
@@ -1679,6 +1731,872 @@ class _LoanFeedbackBanner extends StatelessWidget {
   }
 }
 
+Future<void> _onGroupMenuAction({
+  required BuildContext context,
+  required WidgetRef ref,
+  required _GroupMenuAction action,
+  required Group group,
+}) async {
+  switch (action) {
+    case _GroupMenuAction.edit:
+      await _handleEditGroup(context, ref, group);
+      break;
+    case _GroupMenuAction.transferOwnership:
+      await _handleTransferOwnership(context, ref, group);
+      break;
+    case _GroupMenuAction.manageMembers:
+      await _showManageMembersSheet(context, ref, group: group);
+      break;
+    case _GroupMenuAction.manageInvitations:
+      await _showInvitationsSheet(context, ref, group: group);
+      break;
+    case _GroupMenuAction.delete:
+      await _handleDeleteGroup(context, ref, group);
+      break;
+  }
+}
+
+Future<void> _handleEditGroup(BuildContext context, WidgetRef ref, Group group) async {
+  final result = await _showGroupFormDialog(
+    context,
+    dialogTitle: 'Editar grupo',
+    confirmLabel: 'Guardar',
+    initialName: group.name,
+    initialDescription: group.description,
+  );
+
+  if (result == null) {
+    return;
+  }
+
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  try {
+    await controller.updateGroup(
+      group: group,
+      name: result.name,
+      description: result.description,
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: error.toString(),
+      isError: true,
+    );
+  }
+}
+
+Future<void> _handleTransferOwnership(
+  BuildContext context,
+  WidgetRef ref,
+  Group group,
+) async {
+  final members = await ref.read(groupMemberDetailsProvider(group.id).future);
+  if (!context.mounted) {
+    return;
+  }
+  final candidates = members
+      .where((detail) =>
+          detail.user != null && detail.user!.id != group.ownerUserId)
+      .toList();
+
+  if (candidates.isEmpty) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'No hay otros miembros disponibles para transferir la propiedad.',
+      isError: true,
+    );
+    return;
+  }
+
+  final selected = await showDialog<GroupMemberDetail>(
+    context: context,
+    builder: (dialogContext) {
+      return SimpleDialog(
+        title: const Text('Transferir propiedad'),
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+            child: Text('Selecciona a la persona que será la nueva propietaria.'),
+          ),
+          for (final detail in candidates)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(detail),
+              child: Text(detail.user?.username ?? 'Miembro'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (!context.mounted) {
+    return;
+  }
+
+  if (selected == null) {
+    return;
+  }
+
+  final newOwner = selected.user;
+  if (newOwner == null) {
+    return;
+  }
+
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  try {
+    await controller.transferOwnership(group: group, newOwner: newOwner);
+  } catch (error) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: error.toString(),
+      isError: true,
+    );
+  }
+}
+
+Future<void> _handleDeleteGroup(
+  BuildContext context,
+  WidgetRef ref,
+  Group group,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Eliminar grupo'),
+        content: Text(
+          '¿Seguro que deseas eliminar "${group.name}"? Esta acción solo afecta a la copia local y marcará el grupo para eliminación remota.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
+  }
+
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  try {
+    await controller.deleteGroup(group: group);
+  } catch (error) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: error.toString(),
+      isError: true,
+    );
+  }
+}
+
+Future<void> _showManageMembersSheet(
+  BuildContext context,
+  WidgetRef ref, {
+  required Group group,
+}) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      final bottomInset = MediaQuery.of(sheetContext).viewInsets.bottom;
+      return Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: Consumer(
+          builder: (context, sheetRef, _) {
+            final membersAsync = sheetRef.watch(groupMemberDetailsProvider(group.id));
+            final actionState = sheetRef.watch(groupPushControllerProvider);
+            final activeUser = sheetRef.watch(activeUserProvider).value;
+            final isBusy = actionState.isLoading;
+
+            return SafeArea(
+              child: FractionallySizedBox(
+                heightFactor: 0.85,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Gestionar miembros',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                            icon: const Icon(Icons.close),
+                            tooltip: 'Cerrar',
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        'Promueve, degrada o elimina miembros del grupo. Añade nuevos miembros sincronizados localmente.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
+                          FilledButton.icon(
+                            onPressed: isBusy
+                                ? null
+                                : () => _handleAddMember(sheetContext, sheetRef, group),
+                            icon: const Icon(Icons.person_add_alt_1_outlined),
+                            label: const Text('Añadir miembro'),
+                          ),
+                          const SizedBox(width: 12),
+                          if (isBusy)
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: membersAsync.when(
+                        data: (members) {
+                          if (members.isEmpty) {
+                            return const Center(
+                              child: Text('No hay miembros registrados.'),
+                            );
+                          }
+
+                          return ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                            itemCount: members.length,
+                            separatorBuilder: (_, __) => const Divider(),
+                            itemBuilder: (context, index) {
+                              final detail = members[index];
+                              final user = detail.user;
+                              final membership = detail.membership;
+                              final isOwner = group.ownerUserId != null &&
+                                  membership.memberUserId == group.ownerUserId;
+                              final isAdmin = membership.role == _kRoleAdmin;
+                              final displayName = user?.username ?? 'Usuario';
+                              final roleLabel = isOwner
+                                  ? 'Propietario'
+                                  : isAdmin
+                                      ? 'Admin'
+                                      : 'Miembro';
+                              final canEdit = !isOwner && activeUser != null;
+
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  child: Text(displayName.characters.first.toUpperCase()),
+                                ),
+                                title: Text(displayName),
+                                subtitle: Text('Rol: $roleLabel'),
+                                trailing: canEdit
+                                    ? PopupMenuButton<_MemberAction>(
+                                        onSelected: (action) => unawaited(
+                                          _handleMemberAction(
+                                            context: sheetContext,
+                                            ref: sheetRef,
+                                            detail: detail,
+                                            action: action,
+                                          ),
+                                        ),
+                                        enabled: !isBusy,
+                                        itemBuilder: (context) {
+                                          final entries = <PopupMenuEntry<_MemberAction>>[];
+                                          if (!isAdmin) {
+                                            entries.add(
+                                              const PopupMenuItem<_MemberAction>(
+                                                value: _MemberAction.promoteToAdmin,
+                                                child: Text('Promover a admin'),
+                                              ),
+                                            );
+                                          } else {
+                                            entries.add(
+                                              const PopupMenuItem<_MemberAction>(
+                                                value: _MemberAction.demoteToMember,
+                                                child: Text('Degradar a miembro'),
+                                              ),
+                                            );
+                                          }
+                                          entries.add(
+                                            const PopupMenuItem<_MemberAction>(
+                                              value: _MemberAction.remove,
+                                              child: Text('Eliminar del grupo'),
+                                            ),
+                                          );
+                                          return entries;
+                                        },
+                                        icon: const Icon(Icons.more_vert),
+                                      )
+                                    : null,
+                              );
+                            },
+                          );
+                        },
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (error, _) => Center(
+                          child: Text('Error al cargar miembros: $error'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    },
+  );
+}
+
+Future<void> _handleAddMember(BuildContext context, WidgetRef ref, Group group) async {
+  final members = await ref.read(groupMemberDetailsProvider(group.id).future);
+  if (!context.mounted) {
+    return;
+  }
+  final existingIds = members
+      .map((detail) => detail.user?.id)
+      .whereType<int>()
+      .toSet();
+
+  final users = await ref.read(userRepositoryProvider).getActiveUsers();
+  if (!context.mounted) {
+    return;
+  }
+  final candidates = users.where((user) => !existingIds.contains(user.id)).toList();
+
+  if (candidates.isEmpty) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'No hay usuarios locales disponibles para añadir.',
+      isError: true,
+    );
+    return;
+  }
+
+  final result = await _showAddMemberDialog(context, candidates);
+  if (!context.mounted) {
+    return;
+  }
+  if (result == null) {
+    return;
+  }
+
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  try {
+    await controller.addMember(
+      group: group,
+      user: result.user,
+      role: result.role,
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: error.toString(),
+      isError: true,
+    );
+  }
+}
+
+Future<_AddMemberResult?> _showAddMemberDialog(
+  BuildContext context,
+  List<LocalUser> candidates,
+) async {
+  final formKey = GlobalKey<FormState>();
+  LocalUser? selectedUser = candidates.isNotEmpty ? candidates.first : null;
+  String selectedRole = _kRoleMember;
+
+  return showDialog<_AddMemberResult>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Añadir miembro'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DropdownButtonFormField<LocalUser>(
+                initialValue: selectedUser,
+                items: candidates
+                    .map(
+                      (user) => DropdownMenuItem<LocalUser>(
+                        value: user,
+                        child: Text(user.username),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) => selectedUser = value,
+                decoration: const InputDecoration(
+                  labelText: 'Usuario',
+                ),
+                validator: (value) => value == null ? 'Selecciona un usuario.' : null,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: selectedRole,
+                items: const [
+                  DropdownMenuItem(
+                    value: _kRoleMember,
+                    child: Text('Miembro'),
+                  ),
+                  DropdownMenuItem(
+                    value: _kRoleAdmin,
+                    child: Text('Admin'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    selectedRole = value;
+                  }
+                },
+                decoration: const InputDecoration(labelText: 'Rol'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (!(formKey.currentState?.validate() ?? false)) {
+                return;
+              }
+              Navigator.of(dialogContext).pop(
+                _AddMemberResult(user: selectedUser!, role: selectedRole),
+              );
+            },
+            child: const Text('Añadir'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<void> _handleMemberAction({
+  required BuildContext context,
+  required WidgetRef ref,
+  required GroupMemberDetail detail,
+  required _MemberAction action,
+}) async {
+  final controller = ref.read(groupPushControllerProvider.notifier);
+
+  try {
+    switch (action) {
+      case _MemberAction.promoteToAdmin:
+        await controller.updateMemberRole(
+          member: detail.membership,
+          role: _kRoleAdmin,
+        );
+        break;
+      case _MemberAction.demoteToMember:
+        await controller.updateMemberRole(
+          member: detail.membership,
+          role: _kRoleMember,
+        );
+        break;
+      case _MemberAction.remove:
+        await controller.removeMember(member: detail.membership);
+        break;
+    }
+  } catch (error) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: error.toString(),
+      isError: true,
+    );
+  }
+}
+
+Future<void> _showInvitationsSheet(
+  BuildContext context,
+  WidgetRef ref, {
+  required Group group,
+}) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      final bottomInset = MediaQuery.of(sheetContext).viewInsets.bottom;
+      return Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: Consumer(
+          builder: (context, sheetRef, _) {
+            final invitationsAsync = sheetRef.watch(groupInvitationDetailsProvider(group.id));
+            final activeUser = sheetRef.watch(activeUserProvider).value;
+            final actionState = sheetRef.watch(groupPushControllerProvider);
+            final isBusy = actionState.isLoading;
+
+            return SafeArea(
+              child: FractionallySizedBox(
+                heightFactor: 0.85,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Invitaciones del grupo',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                            icon: const Icon(Icons.close),
+                            tooltip: 'Cerrar',
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
+                          FilledButton.icon(
+                            onPressed: isBusy || activeUser == null
+                                ? null
+                                : () => _handleCreateInvitation(
+                                      sheetContext,
+                                      sheetRef,
+                                      group: group,
+                                      inviter: activeUser,
+                                    ),
+                            icon: const Icon(Icons.qr_code_2_outlined),
+                            label: const Text('Nueva invitación'),
+                          ),
+                          const SizedBox(width: 12),
+                          if (isBusy)
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: invitationsAsync.when(
+                        data: (invitations) {
+                          if (invitations.isEmpty) {
+                            return const Center(
+                              child: Text('Aún no se han generado invitaciones.'),
+                            );
+                          }
+
+                          return ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                            itemCount: invitations.length,
+                            separatorBuilder: (_, __) => const Divider(),
+                            itemBuilder: (context, index) {
+                              final detail = invitations[index];
+                              final invitation = detail.invitation;
+                              final status = invitation.status;
+                              final expiresAt = DateFormat.yMd().add_Hm().format(invitation.expiresAt);
+                              final code = invitation.code;
+                              final canCancel = status == _kInvitationStatusPending && !isBusy;
+
+                              return ListTile(
+                                leading: const Icon(Icons.qr_code_2_outlined),
+                                title: Text('Código: $code'),
+                                subtitle: Text('Rol: ${invitation.role} · Estado: $status · Expira: $expiresAt'),
+                                contentPadding: EdgeInsets.zero,
+                                isThreeLine: true,
+                                trailing: SizedBox(
+                                  width: 120,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            tooltip: 'Copiar código',
+                                            onPressed: () => _copyToClipboard(sheetContext, code),
+                                            icon: const Icon(Icons.copy_outlined),
+                                          ),
+                                          IconButton(
+                                            tooltip: 'Mostrar QR',
+                                            onPressed: () => _showInvitationQrDialog(sheetContext, code),
+                                            icon: const Icon(Icons.fullscreen),
+                                          ),
+                                          IconButton(
+                                            tooltip: 'Compartir código',
+                                            onPressed: () => _shareInvitationCode(
+                                              context: sheetContext,
+                                              group: group,
+                                              invitation: invitation,
+                                            ),
+                                            icon: const Icon(Icons.share_outlined),
+                                          ),
+                                        ],
+                                      ),
+                                      if (canCancel)
+                                        TextButton.icon(
+                                          onPressed: () => _handleCancelInvitation(
+                                            sheetContext,
+                                            sheetRef,
+                                            invitation: invitation,
+                                          ),
+                                          icon: const Icon(Icons.cancel_outlined),
+                                          label: const Text('Cancelar'),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (error, _) => Center(
+                          child: Text('Error al cargar invitaciones: $error'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    },
+  );
+}
+
+Future<void> _handleCreateInvitation(
+  BuildContext context,
+  WidgetRef ref, {
+  required Group group,
+  required LocalUser inviter,
+}) async {
+  final result = await _showInvitationFormDialog(context);
+  if (result == null) {
+    return;
+  }
+
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  try {
+    await controller.createInvitation(
+      group: group,
+      inviter: inviter,
+      role: result.role,
+      expiresAt: result.expiresAt,
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: error.toString(),
+      isError: true,
+    );
+  }
+}
+
+Future<_InvitationFormResult?> _showInvitationFormDialog(BuildContext context) async {
+  final formKey = GlobalKey<FormState>();
+  String role = _kRoleMember;
+  final durationOptions = <Duration, String>{
+    const Duration(days: 1): '1 día',
+    const Duration(days: 7): '7 días',
+    const Duration(days: 30): '30 días',
+  };
+  Duration selectedDuration = const Duration(days: 7);
+
+  return showDialog<_InvitationFormResult>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Crear invitación'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: role,
+                items: const [
+                  DropdownMenuItem(
+                    value: _kRoleMember,
+                    child: Text('Miembro'),
+                  ),
+                  DropdownMenuItem(
+                    value: _kRoleAdmin,
+                    child: Text('Admin'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    role = value;
+                  }
+                },
+                decoration: const InputDecoration(labelText: 'Rol asignado'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<Duration>(
+                initialValue: selectedDuration,
+                items: durationOptions.entries
+                    .map(
+                      (entry) => DropdownMenuItem<Duration>(
+                        value: entry.key,
+                        child: Text('Expira en ${entry.value}'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    selectedDuration = value;
+                  }
+                },
+                decoration: const InputDecoration(labelText: 'Duración'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (!(formKey.currentState?.validate() ?? false)) {
+                return;
+              }
+              Navigator.of(dialogContext).pop(
+                _InvitationFormResult(
+                  role: role,
+                  expiresAt: DateTime.now().add(selectedDuration),
+                ),
+              );
+            },
+            child: const Text('Crear'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<void> _handleCancelInvitation(
+  BuildContext context,
+  WidgetRef ref, {
+  required GroupInvitation invitation,
+}) async {
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  try {
+    await controller.cancelInvitation(invitation: invitation);
+  } catch (error) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: error.toString(),
+      isError: true,
+    );
+  }
+}
+
+Future<void> _showInvitationQrDialog(BuildContext context, String code) {
+  final data = 'group-invite://$code';
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Código QR de invitación'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            QrImageView(
+              data: data,
+              size: 220,
+              backgroundColor: Colors.white,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              code,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Escanea este código o comparte el código alfanumérico para unirse al grupo.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => _copyToClipboard(dialogContext, code),
+            child: const Text('Copiar código'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+void _copyToClipboard(BuildContext context, String value) {
+  Clipboard.setData(ClipboardData(text: value));
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Código copiado al portapapeles.')),
+  );
+}
+
+Future<void> _shareInvitationCode({
+  required BuildContext context,
+  required Group group,
+  required GroupInvitation invitation,
+}) async {
+  final subject = 'Únete al grupo "${group.name}"';
+  final message =
+      'Hola, te invito a unirte al grupo "${group.name}" en Book Sharing. Usa el código ${invitation.code} o escanea el QR para entrar.';
+
+  await Share.share(
+    message,
+    subject: subject,
+  );
+}
+
 Future<void> _performSync(BuildContext context, WidgetRef ref) async {
   final controller = ref.read(groupSyncControllerProvider.notifier);
   await controller.syncGroups();
@@ -1716,6 +2634,211 @@ void _showFeedbackSnackBar({
   );
 }
 
+Future<_GroupFormResult?> _showGroupFormDialog(
+  BuildContext context, {
+  String? dialogTitle,
+  String? confirmLabel,
+  String? initialName,
+  String? initialDescription,
+}) async {
+  final formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController(text: initialName ?? '');
+  final descriptionController = TextEditingController(text: initialDescription ?? '');
+
+  try {
+    return showDialog<_GroupFormResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
+        final titleText = dialogTitle ??
+            (initialName == null ? 'Crear grupo' : 'Editar grupo');
+        final submitLabel = confirmLabel ??
+            (initialName == null ? 'Crear' : 'Guardar');
+
+        return AlertDialog(
+          title: Text(titleText),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del grupo',
+                  ),
+                  autofocus: true,
+                  textInputAction: TextInputAction.next,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Introduce un nombre válido.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Descripción (opcional)',
+                  ),
+                  maxLines: 3,
+                  textInputAction: TextInputAction.done,
+                ),
+                if (initialDescription == null || initialDescription.isEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Puedes actualizar la descripción más tarde desde el menú.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (!(formKey.currentState?.validate() ?? false)) {
+                  return;
+                }
+                final trimmedName = nameController.text.trim();
+                final trimmedDescription = descriptionController.text.trim();
+                Navigator.of(dialogContext).pop(
+                  _GroupFormResult(
+                    name: trimmedName,
+                    description:
+                        trimmedDescription.isEmpty ? null : trimmedDescription,
+                  ),
+                );
+              },
+              child: Text(submitLabel),
+            ),
+          ],
+        );
+      },
+    );
+  } finally {
+    nameController.dispose();
+    descriptionController.dispose();
+  }
+}
+
+Future<String?> _showJoinGroupByCodeDialog(BuildContext context) async {
+  final formKey = GlobalKey<FormState>();
+  final codeController = TextEditingController();
+
+  try {
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Unirse por código'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: codeController,
+              decoration: const InputDecoration(
+                labelText: 'Código de invitación',
+                hintText: 'Ej. 123e4567-e89b-12d3-a456-426614174000',
+              ),
+              autofocus: true,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Introduce un código válido.';
+                }
+                if (value.trim().length < 6) {
+                  return 'El código es demasiado corto.';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (!(formKey.currentState?.validate() ?? false)) {
+                  return;
+                }
+                Navigator.of(dialogContext).pop(codeController.text.trim());
+              },
+              child: const Text('Unirse'),
+            ),
+          ],
+        );
+      },
+    );
+  } finally {
+    codeController.dispose();
+  }
+}
+
+Future<void> _handleCreateGroup(
+  BuildContext context,
+  WidgetRef ref,
+  LocalUser owner,
+) async {
+  final result = await _showGroupFormDialog(context);
+  if (result == null) {
+    return;
+  }
+
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  try {
+    await controller.createGroup(
+      name: result.name,
+      description: result.description,
+      owner: owner,
+    );
+  } catch (error) {
+    if (!context.mounted) {
+      return;
+    }
+    _showFeedbackSnackBar(
+      context: context,
+      message: error.toString(),
+      isError: true,
+    );
+  }
+}
+
+Future<void> _handleJoinGroupByCode(
+  BuildContext context,
+  WidgetRef ref,
+  LocalUser user,
+) async {
+  final code = await _showJoinGroupByCodeDialog(context);
+  if (code == null) {
+    return;
+  }
+
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  try {
+    await controller.acceptInvitationByCode(
+      code: code,
+      user: user,
+    );
+  } catch (error) {
+    if (!context.mounted) {
+      return;
+    }
+    _showFeedbackSnackBar(
+      context: context,
+      message: error.toString(),
+      isError: true,
+    );
+  }
+}
+
 String _resolveUserName(LocalUser? user) {
   return user?.username ?? 'Usuario desconocido';
 }
@@ -1727,10 +2850,55 @@ class _CommunityTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final groupsAsync = ref.watch(groupListProvider);
     final loanActionState = ref.watch(loanControllerProvider);
+    final groupActionState = ref.watch(groupPushControllerProvider);
+    final activeUser = ref.watch(activeUserProvider).value;
+    final isGroupBusy = groupActionState.isLoading;
 
     return SafeArea(
       child: Column(
         children: [
+          if (groupActionState.lastError != null)
+            _LoanFeedbackBanner(
+              message: groupActionState.lastError!,
+              isError: true,
+              onDismiss: () => ref.read(groupPushControllerProvider.notifier).dismissError(),
+            )
+          else if (groupActionState.lastSuccess != null)
+            _LoanFeedbackBanner(
+              message: groupActionState.lastSuccess!,
+              isError: false,
+              onDismiss: () => ref.read(groupPushControllerProvider.notifier).dismissSuccess(),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                FilledButton.icon(
+                  onPressed: activeUser == null || isGroupBusy
+                      ? null
+                      : () => _handleCreateGroup(context, ref, activeUser),
+                  icon: const Icon(Icons.group_add_outlined),
+                  label: const Text('Crear grupo'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: activeUser == null || isGroupBusy
+                      ? null
+                      : () => _handleJoinGroupByCode(context, ref, activeUser),
+                  icon: const Icon(Icons.qr_code_2_outlined),
+                  label: const Text('Unirse por código'),
+                ),
+                if (isGroupBusy)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+              ],
+            ),
+          ),
           if (loanActionState.lastError != null)
             _LoanFeedbackBanner(
               message: loanActionState.lastError!,
@@ -1877,10 +3045,61 @@ class _GroupCard extends ConsumerWidget {
     final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
     final sharedBooksAsync = ref.watch(sharedBookDetailsProvider(group.id));
     final loansAsync = ref.watch(groupLoanDetailsProvider(group.id));
+    final invitationsAsync = ref.watch(groupInvitationDetailsProvider(group.id));
     final activeUserAsync = ref.watch(activeUserProvider);
     final activeUser = activeUserAsync.value;
+    final groupActionState = ref.watch(groupPushControllerProvider);
+    final isGroupBusy = groupActionState.isLoading;
     final loanController = ref.watch(loanControllerProvider.notifier);
     final loanState = ref.watch(loanControllerProvider);
+
+    final members = membersAsync.asData?.value ?? const <GroupMemberDetail>[];
+    final isOwner = activeUser != null && group.ownerUserId != null && group.ownerUserId == activeUser.id;
+    final currentMembership = activeUser != null
+        ? _findMemberDetail(members, activeUser.id)
+        : null;
+    final isAdmin = isOwner || currentMembership?.membership.role == _kRoleAdmin;
+
+    final menuEntries = <PopupMenuEntry<_GroupMenuAction>>[];
+    if (activeUser != null && isAdmin) {
+      menuEntries
+        ..add(
+          const PopupMenuItem<_GroupMenuAction>(
+            value: _GroupMenuAction.edit,
+            child: Text('Editar grupo'),
+          ),
+        )
+        ..add(
+          const PopupMenuItem<_GroupMenuAction>(
+            value: _GroupMenuAction.manageMembers,
+            child: Text('Gestionar miembros'),
+          ),
+        )
+        ..add(
+          const PopupMenuItem<_GroupMenuAction>(
+            value: _GroupMenuAction.manageInvitations,
+            child: Text('Gestionar invitaciones'),
+          ),
+        );
+    }
+    if (activeUser != null && isOwner) {
+      if (menuEntries.isNotEmpty) {
+        menuEntries.add(const PopupMenuDivider());
+      }
+      menuEntries
+        ..add(
+          const PopupMenuItem<_GroupMenuAction>(
+            value: _GroupMenuAction.transferOwnership,
+            child: Text('Transferir propiedad'),
+          ),
+        )
+        ..add(
+          const PopupMenuItem<_GroupMenuAction>(
+            value: _GroupMenuAction.delete,
+            child: Text('Eliminar grupo'),
+          ),
+        );
+    }
 
     return Card(
       child: Padding(
@@ -1907,10 +3126,32 @@ class _GroupCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: () => onSync(),
-                  icon: const Icon(Icons.sync_outlined),
-                  tooltip: 'Sincronizar grupo',
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: isGroupBusy ? null : () => onSync(),
+                      icon: const Icon(Icons.sync_outlined),
+                      tooltip: 'Sincronizar grupo',
+                    ),
+                    if (menuEntries.isNotEmpty)
+                      PopupMenuButton<_GroupMenuAction>(
+                        icon: const Icon(Icons.more_vert),
+                        tooltip: 'Acciones del grupo',
+                        enabled: !isGroupBusy,
+                        itemBuilder: (context) => menuEntries,
+                        onSelected: (action) {
+                          unawaited(
+                            _onGroupMenuAction(
+                              context: context,
+                              ref: ref,
+                              action: action,
+                              group: group,
+                            ),
+                          );
+                        },
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -1933,6 +3174,11 @@ class _GroupCard extends ConsumerWidget {
                   icon: Icons.swap_horiz_outlined,
                   label: 'Préstamos',
                   value: loansAsync,
+                ),
+                _AsyncCountChip(
+                  icon: Icons.qr_code_2_outlined,
+                  label: 'Invitaciones',
+                  value: invitationsAsync,
                 ),
               ],
             ),

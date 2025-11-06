@@ -38,6 +38,10 @@ class UserDao extends DatabaseAccessor<AppDatabase> with _$UserDaoMixin {
     return (select(localUsers)..where((tbl) => tbl.username.equals(username))).getSingleOrNull();
   }
 
+  Future<List<LocalUser>> getActiveUsers() {
+    return (select(localUsers)..where((tbl) => tbl.isDeleted.equals(false))).get();
+  }
+
   Future<int> updateUserFields({required int userId, required LocalUsersCompanion entry}) {
     return (update(localUsers)..where((tbl) => tbl.id.equals(userId))).write(entry);
   }

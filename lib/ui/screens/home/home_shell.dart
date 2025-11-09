@@ -15,13 +15,16 @@ import '../../../data/local/group_dao.dart';
 import '../../../providers/api_providers.dart';
 import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
+import '../../../providers/notification_providers.dart';
 import '../../../services/book_export_service.dart';
 import '../../../services/cover_image_service_base.dart';
 import '../../../services/google_books_client.dart';
 import '../../../services/loan_controller.dart';
 import '../../../services/open_library_client.dart';
+import '../../../services/notification_service.dart';
 import '../../../services/supabase_config_service.dart';
 import '../../widgets/cover_preview.dart';
+import '../../widgets/import_books_dialog.dart';
 import '../auth/pin_setup_screen.dart';
 
 final _currentTabProvider = StateProvider<int>((ref) => 0);
@@ -126,6 +129,13 @@ class HomeShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<NotificationIntent?>(notificationIntentProvider, (previous, next) {
+      if (next == null) {
+        return;
+      }
+      _handleNotificationIntent(context, ref, next);
+    });
+
     final currentIndex = ref.watch(_currentTabProvider);
 
     return Scaffold(
@@ -194,6 +204,28 @@ class HomeShell extends ConsumerWidget {
     }
 
     return null;
+  }
+
+  void _handleNotificationIntent(
+    BuildContext context,
+    WidgetRef ref,
+    NotificationIntent intent,
+  ) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final tabNotifier = ref.read(_currentTabProvider.notifier);
+
+      switch (intent.type) {
+        case NotificationType.loanDueSoon:
+        case NotificationType.loanExpired:
+          tabNotifier.state = 2;
+          break;
+        case NotificationType.groupInvitation:
+          tabNotifier.state = 1;
+          break;
+      }
+
+      ref.read(notificationIntentProvider.notifier).clear();
+    });
   }
 
   Future<void> _showBookFormSheet(BuildContext context, WidgetRef ref, {Book? book}) async {
@@ -3615,6 +3647,33 @@ class _SettingsTab extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Sección de importación de libros
+              Text(
+                'Biblioteca',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Importa o exporta tu biblioteca de libros.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.import_export),
+                  title: const Text('Importar libros'),
+                  subtitle: const Text('Importa libros desde un archivo CSV o JSON'),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const ImportBooksDialog(),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Sección de seguridad
               Text(
                 'Ajustes de seguridad',
                 style: Theme.of(context).textTheme.headlineSmall,

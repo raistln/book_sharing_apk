@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'providers/auth_providers.dart';
+import 'providers/notification_providers.dart';
 import 'ui/screens/auth/lock_screen.dart';
 import 'ui/screens/auth/pin_setup_screen.dart';
 import 'ui/screens/home/home_shell.dart';
@@ -16,14 +18,40 @@ final themeProvider = Provider<ThemeData>((ref) {
   );
 });
 
+final navigatorKey = GlobalKey<NavigatorState>();
+
 class BookSharingApp extends ConsumerWidget {
   const BookSharingApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Ensure notification intent notifier is instantiated.
+    ref.watch(notificationIntentProvider);
+
+    ref.listen<NotificationIntent?>(notificationIntentProvider, (previous, next) {
+      if (next == null) {
+        return;
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final authState = ref.read(authControllerProvider);
+        if (authState.status != AuthStatus.unlocked) {
+          return;
+        }
+
+        final navigator = navigatorKey.currentState;
+        if (navigator == null) {
+          return;
+        }
+
+        navigator.pushNamedAndRemoveUntil(HomeShell.routeName, (route) => false);
+      });
+    });
+
     final theme = ref.watch(themeProvider);
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Book Sharing App',
       debugShowCheckedModeBanner: false,
       theme: theme,

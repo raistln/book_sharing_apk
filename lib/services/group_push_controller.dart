@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/local/database.dart';
 import '../data/repositories/group_push_repository.dart';
 import 'group_sync_controller.dart';
+import 'notification_service.dart';
 
 class GroupActionState {
   const GroupActionState({
@@ -33,12 +35,15 @@ class GroupPushController extends StateNotifier<GroupActionState> {
   GroupPushController({
     required GroupPushRepository groupPushRepository,
     required GroupSyncController groupSyncController,
+    required NotificationClient notificationClient,
   })  : _groupPushRepository = groupPushRepository,
         _groupSyncController = groupSyncController,
+        _notificationClient = notificationClient,
         super(const GroupActionState());
 
   final GroupPushRepository _groupPushRepository;
   final GroupSyncController _groupSyncController;
+  final NotificationClient _notificationClient;
 
   void dismissError() {
     state = state.copyWith(lastError: () => null);
@@ -255,6 +260,11 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         isLoading: false,
         lastSuccess: () => 'Invitación creada.',
       );
+      await _showGroupInvitationNotification(
+        invitation: invitation,
+        group: group,
+        inviter: inviter,
+      );
       return invitation;
     } catch (error) {
       state = state.copyWith(
@@ -280,6 +290,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         isLoading: false,
         lastSuccess: () => 'Invitación cancelada.',
       );
+      await _cancelGroupInvitationNotification(invitation);
     } catch (error) {
       state = state.copyWith(
         isLoading: false,
@@ -311,6 +322,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         lastSuccess: () =>
             newStatus == 'accepted' ? 'Invitación aceptada.' : 'Invitación actualizada.',
       );
+      await _cancelGroupInvitationNotification(updated);
       return updated;
     } catch (error) {
       state = state.copyWith(
@@ -338,6 +350,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         isLoading: false,
         lastSuccess: () => 'Te uniste al grupo.',
       );
+      await _cancelGroupInvitationNotification(invitation);
       return invitation;
     } catch (error) {
       state = state.copyWith(
@@ -345,6 +358,70 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         lastError: () => error.toString(),
       );
       rethrow;
+    }
+  }
+
+  Future<void> _showGroupInvitationNotification({
+    required GroupInvitation invitation,
+    required Group group,
+    required LocalUser inviter,
+  }) async {
+    final invitationUuid = invitation.uuid;
+    if (invitationUuid.isEmpty) {
+      return;
+    }
+
+    try {
+      final notificationId = NotificationIds.groupInvitation(invitationUuid);
+      final inviterName = inviter.username.trim();
+      const title = 'Invitación al grupo';
+      final body = inviterName.isNotEmpty
+          ? '$inviterName te ha invitado a unirte a "${group.name}".'
+          : 'Tienes una invitación para unirte a "${group.name}".';
+
+      await _notificationClient.cancel(notificationId);
+      await _notificationClient.showImmediate(
+        id: notificationId,
+        type: NotificationType.groupInvitation,
+        title: title,
+        body: body,
+        payload: {
+          NotificationPayloadKeys.groupId: group.uuid,
+          NotificationPayloadKeys.invitationId: invitationUuid,
+          NotificationPayloadKeys.action: NotificationActionType.open.name,
+        },
+        androidActions: [
+          AndroidNotificationAction(
+            NotificationActionType.invitationAccept.name,
+            'Aceptar',
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+          AndroidNotificationAction(
+            NotificationActionType.invitationReject.name,
+            'Rechazar',
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+        ],
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Error showing group invitation notification: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> _cancelGroupInvitationNotification(GroupInvitation invitation) async {
+    final invitationUuid = invitation.uuid;
+    if (invitationUuid.isEmpty) {
+      return;
+    }
+
+    try {
+      await _notificationClient.cancel(NotificationIds.groupInvitation(invitationUuid));
+    } catch (error, stackTrace) {
+      debugPrint('Error cancelling group invitation notification: $error');
+      debugPrintStack(stackTrace: stackTrace);
     }
   }
 }

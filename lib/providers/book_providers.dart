@@ -19,6 +19,7 @@ import '../services/supabase_group_service.dart';
 import '../services/supabase_user_service.dart';
 import '../data/repositories/group_push_repository.dart';
 import '../services/group_push_controller.dart';
+import 'notification_providers.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -185,9 +186,11 @@ final loanControllerProvider =
     StateNotifierProvider<LoanController, LoanActionState>((ref) {
   final repository = ref.watch(loanRepositoryProvider);
   final syncController = ref.watch(groupSyncControllerProvider.notifier);
+  final notificationClient = ref.watch(notificationServiceProvider);
   return LoanController(
     loanRepository: repository,
     groupSyncController: syncController,
+    notificationClient: notificationClient,
   );
 });
 
@@ -195,9 +198,11 @@ final groupPushControllerProvider =
     StateNotifierProvider<GroupPushController, GroupActionState>((ref) {
   final repository = ref.watch(groupPushRepositoryProvider);
   final syncController = ref.watch(groupSyncControllerProvider.notifier);
+  final notificationClient = ref.watch(notificationServiceProvider);
   return GroupPushController(
     groupPushRepository: repository,
     groupSyncController: syncController,
+    notificationClient: notificationClient,
   );
 });
 

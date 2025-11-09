@@ -9,10 +9,12 @@ import 'package:book_sharing_app/data/repositories/supabase_group_repository.dar
 import 'package:book_sharing_app/data/repositories/user_repository.dart';
 import 'package:book_sharing_app/services/group_push_controller.dart';
 import 'package:book_sharing_app/services/group_sync_controller.dart';
+import 'package:book_sharing_app/services/notification_service.dart';
 import 'package:book_sharing_app/services/supabase_config_service.dart';
 import 'package:book_sharing_app/services/supabase_group_service.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -25,6 +27,7 @@ void main() {
   late BookDao bookDao;
   late GroupPushRepository groupPushRepository;
   late GroupSyncController syncController;
+  late _FakeNotificationClient notificationClient;
   late GroupPushController controller;
   late List<http.Request> requests;
 
@@ -51,6 +54,9 @@ void main() {
       uuid: _FakeUuid([
         'group-uuid',
         'member-uuid',
+        'invitation-uuid',
+        'invitation-code',
+        'accepted-member-uuid',
       ]),
     );
 
@@ -73,9 +79,12 @@ void main() {
       ),
     );
 
+    notificationClient = _FakeNotificationClient();
+
     controller = GroupPushController(
       groupPushRepository: groupPushRepository,
       groupSyncController: syncController,
+      notificationClient: notificationClient,
     );
   });
 
@@ -132,6 +141,93 @@ void main() {
     expect(controller.state.lastError, isNotNull);
     expect(controller.state.isLoading, isFalse);
   });
+
+  test('createInvitation shows notification with accept/reject actions', () async {
+    final ownerId = await userDao.insertUser(
+      LocalUsersCompanion.insert(
+        uuid: 'owner-uuid',
+        username: 'Owner',
+        remoteId: const Value('remote-owner'),
+        isDirty: const Value(false),
+        isDeleted: const Value(false),
+      ),
+    );
+    final owner = (await userDao.getById(ownerId))!;
+
+    final group = await controller.createGroup(
+      name: 'Club',
+      description: 'Descripción',
+      owner: owner,
+      accessToken: 'access-token',
+    );
+
+    notificationClient.reset();
+
+    final invitation = await controller.createInvitation(
+      group: group,
+      inviter: owner,
+      role: 'member',
+      accessToken: 'access-token',
+    );
+
+    expect(notificationClient.immediate, hasLength(1));
+    final notification = notificationClient.immediate.single;
+    expect(notification.id, NotificationIds.groupInvitation(invitation.uuid));
+    expect(notification.type, NotificationType.groupInvitation);
+    expect(notification.title, 'Invitación al grupo');
+    expect(notification.payload, {
+      NotificationPayloadKeys.groupId: group.uuid,
+      NotificationPayloadKeys.invitationId: invitation.uuid,
+      NotificationPayloadKeys.action: NotificationActionType.open.name,
+    });
+    final actionIds = notification.actions.map((action) => action.id).toSet();
+    expect(
+      actionIds,
+      {
+        NotificationActionType.invitationAccept.name,
+        NotificationActionType.invitationReject.name,
+      },
+    );
+    expect(notificationClient.cancelled, contains(notification.id));
+    expect(controller.state.lastSuccess, 'Invitación creada.');
+  });
+
+  test('cancelInvitation cancels pending notification', () async {
+    final ownerId = await userDao.insertUser(
+      LocalUsersCompanion.insert(
+        uuid: 'owner-uuid',
+        username: 'Owner',
+        remoteId: const Value('remote-owner'),
+        isDirty: const Value(false),
+        isDeleted: const Value(false),
+      ),
+    );
+    final owner = (await userDao.getById(ownerId))!;
+
+    final group = await controller.createGroup(
+      name: 'Club',
+      description: 'Descripción',
+      owner: owner,
+      accessToken: 'access-token',
+    );
+
+    final invitation = await controller.createInvitation(
+      group: group,
+      inviter: owner,
+      accessToken: 'access-token',
+    );
+
+    notificationClient.reset();
+
+    await controller.cancelInvitation(
+      invitation: invitation,
+      accessToken: 'access-token',
+    );
+
+    final expectedId = NotificationIds.groupInvitation(invitation.uuid);
+    expect(notificationClient.cancelled, contains(expectedId));
+    expect(controller.state.lastSuccess, 'Invitación cancelada.');
+  });
 }
 
 class _FakeSupabaseConfigService extends SupabaseConfigService {
@@ -163,4 +259,73 @@ class _FakeUuid extends Uuid {
     }
     return _values.removeFirst();
   }
+}
+
+class _FakeNotificationClient implements NotificationClient {
+  final List<int> cancelled = [];
+  final List<_ImmediateNotification> immediate = [];
+
+  @override
+  Future<void> cancel(int id) async {
+    cancelled.add(id);
+  }
+
+  @override
+  Future<void> cancelMany(Iterable<int> ids) async {
+    cancelled.addAll(ids);
+  }
+
+  @override
+  Future<void> schedule({
+    required int id,
+    required NotificationType type,
+    required String title,
+    required String body,
+    required DateTime scheduledAt,
+    Map<String, String>? payload,
+  }) async {}
+
+  @override
+  Future<void> showImmediate({
+    required int id,
+    required NotificationType type,
+    required String title,
+    required String body,
+    Map<String, String>? payload,
+    List<AndroidNotificationAction>? androidActions,
+  }) async {
+    immediate.add(
+      _ImmediateNotification(
+        id: id,
+        type: type,
+        title: title,
+        body: body,
+        payload: Map<String, String>.from(payload ?? const {}),
+        actions: List<AndroidNotificationAction>.from(androidActions ?? const []),
+      ),
+    );
+  }
+
+  void reset() {
+    cancelled.clear();
+    immediate.clear();
+  }
+}
+
+class _ImmediateNotification {
+  _ImmediateNotification({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.body,
+    required this.payload,
+    required this.actions,
+  });
+
+  final int id;
+  final NotificationType type;
+  final String title;
+  final String body;
+  final Map<String, String> payload;
+  final List<AndroidNotificationAction> actions;
 }

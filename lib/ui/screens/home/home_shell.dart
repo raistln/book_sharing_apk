@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../config/supabase_defaults.dart';
 import '../../../data/local/database.dart';
@@ -16,6 +17,7 @@ import '../../../providers/api_providers.dart';
 import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
 import '../../../providers/stats_providers.dart';
+import '../../../providers/settings_providers.dart';
 import '../../../providers/theme_providers.dart';
 import '../../../providers/notification_providers.dart';
 import '../../../services/book_export_service.dart';
@@ -74,28 +76,56 @@ class _ThemeSection extends ConsumerWidget {
           ),
         ),
       ),
-      data: (preference) => Card(
-        child: Column(
-          children: ThemePreference.values.map((value) {
-            return RadioListTile<ThemePreference>(
-              title: Text(
-                switch (value) {
-                  ThemePreference.system => 'Usar tema del sistema',
-                  ThemePreference.light => 'Modo claro',
-                  ThemePreference.dark => 'Modo oscuro',
-                },
-              ),
-              value: value,
-              groupValue: preference,
-              onChanged: (selected) {
-                if (selected != null) {
-                  notifier.update(selected);
-                }
+      data: (preference) {
+        final segments = ThemePreference.values.map((value) {
+          return ButtonSegment<ThemePreference>(
+            value: value,
+            label: Text(
+              switch (value) {
+                ThemePreference.system => 'Usar tema del sistema',
+                ThemePreference.light => 'Modo claro',
+                ThemePreference.dark => 'Modo oscuro',
               },
-            );
-          }).toList(),
-        ),
-      ),
+            ),
+            icon: Icon(
+              switch (value) {
+                ThemePreference.system => Icons.phone_android,
+                ThemePreference.light => Icons.wb_sunny_outlined,
+                ThemePreference.dark => Icons.dark_mode_outlined,
+              },
+            ),
+          );
+        }).toList(growable: false);
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SegmentedButton<ThemePreference>(
+                  segments: segments,
+                  selected: {preference},
+                  onSelectionChanged: (selection) {
+                    if (selection.isEmpty) {
+                      return;
+                    }
+                    final selected = selection.first;
+                    if (selected != preference) {
+                      notifier.update(selected);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Elige cómo se ve la app. Puedes seguir el sistema o forzar un tema.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -117,6 +147,7 @@ class _BookCandidate {
     this.isbn,
     this.description,
     this.coverUrl,
+    required this.source,
   });
 
   factory _BookCandidate.fromOpenLibrary(OpenLibraryBookResult result) {
@@ -125,6 +156,7 @@ class _BookCandidate {
       author: result.author,
       isbn: result.isbn,
       coverUrl: result.coverUrl,
+      source: _BookSource.openLibrary,
     );
   }
 
@@ -135,6 +167,7 @@ class _BookCandidate {
       isbn: volume.isbn,
       description: volume.description,
       coverUrl: volume.thumbnailUrl,
+      source: _BookSource.googleBooks,
     );
   }
 
@@ -143,7 +176,10 @@ class _BookCandidate {
   final String? isbn;
   final String? description;
   final String? coverUrl;
+  final _BookSource source;
 }
+
+enum _BookSource { openLibrary, googleBooks }
 
 class _ReviewDraft {
   const _ReviewDraft({required this.rating, this.review});
@@ -1249,7 +1285,7 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
           isbn: isbn,
           limit: 10,
         );
-        candidates.addAll(olResults.map((result) => _BookCandidate.fromOpenLibrary(result)));
+        candidates.addAll(olResults.map(_BookCandidate.fromOpenLibrary));
       } catch (err) {
         // Guardamos el error pero no rompemos el flujo.
         debugPrint('OpenLibrary search failed: $err');
@@ -1261,9 +1297,13 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
           isbn: isbn,
           maxResults: 10,
         );
-        candidates.addAll(gbResults.map((result) => _BookCandidate.fromGoogleBooks(result)));
+        candidates.addAll(gbResults.map(_BookCandidate.fromGoogleBooks));
       } on GoogleBooksMissingApiKeyException {
-        // Sin API key, simplemente ignoramos Google Books.
+        setState(() {
+          _searchError =
+              'Google Books necesita una API key. Añádela en Configuración > Integraciones externas.';
+        });
+        debugPrint('GoogleBooks search omitido por falta de API key');
       } catch (err) {
         debugPrint('GoogleBooks search failed: $err');
       }
@@ -1344,6 +1384,12 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
                               Text(candidate.author!),
                             if (candidate.isbn != null && candidate.isbn!.isNotEmpty)
                               Text('ISBN: ${candidate.isbn}'),
+                            Text(
+                              'Fuente: ${switch (candidate.source) {
+                                _BookSource.openLibrary => 'Open Library',
+                                _BookSource.googleBooks => 'Google Books',
+                              }}',
+                            ),
                           ],
                         ),
                         onTap: () => Navigator.of(context).pop(candidate),
@@ -4003,6 +4049,13 @@ class _SettingsTab extends ConsumerWidget {
               const _ThemeSection(),
               const SizedBox(height: 16),
               Text(
+                'Apoya el proyecto',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 12),
+              _buildDonationCard(context, ref),
+              const SizedBox(height: 24),
+              Text(
                 'Integraciones externas',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
@@ -4029,6 +4082,71 @@ class _SettingsTab extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildDonationCard(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final donationUrl = ref.watch(donationUrlProvider);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.local_cafe_outlined,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Invítame a un café',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Si esta app te resulta útil, puedes apoyar su desarrollo con una donación.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () => _openDonationLink(context, donationUrl),
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Invítame a un café'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openDonationLink(
+      BuildContext context, String donationUrl) async {
+    final uri = Uri.tryParse(donationUrl);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El enlace de donación no es válido.')),
+      );
+      return;
+    }
+
+    try {
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir el enlace de donación.')),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al abrir el enlace: $e')),
+      );
+    }
   }
 
   Widget _buildSyncStatusBanner(BuildContext context, WidgetRef ref) {

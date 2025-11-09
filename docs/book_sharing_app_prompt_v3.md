@@ -237,30 +237,58 @@ Se sugiere ejecutar en SQL editor de Supabase:
 create table groups (
   id uuid default uuid_generate_v4() primary key,
   name text not null,
-  owner_id uuid references auth.users(id),
+  owner_id uuid references auth.users(id) on delete set null,
+  description text,
   created_at timestamptz default now()
 );
 
--- Tabla group_members
+create index groups_owner_idx on groups(owner_id);
+
+-- Miembros del grupo (se permiten varios roles)
 create table group_members (
   id uuid default uuid_generate_v4() primary key,
-  group_id uuid references groups(id),
-  user_id uuid references auth.users(id),
-  role text default 'member',
-  created_at timestamptz default now()
+  group_id uuid not null references groups(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null default 'member',
+  invited_by uuid references auth.users(id),
+  created_at timestamptz default now(),
+  unique (group_id, user_id)
 );
 
--- Tabla loans
+create index group_members_user_idx on group_members(user_id);
+
+-- Libros compartidos dentro del grupo (referencia al libro local del dueño)
+create table shared_books (
+  id uuid default uuid_generate_v4() primary key,
+  group_id uuid not null references groups(id) on delete cascade,
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  local_book_uuid text not null,
+  visibility text not null default 'visible',
+  created_at timestamptz default now(),
+  unique (group_id, local_book_uuid)
+);
+
+create index shared_books_owner_idx on shared_books(owner_id);
+
+-- Préstamos registrados en Supabase
 create table loans (
   id uuid default uuid_generate_v4() primary key,
-  book_id text not null,
-  from_user uuid references auth.users(id),
-  to_user uuid references auth.users(id),
-  status text default 'pending',
+  shared_book_id uuid not null references shared_books(id) on delete cascade,
+  from_user uuid not null references auth.users(id) on delete cascade,
+  to_user uuid not null references auth.users(id) on delete cascade,
+  status text not null default 'pending',
   start_date date,
   due_date date,
-  created_at timestamptz default now()
+  returned_at timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
+
+create index loans_from_user_idx on loans(from_user);
+create index loans_to_user_idx on loans(to_user);
+create index loans_status_idx on loans(status);
+
+-- Recuerda añadir políticas RLS y funciones para sincronización según necesidades de seguridad.
 ```
 
 (Agregar índices y políticas RLS según necesidades de seguridad.)

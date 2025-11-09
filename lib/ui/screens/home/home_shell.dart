@@ -16,6 +16,7 @@ import '../../../data/local/group_dao.dart';
 import '../../../providers/api_providers.dart';
 import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
+import '../../../providers/permission_providers.dart';
 import '../../../providers/stats_providers.dart';
 import '../../../providers/settings_providers.dart';
 import '../../../providers/theme_providers.dart';
@@ -1211,6 +1212,18 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
   }
 
   Future<void> _handlePickCover() async {
+    final permissionService = ref.read(permissionServiceProvider);
+    final granted = await permissionService.ensureCameraPermission();
+    if (!granted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Necesitas habilitar la cámara para seleccionar una portada.'),
+        ),
+      );
+      return;
+    }
+
     final coverService = ref.read(coverImageServiceProvider);
     final newPath = await coverService.pickCover();
     if (newPath == null) return;

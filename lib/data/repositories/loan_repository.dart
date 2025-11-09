@@ -310,6 +310,10 @@ class LoanRepository {
     return _requireLoan(current.id);
   }
 
+  Future<List<LoanDetail>> getAllLoanDetails() {
+    return _groupDao.getAllLoanDetails();
+  }
+
   Future<Loan> _requireLoan(int id) async {
     final loan = await _groupDao.findLoanById(id);
     if (loan == null) {

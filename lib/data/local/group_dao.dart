@@ -329,6 +329,28 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
     );
   }
 
+  Future<List<LoanDetail>> getAllLoanDetails() {
+    final borrowers = alias(localUsers, 'allBorrowers');
+    final owners = alias(localUsers, 'allOwners');
+    final query = select(loans).join([
+      leftOuterJoin(sharedBooks, sharedBooks.id.equalsExp(loans.sharedBookId)),
+      leftOuterJoin(books, books.id.equalsExp(sharedBooks.bookId)),
+      leftOuterJoin(borrowers, borrowers.id.equalsExp(loans.fromUserId)),
+      leftOuterJoin(owners, owners.id.equalsExp(loans.toUserId)),
+    ])
+      ..where(loans.isDeleted.equals(false) | loans.isDeleted.isNull());
+
+    return query.map(
+      (row) => LoanDetail(
+        loan: row.readTable(loans),
+        sharedBook: row.readTableOrNull(sharedBooks),
+        book: row.readTableOrNull(books),
+        borrower: row.readTableOrNull(borrowers),
+        owner: row.readTableOrNull(owners),
+      ),
+    ).get();
+  }
+
   Future<int> insertLoan(LoansCompanion entry) => into(loans).insert(entry);
 
   Future<int> updateLoan({required int loanId, required LoansCompanion entry}) {

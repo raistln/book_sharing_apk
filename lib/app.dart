@@ -4,19 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/auth_providers.dart';
 import 'providers/notification_providers.dart';
+import 'providers/theme_providers.dart';
 import 'ui/screens/auth/lock_screen.dart';
 import 'ui/screens/auth/pin_setup_screen.dart';
 import 'ui/screens/home/home_shell.dart';
 import 'ui/widgets/inactivity_listener.dart';
 import 'ui/screens/splash_screen.dart';
-
-final themeProvider = Provider<ThemeData>((ref) {
-  return ThemeData(
-    useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4A148C)),
-    visualDensity: VisualDensity.adaptivePlatformDensity,
-  );
-});
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
@@ -48,13 +41,17 @@ class BookSharingApp extends ConsumerWidget {
       });
     });
 
-    final theme = ref.watch(themeProvider);
+    final theme = ref.watch(lightThemeProvider);
+    final darkTheme = ref.watch(darkThemeProvider);
+    final mode = ref.watch(themeModeProvider);
 
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: 'Book Sharing App',
       debugShowCheckedModeBanner: false,
       theme: theme,
+      darkTheme: darkTheme,
+      themeMode: mode,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

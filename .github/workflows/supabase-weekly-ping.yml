@@ -1,0 +1,30 @@
+name: Keep Supabase Warm
+
+on:
+  schedule:
+    - cron: "0 4 * * 1" # Every Monday at 04:00 UTC
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping Supabase REST endpoint
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Fail fast if secrets are missing
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not configured in repository secrets." >&2
+            exit 1
+          fi
+      - name: Ping Supabase
+        run: |
+          curl -sSf \
+            --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "Accept: application/json" \
+            "${SUPABASE_URL}/rest/v1/rpc/pg_sleep" \
+            --data '{"seconds":0}' \
+            --header 'Content-Type: application/json'

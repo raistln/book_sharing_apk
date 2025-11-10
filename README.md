@@ -109,11 +109,10 @@ Este repositorio se distribuye bajo la licencia **Book Sharing App Non-Commercia
 ## 🧍‍♀️ Completa tus datos
 
 
-| Dato | Valor |
-|------|-------|
-| **book_sharing_app** |
-| **samumarfon@gmail.com** |
-| **https://github.com/raistln** | 
+
+**book_sharing_app** 
+**samumarfon@gmail.com**
+**https://github.com/raistln**
 
 ---
 

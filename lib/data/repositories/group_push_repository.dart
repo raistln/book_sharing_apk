@@ -29,7 +29,7 @@ class GroupPushRepository {
     Uuid? uuid,
   })  : _groupDao = groupDao,
         _userDao = userDao,
-        _configService = configService ?? SupabaseConfigService(),
+        _configService = configService ?? const SupabaseConfigService(),
         _client = client ?? http.Client(),
         _uuid = uuid ?? const Uuid();
 

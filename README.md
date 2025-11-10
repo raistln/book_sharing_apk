@@ -6,6 +6,10 @@
     ¡Descubre la forma más bonita de cuidar tu biblioteca personal!
   </p>
   <a href="#descarga">⬇️ Descarga y empieza en minutos</a>
+  <br/>
+  <a href="https://buymeacoffee.com/samumarfona">
+    <img src="https://img.buymeacoffee.com/button-api/?text=Invítame%20a%20un%20café&emoji=☕&slug=samumarfona&button_colour=ff813f&font_colour=ffffff&font_family=Inter&outline_colour=000000&coffee_colour=ffffff" alt="Buy Me A Coffee" />
+  </a>
 </div>
 
 ---
@@ -66,6 +70,19 @@ Los permisos se gestionan con [`permission_handler`](https://pub.dev/packages/pe
 
 2. En Ajustes verás el botón "Invítame a un café" apuntando al enlace que indiques.
 3. Comparte la app con tu comunidad y recuérdales que pueden apoyarte desde ahí.
+
+[![Invítame a un café](https://img.buymeacoffee.com/button-api/?text=Invítame%20a%20un%20café&emoji=☕&slug=samumarfona&button_colour=ff813f&font_colour=ffffff&font_family=Inter&outline_colour=000000&coffee_colour=ffffff)](https://buymeacoffee.com/samumarfona)
+
+## 🛠️ ¿Quieres tu propio backend Supabase?
+
+El proyecto oficial usa las credenciales integradas y no admite cambios desde la app. Si quieres alojar tu propia instancia (o personalizar Google Books):
+
+1. Haz fork del repositorio.
+2. Sigue la guía detallada en [`docs/self_host_supabase.md`](docs/self_host_supabase.md) para crear el proyecto Supabase, aplicar el esquema y actualizar tus claves en `lib/config/supabase_defaults.dart`.
+3. Opcional: añade tu API key de Google Books desde Ajustes una vez compilada tu build.
+4. Genera tus builds (`flutter build apk --release`) con las nuevas credenciales.
+
+La guía también explica cómo mantener tu instancia y qué pasos seguir para distribuir tu propia versión.
 
 ## ✅ Calidad garantizada
 

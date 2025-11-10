@@ -1,6 +1,0 @@
-NEXT_PUBLIC_SUPABASE_URL=https://zeautindvdwfvawjtkit.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplYXV0aW5kdmR3ZnZhd2p0a2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNTExNjQsImV4cCI6MjA3NzkyNzE2NH0.WB7_SCkoPNgmZyy7jKnKXmB9eMSQh0yCWOVdXgdhGck
-
-Copiados en `lib/config/supabase_defaults.dart` por conveniencia.
-
-uG5rZ4U2tvfubrBC

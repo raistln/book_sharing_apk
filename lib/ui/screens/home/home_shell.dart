@@ -27,7 +27,6 @@ import '../../../services/google_books_client.dart';
 import '../../../services/loan_controller.dart';
 import '../../../services/open_library_client.dart';
 import '../../../services/notification_service.dart';
-import '../../../services/supabase_config_service.dart';
 import '../../../services/stats_service.dart';
 import '../../widgets/cover_preview.dart';
 import '../../widgets/import_books_dialog.dart';
@@ -411,284 +410,59 @@ class _EmptyLibraryState extends StatelessWidget {
 
 }
 
-class _SupabaseConfigCard extends ConsumerWidget {
-  const _SupabaseConfigCard({
-    required this.onConfigure,
-    required this.onReset,
-  });
-
-  final Future<void> Function() onConfigure;
-  final Future<void> Function() onReset;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final configState = ref.watch(supabaseConfigControllerProvider);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: configState.when(
-          data: (config) {
-            final theme = Theme.of(context);
-            final usingDefaults = config.url == kSupabaseDefaultUrl &&
-                config.anonKey == kSupabaseDefaultAnonKey;
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.cloud_outlined,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Supabase',
-                      style: theme.textTheme.titleMedium,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  usingDefaults
-                      ? 'Usando la configuración predeterminada del proyecto.'
-                      : 'Usando una configuración personalizada.',
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'URL: ${config.url}',
-                  style: theme.textTheme.bodySmall,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Anon key: ${_maskSupabaseAnonKey(config.anonKey)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: () => unawaited(onConfigure()),
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('Configurar Supabase'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: usingDefaults
-                          ? null
-                          : () => unawaited(onReset()),
-                      icon: const Icon(Icons.settings_backup_restore_outlined),
-                      label: const Text('Restaurar valores por defecto'),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
-          loading: () => const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: CircularProgressIndicator(),
-            ),
-          ),
-          error: (error, _) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'No se pudo cargar la configuración de Supabase.',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '$error',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () =>
-                      ref.invalidate(supabaseConfigControllerProvider),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar'),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-String _maskSupabaseAnonKey(String key) {
-  if (key.length <= 8) {
-    return '*' * key.length;
-  }
-  final prefix = key.substring(0, 6);
-  final suffix = key.substring(key.length - 4);
-  return '$prefix***$suffix';
-}
-
-class _SupabaseConfigDialog extends StatefulWidget {
-  const _SupabaseConfigDialog({
-    required this.ref,
-    this.initialConfig,
-  });
-
-  final WidgetRef ref;
-  final SupabaseConfig? initialConfig;
-
-  @override
-  State<_SupabaseConfigDialog> createState() => _SupabaseConfigDialogState();
-}
-
-class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
-  late final TextEditingController _urlController;
-  late final TextEditingController _anonKeyController;
-  String? _urlError;
-  String? _anonKeyError;
-  String? _formError;
-  bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final initial = widget.initialConfig ??
-        const SupabaseConfig(
-          url: kSupabaseDefaultUrl,
-          anonKey: kSupabaseDefaultAnonKey,
-        );
-    _urlController = TextEditingController(text: initial.url);
-    _anonKeyController = TextEditingController(text: initial.anonKey);
-  }
-
-  @override
-  void dispose() {
-    _urlController.dispose();
-    _anonKeyController.dispose();
-    super.dispose();
-  }
+class _SupabaseConfigCard extends StatelessWidget {
+  const _SupabaseConfigCard();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return AlertDialog(
-      title: const Text('Configurar Supabase'),
-      content: SingleChildScrollView(
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.cloud_outlined,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Supabase oficial',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             Text(
-              'Introduce la URL y la anon key de tu proyecto. Si no tienes una propia, puedes conservar la configuración predeterminada.',
+              'Esta versión utiliza el espacio de Supabase mantenido por el proyecto. '
+              'Las credenciales están integradas y no se pueden editar desde la app.',
               style: theme.textTheme.bodyMedium,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _urlController,
-              decoration: InputDecoration(
-                labelText: 'Supabase URL',
-                hintText: 'https://your-project.supabase.co',
-                border: const OutlineInputBorder(),
-                errorText: _urlError,
+            const SizedBox(height: 12),
+            Text(
+              'URL: $kSupabaseDefaultUrl',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Anon key: ******',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _anonKeyController,
-              decoration: InputDecoration(
-                labelText: 'Anon key',
-                hintText: 'eyJhbGciOiJI...',
-                border: const OutlineInputBorder(),
-                errorText: _anonKeyError,
-              ),
-              maxLines: 3,
-              minLines: 1,
+            const SizedBox(height: 12),
+            Text(
+              'Si deseas alojar tu propio backend, revisa la guía "docs/self_host_supabase.md" en el repositorio.',
+              style: theme.textTheme.bodySmall,
             ),
-            if (_formError != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _formError!,
-                style:
-                    theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
-              ),
-            ],
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _saving
-              ? null
-              : () {
-                  Navigator.of(context).pop(false);
-                },
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: _saving ? null : _submit,
-          child: _saving
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Guardar'),
-        ),
-      ],
     );
-  }
-
-  Future<void> _submit() async {
-    final url = _urlController.text.trim();
-    final anonKey = _anonKeyController.text.trim();
-
-    setState(() {
-      _urlError = url.isEmpty ? 'Introduce una URL válida.' : null;
-      _anonKeyError = anonKey.isEmpty ? 'Introduce una anon key válida.' : null;
-      _formError = null;
-    });
-
-    if (_urlError != null || _anonKeyError != null) {
-      return;
-    }
-
-    setState(() {
-      _saving = true;
-    });
-
-    final controller = widget.ref.read(supabaseConfigControllerProvider.notifier);
-    await controller.saveConfig(url: url, anonKey: anonKey);
-
-    final state = widget.ref.read(supabaseConfigControllerProvider);
-    if (!mounted) {
-      return;
-    }
-
-    if (state.hasError) {
-      setState(() {
-        _saving = false;
-        _formError = 'No se pudo guardar: ${state.error}';
-      });
-      return;
-    }
-
-    Navigator.of(context).pop(true);
   }
 }
 
@@ -4073,10 +3847,7 @@ class _SettingsTab extends ConsumerWidget {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 12),
-              _SupabaseConfigCard(
-                onConfigure: () => _handleConfigureSupabase(context, ref),
-                onReset: () => _handleResetSupabase(context, ref),
-              ),
+              const _SupabaseConfigCard(),
               const SizedBox(height: 16),
               _buildSyncActionsCard(context, ref),
               const SizedBox(height: 16),
@@ -4300,66 +4071,6 @@ class _SettingsTab extends ConsumerWidget {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Sincronización completada.')),
-    );
-  }
-
-  Future<void> _handleConfigureSupabase(
-      BuildContext context, WidgetRef ref) async {
-    final currentConfig = ref.read(supabaseConfigControllerProvider).valueOrNull;
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => _SupabaseConfigDialog(
-        ref: ref,
-        initialConfig: currentConfig,
-      ),
-    );
-
-    if (result == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Configuración de Supabase guardada.')),
-      );
-    }
-  }
-
-  Future<void> _handleResetSupabase(
-      BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Restablecer Supabase'),
-        content: const Text(
-          'Se restaurarán la URL y la anon key predeterminadas. ¿Deseas continuar?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Restablecer'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    final controller = ref.read(supabaseConfigControllerProvider.notifier);
-    await controller.resetToDefaults();
-
-    if (!context.mounted) return;
-
-    final state = ref.read(supabaseConfigControllerProvider);
-    if (state.hasError) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo restablecer: ${state.error}')),
-      );
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Configuración de Supabase restablecida.')),
     );
   }
 

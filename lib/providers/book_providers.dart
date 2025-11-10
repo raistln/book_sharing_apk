@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../config/supabase_defaults.dart';
 import '../data/local/book_dao.dart';
 import '../data/local/database.dart';
 import '../data/local/group_dao.dart';
@@ -97,30 +96,14 @@ final activeUserProvider = StreamProvider.autoDispose<LocalUser?>((ref) {
   return repository.watchActiveUser();
 });
 
-final supabaseConfigServiceProvider = Provider<SupabaseConfigService>((ref) {
-  return SupabaseConfigService();
-});
-
-final supabaseConfigProvider = FutureProvider.autoDispose<SupabaseConfig>((ref) {
-  final service = ref.watch(supabaseConfigServiceProvider);
-  return service.loadConfig();
-});
-
-final supabaseConfigControllerProvider = AutoDisposeAsyncNotifierProvider<
-    SupabaseConfigController, SupabaseConfig>(SupabaseConfigController.new);
-
 final supabaseUserServiceProvider = Provider<SupabaseUserService>((ref) {
-  final service = SupabaseUserService(
-    configService: ref.watch(supabaseConfigServiceProvider),
-  );
+  final service = SupabaseUserService();
   ref.onDispose(service.dispose);
   return service;
 });
 
 final supabaseGroupServiceProvider = Provider<SupabaseGroupService>((ref) {
-  final service = SupabaseGroupService(
-    configService: ref.watch(supabaseConfigServiceProvider),
-  );
+  final service = SupabaseGroupService();
   ref.onDispose(service.dispose);
   return service;
 });
@@ -128,11 +111,9 @@ final supabaseGroupServiceProvider = Provider<SupabaseGroupService>((ref) {
 final groupPushRepositoryProvider = Provider<GroupPushRepository>((ref) {
   final groupDao = ref.watch(groupDaoProvider);
   final userDao = ref.watch(userDaoProvider);
-  final configService = ref.watch(supabaseConfigServiceProvider);
   final repository = GroupPushRepository(
     groupDao: groupDao,
     userDao: userDao,
-    configService: configService,
   );
   ref.onDispose(repository.dispose);
   return repository;
@@ -174,11 +155,10 @@ final groupSyncControllerProvider =
     StateNotifierProvider<GroupSyncController, SyncState>((ref) {
   final repository = ref.watch(supabaseGroupSyncRepositoryProvider);
   final userRepository = ref.watch(userRepositoryProvider);
-  final configService = ref.watch(supabaseConfigServiceProvider);
   return GroupSyncController(
     groupRepository: repository,
     userRepository: userRepository,
-    configService: configService,
+    configService: const SupabaseConfigService(),
   );
 });
 
@@ -205,46 +185,3 @@ final groupPushControllerProvider =
     notificationClient: notificationClient,
   );
 });
-
-class SupabaseConfigController
-    extends AutoDisposeAsyncNotifier<SupabaseConfig> {
-  SupabaseConfigService get _service =>
-      ref.read(supabaseConfigServiceProvider);
-
-  @override
-  Future<SupabaseConfig> build() {
-    return _service.loadConfig();
-  }
-
-  Future<void> saveConfig({required String url, required String anonKey}) async {
-    final trimmedUrl = url.trim();
-    final trimmedAnonKey = anonKey.trim();
-
-    if (trimmedUrl.isEmpty || trimmedAnonKey.isEmpty) {
-      throw ArgumentError('La URL y la anon key no pueden estar vacías.');
-    }
-
-    state = const AsyncValue.loading();
-    try {
-      final config = SupabaseConfig(url: trimmedUrl, anonKey: trimmedAnonKey);
-      await _service.saveConfig(config);
-      state = AsyncValue.data(config);
-    } catch (err, stack) {
-      state = AsyncValue.error(err, stack);
-    }
-  }
-
-  Future<void> resetToDefaults() async {
-    state = const AsyncValue.loading();
-    try {
-      await _service.clear();
-      const config = SupabaseConfig(
-        url: kSupabaseDefaultUrl,
-        anonKey: kSupabaseDefaultAnonKey,
-      );
-      state = const AsyncValue.data(config);
-    } catch (err, stack) {
-      state = AsyncValue.error(err, stack);
-    }
-  }
-}

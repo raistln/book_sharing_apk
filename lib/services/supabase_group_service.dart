@@ -230,8 +230,8 @@ class SupabaseGroupService {
     SupabaseConfigService? configService,
     Future<SupabaseConfig> Function()? configLoader,
   })  : _client = client ?? http.Client(),
-        _loadConfig =
-            configLoader ?? ((configService ?? SupabaseConfigService()).loadConfig);
+        _loadConfig = configLoader ??
+            ((configService ?? const SupabaseConfigService()).loadConfig);
 
   final http.Client _client;
   final Future<SupabaseConfig> Function() _loadConfig;

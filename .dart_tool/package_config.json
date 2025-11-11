@@ -201,9 +201,9 @@
     },
     {
       "name": "file_picker",
-      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/file_picker-6.2.1",
+      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/file_picker-10.3.3",
       "packageUri": "lib/",
-      "languageVersion": "2.19"
+      "languageVersion": "3.4"
     },
     {
       "name": "file_selector_linux",
@@ -418,18 +418,6 @@
     {
       "name": "image",
       "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/image-4.5.4",
-      "packageUri": "lib/",
-      "languageVersion": "3.0"
-    },
-    {
-      "name": "image_compression",
-      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/image_compression-1.0.5",
-      "packageUri": "lib/",
-      "languageVersion": "3.0"
-    },
-    {
-      "name": "image_compression_flutter",
-      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/image_compression_flutter-1.0.4",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
@@ -1065,9 +1053,27 @@
     },
     {
       "name": "workmanager",
-      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/workmanager-0.5.2",
+      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/workmanager-0.9.0+3",
       "packageUri": "lib/",
-      "languageVersion": "3.1"
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "workmanager_android",
+      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/workmanager_android-0.9.0+2",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "workmanager_apple",
+      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/workmanager_apple-0.9.1+2",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "workmanager_platform_interface",
+      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/workmanager_platform_interface-0.9.1+1",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
     },
     {
       "name": "xdg_directories",

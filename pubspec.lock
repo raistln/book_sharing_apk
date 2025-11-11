@@ -269,10 +269,10 @@ packages:
     dependency: "direct main"
     description:
       name: file_picker
-      sha256: "1bbf65dd997458a08b531042ec3794112a6c39c07c37ff22113d2e7e4f81d4e4"
+      sha256: f2d9f173c2c14635cc0e9b14c143c49ef30b4934e8d1d274d6206fcb0086a06f
       url: "https://pub.dev"
     source: hosted
-    version: "6.2.1"
+    version: "10.3.3"
   file_selector_linux:
     dependency: transitive
     description:
@@ -332,7 +332,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_image_compress:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_image_compress
       sha256: "51d23be39efc2185e72e290042a0da41aed70b14ef97db362a6b5368d0523b27"
@@ -543,22 +543,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.5.4"
-  image_compression:
-    dependency: transitive
-    description:
-      name: image_compression
-      sha256: "0ab2ad255fc3877c0e425a3f46796b2872806c1d7260207ec72b723975f6f3e0"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.5"
-  image_compression_flutter:
-    dependency: "direct main"
-    description:
-      name: image_compression_flutter
-      sha256: "0d7fc5d37bb69996285dd57342b3a37ad92fa4bb0616484af084ec924d6818b4"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.4"
   image_picker:
     dependency: "direct main"
     description:
@@ -1397,10 +1381,34 @@ packages:
     dependency: "direct main"
     description:
       name: workmanager
-      sha256: ed13530cccd28c5c9959ad42d657cd0666274ca74c56dea0ca183ddd527d3a00
+      sha256: "065673b2a465865183093806925419d311a9a5e0995aa74ccf8920fd695e2d10"
       url: "https://pub.dev"
     source: hosted
-    version: "0.5.2"
+    version: "0.9.0+3"
+  workmanager_android:
+    dependency: transitive
+    description:
+      name: workmanager_android
+      sha256: "9ae744db4ef891f5fcd2fb8671fccc712f4f96489a487a1411e0c8675e5e8cb7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.9.0+2"
+  workmanager_apple:
+    dependency: transitive
+    description:
+      name: workmanager_apple
+      sha256: "1cc12ae3cbf5535e72f7ba4fde0c12dd11b757caf493a28e22d684052701f2ca"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.9.1+2"
+  workmanager_platform_interface:
+    dependency: transitive
+    description:
+      name: workmanager_platform_interface
+      sha256: f40422f10b970c67abb84230b44da22b075147637532ac501729256fcea10a47
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.9.1+1"
   xdg_directories:
     dependency: transitive
     description:

@@ -14,12 +14,12 @@
         "file_picker",
         "flutter",
         "flutter_dotenv",
+        "flutter_image_compress",
         "flutter_local_notifications",
         "flutter_localizations",
         "flutter_riverpod",
         "flutter_secure_storage",
         "http",
-        "image_compression_flutter",
         "image_picker",
         "intl",
         "json_annotation",
@@ -226,14 +226,17 @@
     },
     {
       "name": "file_picker",
-      "version": "6.2.1",
+      "version": "10.3.3",
       "dependencies": [
+        "cross_file",
+        "dbus",
         "ffi",
         "flutter",
         "flutter_plugin_android_lifecycle",
         "flutter_web_plugins",
         "path",
         "plugin_platform_interface",
+        "web",
         "win32"
       ]
     },
@@ -340,9 +343,12 @@
     },
     {
       "name": "workmanager",
-      "version": "0.5.2",
+      "version": "0.9.0+3",
       "dependencies": [
-        "flutter"
+        "flutter",
+        "workmanager_android",
+        "workmanager_apple",
+        "workmanager_platform_interface"
       ]
     },
     {
@@ -364,14 +370,15 @@
       ]
     },
     {
-      "name": "image_compression_flutter",
-      "version": "1.0.4",
+      "name": "flutter_image_compress",
+      "version": "2.4.0",
       "dependencies": [
-        "cross_file",
         "flutter",
-        "flutter_image_compress",
-        "flutter_web_plugins",
-        "image_compression"
+        "flutter_image_compress_common",
+        "flutter_image_compress_macos",
+        "flutter_image_compress_ohos",
+        "flutter_image_compress_platform_interface",
+        "flutter_image_compress_web"
       ]
     },
     {
@@ -453,6 +460,13 @@
         "stack_trace",
         "stream_channel",
         "web"
+      ]
+    },
+    {
+      "name": "flutter_dotenv",
+      "version": "5.2.1",
+      "dependencies": [
+        "flutter"
       ]
     },
     {
@@ -1086,6 +1100,29 @@
       ]
     },
     {
+      "name": "dbus",
+      "version": "0.7.11",
+      "dependencies": [
+        "args",
+        "ffi",
+        "meta",
+        "xml"
+      ]
+    },
+    {
+      "name": "web",
+      "version": "1.1.1",
+      "dependencies": []
+    },
+    {
+      "name": "cross_file",
+      "version": "0.3.5",
+      "dependencies": [
+        "meta",
+        "web"
+      ]
+    },
+    {
       "name": "win32",
       "version": "5.15.0",
       "dependencies": [
@@ -1117,11 +1154,6 @@
       "dependencies": [
         "flutter"
       ]
-    },
-    {
-      "name": "web",
-      "version": "1.1.1",
-      "dependencies": []
     },
     {
       "name": "package_info_plus_platform_interface",
@@ -1168,14 +1200,6 @@
         "path_provider",
         "plugin_platform_interface",
         "uuid"
-      ]
-    },
-    {
-      "name": "cross_file",
-      "version": "0.3.5",
-      "dependencies": [
-        "meta",
-        "web"
       ]
     },
     {
@@ -1227,6 +1251,31 @@
       ]
     },
     {
+      "name": "workmanager_apple",
+      "version": "0.9.1+2",
+      "dependencies": [
+        "flutter",
+        "workmanager_platform_interface"
+      ]
+    },
+    {
+      "name": "workmanager_android",
+      "version": "0.9.0+2",
+      "dependencies": [
+        "flutter",
+        "workmanager_platform_interface"
+      ]
+    },
+    {
+      "name": "workmanager_platform_interface",
+      "version": "0.9.1+1",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "plugin_platform_interface"
+      ]
+    },
+    {
       "name": "flutter_local_notifications_platform_interface",
       "version": "7.2.0",
       "dependencies": [
@@ -1247,24 +1296,46 @@
       ]
     },
     {
-      "name": "image_compression",
-      "version": "1.0.5",
+      "name": "flutter_image_compress_ohos",
+      "version": "0.0.3",
       "dependencies": [
-        "image",
-        "mime",
-        "path"
+        "flutter",
+        "flutter_image_compress_platform_interface"
       ]
     },
     {
-      "name": "flutter_image_compress",
-      "version": "2.4.0",
+      "name": "flutter_image_compress_macos",
+      "version": "1.0.3",
       "dependencies": [
         "flutter",
-        "flutter_image_compress_common",
-        "flutter_image_compress_macos",
-        "flutter_image_compress_ohos",
+        "flutter_image_compress_platform_interface"
+      ]
+    },
+    {
+      "name": "flutter_image_compress_web",
+      "version": "0.1.5",
+      "dependencies": [
+        "flutter",
         "flutter_image_compress_platform_interface",
-        "flutter_image_compress_web"
+        "flutter_web_plugins",
+        "web"
+      ]
+    },
+    {
+      "name": "flutter_image_compress_common",
+      "version": "1.0.6",
+      "dependencies": [
+        "flutter",
+        "flutter_image_compress_platform_interface"
+      ]
+    },
+    {
+      "name": "flutter_image_compress_platform_interface",
+      "version": "1.0.5",
+      "dependencies": [
+        "cross_file",
+        "flutter",
+        "plugin_platform_interface"
       ]
     },
     {
@@ -1616,59 +1687,6 @@
       ]
     },
     {
-      "name": "dbus",
-      "version": "0.7.11",
-      "dependencies": [
-        "args",
-        "ffi",
-        "meta",
-        "xml"
-      ]
-    },
-    {
-      "name": "flutter_image_compress_ohos",
-      "version": "0.0.3",
-      "dependencies": [
-        "flutter",
-        "flutter_image_compress_platform_interface"
-      ]
-    },
-    {
-      "name": "flutter_image_compress_macos",
-      "version": "1.0.3",
-      "dependencies": [
-        "flutter",
-        "flutter_image_compress_platform_interface"
-      ]
-    },
-    {
-      "name": "flutter_image_compress_web",
-      "version": "0.1.5",
-      "dependencies": [
-        "flutter",
-        "flutter_image_compress_platform_interface",
-        "flutter_web_plugins",
-        "web"
-      ]
-    },
-    {
-      "name": "flutter_image_compress_common",
-      "version": "1.0.6",
-      "dependencies": [
-        "flutter",
-        "flutter_image_compress_platform_interface"
-      ]
-    },
-    {
-      "name": "flutter_image_compress_platform_interface",
-      "version": "1.0.5",
-      "dependencies": [
-        "cross_file",
-        "flutter",
-        "plugin_platform_interface"
-      ]
-    },
-    {
       "name": "file_selector_windows",
       "version": "0.9.3+4",
       "dependencies": [
@@ -1722,13 +1740,6 @@
         "file",
         "path",
         "platform"
-      ]
-    },
-    {
-      "name": "flutter_dotenv",
-      "version": "5.2.1",
-      "dependencies": [
-        "flutter"
       ]
     }
   ],

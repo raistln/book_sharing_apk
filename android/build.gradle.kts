@@ -1,3 +1,8 @@
+import com.android.build.gradle.LibraryExtension
+import com.android.build.gradle.AppExtension
+import org.gradle.api.tasks.compile.JavaCompile
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 allprojects {
     repositories {
         google()
@@ -18,6 +23,8 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(":app")
 }
+
+// No forzar configuración global - dejar que cada plugin use su propia versión
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)

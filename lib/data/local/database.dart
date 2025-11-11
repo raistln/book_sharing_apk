@@ -281,7 +281,12 @@ class AppDatabase extends _$AppDatabase {
           }
 
           if (from < 6) {
-            await m.addColumn(groups, groups.description);
+            // Verificar si la columna description ya existe antes de agregarla
+            try {
+              await m.addColumn(groups, groups.description);
+            } catch (e) {
+              // La columna ya existe, continuar
+            }
             await m.createTable(groupInvitations);
           }
         },

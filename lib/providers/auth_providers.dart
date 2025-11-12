@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/auth_service.dart';
 import '../services/inactivity_service.dart';
+import '../services/sync_service.dart';
+import 'book_providers.dart';
 
 enum AuthStatus { loading, needsPin, locked, unlocked }
 
@@ -68,9 +70,11 @@ final isBiometricButtonEnabledProvider = Provider<bool>((ref) {
 });
 
 class AuthController extends StateNotifier<AuthState> {
-  AuthController(this._authService) : super(AuthState.initial);
+  AuthController(this._authService, this._userSyncController)
+      : super(AuthState.initial);
 
   final AuthService _authService;
+  final SyncController _userSyncController;
   Timer? _lockTimer;
 
   void _cancelLockTimer() {
@@ -134,6 +138,7 @@ class AuthController extends StateNotifier<AuthState> {
         lockUntil: null,
       );
       _cancelLockTimer();
+      unawaited(_userSyncController.sync());
       return const AuthAttemptResult.success();
     }
 
@@ -182,6 +187,7 @@ class AuthController extends StateNotifier<AuthState> {
         lockUntil: null,
       );
       _cancelLockTimer();
+      unawaited(_userSyncController.sync());
       return true;
     }
 
@@ -206,6 +212,7 @@ class AuthController extends StateNotifier<AuthState> {
       lockUntil: null,
     );
     _cancelLockTimer();
+    unawaited(_userSyncController.sync());
   }
 
   Future<void> clearPin() async {
@@ -229,7 +236,8 @@ class AuthController extends StateNotifier<AuthState> {
 final authControllerProvider =
     StateNotifierProvider<AuthController, AuthState>((ref) {
   final service = ref.watch(authServiceProvider);
-  return AuthController(service);
+  final userSyncController = ref.watch(userSyncControllerProvider.notifier);
+  return AuthController(service, userSyncController);
 });
 
 final inactivityManagerProvider = Provider<InactivityManager>((ref) {

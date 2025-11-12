@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/auth_providers.dart';
+import '../../../providers/book_providers.dart';
 import '../home/home_shell.dart';
 
 class PinSetupScreen extends ConsumerStatefulWidget {
@@ -14,13 +15,16 @@ class PinSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
+  final _usernameController = TextEditingController();
   final _pinController = TextEditingController();
   final _confirmController = TextEditingController();
   String? _errorMessage;
   bool _navigated = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _pinController.dispose();
     _confirmController.dispose();
     super.dispose();
@@ -38,7 +42,8 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
     });
 
     final authState = ref.watch(authControllerProvider);
-    final isLoading = authState.status == AuthStatus.loading;
+    final isLoading =
+        authState.status == AuthStatus.loading || _isSubmitting;
 
     return Scaffold(
       body: SafeArea(
@@ -59,6 +64,18 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
+                  TextField(
+                    controller: _usernameController,
+                    enabled: !isLoading,
+                    textCapitalization: TextCapitalization.none,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre de usuario',
+                      border: OutlineInputBorder(),
+                      hintText: 'Ej. ana_lectora',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _pinController,
                     enabled: !isLoading,
@@ -113,9 +130,20 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+
+    final username = _usernameController.text.trim();
     final pin = _pinController.text.trim();
     final confirm = _confirmController.text.trim();
+
+    if (username.length < 3) {
+      setState(() {
+        _errorMessage =
+            'El nombre de usuario debe tener al menos 3 caracteres.';
+      });
+      return;
+    }
 
     if (pin.length < 4) {
       setState(() {
@@ -133,8 +161,37 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
 
     setState(() {
       _errorMessage = null;
+      _isSubmitting = true;
     });
 
-    ref.read(authControllerProvider.notifier).configurePin(pin);
+    try {
+      final supabaseService = ref.read(supabaseUserServiceProvider);
+      final isAvailable = await supabaseService.isUsernameAvailable(username);
+
+      if (!isAvailable) {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage =
+              'Ese nombre de usuario ya existe en Supabase. Prueba con otro.';
+        });
+        return;
+      }
+
+      final userRepository = ref.read(userRepositoryProvider);
+      await userRepository.createUser(username: username);
+
+      if (!mounted) return;
+      await ref.read(authControllerProvider.notifier).configurePin(pin);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'No se pudo crear el usuario: $error';
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+      });
+    }
   }
 }

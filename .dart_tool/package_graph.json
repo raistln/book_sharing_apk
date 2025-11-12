@@ -12,6 +12,7 @@
         "cupertino_icons",
         "drift",
         "file_picker",
+        "file_saver",
         "flutter",
         "flutter_dotenv",
         "flutter_image_compress",
@@ -222,6 +223,20 @@
         "shared_preferences_platform_interface",
         "shared_preferences_web",
         "shared_preferences_windows"
+      ]
+    },
+    {
+      "name": "file_saver",
+      "version": "0.2.14",
+      "dependencies": [
+        "collection",
+        "dio",
+        "flutter",
+        "flutter_web_plugins",
+        "path_provider",
+        "path_provider_linux",
+        "path_provider_windows",
+        "web"
       ]
     },
     {
@@ -1100,6 +1115,52 @@
       ]
     },
     {
+      "name": "web",
+      "version": "1.1.1",
+      "dependencies": []
+    },
+    {
+      "name": "path_provider_windows",
+      "version": "2.3.0",
+      "dependencies": [
+        "ffi",
+        "flutter",
+        "path",
+        "path_provider_platform_interface"
+      ]
+    },
+    {
+      "name": "path_provider_linux",
+      "version": "2.2.1",
+      "dependencies": [
+        "ffi",
+        "flutter",
+        "path",
+        "path_provider_platform_interface",
+        "xdg_directories"
+      ]
+    },
+    {
+      "name": "flutter_web_plugins",
+      "version": "0.0.0",
+      "dependencies": [
+        "flutter"
+      ]
+    },
+    {
+      "name": "dio",
+      "version": "5.9.0",
+      "dependencies": [
+        "async",
+        "collection",
+        "dio_web_adapter",
+        "http_parser",
+        "meta",
+        "mime",
+        "path"
+      ]
+    },
+    {
       "name": "dbus",
       "version": "0.7.11",
       "dependencies": [
@@ -1108,11 +1169,6 @@
         "meta",
         "xml"
       ]
-    },
-    {
-      "name": "web",
-      "version": "1.1.1",
-      "dependencies": []
     },
     {
       "name": "cross_file",
@@ -1144,13 +1200,6 @@
     {
       "name": "flutter_plugin_android_lifecycle",
       "version": "2.0.32",
-      "dependencies": [
-        "flutter"
-      ]
-    },
-    {
-      "name": "flutter_web_plugins",
-      "version": "0.0.0",
       "dependencies": [
         "flutter"
       ]
@@ -1495,33 +1544,12 @@
       ]
     },
     {
-      "name": "path_provider_windows",
-      "version": "2.3.0",
-      "dependencies": [
-        "ffi",
-        "flutter",
-        "path",
-        "path_provider_platform_interface"
-      ]
-    },
-    {
       "name": "path_provider_platform_interface",
       "version": "2.1.2",
       "dependencies": [
         "flutter",
         "platform",
         "plugin_platform_interface"
-      ]
-    },
-    {
-      "name": "path_provider_linux",
-      "version": "2.2.1",
-      "dependencies": [
-        "ffi",
-        "flutter",
-        "path",
-        "path_provider_platform_interface",
-        "xdg_directories"
       ]
     },
     {
@@ -1662,6 +1690,24 @@
       ]
     },
     {
+      "name": "xdg_directories",
+      "version": "1.1.0",
+      "dependencies": [
+        "meta",
+        "path"
+      ]
+    },
+    {
+      "name": "dio_web_adapter",
+      "version": "2.1.1",
+      "dependencies": [
+        "dio",
+        "http_parser",
+        "meta",
+        "web"
+      ]
+    },
+    {
       "name": "petitparser",
       "version": "7.0.1",
       "dependencies": [
@@ -1674,14 +1720,6 @@
       "version": "6.0.3",
       "dependencies": [
         "ffi",
-        "meta",
-        "path"
-      ]
-    },
-    {
-      "name": "xdg_directories",
-      "version": "1.1.0",
-      "dependencies": [
         "meta",
         "path"
       ]

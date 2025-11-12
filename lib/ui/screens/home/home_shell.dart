@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart' show Value;
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as p;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -35,6 +37,21 @@ import '../auth/pin_setup_screen.dart';
 final _currentTabProvider = StateProvider<int>((ref) => 0);
 
 enum _BookFormResult { saved, deleted }
+
+enum _ExportAction { share, download }
+
+MimeType _mapMimeType(String extension) {
+  switch (extension.toLowerCase()) {
+    case 'pdf':
+      return MimeType.pdf;
+    case 'json':
+      return MimeType.json;
+    case 'csv':
+      return MimeType.csv;
+    default:
+      return MimeType.other;
+  }
+}
 
 class _ThemeSection extends ConsumerWidget {
   const _ThemeSection();
@@ -558,6 +575,30 @@ class _BookListTile extends ConsumerWidget {
       ),
     );
 
+    subtitleWidgets.add(
+      Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Chip(
+              label: Text(statusLabel),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+              labelStyle: theme.textTheme.labelSmall
+                  ?.copyWith(color: theme.colorScheme.primary),
+            ),
+            Text(
+              DateFormat.yMMMd().format(book.updatedAt),
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+
     return Card(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -569,28 +610,15 @@ class _BookListTile extends ConsumerWidget {
               size: 48,
               borderRadius: BorderRadius.circular(8),
             ),
-            title: Text(book.title),
+            title: Text(
+              book.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
             subtitle: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: subtitleWidgets,
-            ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Chip(
-                  label: Text(statusLabel),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  labelStyle: theme.textTheme.labelSmall
-                      ?.copyWith(color: theme.colorScheme.primary),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  DateFormat.yMMMd().format(book.updatedAt),
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
             ),
             onTap: onTap,
           ),
@@ -1572,23 +1600,66 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
         return;
       }
 
+      final action = await showModalBottomSheet<_ExportAction>(
+        context: context,
+        builder: (sheetContext) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.ios_share),
+                title: const Text('Compartir archivo'),
+                subtitle: const Text('Enviar el archivo generado a otras apps.'),
+                onTap: () => Navigator.of(sheetContext).pop(_ExportAction.share),
+              ),
+              ListTile(
+                leading: const Icon(Icons.download_outlined),
+                title: const Text('Descargar archivo'),
+                subtitle: const Text('Guardar el archivo localmente en el dispositivo.'),
+                onTap: () => Navigator.of(sheetContext).pop(_ExportAction.download),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (action == null) {
+        return;
+      }
+
       final result = await exportService.export(
         books: books,
         reviews: reviews,
         format: format,
       );
 
-      final file = XFile.fromData(
-        result.bytes,
-        mimeType: result.mimeType,
-        name: result.fileName,
-      );
+      if (action == _ExportAction.share) {
+        final file = XFile.fromData(
+          result.bytes,
+          mimeType: result.mimeType,
+          name: result.fileName,
+        );
 
-      await Share.shareXFiles(
-        [file],
-        subject: 'Mi biblioteca exportada',
-        text: 'Te comparto mi biblioteca en formato ${format.name.toUpperCase()}.',
-      );
+        await Share.shareXFiles(
+          [file],
+          subject: 'Mi biblioteca exportada',
+          text: 'Te comparto mi biblioteca en formato ${format.name.toUpperCase()}.',
+        );
+      } else {
+        final name = p.basenameWithoutExtension(result.fileName);
+        final extension = p.extension(result.fileName).replaceFirst('.', '');
+        await FileSaver.instance.saveFile(
+          name: name,
+          bytes: result.bytes,
+          ext: extension,
+          mimeType: _mapMimeType(extension),
+        );
+
+        if (!mounted) return;
+        messenger.showSnackBar(
+          SnackBar(content: Text('Archivo guardado como ${result.fileName}.')),
+        );
+      }
     } catch (err) {
       if (!mounted) return;
       messenger.showSnackBar(
@@ -1596,6 +1667,7 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
       );
     }
   }
+
 }
 
 class _ExportButton extends StatelessWidget {

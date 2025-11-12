@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/stats_service.dart';
@@ -9,7 +11,33 @@ final statsServiceProvider = Provider<StatsService>((ref) {
   return StatsService(bookRepository, loanRepository);
 });
 
-final statsSummaryProvider = FutureProvider<StatsSummary>((ref) async {
+final statsSummaryProvider = StreamProvider.autoDispose<StatsSummary>((ref) {
   final service = ref.watch(statsServiceProvider);
-  return service.loadSummary();
+  final controller = StreamController<StatsSummary>();
+
+  Future<void> emitSummary() async {
+    try {
+      final summary = await service.loadSummary();
+      if (!controller.isClosed) {
+        controller.add(summary);
+      }
+    } catch (error, stackTrace) {
+      if (!controller.isClosed) {
+        controller.addError(error, stackTrace);
+      }
+    }
+  }
+
+  emitSummary();
+
+  final timer = Timer.periodic(const Duration(seconds: 5), (_) {
+    emitSummary();
+  });
+
+  ref.onDispose(() {
+    timer.cancel();
+    controller.close();
+  });
+
+  return controller.stream;
 });

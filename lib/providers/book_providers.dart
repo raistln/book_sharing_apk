@@ -7,6 +7,7 @@ import '../data/local/user_dao.dart';
 import '../data/repositories/book_repository.dart';
 import '../data/repositories/loan_repository.dart';
 import '../data/repositories/supabase_group_repository.dart';
+import '../data/repositories/supabase_user_sync_repository.dart';
 import '../data/repositories/user_repository.dart';
 import '../services/book_export_service.dart';
 import '../services/cover_image_service.dart';
@@ -100,6 +101,29 @@ final supabaseUserServiceProvider = Provider<SupabaseUserService>((ref) {
   final service = SupabaseUserService();
   ref.onDispose(service.dispose);
   return service;
+});
+
+final supabaseUserSyncRepositoryProvider =
+    Provider<SupabaseUserSyncRepository>((ref) {
+  final userDao = ref.watch(userDaoProvider);
+  final supabaseService = ref.watch(supabaseUserServiceProvider);
+  return SupabaseUserSyncRepository(
+    userDao: userDao,
+    userService: supabaseService,
+  );
+});
+
+final userSyncControllerProvider =
+    StateNotifierProvider<SyncController, SyncState>((ref) {
+  final userRepository = ref.watch(userRepositoryProvider);
+  final syncRepository = ref.watch(supabaseUserSyncRepositoryProvider);
+  final controller = SyncController(
+    getActiveUser: () => userRepository.getActiveUser(),
+    pushLocalChanges: () => syncRepository.pushLocalChanges(),
+    loadConfig: () => const SupabaseConfigService().loadConfig(),
+  );
+
+  return controller;
 });
 
 final supabaseGroupServiceProvider = Provider<SupabaseGroupService>((ref) {

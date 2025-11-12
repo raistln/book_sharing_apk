@@ -25,6 +25,4 @@ jobs:
             --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
             --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             --header "Accept: application/json" \
-            "${SUPABASE_URL}/rest/v1/rpc/pg_sleep" \
-            --data '{"seconds":0}' \
-            --header 'Content-Type: application/json'
+            "${SUPABASE_URL}/rest/v1/local_users?select=id&limit=1"

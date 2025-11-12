@@ -188,10 +188,11 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
         _errorMessage = 'No se pudo crear el usuario: $error';
       });
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _isSubmitting = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
 }

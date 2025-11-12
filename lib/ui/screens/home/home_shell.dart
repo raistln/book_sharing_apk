@@ -1554,6 +1554,7 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
   Future<void> _handleExport() async {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
+    final contextRef = context;
 
     try {
       final repository = ref.read(bookRepositoryProvider);
@@ -1569,9 +1570,9 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
 
       final reviews = await repository.fetchActiveReviews();
 
-      if (!mounted) return;
+      if (!contextRef.mounted) return;
       final format = await showModalBottomSheet<BookExportFormat>(
-        context: context,
+        context: contextRef,
         builder: (sheetContext) => SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1600,8 +1601,9 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
         return;
       }
 
+      if (!contextRef.mounted) return;
       final action = await showModalBottomSheet<_ExportAction>(
-        context: context,
+        context: contextRef,
         builder: (sheetContext) => SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,

@@ -27,12 +27,20 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
     return (select(books)..where((tbl) => tbl.uuid.equals(uuid))).getSingleOrNull();
   }
 
+  Future<Book?> findByRemoteId(String remoteId) {
+    return (select(books)..where((tbl) => tbl.remoteId.equals(remoteId))).getSingleOrNull();
+  }
+
   Future<int> insertBook(BooksCompanion entry) => into(books).insert(entry);
 
   Future<bool> updateBook(BooksCompanion entry) => update(books).replace(entry);
 
   Future<int> updateBookFields({required int bookId, required BooksCompanion entry}) {
     return (update(books)..where((tbl) => tbl.id.equals(bookId))).write(entry);
+  }
+
+  Future<List<Book>> getDirtyBooks() {
+    return (select(books)..where((tbl) => tbl.isDirty.equals(true))).get();
   }
 
   Future<void> softDeleteBook({required int bookId, required DateTime timestamp}) {
@@ -89,11 +97,26 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
         .getSingleOrNull();
   }
 
+  Future<BookReview?> findReviewByRemoteId(String remoteId) {
+    return (select(bookReviews)..where((tbl) => tbl.remoteId.equals(remoteId))).getSingleOrNull();
+  }
+
   Future<int> updateReview({
     required int reviewId,
     required BookReviewsCompanion entry,
   }) {
     return (update(bookReviews)..where((tbl) => tbl.id.equals(reviewId))).write(entry);
+  }
+
+  Future<int> updateReviewFields({
+    required int reviewId,
+    required BookReviewsCompanion entry,
+  }) {
+    return (update(bookReviews)..where((tbl) => tbl.id.equals(reviewId))).write(entry);
+  }
+
+  Future<List<BookReview>> getDirtyReviews() {
+    return (select(bookReviews)..where((tbl) => tbl.isDirty.equals(true))).get();
   }
 
   Future<void> softDeleteReviewsForBook({

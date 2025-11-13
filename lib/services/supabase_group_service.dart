@@ -236,6 +236,22 @@ class SupabaseGroupService {
   final http.Client _client;
   final Future<SupabaseConfig> Function() _loadConfig;
 
+  Map<String, String> _buildHeaders(
+    SupabaseConfig config, {
+    String? accessToken,
+  }) {
+    final useServiceRole = accessToken == null;
+    final baseToken = config.authToken(useServiceRole: useServiceRole);
+    final token = accessToken ?? baseToken;
+    final apiKey = useServiceRole ? baseToken : config.anonKey;
+
+    return {
+      'apikey': apiKey,
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+    };
+  }
+
   Future<List<SupabaseGroupRecord>> fetchGroups({String? accessToken}) async {
     final config = await _loadConfig();
     final uri = Uri.parse('${config.url}/rest/v1/groups').replace(
@@ -249,12 +265,13 @@ class SupabaseGroupService {
       },
     );
 
-    final token = accessToken ?? config.anonKey;
-    final response = await _client.get(uri, headers: {
-      'apikey': config.anonKey,
-      'Authorization': 'Bearer $token',
-      'Accept': 'application/json',
-    });
+    final response = await _client.get(
+      uri,
+      headers: _buildHeaders(
+        config,
+        accessToken: accessToken,
+      ),
+    );
 
     if (response.statusCode != 200) {
       throw SupabaseGroupServiceException(

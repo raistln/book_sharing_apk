@@ -212,6 +212,118 @@ class _GroupFormResult {
   final String? description;
 }
 
+class _GroupFormDialog extends StatefulWidget {
+  const _GroupFormDialog({
+    this.dialogTitle,
+    this.confirmLabel,
+    this.initialName,
+    this.initialDescription,
+  });
+
+  final String? dialogTitle;
+  final String? confirmLabel;
+  final String? initialName;
+  final String? initialDescription;
+
+  @override
+  State<_GroupFormDialog> createState() => _GroupFormDialogState();
+}
+
+class _GroupFormDialogState extends State<_GroupFormDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName ?? '');
+    _descriptionController =
+        TextEditingController(text: widget.initialDescription ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isCreating = widget.initialName == null;
+    final titleText = widget.dialogTitle ?? (isCreating ? 'Crear grupo' : 'Editar grupo');
+    final submitLabel = widget.confirmLabel ?? (isCreating ? 'Crear' : 'Guardar');
+
+    return AlertDialog(
+      title: Text(titleText),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del grupo',
+              ),
+              autofocus: true,
+              textInputAction: TextInputAction.next,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Introduce un nombre válido.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Descripción (opcional)',
+              ),
+              maxLines: 3,
+              textInputAction: TextInputAction.done,
+            ),
+            if (widget.initialDescription == null || widget.initialDescription!.isEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Puedes actualizar la descripción más tarde desde el menú.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(submitLabel),
+        ),
+      ],
+    );
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    final trimmedName = _nameController.text.trim();
+    final trimmedDescription = _descriptionController.text.trim();
+    Navigator.of(context).pop(
+      _GroupFormResult(
+        name: trimmedName,
+        description: trimmedDescription.isEmpty ? null : trimmedDescription,
+      ),
+    );
+  }
+}
+
 class _AddMemberResult {
   const _AddMemberResult({required this.user, required this.role});
 
@@ -2648,92 +2760,17 @@ Future<_GroupFormResult?> _showGroupFormDialog(
   String? confirmLabel,
   String? initialName,
   String? initialDescription,
-}) async {
-  final formKey = GlobalKey<FormState>();
-  final nameController = TextEditingController(text: initialName ?? '');
-  final descriptionController = TextEditingController(text: initialDescription ?? '');
-
-  try {
-    return showDialog<_GroupFormResult>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        final theme = Theme.of(dialogContext);
-        final titleText = dialogTitle ??
-            (initialName == null ? 'Crear grupo' : 'Editar grupo');
-        final submitLabel = confirmLabel ??
-            (initialName == null ? 'Crear' : 'Guardar');
-
-        return AlertDialog(
-          title: Text(titleText),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre del grupo',
-                  ),
-                  autofocus: true,
-                  textInputAction: TextInputAction.next,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Introduce un nombre válido.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Descripción (opcional)',
-                  ),
-                  maxLines: 3,
-                  textInputAction: TextInputAction.done,
-                ),
-                if (initialDescription == null || initialDescription.isEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Puedes actualizar la descripción más tarde desde el menú.',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (!(formKey.currentState?.validate() ?? false)) {
-                  return;
-                }
-                final trimmedName = nameController.text.trim();
-                final trimmedDescription = descriptionController.text.trim();
-                Navigator.of(dialogContext).pop(
-                  _GroupFormResult(
-                    name: trimmedName,
-                    description:
-                        trimmedDescription.isEmpty ? null : trimmedDescription,
-                  ),
-                );
-              },
-              child: Text(submitLabel),
-            ),
-          ],
-        );
-      },
-    );
-  } finally {
-    nameController.dispose();
-    descriptionController.dispose();
-  }
+}) {
+  return showDialog<_GroupFormResult>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => _GroupFormDialog(
+      dialogTitle: dialogTitle,
+      confirmLabel: confirmLabel,
+      initialName: initialName,
+      initialDescription: initialDescription,
+    ),
+  );
 }
 
 Future<String?> _showJoinGroupByCodeDialog(BuildContext context) async {

@@ -47,21 +47,27 @@ class GroupPushRepository {
 
   Future<SupabaseConfig> _loadConfig() => _configService.loadConfig();
 
-  Future<String> _requireAccessToken() async {
+  Future<String> _requireAccessToken({bool useServiceRole = false}) async {
     final config = await _loadConfig();
-    if (config.url.isEmpty || config.anonKey.isEmpty) {
+    final fallbackToken = config.authToken(useServiceRole: useServiceRole);
+
+    if (config.url.isEmpty || fallbackToken.isEmpty) {
       throw GroupPushException(
         'Configura Supabase antes de sincronizar.',
       );
     }
-    return config.anonKey;
+    return fallbackToken;
   }
 
   Future<Map<String, String>> _headers({String? accessToken}) async {
     final config = await _loadConfig();
-    final token = accessToken ?? await _requireAccessToken();
+    final useServiceRole = accessToken == null;
+    final token = accessToken ?? await _requireAccessToken(useServiceRole: true);
+    final apiKey = useServiceRole
+        ? config.authToken(useServiceRole: true)
+        : config.anonKey;
     return {
-      'apikey': config.anonKey,
+      'apikey': apiKey,
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
       'Prefer': 'return=minimal',

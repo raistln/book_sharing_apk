@@ -20,10 +20,16 @@ class SupabaseUserService {
     SupabaseConfig config, {
     String? accessToken,
     bool preferRepresentation = false,
+    bool forceServiceRole = false,
   }) {
+    final useServiceRole = forceServiceRole || accessToken == null;
+    final baseToken = config.authToken(useServiceRole: useServiceRole);
+    final token = accessToken ?? baseToken;
+    final apiKey = useServiceRole ? baseToken : config.anonKey;
+
     final headers = <String, String>{
-      'apikey': config.anonKey,
-      'Authorization': 'Bearer ${accessToken ?? config.anonKey}',
+      'apikey': apiKey,
+      'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
@@ -44,19 +50,60 @@ class SupabaseUserService {
       },
     );
 
+    final headers = _buildHeaders(
+      config,
+      forceServiceRole: true,
+    );
+    headers['Prefer'] = 'count=exact';
+
     final response = await _client.get(
       uri,
-      headers: {
-        'apikey': config.anonKey,
-        'Authorization': 'Bearer ${config.anonKey}',
-        'Accept': 'application/json',
-        'Prefer': 'count=exact',
-      },
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as List<dynamic>;
       return data.isEmpty;
+    }
+
+    throw SupabaseUserServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+      response.statusCode,
+    );
+  }
+
+  Future<List<SupabaseUserRecord>> fetchUsers({
+    String? accessToken,
+    DateTime? updatedAfter,
+  }) async {
+    final config = await _loadConfig();
+    final query = <String, String>{
+      'select': 'id,username,is_deleted,created_at,updated_at',
+      'order': 'updated_at.asc',
+    };
+
+    if (updatedAfter != null) {
+      query['updated_at'] = 'gte.${updatedAfter.toUtc().toIso8601String()}';
+    }
+
+    final uri = Uri.parse('${config.url}/rest/v1/local_users').replace(
+      queryParameters: query,
+    );
+
+    final response = await _client.get(
+      uri,
+      headers: _buildHeaders(
+        config,
+        accessToken: accessToken,
+      ),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final payload = jsonDecode(response.body) as List<dynamic>;
+      return payload
+          .whereType<Map<String, dynamic>>()
+          .map(SupabaseUserRecord.fromJson)
+          .toList();
     }
 
     throw SupabaseUserServiceException(
@@ -171,4 +218,37 @@ class SupabaseUserServiceException implements Exception {
   @override
   String toString() =>
       'SupabaseUserServiceException(${statusCode ?? 'unknown'}): $message';
+}
+
+class SupabaseUserRecord {
+  const SupabaseUserRecord({
+    required this.id,
+    required this.username,
+    required this.isDeleted,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  final String id;
+  final String username;
+  final bool isDeleted;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    return null;
+  }
+
+  factory SupabaseUserRecord.fromJson(Map<String, dynamic> json) {
+    return SupabaseUserRecord(
+      id: json['id'] as String,
+      username: (json['username'] as String?) ?? '',
+      isDeleted: (json['is_deleted'] as bool?) ?? false,
+      createdAt: _parseDate(json['created_at']),
+      updatedAt: _parseDate(json['updated_at']),
+    );
+  }
 }

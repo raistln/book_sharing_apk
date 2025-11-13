@@ -179,6 +179,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
 
       final userRepository = ref.read(userRepositoryProvider);
       await userRepository.createUser(username: username);
+      ref.read(userSyncControllerProvider.notifier).markPendingChanges();
 
       if (!mounted) return;
       await ref.read(authControllerProvider.notifier).configurePin(pin);

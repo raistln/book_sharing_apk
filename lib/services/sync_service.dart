@@ -55,6 +55,7 @@ class SyncException implements Exception {
 }
 
 typedef GetActiveUser = Future<LocalUser?> Function();
+typedef FetchRemoteChanges = Future<void> Function();
 typedef PushLocalChanges = Future<void> Function();
 typedef LoadConfig = Future<SupabaseConfig> Function();
 
@@ -63,14 +64,17 @@ class SyncController extends StateNotifier<SyncState> {
     required GetActiveUser getActiveUser,
     required PushLocalChanges pushLocalChanges,
     required LoadConfig loadConfig,
+    FetchRemoteChanges? fetchRemoteChanges,
   })  : _getActiveUser = getActiveUser,
         _pushLocalChanges = pushLocalChanges,
         _loadConfig = loadConfig,
+        _fetchRemoteChanges = fetchRemoteChanges,
         super(const SyncState());
 
   final GetActiveUser _getActiveUser;
   final PushLocalChanges _pushLocalChanges;
   final LoadConfig _loadConfig;
+  final FetchRemoteChanges? _fetchRemoteChanges;
 
   void markPendingChanges() {
     if (!state.hasPendingChanges) {
@@ -100,6 +104,10 @@ class SyncController extends StateNotifier<SyncState> {
       final config = await _loadConfig();
       if (config.url.isEmpty || config.anonKey.isEmpty) {
         throw const SyncException('Configura Supabase antes de sincronizar.');
+      }
+
+      if (_fetchRemoteChanges != null) {
+        await _fetchRemoteChanges();
       }
 
       if (state.hasPendingChanges) {

@@ -7,6 +7,7 @@ import '../data/local/user_dao.dart';
 import '../data/repositories/book_repository.dart';
 import '../data/repositories/loan_repository.dart';
 import '../data/repositories/supabase_group_repository.dart';
+import '../data/repositories/supabase_book_sync_repository.dart';
 import '../data/repositories/supabase_user_sync_repository.dart';
 import '../data/repositories/user_repository.dart';
 import '../services/book_export_service.dart';
@@ -16,6 +17,7 @@ import '../services/loan_controller.dart';
 import '../services/sync_service.dart';
 import '../services/supabase_config_service.dart';
 import '../services/supabase_group_service.dart';
+import '../services/supabase_book_service.dart';
 import '../services/supabase_user_service.dart';
 import '../data/repositories/group_push_repository.dart';
 import '../services/group_push_controller.dart';
@@ -34,7 +36,11 @@ final bookDaoProvider = Provider<BookDao>((ref) {
 
 final bookRepositoryProvider = Provider<BookRepository>((ref) {
   final dao = ref.watch(bookDaoProvider);
-  return BookRepository(dao);
+  final syncController = ref.watch(bookSyncControllerProvider.notifier);
+  return BookRepository(
+    dao,
+    bookSyncController: syncController,
+  );
 });
 
 final groupDaoProvider = Provider<GroupDao>((ref) {
@@ -119,9 +125,61 @@ final userSyncControllerProvider =
   final syncRepository = ref.watch(supabaseUserSyncRepositoryProvider);
   final controller = SyncController(
     getActiveUser: () => userRepository.getActiveUser(),
+    fetchRemoteChanges: () => syncRepository.syncFromRemote(),
     pushLocalChanges: () => syncRepository.pushLocalChanges(),
     loadConfig: () => const SupabaseConfigService().loadConfig(),
   );
+
+  return controller;
+});
+
+final supabaseBookServiceProvider = Provider<SupabaseBookService>((ref) {
+  final service = SupabaseBookService();
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+final supabaseBookSyncRepositoryProvider =
+    Provider<SupabaseBookSyncRepository>((ref) {
+  final bookDao = ref.watch(bookDaoProvider);
+  final bookService = ref.watch(supabaseBookServiceProvider);
+  return SupabaseBookSyncRepository(
+    bookDao: bookDao,
+    bookService: bookService,
+  );
+});
+
+final bookSyncControllerProvider =
+    StateNotifierProvider<SyncController, SyncState>((ref) {
+  final userRepository = ref.watch(userRepositoryProvider);
+  final syncRepository = ref.watch(supabaseBookSyncRepositoryProvider);
+
+  Future<void> fetchRemote() async {
+    final user = await userRepository.getActiveUser();
+    if (user == null) {
+      throw const SyncException('No hay usuario local configurado.');
+    }
+
+    await syncRepository.syncFromRemote(owner: user);
+  }
+
+  Future<void> pushLocal() async {
+    final user = await userRepository.getActiveUser();
+    if (user == null) {
+      throw const SyncException('No hay usuario local configurado.');
+    }
+
+    await syncRepository.pushLocalChanges(owner: user);
+  }
+
+  final controller = SyncController(
+    getActiveUser: () => userRepository.getActiveUser(),
+    fetchRemoteChanges: fetchRemote,
+    pushLocalChanges: pushLocal,
+    loadConfig: () => const SupabaseConfigService().loadConfig(),
+  );
+
+  ref.onDispose(controller.dispose);
 
   return controller;
 });

@@ -3,12 +3,15 @@ import 'package:uuid/uuid.dart';
 
 import '../local/book_dao.dart';
 import '../local/database.dart';
+import '../../services/sync_service.dart';
 
 class BookRepository {
-  BookRepository(this._dao, {Uuid? uuid}) : _uuid = uuid ?? const Uuid();
+  BookRepository(this._dao, {Uuid? uuid, this.bookSyncController})
+      : _uuid = uuid ?? const Uuid();
 
   final BookDao _dao;
   final Uuid _uuid;
+  final SyncController? bookSyncController;
 
   Stream<List<Book>> watchAll() => _dao.watchActiveBooks();
 
@@ -28,10 +31,10 @@ class BookRepository {
     String status = 'available',
     String? notes,
     LocalUser? owner,
-  }) {
+  }) async {
     final now = DateTime.now();
     final bookUuid = _uuid.v4();
-    return _dao.insertBook(
+    final bookId = await _dao.insertBook(
       BooksCompanion.insert(
         uuid: bookUuid,
         title: title,
@@ -49,6 +52,8 @@ class BookRepository {
         updatedAt: Value(now),
       ),
     );
+    bookSyncController?.markPendingChanges();
+    return bookId;
   }
 
   Future<int> addReview({
@@ -79,10 +84,11 @@ class BookRepository {
           updatedAt: Value(now),
         ),
       );
+      bookSyncController?.markPendingChanges();
       return existing.id;
     }
 
-    return _dao.insertReview(
+    final reviewId = await _dao.insertReview(
       BookReviewsCompanion.insert(
         uuid: _uuid.v4(),
         bookId: book.id,
@@ -99,14 +105,18 @@ class BookRepository {
         updatedAt: Value(now),
       ),
     );
+    bookSyncController?.markPendingChanges();
+    return reviewId;
   }
 
-  Future<bool> updateBook(Book book) {
+  Future<bool> updateBook(Book book) async {
     final updated = book.copyWith(
       updatedAt: DateTime.now(),
       isDirty: true,
     );
-    return _dao.updateBook(updated.toCompanion(true));
+    final result = await _dao.updateBook(updated.toCompanion(true));
+    bookSyncController?.markPendingChanges();
+    return result;
   }
 
   Future<void> deleteBook(Book book) async {
@@ -119,6 +129,7 @@ class BookRepository {
       bookId: book.id,
       timestamp: now,
     );
+    bookSyncController?.markPendingChanges();
   }
 
   Future<Book?> findById(int id) => _dao.findById(id);

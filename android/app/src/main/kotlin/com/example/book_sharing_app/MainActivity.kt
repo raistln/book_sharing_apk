@@ -1,4 +1,4 @@
-package com.example.book_sharing_app
+package com.booksharing.app
 
 import io.flutter.embedding.android.FlutterActivity
 

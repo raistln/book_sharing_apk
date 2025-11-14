@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
@@ -12,6 +14,16 @@ class BookRepository {
   final BookDao _dao;
   final Uuid _uuid;
   final SyncController? bookSyncController;
+
+  void _scheduleSync() {
+    final controller = bookSyncController;
+    if (controller == null) {
+      return;
+    }
+
+    controller.markPendingChanges();
+    unawaited(controller.sync());
+  }
 
   Stream<List<Book>> watchAll() => _dao.watchActiveBooks();
 
@@ -52,7 +64,7 @@ class BookRepository {
         updatedAt: Value(now),
       ),
     );
-    bookSyncController?.markPendingChanges();
+    _scheduleSync();
     return bookId;
   }
 
@@ -84,7 +96,7 @@ class BookRepository {
           updatedAt: Value(now),
         ),
       );
-      bookSyncController?.markPendingChanges();
+      _scheduleSync();
       return existing.id;
     }
 
@@ -105,7 +117,7 @@ class BookRepository {
         updatedAt: Value(now),
       ),
     );
-    bookSyncController?.markPendingChanges();
+    _scheduleSync();
     return reviewId;
   }
 
@@ -115,7 +127,7 @@ class BookRepository {
       isDirty: true,
     );
     final result = await _dao.updateBook(updated.toCompanion(true));
-    bookSyncController?.markPendingChanges();
+    _scheduleSync();
     return result;
   }
 
@@ -129,7 +141,7 @@ class BookRepository {
       bookId: book.id,
       timestamp: now,
     );
-    bookSyncController?.markPendingChanges();
+    _scheduleSync();
   }
 
   Future<Book?> findById(int id) => _dao.findById(id);

@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS local_users (
   display_name text,
   avatar_url text,
   google_books_api_key text,
+  pin_hash text,
+  pin_salt text,
+  pin_updated_at timestamptz,
   is_deleted boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()

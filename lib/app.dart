@@ -8,6 +8,7 @@ import 'providers/theme_providers.dart';
 import 'ui/screens/auth/lock_screen.dart';
 import 'ui/screens/auth/pin_setup_screen.dart';
 import 'ui/screens/home/home_shell.dart';
+import 'ui/screens/auth/existing_account_login_screen.dart';
 import 'ui/widgets/inactivity_listener.dart';
 import 'ui/screens/splash_screen.dart';
 
@@ -65,6 +66,8 @@ class BookSharingApp extends ConsumerWidget {
       routes: {
         LockScreen.routeName: (context) => const LockScreen(),
         PinSetupScreen.routeName: (context) => const PinSetupScreen(),
+        ExistingAccountLoginScreen.routeName: (context) =>
+            const ExistingAccountLoginScreen(),
         HomeShell.routeName: (context) => const InactivityListener(child: HomeShell()),
       },
     );

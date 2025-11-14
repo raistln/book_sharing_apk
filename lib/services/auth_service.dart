@@ -1,51 +1,92 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
+import '../data/repositories/user_repository.dart';
+
 class AuthService {
   AuthService({
+    required UserRepository userRepository,
     LocalAuthentication? localAuth,
     FlutterSecureStorage? storage,
-  })  : _localAuth = localAuth ?? LocalAuthentication(),
-        _storage = _SecurePluginStorageAdapter(
-            storage ?? const FlutterSecureStorage());
+    Random? random,
+    AuthStorageAdapter? storageAdapter,
+  })  : _userRepository = userRepository,
+        _localAuth = localAuth ?? LocalAuthentication(),
+        _storage = storageAdapter ??
+            _SecurePluginStorageAdapter(storage ?? const FlutterSecureStorage()),
+        _random = random ?? Random.secure();
 
+  final UserRepository _userRepository;
   final LocalAuthentication _localAuth;
-  final _StorageAdapter _storage;
+  final AuthStorageAdapter _storage;
+  final Random _random;
 
-  static const _pinKey = 'auth.pin';
-  static const _pinConfiguredKey = 'auth.pin_configured';
   static const _lockedKey = 'auth.session_locked';
-  static const _defaultPin = '1234';
+
+  static String hashPinWithSalt(String pin, String salt) {
+    final payload = utf8.encode('$salt:$pin');
+    final digest = sha256.convert(payload);
+    return base64UrlEncode(digest.bytes);
+  }
 
   Future<bool> hasConfiguredPin() async {
-    final configured = await _storage.read(_pinConfiguredKey);
-    if (configured == 'true') return true;
-
-    final storedPin = await _storage.read(_pinKey);
-    if (storedPin != null && storedPin.isNotEmpty) {
-      await _storage.write(_pinConfiguredKey, 'true');
-      return true;
+    final user = await _userRepository.getActiveUser();
+    if (user == null) {
+      return false;
     }
-
-    if (configured == null) {
-      // Seed a default PIN for first run in development until replaced by user setup.
-      await _storage.write(_pinKey, _defaultPin);
-      await _storage.write(_pinConfiguredKey, 'true');
-      await _storage.write(_lockedKey, 'true');
-      return true;
-    }
-
-    return false;
+    return user.pinHash != null && user.pinSalt != null;
   }
 
   Future<bool> verifyPin(String pin) async {
-    final storedPin = await _storage.read(_pinKey);
-    if (storedPin == null) return false;
-    return storedPin == pin;
+    final user = await _userRepository.getActiveUser();
+    if (user == null) {
+      return false;
+    }
+
+    final salt = user.pinSalt;
+    final hash = user.pinHash;
+    if (salt == null || hash == null) {
+      return false;
+    }
+
+    final attempt = hashPinWithSalt(pin, salt);
+    return timingSafeEquals(hash, attempt);
+  }
+
+  Future<void> setPin(String pin) async {
+    final user = await _userRepository.getActiveUser();
+    if (user == null) {
+      throw StateError('No existe un usuario activo para configurar el PIN.');
+    }
+
+    final salt = _generateSalt();
+    final hash = hashPinWithSalt(pin, salt);
+    final now = DateTime.now();
+
+    await _userRepository.updatePinData(
+      userId: user.id,
+      pinHash: hash,
+      pinSalt: salt,
+      pinUpdatedAt: now,
+      markDirty: true,
+    );
+  }
+
+  Future<void> clearPin() async {
+    final user = await _userRepository.getActiveUser();
+    if (user == null) {
+      return;
+    }
+
+    await _userRepository.clearPinData(userId: user.id);
+    await lockSession();
   }
 
   Future<bool> isBiometricAvailable() async {
@@ -87,17 +128,6 @@ class AuthService {
     await _storage.write(_lockedKey, 'false');
   }
 
-  Future<void> setPin(String pin) async {
-    await _storage.write(_pinKey, pin);
-    await _storage.write(_pinConfiguredKey, 'true');
-  }
-
-  Future<void> clearPin() async {
-    await _storage.delete(_pinKey);
-    await _storage.write(_pinConfiguredKey, 'false');
-    await lockSession();
-  }
-
   Future<bool> isSessionLocked() async {
     final locked = await _storage.read(_lockedKey);
     if (locked == null) {
@@ -106,15 +136,32 @@ class AuthService {
     }
     return locked != 'false';
   }
+
+  String _generateSalt({int length = 16}) {
+    final buffer = List<int>.generate(length, (_) => _random.nextInt(256));
+    return base64UrlEncode(buffer);
+  }
+
+  bool timingSafeEquals(String a, String b) {
+    if (a.length != b.length) {
+      return false;
+    }
+
+    var diff = 0;
+    for (var i = 0; i < a.length; i++) {
+      diff |= a.codeUnitAt(i) ^ b.codeUnitAt(i);
+    }
+    return diff == 0;
+  }
 }
 
-abstract class _StorageAdapter {
+abstract class AuthStorageAdapter {
   Future<String?> read(String key);
   Future<void> write(String key, String value);
   Future<void> delete(String key);
 }
 
-class _SecurePluginStorageAdapter implements _StorageAdapter {
+class _SecurePluginStorageAdapter implements AuthStorageAdapter {
   _SecurePluginStorageAdapter(this._storage);
 
   final FlutterSecureStorage _storage;

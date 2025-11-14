@@ -56,7 +56,8 @@ class AuthAttemptResult {
 }
 
 final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService();
+  final userRepository = ref.watch(userRepositoryProvider);
+  return AuthService(userRepository: userRepository);
 });
 
 final biometricAvailabilityProvider = FutureProvider<bool>((ref) async {
@@ -205,6 +206,7 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> configurePin(String pin) async {
     state = state.copyWith(status: AuthStatus.loading);
     await _authService.setPin(pin);
+    _userSyncController.markPendingChanges();
     await _authService.unlockSession();
     state = state.copyWith(
       status: AuthStatus.unlocked,
@@ -218,12 +220,27 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> clearPin() async {
     state = state.copyWith(status: AuthStatus.loading);
     await _authService.clearPin();
+    _userSyncController.markPendingChanges();
     state = state.copyWith(
       status: AuthStatus.needsPin,
       failedAttempts: 0,
       lockUntil: null,
     );
     _cancelLockTimer();
+  }
+
+  Future<void> markAuthenticated({bool runSync = true}) async {
+    state = state.copyWith(status: AuthStatus.loading);
+    await _authService.unlockSession();
+    state = state.copyWith(
+      status: AuthStatus.unlocked,
+      failedAttempts: 0,
+      lockUntil: null,
+    );
+    _cancelLockTimer();
+    if (runSync) {
+      unawaited(_userSyncController.sync());
+    }
   }
 
   @override

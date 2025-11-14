@@ -78,7 +78,8 @@ class SupabaseUserService {
   }) async {
     final config = await _loadConfig();
     final query = <String, String>{
-      'select': 'id,username,is_deleted,created_at,updated_at',
+      'select':
+          'id,username,display_name,avatar_url,google_books_api_key,is_deleted,pin_hash,pin_salt,pin_updated_at,created_at,updated_at',
       'order': 'updated_at.asc',
     };
 
@@ -118,6 +119,12 @@ class SupabaseUserService {
     required bool isDeleted,
     required DateTime createdAt,
     required DateTime updatedAt,
+    String? displayName,
+    String? avatarUrl,
+    String? googleBooksApiKey,
+    String? pinHash,
+    String? pinSalt,
+    DateTime? pinUpdatedAt,
     String? accessToken,
   }) async {
     final config = await _loadConfig();
@@ -132,7 +139,13 @@ class SupabaseUserService {
       body: jsonEncode({
         'id': id,
         'username': username,
+        'display_name': displayName,
+        'avatar_url': avatarUrl,
+        'google_books_api_key': googleBooksApiKey,
         'is_deleted': isDeleted,
+        'pin_hash': pinHash,
+        'pin_salt': pinSalt,
+        'pin_updated_at': pinUpdatedAt?.toUtc().toIso8601String(),
         'created_at': createdAt.toUtc().toIso8601String(),
         'updated_at': updatedAt.toUtc().toIso8601String(),
       }),
@@ -165,7 +178,13 @@ class SupabaseUserService {
   Future<bool> updateUser({
     required String id,
     required String username,
+    String? displayName,
+    String? avatarUrl,
+    String? googleBooksApiKey,
     required bool isDeleted,
+    String? pinHash,
+    String? pinSalt,
+    DateTime? pinUpdatedAt,
     required DateTime updatedAt,
     String? accessToken,
   }) async {
@@ -185,7 +204,13 @@ class SupabaseUserService {
       ),
       body: jsonEncode({
         'username': username,
+        'display_name': displayName,
+        'avatar_url': avatarUrl,
+        'google_books_api_key': googleBooksApiKey,
         'is_deleted': isDeleted,
+        'pin_hash': pinHash,
+        'pin_salt': pinSalt,
+        'pin_updated_at': pinUpdatedAt?.toUtc().toIso8601String(),
         'updated_at': updatedAt.toUtc().toIso8601String(),
       }),
     );
@@ -207,6 +232,45 @@ class SupabaseUserService {
   void dispose() {
     _client.close();
   }
+
+  Future<SupabaseUserRecord?> fetchUserByUsername(
+    String username, {
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/local_users').replace(
+      queryParameters: {
+        'username': 'eq.$username',
+        'select':
+            'id,username,display_name,avatar_url,google_books_api_key,is_deleted,pin_hash,pin_salt,pin_updated_at,created_at,updated_at',
+        'limit': '1',
+      },
+    );
+
+    final response = await _client.get(
+      uri,
+      headers: _buildHeaders(
+        config,
+        accessToken: accessToken,
+      ),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final payload = jsonDecode(response.body);
+      if (payload is List && payload.isNotEmpty) {
+        final first = payload.first;
+        if (first is Map<String, dynamic>) {
+          return SupabaseUserRecord.fromJson(first);
+        }
+      }
+      return null;
+    }
+
+    throw SupabaseUserServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+      response.statusCode,
+    );
+  }
 }
 
 class SupabaseUserServiceException implements Exception {
@@ -224,16 +288,28 @@ class SupabaseUserRecord {
   const SupabaseUserRecord({
     required this.id,
     required this.username,
+    this.displayName,
+    this.avatarUrl,
+    this.googleBooksApiKey,
     required this.isDeleted,
     this.createdAt,
     this.updatedAt,
+    this.pinHash,
+    this.pinSalt,
+    this.pinUpdatedAt,
   });
 
   final String id;
   final String username;
+  final String? displayName;
+  final String? avatarUrl;
+  final String? googleBooksApiKey;
   final bool isDeleted;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final String? pinHash;
+  final String? pinSalt;
+  final DateTime? pinUpdatedAt;
 
   static DateTime? _parseDate(dynamic value) {
     if (value is String) {
@@ -246,9 +322,15 @@ class SupabaseUserRecord {
     return SupabaseUserRecord(
       id: json['id'] as String,
       username: (json['username'] as String?) ?? '',
+      displayName: json['display_name'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+      googleBooksApiKey: json['google_books_api_key'] as String?,
       isDeleted: (json['is_deleted'] as bool?) ?? false,
       createdAt: _parseDate(json['created_at']),
       updatedAt: _parseDate(json['updated_at']),
+      pinHash: json['pin_hash'] as String?,
+      pinSalt: json['pin_salt'] as String?,
+      pinUpdatedAt: _parseDate(json['pin_updated_at']),
     );
   }
 }

@@ -8,6 +8,7 @@
       "version": "1.0.0+1",
       "dependencies": [
         "collection",
+        "crypto",
         "csv",
         "cupertino_icons",
         "drift",
@@ -420,6 +421,13 @@
       ]
     },
     {
+      "name": "crypto",
+      "version": "3.0.6",
+      "dependencies": [
+        "typed_data"
+      ]
+    },
+    {
       "name": "local_auth",
       "version": "2.3.0",
       "dependencies": [
@@ -827,13 +835,6 @@
         "file",
         "path",
         "string_scanner"
-      ]
-    },
-    {
-      "name": "crypto",
-      "version": "3.0.6",
-      "dependencies": [
-        "typed_data"
       ]
     },
     {
@@ -1463,6 +1464,13 @@
       ]
     },
     {
+      "name": "typed_data",
+      "version": "1.4.0",
+      "dependencies": [
+        "collection"
+      ]
+    },
+    {
       "name": "local_auth_windows",
       "version": "1.0.11",
       "dependencies": [
@@ -1629,13 +1637,6 @@
       "version": "91.0.0",
       "dependencies": [
         "meta"
-      ]
-    },
-    {
-      "name": "typed_data",
-      "version": "1.4.0",
-      "dependencies": [
-        "collection"
       ]
     },
     {

@@ -3,48 +3,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
-import '../home/home_shell.dart';
-import 'existing_account_login_screen.dart';
+import '../../screens/home/home_shell.dart';
 
-class PinSetupScreen extends ConsumerStatefulWidget {
-  const PinSetupScreen({super.key});
+class ExistingAccountLoginScreen extends ConsumerStatefulWidget {
+  const ExistingAccountLoginScreen({super.key});
 
-  static const routeName = '/setup-pin';
+  static const routeName = '/existing-account';
 
   @override
-  ConsumerState<PinSetupScreen> createState() => _PinSetupScreenState();
+  ConsumerState<ExistingAccountLoginScreen> createState() =>
+      _ExistingAccountLoginScreenState();
 }
 
-class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
+class _ExistingAccountLoginScreenState
+    extends ConsumerState<ExistingAccountLoginScreen> {
   final _usernameController = TextEditingController();
   final _pinController = TextEditingController();
-  final _confirmController = TextEditingController();
+
   String? _errorMessage;
-  bool _navigated = false;
   bool _isSubmitting = false;
+  bool _navigated = false;
 
   @override
   void dispose() {
     _usernameController.dispose();
     _pinController.dispose();
-    _confirmController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AuthState>(authControllerProvider, (previous, next) {
-      if (!mounted || _navigated) return;
-      if (next.status == AuthStatus.unlocked) {
-        _navigated = true;
-        Navigator.of(context)
-            .pushNamedAndRemoveUntil(HomeShell.routeName, (route) => false);
-      }
-    });
-
     final authState = ref.watch(authControllerProvider);
     final isLoading =
-        authState.status == AuthStatus.loading || _isSubmitting;
+        _isSubmitting || authState.status == AuthStatus.loading;
 
     return Scaffold(
       body: SafeArea(
@@ -57,10 +48,11 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Icon(Icons.pin, size: 96, color: Theme.of(context).colorScheme.primary),
+                  Icon(Icons.login,
+                      size: 96, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 24),
                   Text(
-                    'Configura un PIN de acceso',
+                    'Inicio con usuario existente',
                     style: Theme.of(context).textTheme.headlineSmall,
                     textAlign: TextAlign.center,
                   ),
@@ -81,25 +73,11 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                     controller: _pinController,
                     enabled: !isLoading,
                     obscureText: true,
-                    maxLength: 6,
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
-                    decoration: const InputDecoration(
-                      labelText: 'PIN nuevo',
-                      border: OutlineInputBorder(),
-                      counterText: '',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _confirmController,
-                    enabled: !isLoading,
-                    obscureText: true,
                     maxLength: 6,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
                     decoration: const InputDecoration(
-                      labelText: 'Confirmar PIN',
+                      labelText: 'PIN',
                       border: OutlineInputBorder(),
                       counterText: '',
                     ),
@@ -109,26 +87,26 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                   FilledButton.icon(
                     onPressed: isLoading ? null : _submit,
                     icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Guardar PIN'),
+                    label: const Text('Acceder'),
                   ),
                   const SizedBox(height: 12),
-                  TextButton.icon(
+                  TextButton(
                     onPressed: isLoading
                         ? null
                         : () {
-                            Navigator.of(context)
-                                .pushNamed(ExistingAccountLoginScreen.routeName);
+                            Navigator.of(context).pop();
                           },
-                    icon: const Icon(Icons.person_search),
-                    label: const Text('Ya tengo cuenta'),
+                    child: const Text('Volver'),
                   ),
-                  const SizedBox(height: 12),
-                  if (_errorMessage != null)
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 12),
                     Text(
                       _errorMessage!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style:
+                          TextStyle(color: Theme.of(context).colorScheme.error),
                       textAlign: TextAlign.center,
                     ),
+                  ],
                   if (isLoading) ...[
                     const SizedBox(height: 24),
                     const CircularProgressIndicator(),
@@ -147,7 +125,6 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
 
     final username = _usernameController.text.trim();
     final pin = _pinController.text.trim();
-    final confirm = _confirmController.text.trim();
 
     if (username.length < 3) {
       setState(() {
@@ -164,13 +141,6 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       return;
     }
 
-    if (pin != confirm) {
-      setState(() {
-        _errorMessage = 'Los PIN introducidos no coinciden.';
-      });
-      return;
-    }
-
     setState(() {
       _errorMessage = null;
       _isSubmitting = true;
@@ -178,27 +148,56 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
 
     try {
       final supabaseService = ref.read(supabaseUserServiceProvider);
-      final isAvailable = await supabaseService.isUsernameAvailable(username);
+      final record = await supabaseService.fetchUserByUsername(username);
 
-      if (!isAvailable) {
+      if (record == null || record.isDeleted) {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = 'No encontramos un usuario activo con ese nombre.';
+        });
+        return;
+      }
+
+      if (record.pinHash == null || record.pinSalt == null) {
         if (!mounted) return;
         setState(() {
           _errorMessage =
-              'Ese nombre de usuario ya existe en Supabase. Prueba con otro.';
+              'Ese usuario no tiene un PIN configurado todavía. Configúralo primero.';
         });
         return;
       }
 
       final userRepository = ref.read(userRepositoryProvider);
-      await userRepository.createUser(username: username);
-      ref.read(userSyncControllerProvider.notifier).markPendingChanges();
+      final localUser = await userRepository.importRemoteUser(record);
 
-      if (!mounted) return;
-      await ref.read(authControllerProvider.notifier).configurePin(pin);
+      if (localUser.isDeleted) {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = 'El usuario remoto está marcado como eliminado.';
+        });
+        return;
+      }
+
+      final authController = ref.read(authControllerProvider.notifier);
+      final result = await authController.unlockWithPin(pin);
+
+      if (!result.success) {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage =
+              result.message ?? 'PIN incorrecto. Intenta de nuevo.';
+        });
+        return;
+      }
+
+      if (!mounted || _navigated) return;
+      _navigated = true;
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil(HomeShell.routeName, (route) => false);
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'No se pudo crear el usuario: $error';
+        _errorMessage = 'No fue posible iniciar sesión: $error';
       });
     } finally {
       if (mounted) {

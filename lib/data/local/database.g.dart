@@ -43,6 +43,24 @@ class $LocalUsersTable extends LocalUsers
   late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
       'remote_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _pinHashMeta =
+      const VerificationMeta('pinHash');
+  @override
+  late final GeneratedColumn<String> pinHash = GeneratedColumn<String>(
+      'pin_hash', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _pinSaltMeta =
+      const VerificationMeta('pinSalt');
+  @override
+  late final GeneratedColumn<String> pinSalt = GeneratedColumn<String>(
+      'pin_salt', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _pinUpdatedAtMeta =
+      const VerificationMeta('pinUpdatedAt');
+  @override
+  late final GeneratedColumn<DateTime> pinUpdatedAt = GeneratedColumn<DateTime>(
+      'pin_updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
   @override
@@ -91,6 +109,9 @@ class $LocalUsersTable extends LocalUsers
         uuid,
         username,
         remoteId,
+        pinHash,
+        pinSalt,
+        pinUpdatedAt,
         isDirty,
         isDeleted,
         syncedAt,
@@ -125,6 +146,20 @@ class $LocalUsersTable extends LocalUsers
     if (data.containsKey('remote_id')) {
       context.handle(_remoteIdMeta,
           remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta));
+    }
+    if (data.containsKey('pin_hash')) {
+      context.handle(_pinHashMeta,
+          pinHash.isAcceptableOrUnknown(data['pin_hash']!, _pinHashMeta));
+    }
+    if (data.containsKey('pin_salt')) {
+      context.handle(_pinSaltMeta,
+          pinSalt.isAcceptableOrUnknown(data['pin_salt']!, _pinSaltMeta));
+    }
+    if (data.containsKey('pin_updated_at')) {
+      context.handle(
+          _pinUpdatedAtMeta,
+          pinUpdatedAt.isAcceptableOrUnknown(
+              data['pin_updated_at']!, _pinUpdatedAtMeta));
     }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
@@ -163,6 +198,12 @@ class $LocalUsersTable extends LocalUsers
           .read(DriftSqlType.string, data['${effectivePrefix}username'])!,
       remoteId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}remote_id']),
+      pinHash: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}pin_hash']),
+      pinSalt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}pin_salt']),
+      pinUpdatedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}pin_updated_at']),
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -187,6 +228,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
   final String uuid;
   final String username;
   final String? remoteId;
+  final String? pinHash;
+  final String? pinSalt;
+  final DateTime? pinUpdatedAt;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -197,6 +241,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       required this.uuid,
       required this.username,
       this.remoteId,
+      this.pinHash,
+      this.pinSalt,
+      this.pinUpdatedAt,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -210,6 +257,15 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
     map['username'] = Variable<String>(username);
     if (!nullToAbsent || remoteId != null) {
       map['remote_id'] = Variable<String>(remoteId);
+    }
+    if (!nullToAbsent || pinHash != null) {
+      map['pin_hash'] = Variable<String>(pinHash);
+    }
+    if (!nullToAbsent || pinSalt != null) {
+      map['pin_salt'] = Variable<String>(pinSalt);
+    }
+    if (!nullToAbsent || pinUpdatedAt != null) {
+      map['pin_updated_at'] = Variable<DateTime>(pinUpdatedAt);
     }
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
@@ -229,6 +285,15 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       remoteId: remoteId == null && nullToAbsent
           ? const Value.absent()
           : Value(remoteId),
+      pinHash: pinHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pinHash),
+      pinSalt: pinSalt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pinSalt),
+      pinUpdatedAt: pinUpdatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pinUpdatedAt),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -247,6 +312,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       uuid: serializer.fromJson<String>(json['uuid']),
       username: serializer.fromJson<String>(json['username']),
       remoteId: serializer.fromJson<String?>(json['remoteId']),
+      pinHash: serializer.fromJson<String?>(json['pinHash']),
+      pinSalt: serializer.fromJson<String?>(json['pinSalt']),
+      pinUpdatedAt: serializer.fromJson<DateTime?>(json['pinUpdatedAt']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -262,6 +330,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       'uuid': serializer.toJson<String>(uuid),
       'username': serializer.toJson<String>(username),
       'remoteId': serializer.toJson<String?>(remoteId),
+      'pinHash': serializer.toJson<String?>(pinHash),
+      'pinSalt': serializer.toJson<String?>(pinSalt),
+      'pinUpdatedAt': serializer.toJson<DateTime?>(pinUpdatedAt),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -275,6 +346,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           String? uuid,
           String? username,
           Value<String?> remoteId = const Value.absent(),
+          Value<String?> pinHash = const Value.absent(),
+          Value<String?> pinSalt = const Value.absent(),
+          Value<DateTime?> pinUpdatedAt = const Value.absent(),
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -285,6 +359,10 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
         uuid: uuid ?? this.uuid,
         username: username ?? this.username,
         remoteId: remoteId.present ? remoteId.value : this.remoteId,
+        pinHash: pinHash.present ? pinHash.value : this.pinHash,
+        pinSalt: pinSalt.present ? pinSalt.value : this.pinSalt,
+        pinUpdatedAt:
+            pinUpdatedAt.present ? pinUpdatedAt.value : this.pinUpdatedAt,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -297,6 +375,11 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
       uuid: data.uuid.present ? data.uuid.value : this.uuid,
       username: data.username.present ? data.username.value : this.username,
       remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      pinHash: data.pinHash.present ? data.pinHash.value : this.pinHash,
+      pinSalt: data.pinSalt.present ? data.pinSalt.value : this.pinSalt,
+      pinUpdatedAt: data.pinUpdatedAt.present
+          ? data.pinUpdatedAt.value
+          : this.pinUpdatedAt,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -312,6 +395,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           ..write('uuid: $uuid, ')
           ..write('username: $username, ')
           ..write('remoteId: $remoteId, ')
+          ..write('pinHash: $pinHash, ')
+          ..write('pinSalt: $pinSalt, ')
+          ..write('pinUpdatedAt: $pinUpdatedAt, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -322,8 +408,19 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
   }
 
   @override
-  int get hashCode => Object.hash(id, uuid, username, remoteId, isDirty,
-      isDeleted, syncedAt, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+      id,
+      uuid,
+      username,
+      remoteId,
+      pinHash,
+      pinSalt,
+      pinUpdatedAt,
+      isDirty,
+      isDeleted,
+      syncedAt,
+      createdAt,
+      updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -332,6 +429,9 @@ class LocalUser extends DataClass implements Insertable<LocalUser> {
           other.uuid == this.uuid &&
           other.username == this.username &&
           other.remoteId == this.remoteId &&
+          other.pinHash == this.pinHash &&
+          other.pinSalt == this.pinSalt &&
+          other.pinUpdatedAt == this.pinUpdatedAt &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -344,6 +444,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
   final Value<String> uuid;
   final Value<String> username;
   final Value<String?> remoteId;
+  final Value<String?> pinHash;
+  final Value<String?> pinSalt;
+  final Value<DateTime?> pinUpdatedAt;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -354,6 +457,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     this.uuid = const Value.absent(),
     this.username = const Value.absent(),
     this.remoteId = const Value.absent(),
+    this.pinHash = const Value.absent(),
+    this.pinSalt = const Value.absent(),
+    this.pinUpdatedAt = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -365,6 +471,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     required String uuid,
     required String username,
     this.remoteId = const Value.absent(),
+    this.pinHash = const Value.absent(),
+    this.pinSalt = const Value.absent(),
+    this.pinUpdatedAt = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -377,6 +486,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     Expression<String>? uuid,
     Expression<String>? username,
     Expression<String>? remoteId,
+    Expression<String>? pinHash,
+    Expression<String>? pinSalt,
+    Expression<DateTime>? pinUpdatedAt,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -388,6 +500,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
       if (uuid != null) 'uuid': uuid,
       if (username != null) 'username': username,
       if (remoteId != null) 'remote_id': remoteId,
+      if (pinHash != null) 'pin_hash': pinHash,
+      if (pinSalt != null) 'pin_salt': pinSalt,
+      if (pinUpdatedAt != null) 'pin_updated_at': pinUpdatedAt,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -401,6 +516,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
       Value<String>? uuid,
       Value<String>? username,
       Value<String?>? remoteId,
+      Value<String?>? pinHash,
+      Value<String?>? pinSalt,
+      Value<DateTime?>? pinUpdatedAt,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -411,6 +529,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
       uuid: uuid ?? this.uuid,
       username: username ?? this.username,
       remoteId: remoteId ?? this.remoteId,
+      pinHash: pinHash ?? this.pinHash,
+      pinSalt: pinSalt ?? this.pinSalt,
+      pinUpdatedAt: pinUpdatedAt ?? this.pinUpdatedAt,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -433,6 +554,15 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
     }
     if (remoteId.present) {
       map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    if (pinHash.present) {
+      map['pin_hash'] = Variable<String>(pinHash.value);
+    }
+    if (pinSalt.present) {
+      map['pin_salt'] = Variable<String>(pinSalt.value);
+    }
+    if (pinUpdatedAt.present) {
+      map['pin_updated_at'] = Variable<DateTime>(pinUpdatedAt.value);
     }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
@@ -459,6 +589,9 @@ class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
           ..write('uuid: $uuid, ')
           ..write('username: $username, ')
           ..write('remoteId: $remoteId, ')
+          ..write('pinHash: $pinHash, ')
+          ..write('pinSalt: $pinSalt, ')
+          ..write('pinUpdatedAt: $pinUpdatedAt, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -5873,6 +6006,9 @@ typedef $$LocalUsersTableCreateCompanionBuilder = LocalUsersCompanion Function({
   required String uuid,
   required String username,
   Value<String?> remoteId,
+  Value<String?> pinHash,
+  Value<String?> pinSalt,
+  Value<DateTime?> pinUpdatedAt,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -5884,6 +6020,9 @@ typedef $$LocalUsersTableUpdateCompanionBuilder = LocalUsersCompanion Function({
   Value<String> uuid,
   Value<String> username,
   Value<String?> remoteId,
+  Value<String?> pinHash,
+  Value<String?> pinSalt,
+  Value<DateTime?> pinUpdatedAt,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -6054,6 +6193,15 @@ class $$LocalUsersTableFilterComposer
 
   ColumnFilters<String> get remoteId => $composableBuilder(
       column: $table.remoteId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get pinHash => $composableBuilder(
+      column: $table.pinHash, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get pinSalt => $composableBuilder(
+      column: $table.pinSalt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get pinUpdatedAt => $composableBuilder(
+      column: $table.pinUpdatedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -6281,6 +6429,16 @@ class $$LocalUsersTableOrderingComposer
   ColumnOrderings<String> get remoteId => $composableBuilder(
       column: $table.remoteId, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get pinHash => $composableBuilder(
+      column: $table.pinHash, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get pinSalt => $composableBuilder(
+      column: $table.pinSalt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get pinUpdatedAt => $composableBuilder(
+      column: $table.pinUpdatedAt,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
 
@@ -6317,6 +6475,15 @@ class $$LocalUsersTableAnnotationComposer
 
   GeneratedColumn<String> get remoteId =>
       $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get pinHash =>
+      $composableBuilder(column: $table.pinHash, builder: (column) => column);
+
+  GeneratedColumn<String> get pinSalt =>
+      $composableBuilder(column: $table.pinSalt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get pinUpdatedAt => $composableBuilder(
+      column: $table.pinUpdatedAt, builder: (column) => column);
 
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
@@ -6559,6 +6726,9 @@ class $$LocalUsersTableTableManager extends RootTableManager<
             Value<String> uuid = const Value.absent(),
             Value<String> username = const Value.absent(),
             Value<String?> remoteId = const Value.absent(),
+            Value<String?> pinHash = const Value.absent(),
+            Value<String?> pinSalt = const Value.absent(),
+            Value<DateTime?> pinUpdatedAt = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -6570,6 +6740,9 @@ class $$LocalUsersTableTableManager extends RootTableManager<
             uuid: uuid,
             username: username,
             remoteId: remoteId,
+            pinHash: pinHash,
+            pinSalt: pinSalt,
+            pinUpdatedAt: pinUpdatedAt,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -6581,6 +6754,9 @@ class $$LocalUsersTableTableManager extends RootTableManager<
             required String uuid,
             required String username,
             Value<String?> remoteId = const Value.absent(),
+            Value<String?> pinHash = const Value.absent(),
+            Value<String?> pinSalt = const Value.absent(),
+            Value<DateTime?> pinUpdatedAt = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -6592,6 +6768,9 @@ class $$LocalUsersTableTableManager extends RootTableManager<
             uuid: uuid,
             username: username,
             remoteId: remoteId,
+            pinHash: pinHash,
+            pinSalt: pinSalt,
+            pinUpdatedAt: pinUpdatedAt,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,

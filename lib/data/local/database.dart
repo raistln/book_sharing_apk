@@ -14,6 +14,10 @@ class LocalUsers extends Table {
   TextColumn get username => text().withLength(min: 3, max: 64).unique()();
   TextColumn get remoteId => text().nullable()();
 
+  TextColumn get pinHash => text().nullable()();
+  TextColumn get pinSalt => text().nullable()();
+  DateTimeColumn get pinUpdatedAt => dateTime().nullable()();
+
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get syncedAt => dateTime().nullable()();
@@ -250,7 +254,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -288,6 +292,18 @@ class AppDatabase extends _$AppDatabase {
               // La columna ya existe, continuar
             }
             await m.createTable(groupInvitations);
+          }
+
+          if (from < 7) {
+            await customStatement(
+              'ALTER TABLE local_users ADD COLUMN pin_hash TEXT',
+            ).catchError((_) {});
+            await customStatement(
+              'ALTER TABLE local_users ADD COLUMN pin_salt TEXT',
+            ).catchError((_) {});
+            await customStatement(
+              'ALTER TABLE local_users ADD COLUMN pin_updated_at TIMESTAMP',
+            ).catchError((_) {});
           }
         },
       );

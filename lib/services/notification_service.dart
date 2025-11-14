@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
@@ -71,13 +73,48 @@ class NotificationService implements NotificationClient {
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
   bool _timezoneInitialized = false;
+  bool _platformAvailable = true;
 
   final _responseController = StreamController<NotificationResponse>.broadcast();
 
   Stream<NotificationResponse> get responses => _responseController.stream;
 
+  Future<bool> _ensurePlatformAvailable() async {
+    if (!_platformAvailable) {
+      return false;
+    }
+
+    if (kIsWeb) {
+      _platformAvailable = false;
+      developer.log(
+        'Las notificaciones locales no están disponibles en esta plataforma (web). Se deshabilita el servicio.',
+        name: 'NotificationService',
+      );
+      return false;
+    }
+
+    final supported = defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+    if (!supported) {
+      _platformAvailable = false;
+      developer.log(
+        'Las notificaciones locales no están disponibles en ${defaultTargetPlatform.name}. Se deshabilita el servicio.',
+        name: 'NotificationService',
+      );
+      return false;
+    }
+
+    return true;
+  }
+
   Future<void> init() async {
     if (_initialized) return;
+
+    final available = await _ensurePlatformAvailable();
+    if (!available) {
+      _initialized = true;
+      return;
+    }
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const initializationSettings = InitializationSettings(android: androidSettings);
@@ -108,6 +145,10 @@ class NotificationService implements NotificationClient {
   }
 
   Future<bool> requestPermissions() async {
+    await init();
+    if (!_platformAvailable) {
+      return false;
+    }
     final androidImpl = _plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     if (androidImpl == null) {
@@ -127,6 +168,9 @@ class NotificationService implements NotificationClient {
     List<AndroidNotificationAction>? androidActions,
   }) async {
     await init();
+    if (!_platformAvailable) {
+      return;
+    }
 
     final details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -159,6 +203,9 @@ class NotificationService implements NotificationClient {
     Map<String, String>? payload,
   }) async {
     await init();
+    if (!_platformAvailable) {
+      return;
+    }
 
     final scheduledInstant = scheduledAt.isUtc ? scheduledAt : scheduledAt.toUtc();
     final tzDateTime = tz.TZDateTime.from(scheduledInstant, tz.UTC);
@@ -190,6 +237,9 @@ class NotificationService implements NotificationClient {
   @override
   Future<void> cancel(int id) async {
     await init();
+    if (!_platformAvailable) {
+      return;
+    }
     await _plugin.cancel(id);
   }
 
@@ -199,6 +249,9 @@ class NotificationService implements NotificationClient {
       return;
     }
     await init();
+    if (!_platformAvailable) {
+      return;
+    }
     for (final id in ids) {
       await _plugin.cancel(id);
     }
@@ -206,12 +259,28 @@ class NotificationService implements NotificationClient {
 
   Future<NotificationResponse?> getInitialResponse() async {
     await init();
-    final details = await _plugin.getNotificationAppLaunchDetails();
-    return details?.notificationResponse;
+    if (!_platformAvailable) {
+      return null;
+    }
+    try {
+      final details = await _plugin.getNotificationAppLaunchDetails();
+      return details?.notificationResponse;
+    } catch (error, stackTrace) {
+      developer.log(
+        'Error obteniendo el estado inicial de la notificación. Se omite la respuesta inicial.',
+        name: 'NotificationService',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
   }
 
   Future<List<PendingNotificationRequest>> getPendingNotificationRequests() async {
     await init();
+    if (!_platformAvailable) {
+      return const [];
+    }
     return _plugin.pendingNotificationRequests();
   }
 

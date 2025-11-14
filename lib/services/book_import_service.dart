@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 
+import '../data/local/database.dart';
 import '../data/repositories/book_repository.dart';
 
 class BookImportResult {
@@ -114,6 +115,15 @@ class BookImportService {
       int failureCount = 0;
       final errors = <String>[];
 
+      Iterable<Book> existingBooks = const [];
+      try {
+        existingBooks = await _bookRepository.fetchActiveBooks();
+      } catch (error, stackTrace) {
+        debugPrint('No se pudieron obtener libros existentes para evitar duplicados: $error');
+        debugPrint('$stackTrace');
+      }
+      final tracker = _BookDuplicateTracker(existingBooks);
+
       for (var rowIndex = 1; rowIndex < data.length; rowIndex++) {
         final row = data[rowIndex];
         final hasValues =
@@ -136,17 +146,40 @@ class BookImportService {
           final statusValue = valueFor(row, statusAliases);
           final barcodeValue = valueFor(row, barcodeAliases);
 
+          final sanitizedTitle = _BookDuplicateTracker.sanitize(title)!;
+          final sanitizedAuthor = _BookDuplicateTracker.sanitize(author);
+          final sanitizedIsbn = _BookDuplicateTracker.sanitize(isbn);
+          final sanitizedNotes = _BookDuplicateTracker.sanitize(notes);
           final sanitizedStatus =
-              (statusValue == null || statusValue.isEmpty) ? 'available' : statusValue;
-          final sanitizedBarcode =
-              (barcodeValue == null || barcodeValue.isEmpty) ? null : barcodeValue;
+              _BookDuplicateTracker.sanitize(statusValue) ?? 'available';
+          final sanitizedBarcode = _BookDuplicateTracker.sanitize(barcodeValue);
+
+          final duplicateReason = tracker.findDuplicate(
+            title: sanitizedTitle,
+            author: sanitizedAuthor,
+            isbn: sanitizedIsbn,
+            barcode: sanitizedBarcode,
+          );
+          if (duplicateReason != null) {
+            failureCount++;
+            errors.add(
+              'Fila ${rowIndex + 1}: Libro duplicado (${duplicateReason}).',
+            );
+            continue;
+          }
 
           await _bookRepository.addBook(
-            title: title,
-            author: author?.isEmpty == true ? null : author,
-            isbn: isbn?.isEmpty == true ? null : isbn,
+            title: sanitizedTitle,
+            author: sanitizedAuthor,
+            isbn: sanitizedIsbn,
             status: sanitizedStatus,
-            notes: notes?.isEmpty == true ? null : notes,
+            notes: sanitizedNotes,
+            barcode: sanitizedBarcode,
+          );
+          tracker.register(
+            title: sanitizedTitle,
+            author: sanitizedAuthor,
+            isbn: sanitizedIsbn,
             barcode: sanitizedBarcode,
           );
           successCount++;
@@ -187,23 +220,66 @@ class BookImportService {
       int failureCount = 0;
       final errors = <String>[];
 
+      Iterable<Book> existingBooks = const [];
+      try {
+        existingBooks = await _bookRepository.fetchActiveBooks();
+      } catch (error, stackTrace) {
+        debugPrint('No se pudieron obtener libros existentes para evitar duplicados: $error');
+        debugPrint('$stackTrace');
+      }
+      final tracker = _BookDuplicateTracker(existingBooks);
+
       for (int i = 0; i < jsonData.length; i++) {
         try {
           final bookData = jsonData[i] as Map<String, dynamic>;
-          
-          if (bookData['title'] == null || bookData['title'].toString().trim().isEmpty) {
+
+          final rawTitle = bookData['title']?.toString();
+          final sanitizedTitle = _BookDuplicateTracker.sanitize(rawTitle);
+          if (sanitizedTitle == null) {
             failureCount++;
             errors.add('Elemento ${i + 1}: El título es obligatorio');
             continue;
           }
 
+          final sanitizedAuthor =
+              _BookDuplicateTracker.sanitize(bookData['author']?.toString());
+          final sanitizedIsbn =
+              _BookDuplicateTracker.sanitize(bookData['isbn']?.toString());
+          final sanitizedBarcode =
+              _BookDuplicateTracker.sanitize(bookData['barcode']?.toString());
+          final sanitizedStatus =
+              _BookDuplicateTracker.sanitize(bookData['status']?.toString()) ??
+                  'available';
+          final sanitizedNotes =
+              _BookDuplicateTracker.sanitize(bookData['notes']?.toString());
+
+          final duplicateReason = tracker.findDuplicate(
+            title: sanitizedTitle,
+            author: sanitizedAuthor,
+            isbn: sanitizedIsbn,
+            barcode: sanitizedBarcode,
+          );
+          if (duplicateReason != null) {
+            failureCount++;
+            errors.add(
+              'Elemento ${i + 1}: Libro duplicado (${duplicateReason}).',
+            );
+            continue;
+          }
+
           await _bookRepository.addBook(
-            title: bookData['title'].toString().trim(),
-            author: bookData['author']?.toString().trim(),
-            isbn: bookData['isbn']?.toString().trim(),
-            barcode: bookData['barcode']?.toString().trim(),
-            status: bookData['status']?.toString().trim() ?? 'available',
-            notes: bookData['notes']?.toString().trim(),
+            title: sanitizedTitle,
+            author: sanitizedAuthor,
+            isbn: sanitizedIsbn,
+            barcode: sanitizedBarcode,
+            status: sanitizedStatus,
+            notes: sanitizedNotes,
+          );
+          tracker.register(
+            title: sanitizedTitle,
+            author: sanitizedAuthor,
+            isbn: sanitizedIsbn,
+            barcode: sanitizedBarcode,
           );
           successCount++;
         } catch (e) {
@@ -224,5 +300,93 @@ class BookImportService {
         errors: ['Error al procesar el archivo JSON: $e'],
       );
     }
+  }
+}
+
+class _BookDuplicateTracker {
+  _BookDuplicateTracker(Iterable<Book> existing) {
+    for (final book in existing) {
+      register(
+        title: book.title,
+        author: book.author,
+        isbn: book.isbn,
+        barcode: book.barcode,
+      );
+    }
+  }
+
+  final _isbns = <String>{};
+  final _barcodes = <String>{};
+  final _titleAuthorKeys = <String>{};
+
+  static String? sanitize(String? value) {
+    if (value == null) return null;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  String _normalize(String value) => value.trim().toLowerCase();
+
+  String _titleAuthorKey(String title, String? author) {
+    final normalizedAuthor = author == null ? '' : _normalize(author);
+    return '${_normalize(title)}::$normalizedAuthor';
+  }
+
+  String? findDuplicate({
+    required String title,
+    String? author,
+    String? isbn,
+    String? barcode,
+  }) {
+    final sanitizedBarcode = sanitize(barcode);
+    if (sanitizedBarcode != null) {
+      final normalizedBarcode = _normalize(sanitizedBarcode);
+      if (_barcodes.contains(normalizedBarcode)) {
+        return 'código de barras "$sanitizedBarcode"';
+      }
+    }
+
+    final sanitizedIsbn = sanitize(isbn);
+    if (sanitizedIsbn != null) {
+      final normalizedIsbn = _normalize(sanitizedIsbn);
+      if (_isbns.contains(normalizedIsbn)) {
+        return 'ISBN "$sanitizedIsbn"';
+      }
+    }
+
+    final key = _titleAuthorKey(title, sanitize(author));
+    if (_titleAuthorKeys.contains(key)) {
+      final sanitizedAuthor = sanitize(author);
+      return sanitizedAuthor == null
+          ? 'título "$title"'
+          : 'título y autor "$title" / "$sanitizedAuthor"';
+    }
+
+    return null;
+  }
+
+  void register({
+    required String title,
+    String? author,
+    String? isbn,
+    String? barcode,
+  }) {
+    final sanitizedTitle = sanitize(title);
+    if (sanitizedTitle == null) {
+      return;
+    }
+
+    final sanitizedIsbn = sanitize(isbn);
+    if (sanitizedIsbn != null) {
+      _isbns.add(_normalize(sanitizedIsbn));
+    }
+
+    final sanitizedBarcode = sanitize(barcode);
+    if (sanitizedBarcode != null) {
+      _barcodes.add(_normalize(sanitizedBarcode));
+    }
+
+    final sanitizedAuthor = sanitize(author);
+    _titleAuthorKeys.add(_titleAuthorKey(sanitizedTitle, sanitizedAuthor));
   }
 }

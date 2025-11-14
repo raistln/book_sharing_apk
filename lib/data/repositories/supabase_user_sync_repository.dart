@@ -66,6 +66,9 @@ class SupabaseUserSyncRepository {
               isDirty: const Value(false),
               syncedAt: Value(now),
               updatedAt: Value(remote.updatedAt ?? now),
+              pinHash: Value(remote.pinHash),
+              pinSalt: Value(remote.pinSalt),
+              pinUpdatedAt: Value(remote.pinUpdatedAt),
             ),
           );
           developer.log(
@@ -83,6 +86,9 @@ class SupabaseUserSyncRepository {
               createdAt: Value(remote.createdAt ?? now),
               updatedAt: Value(remote.updatedAt ?? now),
               syncedAt: Value(now),
+              pinHash: Value(remote.pinHash),
+              pinSalt: Value(remote.pinSalt),
+              pinUpdatedAt: Value(remote.pinUpdatedAt),
             ),
           );
           developer.log(
@@ -127,6 +133,9 @@ class SupabaseUserSyncRepository {
             isDeleted: user.isDeleted,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
+            pinHash: user.pinHash,
+            pinSalt: user.pinSalt,
+            pinUpdatedAt: user.pinUpdatedAt,
             accessToken: accessToken,
           );
           developer.log(
@@ -142,6 +151,9 @@ class SupabaseUserSyncRepository {
             id: provisionalRemoteId,
             username: user.username,
             isDeleted: user.isDeleted,
+            pinHash: user.pinHash,
+            pinSalt: user.pinSalt,
+            pinUpdatedAt: user.pinUpdatedAt,
             updatedAt: user.updatedAt,
             accessToken: accessToken,
           );

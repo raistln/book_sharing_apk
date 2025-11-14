@@ -15,6 +15,8 @@ void main() {
   setUp(() {
     mockBookRepository = MockBookRepository();
     bookImportService = BookImportService(mockBookRepository);
+    when(() => mockBookRepository.fetchActiveBooks())
+        .thenAnswer((_) async => []);
   });
 
   group('importFromCsv', () {

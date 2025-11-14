@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:http/http.dart' as http;
 
@@ -144,6 +145,27 @@ class SupabaseBookService {
     final config = await _loadConfig();
     final uri = Uri.parse('${config.url}/rest/v1/books');
 
+    final payload = {
+      'id': id,
+      'owner_id': ownerId,
+      'title': title,
+      'author': author,
+      'isbn': isbn,
+      'barcode': barcode,
+      'cover_url': coverUrl,
+      'status': status,
+      'notes': notes,
+      'is_deleted': isDeleted,
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+    };
+
+    developer.log(
+      'POST ${uri.path} → crear libro ${payload['title']} (${payload['id']})',
+      name: 'SupabaseBookService',
+      error: jsonEncode(payload),
+    );
+
     final response = await _client.post(
       uri,
       headers: _buildHeaders(
@@ -151,20 +173,13 @@ class SupabaseBookService {
         accessToken: accessToken,
         preferRepresentation: true,
       ),
-      body: jsonEncode({
-        'id': id,
-        'owner_id': ownerId,
-        'title': title,
-        'author': author,
-        'isbn': isbn,
-        'barcode': barcode,
-        'cover_url': coverUrl,
-        'status': status,
-        'notes': notes,
-        'is_deleted': isDeleted,
-        'created_at': createdAt.toUtc().toIso8601String(),
-        'updated_at': updatedAt.toUtc().toIso8601String(),
-      }),
+      body: jsonEncode(payload),
+    );
+
+    developer.log(
+      'Respuesta POST ${uri.path}: ${response.statusCode}',
+      name: 'SupabaseBookService',
+      error: response.body,
     );
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -211,23 +226,37 @@ class SupabaseBookService {
       },
     );
 
+    final payload = {
+      'title': title,
+      'author': author,
+      'isbn': isbn,
+      'barcode': barcode,
+      'cover_url': coverUrl,
+      'status': status,
+      'notes': notes,
+      'is_deleted': isDeleted,
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+    };
+
+    developer.log(
+      'PATCH ${uri.toString()} → actualizar libro $id',
+      name: 'SupabaseBookService',
+      error: jsonEncode(payload),
+    );
+
     final response = await _client.patch(
       uri,
       headers: _buildHeaders(
         config,
         accessToken: accessToken,
       ),
-      body: jsonEncode({
-        'title': title,
-        'author': author,
-        'isbn': isbn,
-        'barcode': barcode,
-        'cover_url': coverUrl,
-        'status': status,
-        'notes': notes,
-        'is_deleted': isDeleted,
-        'updated_at': updatedAt.toUtc().toIso8601String(),
-      }),
+      body: jsonEncode(payload),
+    );
+
+    developer.log(
+      'Respuesta PATCH ${uri.path}: ${response.statusCode}',
+      name: 'SupabaseBookService',
+      error: response.body,
     );
 
     if (response.statusCode == 404) {

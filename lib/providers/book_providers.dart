@@ -50,7 +50,13 @@ final groupDaoProvider = Provider<GroupDao>((ref) {
 
 final groupListProvider = StreamProvider.autoDispose<List<Group>>((ref) {
   final dao = ref.watch(groupDaoProvider);
-  return dao.watchActiveGroups();
+  final activeUser = ref.watch(activeUserProvider).value;
+
+  if (activeUser == null) {
+    return const Stream.empty();
+  }
+
+  return dao.watchGroupsForUser(activeUser.id);
 });
 
 final groupMemberDetailsProvider = StreamProvider.autoDispose

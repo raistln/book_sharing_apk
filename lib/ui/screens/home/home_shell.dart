@@ -2370,148 +2370,190 @@ Future<void> _showInvitationsSheet(
     context: context,
     isScrollControlled: true,
     builder: (sheetContext) {
-      final bottomInset = MediaQuery.of(sheetContext).viewInsets.bottom;
+      final mediaQuery = MediaQuery.of(sheetContext);
+      final bottomInset = mediaQuery.viewInsets.bottom;
       return Padding(
         padding: EdgeInsets.only(bottom: bottomInset),
-        child: Consumer(
-          builder: (context, sheetRef, _) {
-            final invitationsAsync = sheetRef.watch(groupInvitationDetailsProvider(group.id));
-            final activeUser = sheetRef.watch(activeUserProvider).value;
-            final actionState = sheetRef.watch(groupPushControllerProvider);
-            final isBusy = actionState.isLoading;
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompactWidth = constraints.maxWidth < 420;
+            final heightFactor = constraints.maxHeight < 560 ? 0.95 : 0.85;
+            final horizontalPadding = constraints.maxWidth >= 720
+                ? 32.0
+                : constraints.maxWidth >= 480
+                    ? 24.0
+                    : 16.0;
 
-            return SafeArea(
-              child: FractionallySizedBox(
-                heightFactor: 0.85,
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Invitaciones del grupo',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.of(sheetContext).pop(),
-                            icon: const Icon(Icons.close),
-                            tooltip: 'Cerrar',
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        children: [
-                          FilledButton.icon(
-                            onPressed: isBusy || activeUser == null
-                                ? null
-                                : () => _handleCreateInvitation(
-                                      sheetContext,
-                                      sheetRef,
-                                      group: group,
-                                      inviter: activeUser,
-                                    ),
-                            icon: const Icon(Icons.qr_code_2_outlined),
-                            label: const Text('Nueva invitación'),
-                          ),
-                          const SizedBox(width: 12),
-                          if (isBusy)
-                            const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: invitationsAsync.when(
-                        data: (invitations) {
-                          if (invitations.isEmpty) {
-                            return const Center(
-                              child: Text('Aún no se han generado invitaciones.'),
-                            );
-                          }
+            return Consumer(
+              builder: (context, sheetRef, _) {
+                final invitationsAsync = sheetRef.watch(groupInvitationDetailsProvider(group.id));
+                final activeUser = sheetRef.watch(activeUserProvider).value;
+                final actionState = sheetRef.watch(groupPushControllerProvider);
+                final isBusy = actionState.isLoading;
 
-                          return ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                            itemCount: invitations.length,
-                            separatorBuilder: (_, __) => const Divider(),
-                            itemBuilder: (context, index) {
-                              final detail = invitations[index];
-                              final invitation = detail.invitation;
-                              final status = invitation.status;
-                              final expiresAt = DateFormat.yMd().add_Hm().format(invitation.expiresAt);
-                              final code = invitation.code;
-                              final canCancel = status == _kInvitationStatusPending && !isBusy;
-
-                              return ListTile(
-                                leading: const Icon(Icons.qr_code_2_outlined),
-                                title: Text('Código: $code'),
-                                subtitle: Text('Rol: ${invitation.role} · Estado: $status · Expira: $expiresAt'),
-                                contentPadding: EdgeInsets.zero,
-                                isThreeLine: true,
-                                trailing: SizedBox(
-                                  width: 120,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            tooltip: 'Copiar código',
-                                            onPressed: () => _copyToClipboard(sheetContext, code),
-                                            icon: const Icon(Icons.copy_outlined),
-                                          ),
-                                          IconButton(
-                                            tooltip: 'Mostrar QR',
-                                            onPressed: () => _showInvitationQrDialog(sheetContext, code),
-                                            icon: const Icon(Icons.fullscreen),
-                                          ),
-                                          IconButton(
-                                            tooltip: 'Compartir código',
-                                            onPressed: () => _shareInvitationCode(
-                                              context: sheetContext,
-                                              group: group,
-                                              invitation: invitation,
-                                            ),
-                                            icon: const Icon(Icons.share_outlined),
-                                          ),
-                                        ],
-                                      ),
-                                      if (canCancel)
-                                        TextButton.icon(
-                                          onPressed: () => _handleCancelInvitation(
-                                            sheetContext,
-                                            sheetRef,
-                                            invitation: invitation,
-                                          ),
-                                          icon: const Icon(Icons.cancel_outlined),
-                                          label: const Text('Cancelar'),
-                                        ),
-                                    ],
-                                  ),
+                return SafeArea(
+                  child: FractionallySizedBox(
+                    heightFactor: heightFactor,
+                    widthFactor: 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(horizontalPadding, 16, horizontalPadding, 8),
+                          child: Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Invitaciones del grupo',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                                 ),
+                              ),
+                              IconButton(
+                                onPressed: () => Navigator.of(sheetContext).pop(),
+                                icon: const Icon(Icons.close),
+                                tooltip: 'Cerrar',
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                          child: Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              FilledButton.icon(
+                                onPressed: isBusy || activeUser == null
+                                    ? null
+                                    : () => _handleCreateInvitation(
+                                          sheetContext,
+                                          sheetRef,
+                                          group: group,
+                                          inviter: activeUser,
+                                        ),
+                                icon: const Icon(Icons.qr_code_2_outlined),
+                                label: const Text('Nueva invitación'),
+                              ),
+                              if (isBusy)
+                                const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: invitationsAsync.when(
+                            data: (invitations) {
+                              if (invitations.isEmpty) {
+                                return const Center(
+                                  child: Text('Aún no se han generado invitaciones.'),
+                                );
+                              }
+
+                              return ListView.separated(
+                                padding: EdgeInsets.fromLTRB(
+                                  horizontalPadding,
+                                  0,
+                                  horizontalPadding,
+                                  24 + mediaQuery.padding.bottom,
+                                ),
+                                itemCount: invitations.length,
+                                separatorBuilder: (_, __) => const Divider(),
+                                itemBuilder: (context, index) {
+                                  final detail = invitations[index];
+                                  final invitation = detail.invitation;
+                                  final status = invitation.status;
+                                  final expiresAt =
+                                      DateFormat.yMd().add_Hm().format(invitation.expiresAt);
+                                  final code = invitation.code;
+                                  final canCancel = status == _kInvitationStatusPending && !isBusy;
+
+                                  final actionButtons = <Widget>[
+                                    IconButton(
+                                      tooltip: 'Copiar código',
+                                      onPressed: () => _copyToClipboard(sheetContext, code),
+                                      icon: const Icon(Icons.copy_outlined),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Mostrar QR',
+                                      onPressed: () => _showInvitationQrDialog(sheetContext, code),
+                                      icon: const Icon(Icons.fullscreen),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Compartir código',
+                                      onPressed: () => _shareInvitationCode(
+                                        context: sheetContext,
+                                        group: group,
+                                        invitation: invitation,
+                                      ),
+                                      icon: const Icon(Icons.share_outlined),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  ];
+
+                                  if (canCancel) {
+                                    actionButtons.add(
+                                      TextButton.icon(
+                                        onPressed: () => _handleCancelInvitation(
+                                          sheetContext,
+                                          sheetRef,
+                                          invitation: invitation,
+                                        ),
+                                        icon: const Icon(Icons.cancel_outlined, size: 20),
+                                        label: const Text('Cancelar'),
+                                        style: TextButton.styleFrom(
+                                          visualDensity: VisualDensity.compact,
+                                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        ),
+                                      ),
+                                    );
+                                  }
+
+                                  final maxActionsWidth = isCompactWidth
+                                      ? constraints.maxWidth * 0.55
+                                      : 200.0;
+
+                                  return ListTile(
+                                    leading: const Icon(Icons.qr_code_2_outlined),
+                                    title: Text('Código: $code'),
+                                    subtitle: Text(
+                                      'Rol: ${invitation.role} · Estado: $status · Expira: $expiresAt',
+                                    ),
+                                    contentPadding: EdgeInsets.zero,
+                                    isThreeLine: true,
+                                    trailing: ConstrainedBox(
+                                      constraints: BoxConstraints(maxWidth: maxActionsWidth),
+                                      child: Align(
+                                        alignment: Alignment.centerRight,
+                                        child: Wrap(
+                                          alignment: WrapAlignment.end,
+                                          spacing: 4,
+                                          runSpacing: 4,
+                                          children: actionButtons,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
                               );
                             },
-                          );
-                        },
-                        loading: () => const Center(child: CircularProgressIndicator()),
-                        error: (error, _) => Center(
-                          child: Text('Error al cargar invitaciones: $error'),
+                            loading: () => const Center(child: CircularProgressIndicator()),
+                            error: (error, _) => Center(
+                              child: Text('Error al cargar invitaciones: $error'),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             );
           },
         ),
@@ -2657,6 +2699,7 @@ Future<void> _showInvitationQrDialog(BuildContext context, String code) {
   final data = 'group-invite://$code';
   return showDialog<void>(
     context: context,
+    useRootNavigator: true,
     builder: (dialogContext) {
       return AlertDialog(
         title: const Text('Código QR de invitación'),
@@ -2773,57 +2816,95 @@ Future<_GroupFormResult?> _showGroupFormDialog(
   );
 }
 
-Future<String?> _showJoinGroupByCodeDialog(BuildContext context) async {
-  final formKey = GlobalKey<FormState>();
-  final codeController = TextEditingController();
+Future<String?> _showJoinGroupByCodeDialog(BuildContext context) {
+  return showDialog<String>(
+    context: context,
+    barrierDismissible: false,
+    useRootNavigator: true,
+    builder: (_) => const _JoinGroupByCodeDialog(),
+  );
+}
 
-  try {
-    return showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Unirse por código'),
-          content: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: codeController,
-              decoration: const InputDecoration(
-                labelText: 'Código de invitación',
-                hintText: 'Ej. 123e4567-e89b-12d3-a456-426614174000',
-              ),
-              autofocus: true,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Introduce un código válido.';
-                }
-                if (value.trim().length < 6) {
-                  return 'El código es demasiado corto.';
-                }
-                return null;
-              },
-            ),
+class _JoinGroupByCodeDialog extends StatefulWidget {
+  const _JoinGroupByCodeDialog();
+
+  @override
+  State<_JoinGroupByCodeDialog> createState() => _JoinGroupByCodeDialogState();
+}
+
+class _JoinGroupByCodeDialogState extends State<_JoinGroupByCodeDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _codeController;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _codeController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_isSubmitting || !(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    FocusScope.of(context).unfocus();
+    final trimmedCode = _codeController.text.trim();
+    Navigator.of(context, rootNavigator: true).pop(trimmedCode);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Unirse por código'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _codeController,
+          decoration: const InputDecoration(
+            labelText: 'Código de invitación',
+            hintText: 'Ej. 123e4567-e89b-12d3-a456-426614174000',
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (!(formKey.currentState?.validate() ?? false)) {
-                  return;
-                }
-                Navigator.of(dialogContext).pop(codeController.text.trim());
-              },
-              child: const Text('Unirse'),
-            ),
-          ],
-        );
-      },
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => _submit(),
+          validator: (value) {
+            final trimmed = value?.trim() ?? '';
+            if (trimmed.isEmpty) {
+              return 'Introduce un código válido.';
+            }
+            if (trimmed.length < 6) {
+              return 'El código es demasiado corto.';
+            }
+            return null;
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting
+              ? null
+              : () => Navigator.of(context, rootNavigator: true).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _isSubmitting ? null : _submit,
+          child: _isSubmitting
+              ? const SizedBox(
+                  height: 16,
+                  width: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Unirse'),
+        ),
+      ],
     );
-  } finally {
-    codeController.dispose();
   }
 }
 

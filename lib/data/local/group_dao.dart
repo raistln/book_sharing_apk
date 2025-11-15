@@ -65,6 +65,27 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
         .watch();
   }
 
+  Stream<List<Group>> watchGroupsForUser(int userId) {
+    final membershipsForUser = alias(groupMembers, 'memberships_for_user');
+    final query = select(groups).join([
+      leftOuterJoin(
+        membershipsForUser,
+        membershipsForUser.groupId.equalsExp(groups.id) &
+            membershipsForUser.memberUserId.equals(userId) &
+            (membershipsForUser.isDeleted.equals(false) |
+                membershipsForUser.isDeleted.isNull()),
+      ),
+    ])
+      ..where(
+        (groups.isDeleted.equals(false) | groups.isDeleted.isNull()) &
+            (groups.ownerUserId.equals(userId) | membershipsForUser.id.isNotNull()),
+      );
+
+    return query.watch().map(
+      (rows) => rows.map((row) => row.readTable(groups)).toList(growable: false),
+    );
+  }
+
   Future<List<Group>> getActiveGroups() {
     return (select(groups)
           ..where((tbl) => tbl.isDeleted.equals(false) | tbl.isDeleted.isNull()))
@@ -241,6 +262,7 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
       ),
     ])
       ..where(groupInvitations.groupId.equals(groupId) &
+          groupInvitations.status.equals('pending') &
           (groupInvitations.isDeleted.equals(false) | groupInvitations.isDeleted.isNull()));
 
     return joined.watch().map(
@@ -289,6 +311,10 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
         updatedAt: Value(timestamp),
       ),
     );
+  }
+
+  Future<void> deleteInvitation({required int invitationId}) {
+    return (delete(groupInvitations)..where((tbl) => tbl.id.equals(invitationId))).go();
   }
 
   // Loans ---------------------------------------------------------------

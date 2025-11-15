@@ -486,7 +486,12 @@ class GroupPushRepository {
     required LocalUser user,
     String? accessToken,
   }) async {
-    final invitation = await _groupDao.findInvitationByCode(code);
+    var invitation = await _groupDao.findInvitationByCode(code);
+    invitation ??= await _fetchAndCacheInvitationByCode(
+      code,
+      accessToken: accessToken,
+    );
+
     if (invitation == null) {
       throw GroupPushException('Código de invitación no válido.');
     }
@@ -518,6 +523,284 @@ class GroupPushRepository {
       newStatus: 'accepted',
       accessToken: accessToken,
     );
+  }
+
+  Future<GroupInvitation?> _fetchAndCacheInvitationByCode(
+    String code, {
+    String? accessToken,
+  }) async {
+    DateTime? parseDateTime(dynamic value) {
+      if (value is String && value.isNotEmpty) {
+        return DateTime.tryParse(value);
+      }
+      return null;
+    }
+
+    bool parseBool(dynamic value) {
+      if (value is bool) {
+        return value;
+      }
+      if (value is num) {
+        return value != 0;
+      }
+      if (value is String) {
+        final normalized = value.toLowerCase();
+        return normalized == 'true' ||
+            normalized == 't' ||
+            normalized == '1';
+      }
+      return false;
+    }
+
+    final uri = await _buildUri(
+      '/rest/v1/group_invitations',
+      {
+        'code': 'eq.$code',
+        'limit': '1',
+        'select':
+            'id,group_id,inviter_id,accepted_user_id,role,code,status,expires_at,responded_at,created_at,updated_at,'
+            'group:groups(id,name,description,owner_id,created_at,updated_at),'
+            'inviter:local_users!group_invitations_inviter_id_fkey(id,username,is_deleted,created_at,updated_at)',
+      },
+    );
+
+    final response = await _client.get(
+      uri,
+      headers: await _headers(accessToken: accessToken),
+    );
+
+    if (response.statusCode >= 300) {
+      throw GroupPushException(
+        'Error ${response.statusCode}: ${response.body}',
+        response.statusCode,
+      );
+    }
+
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    if (decoded is! List) {
+      return null;
+    }
+
+    Map<String, dynamic>? record;
+    for (final item in decoded) {
+      if (item is Map<String, dynamic>) {
+        record = item;
+        break;
+      }
+    }
+
+    if (record == null) {
+      return null;
+    }
+
+    final remoteId = record['id'] as String?;
+    final groupRemoteId = record['group_id'] as String?;
+    final inviterRemoteId = record['inviter_id'] as String?;
+    final status = (record['status'] as String?) ?? 'pending';
+    final role = (record['role'] as String?) ?? 'member';
+    final acceptedRemoteId = record['accepted_user_id'] as String?;
+    final expiresAt = parseDateTime(record['expires_at']);
+    final respondedAt = parseDateTime(record['responded_at']);
+    final createdAt = parseDateTime(record['created_at']);
+    final updatedAt = parseDateTime(record['updated_at']);
+
+    if (remoteId == null ||
+        groupRemoteId == null ||
+        inviterRemoteId == null ||
+        expiresAt == null) {
+      return null;
+    }
+
+    final groupJson = record['group'] as Map<String, dynamic>?;
+    final inviterJson = record['inviter'] as Map<String, dynamic>?;
+
+    if (groupJson == null || inviterJson == null) {
+      return null;
+    }
+
+    final groupName = groupJson['name'] as String?;
+    if (groupName == null || groupName.isEmpty) {
+      return null;
+    }
+
+    final groupDescription = groupJson['description'] as String?;
+    final groupOwnerRemoteId = groupJson['owner_id'] as String?;
+    final groupCreatedAt = parseDateTime(groupJson['created_at']);
+    final groupUpdatedAt = parseDateTime(groupJson['updated_at']);
+
+    final inviterUsername = inviterJson['username'] as String?;
+    if (inviterUsername == null || inviterUsername.isEmpty) {
+      return null;
+    }
+
+    final inviterIsDeleted = parseBool(inviterJson['is_deleted']);
+    final inviterCreatedAt = parseDateTime(inviterJson['created_at']);
+    final inviterUpdatedAt = parseDateTime(inviterJson['updated_at']);
+
+    final now = DateTime.now();
+
+    final invitation = await _db.transaction(() async {
+      var inviter = await _userDao.findByRemoteId(inviterRemoteId);
+      if (inviter == null) {
+        final userId = await _userDao.insertUser(
+          LocalUsersCompanion.insert(
+            uuid: inviterRemoteId,
+            username: inviterUsername,
+            remoteId: Value(inviterRemoteId),
+            isDeleted: Value(inviterIsDeleted),
+            isDirty: const Value(false),
+            syncedAt: Value(now),
+            createdAt: Value(inviterCreatedAt ?? now),
+            updatedAt: Value(inviterUpdatedAt ?? inviterCreatedAt ?? now),
+          ),
+        );
+        inviter = (await _userDao.getById(userId))!;
+      } else if (!inviter.isDirty) {
+        await _userDao.updateUserFields(
+          userId: inviter.id,
+          entry: LocalUsersCompanion(
+            username: Value(inviterUsername),
+            remoteId: Value(inviterRemoteId),
+            isDeleted: Value(inviterIsDeleted),
+            isDirty: const Value(false),
+            syncedAt: Value(now),
+            updatedAt: Value(inviterUpdatedAt ?? inviter.updatedAt),
+          ),
+        );
+        inviter = (await _userDao.getById(inviter.id))!;
+      }
+
+      int? ownerUserId;
+      if (groupOwnerRemoteId != null) {
+        final owner = await _userDao.findByRemoteId(groupOwnerRemoteId);
+        ownerUserId = owner?.id;
+      }
+
+      final ownerUserIdValue = ownerUserId != null
+          ? Value(ownerUserId)
+          : const Value<int?>.absent();
+      final ownerRemoteValue = groupOwnerRemoteId != null
+          ? Value(groupOwnerRemoteId)
+          : const Value<String?>.absent();
+
+      var group = await _groupDao.findGroupByRemoteId(groupRemoteId);
+      if (group == null) {
+        final groupId = await _groupDao.insertGroup(
+          GroupsCompanion.insert(
+            uuid: groupRemoteId,
+            remoteId: Value(groupRemoteId),
+            name: groupName,
+            description: groupDescription != null
+                ? Value(groupDescription)
+                : const Value.absent(),
+            ownerUserId: ownerUserIdValue,
+            ownerRemoteId: ownerRemoteValue,
+            isDirty: const Value(false),
+            isDeleted: const Value(false),
+            syncedAt: Value(now),
+            createdAt: Value(groupCreatedAt ?? now),
+            updatedAt: Value(groupUpdatedAt ?? groupCreatedAt ?? now),
+          ),
+        );
+        group = (await _groupDao.findGroupById(groupId))!;
+      } else if (!group.isDirty) {
+        await _groupDao.updateGroupFields(
+          groupId: group.id,
+          entry: GroupsCompanion(
+            name: Value(groupName),
+            description: groupDescription != null
+                ? Value(groupDescription)
+                : const Value.absent(),
+            ownerUserId: ownerUserIdValue,
+            ownerRemoteId: ownerRemoteValue,
+            isDeleted: const Value(false),
+            isDirty: const Value(false),
+            syncedAt: Value(now),
+            updatedAt: Value(groupUpdatedAt ?? group.updatedAt),
+          ),
+        );
+        group = (await _groupDao.findGroupById(group.id))!;
+      }
+
+      int? acceptedUserId;
+      if (acceptedRemoteId != null) {
+        final acceptedUser = await _userDao.findByRemoteId(acceptedRemoteId);
+        acceptedUserId = acceptedUser?.id;
+      }
+
+      final acceptedUserIdValue = acceptedUserId != null
+          ? Value(acceptedUserId)
+          : const Value<int?>.absent();
+      final acceptedUserRemoteValue = acceptedRemoteId != null
+          ? Value(acceptedRemoteId)
+          : const Value<String?>.absent();
+      final respondedAtValue = respondedAt != null
+          ? Value(respondedAt)
+          : const Value<DateTime?>.absent();
+
+      final invitationUpdate = GroupInvitationsCompanion(
+        uuid: Value(remoteId),
+        remoteId: Value(remoteId),
+        groupId: Value(group.id),
+        groupUuid: Value(group.uuid),
+        inviterUserId: Value(inviter.id),
+        inviterRemoteId: Value(inviterRemoteId),
+        acceptedUserId: acceptedUserIdValue,
+        acceptedUserRemoteId: acceptedUserRemoteValue,
+        role: Value(role),
+        code: Value(code),
+        status: Value(status),
+        expiresAt: Value(expiresAt),
+        respondedAt: respondedAtValue,
+        isDirty: const Value(false),
+        isDeleted: const Value(false),
+        syncedAt: Value(now),
+        createdAt: Value(createdAt ?? now),
+        updatedAt: Value(updatedAt ?? now),
+      );
+
+      final existingInvitation =
+          await _groupDao.findInvitationByRemoteId(remoteId) ??
+              await _groupDao.findInvitationByCode(code);
+
+      if (existingInvitation != null) {
+        await _groupDao.updateInvitation(
+          invitationId: existingInvitation.id,
+          entry: invitationUpdate,
+        );
+        return (await _groupDao.findInvitationById(existingInvitation.id))!;
+      }
+
+      final invitationId = await _groupDao.insertInvitation(
+        GroupInvitationsCompanion.insert(
+          uuid: remoteId,
+          remoteId: Value(remoteId),
+          groupId: group.id,
+          groupUuid: group.uuid,
+          inviterUserId: inviter.id,
+          inviterRemoteId: Value(inviterRemoteId),
+          acceptedUserId: acceptedUserIdValue,
+          acceptedUserRemoteId: acceptedUserRemoteValue,
+          role: Value(role),
+          code: code,
+          status: Value(status),
+          expiresAt: expiresAt,
+          respondedAt: respondedAtValue,
+          isDirty: const Value(false),
+          isDeleted: const Value(false),
+          syncedAt: Value(now),
+          createdAt: Value(createdAt ?? now),
+          updatedAt: Value(updatedAt ?? createdAt ?? now),
+        ),
+      );
+      return (await _groupDao.findInvitationById(invitationId))!;
+    });
+
+    if (invitation.status != 'pending') {
+      return null;
+    }
+
+    return invitation;
   }
 
   Future<void> _post({

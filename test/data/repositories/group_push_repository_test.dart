@@ -6,7 +6,7 @@ import 'package:book_sharing_app/data/local/group_dao.dart';
 import 'package:book_sharing_app/data/local/user_dao.dart';
 import 'package:book_sharing_app/data/repositories/group_push_repository.dart';
 import 'package:book_sharing_app/services/supabase_config_service.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -136,6 +136,117 @@ void main() {
       ),
       throwsA(isA<GroupPushException>()),
     );
+  });
+
+  test('acceptInvitationByCode fetches remote invitation and caches related data', () async {
+    final joinerId = await userDao.insertUser(
+      LocalUsersCompanion.insert(
+        uuid: 'joiner-uuid',
+        username: 'Joiner',
+        remoteId: const Value('joiner-remote-id'),
+        isDirty: const Value(false),
+        isDeleted: const Value(false),
+      ),
+    );
+    final joiner = (await userDao.getById(joinerId))!;
+
+    final now = DateTime.now().toUtc();
+    final requests = <http.Request>[];
+
+    final repository = GroupPushRepository(
+      groupDao: groupDao,
+      userDao: userDao,
+      configService: _FakeSupabaseConfigService(
+        const SupabaseConfig(
+          url: 'https://example.supabase.co',
+          anonKey: 'test-anon-key',
+        ),
+      ),
+      client: MockClient((request) async {
+        requests.add(request);
+        if (request.method == 'GET' &&
+            request.url.path.endsWith('/rest/v1/group_invitations')) {
+          final select = request.url.queryParameters['select'];
+          expect(
+            select,
+            contains('inviter:local_users!group_invitations_inviter_id_fkey'),
+          );
+          return http.Response(
+            jsonEncode([
+              {
+                'id': 'remote-invite-id',
+                'group_id': 'remote-group-id',
+                'inviter_id': 'inviter-remote-id',
+                'accepted_user_id': null,
+                'role': 'member',
+                'code': 'invite-code',
+                'status': 'pending',
+                'expires_at': now.add(const Duration(days: 1)).toIso8601String(),
+                'responded_at': null,
+                'created_at': now.toIso8601String(),
+                'updated_at': now.toIso8601String(),
+                'group': {
+                  'id': 'remote-group-id',
+                  'name': 'Remote Group',
+                  'description': 'Description',
+                  'owner_id': 'owner-remote-id',
+                  'created_at': now.toIso8601String(),
+                  'updated_at': now.toIso8601String(),
+                },
+                'inviter': {
+                  'id': 'inviter-remote-id',
+                  'username': 'Inviter',
+                  'is_deleted': false,
+                  'created_at': now.toIso8601String(),
+                  'updated_at': now.toIso8601String(),
+                },
+              },
+            ]),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+
+        if (request.method == 'POST' &&
+            request.url.path.endsWith('/rest/v1/group_members')) {
+          return http.Response('', 201);
+        }
+
+        if (request.method == 'PATCH' &&
+            request.url.path.endsWith('/rest/v1/group_invitations')) {
+          return http.Response('', 204);
+        }
+
+        fail('Unexpected request: ${request.method} ${request.url}');
+      }),
+      uuid: _FakeUuid(['member-joiner-uuid']),
+    );
+
+    final invitation = await repository.acceptInvitationByCode(
+      code: 'invite-code',
+      user: joiner,
+      accessToken: 'session-token',
+    );
+
+    expect(invitation.status, 'accepted');
+    expect(invitation.acceptedUserId, joinerId);
+
+    final cachedInvitation = await groupDao.findInvitationByCode('invite-code');
+    expect(cachedInvitation, isNotNull);
+    expect(cachedInvitation!.acceptedUserId, joinerId);
+    expect(cachedInvitation.status, 'accepted');
+
+    final cachedGroup = await groupDao.findGroupByRemoteId('remote-group-id');
+    expect(cachedGroup, isNotNull);
+    expect(cachedGroup!.name, 'Remote Group');
+
+    final inviter = await userDao.findByRemoteId('inviter-remote-id');
+    expect(inviter, isNotNull);
+    expect(inviter!.username, 'Inviter');
+
+    expect(requests.where((request) => request.method == 'GET'), hasLength(1));
+    expect(requests.where((request) => request.method == 'POST'), hasLength(1));
+    expect(requests.where((request) => request.method == 'PATCH'), hasLength(1));
   });
 }
 

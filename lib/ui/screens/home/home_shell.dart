@@ -38,6 +38,567 @@ final _currentTabProvider = StateProvider<int>((ref) => 0);
 
 enum _BookFormResult { saved, deleted }
 
+class _DiscoverBookDetailPage extends ConsumerStatefulWidget {
+  const _DiscoverBookDetailPage({required this.group, required this.sharedBookId});
+
+  final Group group;
+  final int sharedBookId;
+
+  @override
+  ConsumerState<_DiscoverBookDetailPage> createState() => _DiscoverBookDetailPageState();
+}
+
+class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage> {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final sharedBooksAsync = ref.watch(sharedBookDetailsProvider(widget.group.id));
+    final loansAsync = ref.watch(groupLoanDetailsProvider(widget.group.id));
+    final membersAsync = ref.watch(groupMemberDetailsProvider(widget.group.id));
+    final activeUser = ref.watch(activeUserProvider).value;
+    final loanState = ref.watch(loanControllerProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.group.name),
+      ),
+      body: SafeArea(
+        child: sharedBooksAsync.when(
+          data: (sharedDetails) {
+            SharedBookDetail? detail;
+            for (final candidate in sharedDetails) {
+              if (candidate.sharedBook.id == widget.sharedBookId) {
+                detail = candidate;
+                break;
+              }
+            }
+
+            if (detail == null) {
+              return _buildInformationMessage(
+                icon: Icons.error_outline,
+                title: 'No encontramos este libro compartido.',
+                subtitle:
+                    'Puede que se haya retirado o que los datos hayan cambiado desde la última sincronización.',
+              );
+            }
+
+            final sharedBook = detail.sharedBook;
+            final book = detail.book;
+            final members = membersAsync.asData?.value ?? const <GroupMemberDetail>[];
+            LocalUser? ownerUser;
+            for (final member in members) {
+              if (member.membership.memberUserId == sharedBook.ownerUserId) {
+                ownerUser = member.user;
+                break;
+              }
+            }
+
+            final loans = loansAsync.asData?.value ?? const <LoanDetail>[];
+            LoanDetail? borrowerLoan;
+            LoanDetail? otherActiveLoan;
+
+            for (final loanDetail in loans) {
+              if (loanDetail.loan.sharedBookId != sharedBook.id) {
+                continue;
+              }
+              final status = loanDetail.loan.status;
+              if (status != 'pending' && status != 'accepted') {
+                continue;
+              }
+
+              if (activeUser != null && loanDetail.loan.fromUserId == activeUser.id) {
+                borrowerLoan = loanDetail;
+              } else {
+                otherActiveLoan = loanDetail;
+              }
+            }
+
+            final LocalUser? borrower = activeUser;
+            final LoanDetail? borrowerLoanDetail = borrowerLoan;
+            final hasOtherActiveLoan = otherActiveLoan != null;
+
+            final canRequest = borrower != null && borrowerLoanDetail == null && !hasOtherActiveLoan;
+            final canCancel = borrower != null &&
+                borrowerLoanDetail != null &&
+                borrowerLoanDetail.loan.status == 'pending' &&
+                borrowerLoanDetail.loan.fromUserId == borrower.id;
+            final LocalUser? owner = ownerUser;
+            final LoanDetail? pendingOwnerLoan = borrowerLoanDetail != null &&
+                    owner != null &&
+                    activeUser != null &&
+                    owner.id == activeUser.id &&
+                    borrowerLoanDetail.loan.status == 'pending' &&
+                    borrowerLoanDetail.loan.toUserId == owner.id
+                ? borrowerLoanDetail
+                : null;
+
+            final ownerName = ownerUser?.username ?? 'Otro miembro';
+            final author = (book?.author ?? '').trim();
+            final isbn = book?.isbn?.trim();
+            final description = book?.notes?.trim();
+
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (loanState.lastError != null)
+                        _LoanFeedbackBanner(
+                          message: loanState.lastError!,
+                          isError: true,
+                          onDismiss: () =>
+                              ref.read(loanControllerProvider.notifier).dismissError(),
+                        )
+                      else if (loanState.lastSuccess != null)
+                        _LoanFeedbackBanner(
+                          message: loanState.lastSuccess!,
+                          isError: false,
+                          onDismiss: () =>
+                              ref.read(loanControllerProvider.notifier).dismissSuccess(),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              book?.title ?? 'Libro sin título',
+                              style: theme.textTheme.headlineSmall,
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Chip(
+                                  avatar: const Icon(Icons.group_outlined, size: 18),
+                                  label: Text('Propietario: $ownerName'),
+                                ),
+                                if (author.isNotEmpty)
+                                  Chip(
+                                    avatar: const Icon(Icons.person_outline, size: 18),
+                                    label: Text(author),
+                                  ),
+                                if (isbn != null && isbn.isNotEmpty)
+                                  Chip(
+                                    avatar: const Icon(Icons.qr_code_2_outlined, size: 18),
+                                    label: Text('ISBN $isbn'),
+                                  ),
+                                Chip(
+                                  avatar: Icon(
+                                    sharedBook.isAvailable ? Icons.check_circle : Icons.block,
+                                    size: 18,
+                                    color: sharedBook.isAvailable
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.error,
+                                  ),
+                                  label: Text(
+                                    sharedBook.isAvailable ? 'Disponible' : 'No disponible',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            if (description != null && description.isNotEmpty)
+                              Text(
+                                description,
+                                style: theme.textTheme.bodyMedium,
+                              )
+                            else
+                              Text(
+                                'Este libro no tiene una descripción añadida.',
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Acciones', style: theme.textTheme.titleMedium),
+                            const SizedBox(height: 12),
+                            if (otherActiveLoan != null)
+                              _buildInformationMessage(
+                                icon: Icons.lock_clock_outlined,
+                                title: 'Reservado por ${_resolveUserName(otherActiveLoan.borrower)}',
+                                subtitle:
+                                    'El préstamo está ${otherActiveLoan.loan.status == 'pending' ? 'pendiente de aprobación' : 'en curso'}. '
+                                    'Podrás solicitarlo cuando vuelva a estar disponible.',
+                              )
+                            else if (activeUser == null)
+                              _buildInformationMessage(
+                                icon: Icons.info_outline,
+                                title: 'Necesitas iniciar sesión local.',
+                                subtitle:
+                                    'Solo las personas registradas localmente pueden solicitar préstamos.',
+                              ),
+                            if (pendingOwnerLoan != null && owner != null)
+                              Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Card(
+                                    color: theme.colorScheme.surfaceTint.withOpacity(0.08),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Solicitud pendiente',
+                                            style: theme.textTheme.titleSmall,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Tienes una solicitud de ${_resolveUserName(pendingOwnerLoan.borrower)} para este libro.',
+                                            style: theme.textTheme.bodyMedium,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Wrap(
+                                            spacing: 12,
+                                            runSpacing: 8,
+                                            children: [
+                                              FilledButton.icon(
+                                                onPressed: loanState.isLoading
+                                                    ? null
+                                                    : () => _handleOwnerAccept(
+                                                          owner: owner,
+                                                          detail: pendingOwnerLoan,
+                                                        ),
+                                                icon: const Icon(Icons.check_circle_outline),
+                                                label: const Text('Aceptar solicitud'),
+                                              ),
+                                              OutlinedButton.icon(
+                                                onPressed: loanState.isLoading
+                                                    ? null
+                                                    : () => _handleOwnerReject(
+                                                          owner: owner,
+                                                          detail: pendingOwnerLoan,
+                                                        ),
+                                                icon: const Icon(Icons.cancel_outlined),
+                                                label: const Text('Rechazar'),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ..._buildLoanActionButtons(
+                              canRequest: canRequest,
+                              canCancel: canCancel,
+                              borrower: borrower,
+                              borrowerLoanDetail: borrowerLoanDetail,
+                              loanState: loanState,
+                              sharedBook: sharedBook,
+                            ),
+                            if (!canRequest && !canCancel && otherActiveLoan == null && activeUser != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  borrowerLoan != null
+                                      ? 'Ya enviaste una solicitud para este libro y está ${borrowerLoan.loan.status == 'pending' ? 'pendiente de aprobación' : borrowerLoan.loan.status}.'
+                                      : 'Este libro no está disponible en este momento.',
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => _buildInformationMessage(
+            icon: Icons.error_outline,
+            title: 'No pudimos cargar este libro.',
+            subtitle: '$error',
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _requestLoan({required SharedBook sharedBook, required LocalUser borrower}) async {
+    final controller = ref.read(loanControllerProvider.notifier);
+    try {
+      await controller.requestLoan(sharedBook: sharedBook, borrower: borrower);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Solicitud enviada.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo enviar la solicitud: $error')),
+      );
+    }
+  }
+
+  Future<void> _cancelLoan({required Loan loan, required LocalUser borrower}) async {
+    final controller = ref.read(loanControllerProvider.notifier);
+    try {
+      await controller.cancelLoan(loan: loan, borrower: borrower);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Solicitud cancelada.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo cancelar la solicitud: $error')),
+      );
+    }
+  }
+
+  Future<void> _handleOwnerAccept({required LocalUser owner, required LoanDetail detail}) async {
+    final controller = ref.read(loanControllerProvider.notifier);
+    try {
+      await controller.acceptLoan(loan: detail.loan, owner: owner);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Solicitud aceptada.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo aceptar la solicitud: $error')),
+      );
+    }
+  }
+
+  Future<void> _handleOwnerReject({required LocalUser owner, required LoanDetail detail}) async {
+    final controller = ref.read(loanControllerProvider.notifier);
+    try {
+      await controller.rejectLoan(loan: detail.loan, owner: owner);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Solicitud rechazada.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo rechazar la solicitud: $error')),
+      );
+    }
+  }
+
+  Widget _buildInformationMessage({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+  }) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, size: 56, color: theme.colorScheme.primary),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: theme.textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Iterable<Widget> _buildLoanActionButtons({
+    required bool canRequest,
+    required bool canCancel,
+    required LocalUser? borrower,
+    required LoanDetail? borrowerLoanDetail,
+    required LoanActionState loanState,
+    required SharedBook sharedBook,
+  }) sync* {
+    if (canRequest && borrower != null) {
+      final LocalUser borrowerNonNull = borrower;
+      yield FilledButton.icon(
+        onPressed: loanState.isLoading
+            ? null
+            : () => _requestLoan(
+                  sharedBook: sharedBook,
+                  borrower: borrowerNonNull,
+                ),
+        icon: const Icon(Icons.handshake_outlined),
+        label: const Text('Solicitar préstamo'),
+      );
+    }
+
+    if (canCancel && borrower != null && borrowerLoanDetail != null) {
+      final LocalUser borrowerNonNull = borrower;
+      final LoanDetail loanDetailNonNull = borrowerLoanDetail;
+      yield Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: OutlinedButton.icon(
+          onPressed: loanState.isLoading
+              ? null
+              : () => _cancelLoan(
+                    loan: loanDetailNonNull.loan,
+                    borrower: borrowerNonNull,
+                  ),
+          icon: const Icon(Icons.cancel_outlined),
+          label: const Text('Cancelar solicitud'),
+        ),
+      );
+    }
+  }
+}
+
+class _ActiveLoansList extends ConsumerWidget {
+  const _ActiveLoansList({required this.loans});
+
+  final List<StatsActiveLoan> loans;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    if (loans.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Icon(Icons.handshake_outlined, color: theme.colorScheme.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'No tienes préstamos pendientes o en curso en este momento.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: loans.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final loan = loans[index];
+        final dueDate = loan.dueDate;
+        final statusLabel = _statusLabel(loan.status);
+        final statusColor = _statusColor(context, loan.status);
+
+        return Card(
+          child: ListTile(
+            leading: Icon(Icons.inventory_2_outlined, color: statusColor),
+            title: Text(loan.bookTitle),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Solicitante: ${loan.borrowerName}'),
+                Text('Estado: $statusLabel'),
+                Text('Inicio: ${DateFormat.yMMMd().format(loan.startDate)}'),
+                Text(
+                  dueDate != null
+                      ? 'Vence: ${DateFormat.yMMMd().format(dueDate)}'
+                      : 'Sin fecha límite',
+                ),
+              ],
+            ),
+            onTap: () {
+              unawaited(_openLoanDetail(context, ref, loan));
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openLoanDetail(BuildContext context, WidgetRef ref, StatsActiveLoan loan) async {
+    final groupId = loan.groupId;
+    final sharedBookId = loan.sharedBookId;
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (groupId == null || sharedBookId == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('No pudimos abrir el detalle de este préstamo.')),
+      );
+      return;
+    }
+
+    final groupDao = ref.read(groupDaoProvider);
+    final group = await groupDao.findGroupById(groupId);
+
+    if (group == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Este grupo ya no está disponible.')),
+      );
+      return;
+    }
+
+    if (!context.mounted) {
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _DiscoverBookDetailPage(
+          group: group,
+          sharedBookId: sharedBookId,
+        ),
+      ),
+    );
+  }
+ 
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'pending':
+        return 'Pendiente';
+      case 'accepted':
+        return 'En curso';
+      case 'returned':
+        return 'Devuelto';
+      case 'expired':
+        return 'Expirado';
+      default:
+        return status;
+    }
+  }
+
+  Color _statusColor(BuildContext context, String status) {
+    final colors = Theme.of(context).colorScheme;
+    switch (status) {
+      case 'pending':
+        return colors.secondary;
+      case 'accepted':
+        return colors.primary;
+      case 'returned':
+        return colors.tertiary;
+      case 'expired':
+        return colors.error;
+      default:
+        return colors.onSurfaceVariant;
+    }
+  }
+}
+
 enum _ExportAction { share, download }
 
 MimeType _mapMimeType(String extension) {
@@ -155,6 +716,56 @@ GroupMemberDetail? _findMemberDetail(List<GroupMemberDetail> members, int userId
     }
   }
   return null;
+}
+
+List<SharedBookDetail> _filterSharedBooksForDiscover({
+  required List<SharedBookDetail> details,
+  required LocalUser? activeUser,
+  required List<Book> ownBooks,
+}) {
+  final activeUserId = activeUser?.id;
+  final isbnSet = <String>{};
+  final titleAuthorSet = <String>{};
+
+  for (final book in ownBooks) {
+    final isbn = book.isbn?.trim();
+    if (isbn != null && isbn.isNotEmpty) {
+      isbnSet.add(isbn.toLowerCase());
+    }
+
+    final title = book.title.trim().toLowerCase();
+    final author = (book.author ?? '').trim().toLowerCase();
+    if (title.isNotEmpty) {
+      titleAuthorSet.add('$title::$author');
+    }
+  }
+
+  return details.where((detail) {
+    final sharedBook = detail.sharedBook;
+    if (activeUserId != null && sharedBook.ownerUserId == activeUserId) {
+      return false;
+    }
+
+    if (!sharedBook.isAvailable) {
+      return false;
+    }
+
+    final book = detail.book;
+    if (book != null) {
+      final isbn = book.isbn?.trim();
+      if (isbn != null && isbn.isNotEmpty && isbnSet.contains(isbn.toLowerCase())) {
+        return false;
+      }
+
+      final title = book.title.trim().toLowerCase();
+      final author = (book.author ?? '').trim().toLowerCase();
+      if (title.isNotEmpty && titleAuthorSet.contains('$title::$author')) {
+        return false;
+      }
+    }
+
+    return true;
+  }).toList(growable: false);
 }
 
 class _BookCandidate {
@@ -378,7 +989,7 @@ class HomeShell extends ConsumerWidget {
         children: [
           _LibraryTab(onOpenForm: ({Book? book}) => _showBookFormSheet(context, ref, book: book)),
           const _CommunityTab(),
-          const _LoansTab(),
+          const _DiscoverTab(),
           const _StatsTab(),
           const _SettingsTab(),
         ],
@@ -397,9 +1008,9 @@ class HomeShell extends ConsumerWidget {
             label: 'Comunidad',
           ),
           NavigationDestination(
-            icon: Icon(Icons.swap_horiz_outlined),
-            selectedIcon: Icon(Icons.swap_horiz),
-            label: 'Préstamos',
+            icon: Icon(Icons.explore_outlined),
+            selectedIcon: Icon(Icons.explore),
+            label: 'Descubrir',
           ),
           NavigationDestination(
             icon: Icon(Icons.insights_outlined),
@@ -3651,68 +4262,264 @@ class _LoansSection extends StatelessWidget {
   }
 }
 
-class _LoansTab extends ConsumerWidget {
-  const _LoansTab();
+class _DiscoverTab extends ConsumerWidget {
+  const _DiscoverTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groupsAsync = ref.watch(groupListProvider);
-    final loanActionState = ref.watch(loanControllerProvider);
+    final theme = Theme.of(context);
 
     return SafeArea(
-      child: Column(
-        children: [
-          if (loanActionState.lastError != null)
-            _LoanFeedbackBanner(
-              message: loanActionState.lastError!,
-              isError: true,
-              onDismiss: () =>
-                  ref.read(loanControllerProvider.notifier).dismissError(),
-            )
-          else if (loanActionState.lastSuccess != null)
-            _LoanFeedbackBanner(
-              message: loanActionState.lastSuccess!,
-              isError: false,
-              onDismiss: () =>
-                  ref.read(loanControllerProvider.notifier).dismissSuccess(),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Descubrir', style: theme.textTheme.headlineMedium),
+            const SizedBox(height: 8),
+            Text(
+              'Explora los grupos a los que perteneces y descubre libros disponibles para solicitar préstamo.',
+              style: theme.textTheme.bodyMedium,
             ),
-          Expanded(
-            child: groupsAsync.when(
-              data: (groups) {
-                if (groups.isEmpty) {
-                  return _EmptyCommunityState(onSync: () => _syncNow(context, ref));
-                }
+            const SizedBox(height: 24),
+            Expanded(
+              child: groupsAsync.when(
+                data: (groups) {
+                  if (groups.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.groups_outlined, size: 56),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Aún no perteneces a ningún grupo.',
+                            style: theme.textTheme.titleMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Crea un grupo o únete mediante un código para empezar a compartir libros.',
+                            style: theme.textTheme.bodyMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
 
-                return RefreshIndicator(
-                  onRefresh: () async => _syncNow(context, ref),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(24),
-                    itemCount: groups.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 16),
-                    itemBuilder: (context, index) {
-                      final group = groups[index];
-                      return _GroupCard(
-                        group: group,
-                        onSync: () => _syncNow(context, ref),
-                      );
-                    },
+                  return RefreshIndicator(
+                    onRefresh: () async => _syncNow(context, ref),
+                    child: ListView.separated(
+                      itemCount: groups.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final group = groups[index];
+                        final subtitle = group.description?.trim();
+                        return Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.groups_2_outlined),
+                            title: Text(group.name),
+                            subtitle:
+                                subtitle != null && subtitle.isNotEmpty ? Text(subtitle) : null,
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => _DiscoverGroupPage(group: group),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No pudimos cargar tus grupos.',
+                        style: theme.textTheme.titleMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '$error',
+                        style: theme.textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: () => _syncNow(context, ref),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reintentar'),
+                      ),
+                    ],
                   ),
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => _ErrorCommunityState(
-                message: '$error',
-                onRetry: () => _syncNow(context, ref),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Future<void> _syncNow(BuildContext context, WidgetRef ref) async {
     await _performSync(context, ref);
+  }
+}
+
+class _DiscoverGroupPage extends ConsumerWidget {
+  const _DiscoverGroupPage({required this.group});
+
+  final Group group;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final sharedBooksAsync = ref.watch(sharedBookDetailsProvider(group.id));
+    final ownBooksAsync = ref.watch(bookListProvider);
+    final activeUser = ref.watch(activeUserProvider).value;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(group.name),
+      ),
+      body: SafeArea(
+        child: sharedBooksAsync.when(
+          data: (sharedDetails) => ownBooksAsync.when(
+            data: (ownBooks) {
+              final filtered = _filterSharedBooksForDiscover(
+                details: sharedDetails,
+                activeUser: activeUser,
+                ownBooks: ownBooks,
+              );
+
+              if (filtered.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.menu_book_outlined, size: 56),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No hay libros disponibles para descubrir en este grupo.',
+                          style: theme.textTheme.titleMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Cuando otros miembros compartan libros compatibles, aparecerán aquí.',
+                          style: theme.textTheme.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.all(24),
+                itemCount: filtered.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final detail = filtered[index];
+                  final book = detail.book;
+                  final title = book?.title ?? 'Libro sin título';
+                  final author = (book?.author ?? '').trim();
+                  final availability =
+                      detail.sharedBook.isAvailable ? 'Disponible' : 'No disponible';
+
+                  return Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.menu_book_outlined),
+                      title: Text(title),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (author.isNotEmpty) Text(author),
+                          Text(availability),
+                        ],
+                      ),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => _DiscoverBookDetailPage(
+                              group: group,
+                              sharedBookId: detail.sharedBook.id,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No pudimos cargar tu biblioteca.',
+                      style: theme.textTheme.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '$error',
+                      style: theme.textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, size: 48),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No pudimos cargar los libros compartidos.',
+                    style: theme.textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$error',
+                    style: theme.textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -3742,13 +4549,13 @@ class _StatsView extends ConsumerWidget {
   }
 }
 
-class _StatsContent extends StatelessWidget {
+class _StatsContent extends ConsumerWidget {
   const _StatsContent({required this.summary});
 
   final StatsSummary summary;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -3788,6 +4595,10 @@ class _StatsContent extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 28),
+          Text('Préstamos activos', style: theme.textTheme.headlineSmall),
+          const SizedBox(height: 12),
+          _ActiveLoansList(loans: summary.activeLoanDetails),
           const SizedBox(height: 28),
           Text('Libros más prestados', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 12),

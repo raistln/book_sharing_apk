@@ -26,6 +26,7 @@ void main() {
   late LoanController controller;
   late LocalUser owner;
   late LocalUser borrower;
+  late int groupId;
   late int sharedBookId;
   late String sharedBookUuid;
 
@@ -62,7 +63,7 @@ void main() {
       ),
     );
 
-    final groupId = await groupDao.insertGroup(
+    groupId = await groupDao.insertGroup(
       GroupsCompanion.insert(
         uuid: 'group-uuid',
         name: 'Grupo',
@@ -179,11 +180,15 @@ void main() {
 
     expect(dueSoon.payload, {
       NotificationPayloadKeys.loanId: accepted.uuid,
-      NotificationPayloadKeys.sharedBookId: sharedBookUuid,
+      NotificationPayloadKeys.sharedBookUuid: sharedBookUuid,
+      NotificationPayloadKeys.sharedBookId: sharedBookId.toString(),
+      NotificationPayloadKeys.groupId: groupId.toString(),
     });
     expect(expired.payload, {
       NotificationPayloadKeys.loanId: accepted.uuid,
-      NotificationPayloadKeys.sharedBookId: sharedBookUuid,
+      NotificationPayloadKeys.sharedBookUuid: sharedBookUuid,
+      NotificationPayloadKeys.sharedBookId: sharedBookId.toString(),
+      NotificationPayloadKeys.groupId: groupId.toString(),
     });
     expect(syncController.state.hasPendingChanges, isTrue);
     expect(controller.state.lastSuccess, 'Préstamo aceptado.');
@@ -202,7 +207,9 @@ void main() {
     expect(expired.type, NotificationType.loanExpired);
     expect(expired.payload, {
       NotificationPayloadKeys.loanId: accepted.uuid,
-      NotificationPayloadKeys.sharedBookId: sharedBookUuid,
+      NotificationPayloadKeys.sharedBookUuid: sharedBookUuid,
+      NotificationPayloadKeys.sharedBookId: sharedBookId.toString(),
+      NotificationPayloadKeys.groupId: groupId.toString(),
     });
   });
 
@@ -234,6 +241,70 @@ void main() {
     expect(result.status, 'cancelled');
     expect(notificationClient.cancelledIds.toSet(), {dueSoonId, expiredId});
     expect(controller.state.lastSuccess, 'Solicitud cancelada.');
+  });
+
+  test('rejectLoan cancels scheduled notifications', () async {
+    final loan = await createPendingLoan(dueOffset: const Duration(days: 2));
+
+    final dueSoonId = NotificationIds.loanDueSoon(loan.uuid);
+    final expiredId = NotificationIds.loanExpired(loan.uuid);
+
+    await notificationClient.schedule(
+      id: dueSoonId,
+      type: NotificationType.loanDueSoon,
+      title: 'Préstamo próximo a vencer',
+      body: 'Recordatorio de préstamo',
+      scheduledAt: DateTime.now().add(const Duration(hours: 1)),
+      payload: const {},
+    );
+    await notificationClient.schedule(
+      id: expiredId,
+      type: NotificationType.loanExpired,
+      title: 'Préstamo vencido',
+      body: 'El préstamo ha vencido',
+      scheduledAt: DateTime.now().add(const Duration(hours: 2)),
+      payload: const {},
+    );
+
+    final result = await controller.rejectLoan(loan: loan, owner: owner);
+
+    expect(result.status, 'rejected');
+    expect(notificationClient.cancelledIds.toSet(), {dueSoonId, expiredId});
+    expect(controller.state.lastSuccess, 'Solicitud rechazada.');
+  });
+
+  test('markReturned cancels scheduled notifications', () async {
+    final loan = await createPendingLoan(dueOffset: const Duration(days: 4));
+    final accepted = await controller.acceptLoan(loan: loan, owner: owner);
+
+    final dueSoonId = NotificationIds.loanDueSoon(accepted.uuid);
+    final expiredId = NotificationIds.loanExpired(accepted.uuid);
+
+    // Clear cancellations originating from the acceptance flow.
+    notificationClient.cancelledIds.clear();
+
+    final result = await controller.markReturned(loan: accepted, actor: owner);
+
+    expect(result.status, 'returned');
+    expect(notificationClient.cancelledIds.toSet(), {dueSoonId, expiredId});
+    expect(controller.state.lastSuccess, 'Préstamo marcado como devuelto.');
+  });
+
+  test('expireLoan cancels scheduled notifications', () async {
+    final loan = await createPendingLoan(dueOffset: const Duration(days: 5));
+    final accepted = await controller.acceptLoan(loan: loan, owner: owner);
+
+    final dueSoonId = NotificationIds.loanDueSoon(accepted.uuid);
+    final expiredId = NotificationIds.loanExpired(accepted.uuid);
+
+    // Clear cancellations originating from the acceptance flow.
+    notificationClient.cancelledIds.clear();
+
+    final result = await controller.expireLoan(loan: accepted);
+
+    expect(result.status, 'expired');
+    expect(notificationClient.cancelledIds.toSet(), {dueSoonId, expiredId});
+    expect(controller.state.lastSuccess, 'Préstamo marcado como expirado.');
   });
 
 }

@@ -163,7 +163,7 @@ class BookImportService {
           if (duplicateReason != null) {
             failureCount++;
             errors.add(
-              'Fila ${rowIndex + 1}: Libro duplicado (${duplicateReason}).',
+              'Fila ${rowIndex + 1}: Libro duplicado ($duplicateReason).',
             );
             continue;
           }
@@ -262,7 +262,7 @@ class BookImportService {
           if (duplicateReason != null) {
             failureCount++;
             errors.add(
-              'Elemento ${i + 1}: Libro duplicado (${duplicateReason}).',
+              'Elemento ${i + 1}: Libro duplicado ($duplicateReason).',
             );
             continue;
           }

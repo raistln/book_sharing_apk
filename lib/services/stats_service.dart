@@ -1,5 +1,7 @@
 import 'package:collection/collection.dart';
 
+import '../data/local/database.dart';
+import '../data/local/group_dao.dart';
 import '../data/repositories/book_repository.dart';
 import '../data/repositories/loan_repository.dart';
 
@@ -11,6 +13,7 @@ class StatsSummary {
     required this.returnedLoans,
     required this.expiredLoans,
     required this.topBooks,
+    required this.activeLoanDetails,
   });
 
   final int totalBooks;
@@ -19,6 +22,7 @@ class StatsSummary {
   final int returnedLoans;
   final int expiredLoans;
   final List<StatsTopBook> topBooks;
+  final List<StatsActiveLoan> activeLoanDetails;
 }
 
 class StatsTopBook {
@@ -31,6 +35,28 @@ class StatsTopBook {
   final int? bookId;
   final String title;
   final int loanCount;
+}
+
+class StatsActiveLoan {
+  const StatsActiveLoan({
+    required this.loanUuid,
+    required this.bookTitle,
+    required this.borrowerName,
+    required this.status,
+    required this.startDate,
+    this.dueDate,
+    this.groupId,
+    this.sharedBookId,
+  });
+
+  final String loanUuid;
+  final String bookTitle;
+  final String borrowerName;
+  final String status;
+  final DateTime startDate;
+  final DateTime? dueDate;
+  final int? groupId;
+  final int? sharedBookId;
 }
 
 class StatsService {
@@ -46,7 +72,24 @@ class StatsService {
     final loanDetails = await _loanRepository.getAllLoanDetails();
 
     final totalLoans = loanDetails.length;
-    final activeLoans = loanDetails.where((detail) => detail.loan.status == 'accepted').length;
+    final activeLoanDetails = loanDetails
+        .where(
+          (detail) => detail.loan.status == 'accepted' || detail.loan.status == 'pending',
+        )
+        .map(
+          (detail) => StatsActiveLoan(
+            loanUuid: detail.loan.uuid,
+            bookTitle: _resolveActiveLoanTitle(detail, books),
+            borrowerName: _resolveUserName(detail.borrower),
+            status: detail.loan.status,
+            startDate: detail.loan.startDate,
+            dueDate: detail.loan.dueDate,
+            groupId: detail.sharedBook?.groupId,
+            sharedBookId: detail.sharedBook?.id,
+          ),
+        )
+        .toList(growable: false);
+    final activeLoans = activeLoanDetails.length;
     final returnedLoans = loanDetails.where((detail) => detail.loan.status == 'returned').length;
     final expiredLoans = loanDetails.where((detail) => detail.loan.status == 'expired').length;
 
@@ -60,9 +103,7 @@ class StatsService {
       }
 
       final bookId = detail.book?.id ?? detail.sharedBook?.bookId;
-      final bookTitle = detail.book?.title ??
-          booksById[detail.sharedBook?.bookId]?.title ??
-          'Libro desconocido';
+      final bookTitle = _resolveTopBookTitle(detail, booksById);
 
       final entry = topAggregates.putIfAbsent(
         bookId,
@@ -88,7 +129,47 @@ class StatsService {
       returnedLoans: returnedLoans,
       expiredLoans: expiredLoans,
       topBooks: topBooks,
+      activeLoanDetails: activeLoanDetails,
     );
+  }
+
+  String _resolveBookTitle(LoanDetail detail, List<Book> books) {
+    final sharedBookId = detail.sharedBook?.bookId;
+    if (sharedBookId != null) {
+      final book = books.firstWhereOrNull((element) => element.id == sharedBookId);
+      if (book != null && !_isBookDeleted(book) && book.title.isNotEmpty) {
+        return book.title;
+      }
+    }
+    return 'Libro sin título';
+  }
+
+  String _resolveActiveLoanTitle(LoanDetail detail, List<Book> books) {
+    final book = detail.book;
+    if (book != null && !_isBookDeleted(book) && book.title.isNotEmpty) {
+      return book.title;
+    }
+    return _resolveBookTitle(detail, books);
+  }
+
+  String _resolveTopBookTitle(LoanDetail detail, Map<int?, Book> booksById) {
+    final book = detail.book;
+    if (book != null && !_isBookDeleted(book) && book.title.isNotEmpty) {
+      return book.title;
+    }
+
+    final resolved = booksById[detail.sharedBook?.bookId];
+    if (resolved != null && resolved.title.isNotEmpty) {
+      return resolved.title;
+    }
+
+    return 'Libro desconocido';
+  }
+
+  bool _isBookDeleted(Book book) => book.isDeleted;
+
+  String _resolveUserName(LocalUser? user) {
+    return user?.username ?? 'Usuario';
   }
 }
 

@@ -46,6 +46,7 @@ class NotificationPayloadKeys {
   static const String type = 'type';
   static const String loanId = 'loanId';
   static const String sharedBookId = 'sharedBookId';
+  static const String sharedBookUuid = 'sharedBookUuid';
   static const String groupId = 'groupId';
   static const String invitationId = 'invitationId';
   static const String action = 'action';

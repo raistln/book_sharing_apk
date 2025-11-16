@@ -187,6 +187,153 @@ void main() {
       expect(state.pageSize, 25);
       expect(state.isLargeDataset, isTrue);
     });
+
+    test('setOwnerFilter applies owner id and resets pagination', () async {
+      final dao = _StubbedGroupDao(
+        db,
+        responses: [
+          _StubbedFetchResponse(
+            builder: (call) => _generateSharedDetails(call.limit),
+          ),
+          _StubbedFetchResponse(
+            builder: (call) => _generateSharedDetails(call.limit, startId: call.offset + 500),
+          ),
+        ],
+      );
+
+      final controller = DiscoverGroupController(groupDao: dao, groupId: 5);
+      await controller.loadInitial(force: true);
+      expect(controller.state.ownerUserIdFilter, isNull);
+
+      await controller.setOwnerFilter(42);
+
+      expect(dao.calls, hasLength(2));
+      expect(dao.calls[1].ownerUserId, 42);
+      expect(dao.calls[1].offset, 0);
+
+      final state = controller.state;
+      expect(state.ownerUserIdFilter, 42);
+      expect(state.items, hasLength(20));
+      expect(state.pageSize, 25);
+      expect(state.isLargeDataset, isTrue);
+    });
+
+    test('setOwnerFilter toggling off removes owner constraint', () async {
+      final dao = _StubbedGroupDao(
+        db,
+        responses: [
+          _StubbedFetchResponse(
+            builder: (call) => _generateSharedDetails(call.limit),
+          ),
+          _StubbedFetchResponse(
+            builder: (call) => _generateSharedDetails(call.limit, startId: call.offset + 1000),
+          ),
+          _StubbedFetchResponse(
+            builder: (call) => _generateSharedDetails(call.limit, startId: call.offset + 2000),
+          ),
+        ],
+      );
+
+      final controller = DiscoverGroupController(groupDao: dao, groupId: 6);
+      await controller.loadInitial(force: true);
+      await controller.setOwnerFilter(84);
+
+      expect(dao.calls, hasLength(2));
+      expect(dao.calls[1].ownerUserId, 84);
+
+      await controller.setOwnerFilter(null);
+
+      expect(dao.calls, hasLength(2));
+
+      final state = controller.state;
+      expect(state.ownerUserIdFilter, isNull);
+      expect(state.items, hasLength(20));
+      expect(state.pageSize, 25);
+      expect(state.loadedFromCache, isTrue);
+      expect(state.isLargeDataset, isTrue);
+    });
+
+    test('invalidateSharedBooks prunes state and forces next initial fetch', () async {
+      const removedId = 3;
+      final dao = _StubbedGroupDao(
+        db,
+        responses: [
+          _StubbedFetchResponse(
+            builder: (call) => _generateSharedDetails(call.limit),
+          ),
+          _StubbedFetchResponse(
+            builder: (call) => _generateSharedDetails(call.limit),
+          ),
+        ],
+      );
+
+      final controller = DiscoverGroupController(groupDao: dao, groupId: 9);
+      await controller.loadInitial(force: true);
+
+      controller.invalidateSharedBooks([removedId]);
+
+      expect(controller.state.items.any((d) => d.sharedBook.id == removedId), isFalse);
+      expect(controller.state.hasMore, isTrue);
+      expect(controller.state.invalidatedSharedBookIds, contains(removedId));
+
+      await controller.loadInitial(force: false);
+
+      expect(dao.calls, hasLength(2));
+      expect(dao.calls.last.offset, 0);
+
+      final state = controller.state;
+      expect(state.loadedFromCache, isFalse);
+      expect(state.invalidatedSharedBookIds, isEmpty);
+      expect(state.items.any((d) => d.sharedBook.id == removedId), isFalse);
+    });
+
+    test('upsertSharedBooks merges updates into state and cache', () async {
+      final dao = _StubbedGroupDao(
+        db,
+        responses: [
+          _StubbedFetchResponse(
+            builder: (call) => _generateSharedDetails(call.limit),
+          ),
+        ],
+      );
+
+      final controller = DiscoverGroupController(groupDao: dao, groupId: 12);
+      await controller.loadInitial(force: true);
+
+      final original = controller.state.items.first;
+      final updatedDetail = _cloneDetail(
+        original,
+        isAvailable: false,
+        title: 'Updated ${original.sharedBook.id}',
+      );
+
+      controller.upsertSharedBooks([updatedDetail]);
+
+      expect(
+        controller.state.items.firstWhere((d) => d.sharedBook.id == original.sharedBook.id).sharedBook.isAvailable,
+        isFalse,
+      );
+      expect(
+        controller.state.items
+            .firstWhere((d) => d.sharedBook.id == original.sharedBook.id)
+            .book
+            ?.title,
+        'Updated ${original.sharedBook.id}',
+      );
+      expect(controller.state.invalidatedSharedBookIds.contains(original.sharedBook.id), isFalse);
+
+      await controller.loadInitial(force: false);
+
+      expect(dao.calls, hasLength(1));
+      expect(
+        controller.state.items
+            .firstWhere((d) => d.sharedBook.id == original.sharedBook.id)
+            .book
+            ?.title,
+        'Updated ${original.sharedBook.id}',
+      );
+      expect(controller.state.loadedFromCache, isTrue);
+    });
   });
 }
 
@@ -206,6 +353,7 @@ class _StubbedGroupDao extends GroupDao {
     required int offset,
     bool includeUnavailable = false,
     String? searchQuery,
+    int? ownerUserId,
   }) async {
     if (_responses.isEmpty) {
       fail('No stubbed response configured');
@@ -217,6 +365,7 @@ class _StubbedGroupDao extends GroupDao {
       offset: offset,
       includeUnavailable: includeUnavailable,
       searchQuery: searchQuery,
+      ownerUserId: ownerUserId,
     );
     calls.add(call);
 
@@ -235,6 +384,7 @@ class _FetchCall {
     required this.offset,
     required this.includeUnavailable,
     required this.searchQuery,
+    required this.ownerUserId,
   });
 
   final int groupId;
@@ -242,6 +392,7 @@ class _FetchCall {
   final int offset;
   final bool includeUnavailable;
   final String? searchQuery;
+  final int? ownerUserId;
 }
 
 class _StubbedFetchResponse {
@@ -299,4 +450,19 @@ List<SharedBookDetail> _generateSharedDetails(int count, {int startId = 0}) {
       ),
     );
   });
+}
+
+SharedBookDetail _cloneDetail(
+  SharedBookDetail detail, {
+  bool? isAvailable,
+  String? title,
+}) {
+  final sharedBook = detail.sharedBook.copyWith(
+    isAvailable: isAvailable ?? detail.sharedBook.isAvailable,
+  );
+  final book = detail.book
+      ?.copyWith(
+        title: title ?? detail.book!.title,
+      );
+  return SharedBookDetail(sharedBook: sharedBook, book: book);
 }

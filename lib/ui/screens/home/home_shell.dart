@@ -821,6 +821,7 @@ List<SharedBookDetail> _filterSharedBooksForDiscover({
   required LocalUser? activeUser,
   required List<Book> ownBooks,
   bool includeUnavailable = false,
+  int? ownerUserIdFilter,
 }) {
   final activeUserId = activeUser?.id;
   final isbnSet = <String>{};
@@ -841,7 +842,13 @@ List<SharedBookDetail> _filterSharedBooksForDiscover({
 
   return details.where((detail) {
     final sharedBook = detail.sharedBook;
-    if (activeUserId != null && sharedBook.ownerUserId == activeUserId) {
+    if (ownerUserIdFilter != null && sharedBook.ownerUserId != ownerUserIdFilter) {
+      return false;
+    }
+
+    if (activeUserId != null &&
+        sharedBook.ownerUserId == activeUserId &&
+        ownerUserIdFilter != sharedBook.ownerUserId) {
       return false;
     }
 
@@ -4550,6 +4557,7 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
         ref.read(discoverGroupControllerProvider(group.id).notifier);
     final activeUser = ref.watch(activeUserProvider).value;
     final ownBooksAsync = ref.watch(bookListProvider);
+    final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
     final showLargeDatasetNotice = state.isLargeDataset && state.searchQuery.isEmpty;
 
     return Scaffold(
@@ -4574,6 +4582,7 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
+                runSpacing: 8,
                 children: [
                   FilterChip(
                     label: const Text('Incluir no disponibles'),
@@ -4581,6 +4590,11 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
                     onSelected: (value) {
                       controller.setIncludeUnavailable(value);
                     },
+                  ),
+                  ..._buildOwnerFilterChips(
+                    membersAsync: membersAsync,
+                    state: state,
+                    controller: controller,
                   ),
                 ],
               ),
@@ -4654,6 +4668,7 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
       activeUser: activeUser,
       ownBooks: ownBooks,
       includeUnavailable: state.includeUnavailable,
+      ownerUserIdFilter: state.ownerUserIdFilter,
     );
 
     if (filtered.isEmpty) {
@@ -4759,6 +4774,75 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
           );
         },
       ),
+    );
+  }
+
+  List<Widget> _buildOwnerFilterChips({
+    required AsyncValue<List<GroupMemberDetail>> membersAsync,
+    required DiscoverGroupState state,
+    required DiscoverGroupController controller,
+  }) {
+    return membersAsync.when(
+      data: (members) {
+        if (members.isEmpty) {
+          return const <Widget>[];
+        }
+
+        final chips = <Widget>[
+          FilterChip(
+            label: const Text('Todos los dueños'),
+            selected: state.ownerUserIdFilter == null,
+            onSelected: (_) => controller.setOwnerFilter(null),
+          ),
+        ];
+
+        final seen = <int>{};
+        final sortedMembers = members.toList()
+          ..sort((a, b) {
+            final nameA = a.user?.username ?? 'Miembro ${a.membership.memberUserId}';
+            final nameB = b.user?.username ?? 'Miembro ${b.membership.memberUserId}';
+            return nameA.toLowerCase().compareTo(nameB.toLowerCase());
+          });
+
+        for (final detail in sortedMembers) {
+          final membership = detail.membership;
+          final user = detail.user;
+          final userId = membership.memberUserId;
+          if (!seen.add(userId)) {
+            continue;
+          }
+
+          final displayName = (user?.username ?? 'Miembro ${membership.memberUserId}').trim();
+          chips.add(
+            FilterChip(
+              label: Text(
+                displayName.isEmpty ? 'Miembro ${membership.memberUserId}' : displayName,
+              ),
+              selected: state.ownerUserIdFilter == userId,
+              onSelected: (selected) => controller.setOwnerFilter(selected ? userId : null),
+            ),
+          );
+        }
+
+        if (chips.length <= 1) {
+          return const <Widget>[];
+        }
+
+        return chips;
+      },
+      loading: () => const <Widget>[
+        SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ],
+      error: (error, _) => <Widget>[
+        Tooltip(
+          message: 'Error al cargar dueños: $error',
+          child: const Icon(Icons.error_outline, size: 20),
+        ),
+      ],
     );
   }
 }

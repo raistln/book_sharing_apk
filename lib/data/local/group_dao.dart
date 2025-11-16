@@ -230,6 +230,7 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
     required int offset,
     bool includeUnavailable = false,
     String? searchQuery,
+    int? ownerUserId,
   }) {
     final query = select(sharedBooks).join([
       leftOuterJoin(books, books.id.equalsExp(sharedBooks.bookId)),
@@ -238,6 +239,10 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
         sharedBooks.groupId.equals(groupId) &
             (sharedBooks.isDeleted.equals(false) | sharedBooks.isDeleted.isNull()),
       );
+
+    if (ownerUserId != null) {
+      query.where(sharedBooks.ownerUserId.equals(ownerUserId));
+    }
 
     if (!includeUnavailable) {
       query.where(sharedBooks.isAvailable.equals(true));

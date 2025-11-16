@@ -22,11 +22,13 @@ class DiscoverGroupState {
     required this.hasMore,
     required this.searchQuery,
     required this.includeUnavailable,
+    required this.ownerUserIdFilter,
     required this.pageSize,
     required this.lastLoadedAt,
     required this.lastLoadDuration,
     required this.loadedFromCache,
     required this.isLargeDataset,
+    required this.invalidatedSharedBookIds,
     this.error,
   });
 
@@ -37,11 +39,13 @@ class DiscoverGroupState {
         hasMore: true,
         searchQuery: '',
         includeUnavailable: false,
+        ownerUserIdFilter: null,
         pageSize: _discoverBasePageSize,
         lastLoadedAt: null,
         lastLoadDuration: null,
         loadedFromCache: false,
         isLargeDataset: false,
+        invalidatedSharedBookIds: <int>{},
         error: null,
       );
 
@@ -51,11 +55,13 @@ class DiscoverGroupState {
   final bool hasMore;
   final String searchQuery;
   final bool includeUnavailable;
+  final int? ownerUserIdFilter;
   final int pageSize;
   final DateTime? lastLoadedAt;
   final Duration? lastLoadDuration;
   final bool loadedFromCache;
   final bool isLargeDataset;
+  final Set<int> invalidatedSharedBookIds;
   final Object? error;
 
   DiscoverGroupState copyWith({
@@ -70,6 +76,8 @@ class DiscoverGroupState {
     Object? lastLoadDuration = _sentinel,
     bool? loadedFromCache,
     bool? isLargeDataset,
+    Object? ownerUserIdFilter = _sentinel,
+    Set<int>? invalidatedSharedBookIds,
     Object? error = _sentinel,
   }) {
     return DiscoverGroupState(
@@ -88,6 +96,11 @@ class DiscoverGroupState {
           : lastLoadDuration as Duration?,
       loadedFromCache: loadedFromCache ?? this.loadedFromCache,
       isLargeDataset: isLargeDataset ?? this.isLargeDataset,
+      ownerUserIdFilter: identical(ownerUserIdFilter, _sentinel)
+          ? this.ownerUserIdFilter
+          : ownerUserIdFilter as int?,
+      invalidatedSharedBookIds:
+          invalidatedSharedBookIds ?? this.invalidatedSharedBookIds,
       error: identical(error, _sentinel) ? this.error : error,
     );
   }
@@ -133,12 +146,14 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
         loadedFromCache: true,
         pageSize: cached.pageSize,
         isLargeDataset: cached.isLargeDataset,
+        invalidatedSharedBookIds: cached.invalidatedIds,
       );
-      if (!cached.isStale) {
+      if (!cached.isStale && state.invalidatedSharedBookIds.isEmpty) {
         return;
       }
     }
 
+    final pendingInvalidations = state.invalidatedSharedBookIds;
     final requestId = ++_lastRequestId;
     state = state.copyWith(
       isLoadingInitial: true,
@@ -148,17 +163,20 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
       loadedFromCache: cached != null,
       pageSize: pageSize,
       isLargeDataset: cached?.isLargeDataset ?? false,
+      invalidatedSharedBookIds: <int>{},
     );
 
     try {
       final start = DateTime.now();
-      debugPrint('[DiscoverGroupController] Fetch initial page (group=$groupId, offset=0, limit=$pageSize, query="${state.searchQuery}", includeUnavailable=${state.includeUnavailable})');
+      debugPrint('[DiscoverGroupController] Fetch initial page (group=$groupId, offset=0, limit=$pageSize, query="${state.searchQuery}", includeUnavailable=${state.includeUnavailable}, owner=${state.ownerUserIdFilter})');
+      final invalidatedIds = pendingInvalidations;
       final results = await _groupDao.fetchSharedBooksPage(
         groupId: groupId,
         limit: pageSize,
         offset: 0,
         includeUnavailable: state.includeUnavailable,
         searchQuery: state.searchQuery,
+        ownerUserId: state.ownerUserIdFilter,
       );
       final completedAt = DateTime.now();
       final duration = completedAt.difference(start);
@@ -167,17 +185,21 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
         return;
       }
 
-      final hasMore = results.length == pageSize;
+      final filteredResults = results.where(
+        (detail) => !invalidatedIds.contains(detail.sharedBook.id),
+      ).toList();
+
+      final hasMore = filteredResults.length == pageSize;
       final nextPageSize = _computeNextPageSize(
         currentPageSize: pageSize,
         duration: duration,
-        fetchedCount: results.length,
+        fetchedCount: filteredResults.length,
       );
       _pageSize = nextPageSize;
-      final isLargeDataset = hasMore || results.length >= _discoverLargeDatasetThreshold;
+      final isLargeDataset = hasMore || filteredResults.length >= _discoverLargeDatasetThreshold;
 
       state = state.copyWith(
-        items: results,
+        items: filteredResults,
         hasMore: hasMore,
         isLoadingInitial: false,
         isLoadingMore: false,
@@ -187,15 +209,17 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
         loadedFromCache: false,
         pageSize: nextPageSize,
         isLargeDataset: isLargeDataset,
+        invalidatedSharedBookIds: <int>{},
       );
 
       _cache[cacheKey] = _DiscoverCacheEntry(
-        items: results,
+        items: filteredResults,
         hasMore: hasMore,
         fetchedAt: completedAt,
         duration: duration,
         pageSize: nextPageSize,
         isLargeDataset: isLargeDataset,
+        invalidatedIds: {},
       );
       debugPrint('[DiscoverGroupController] Initial page loaded ${results.length} items in ${duration.inMilliseconds} ms (nextPageSize=$nextPageSize)');
     } catch (error, stackTrace) {
@@ -208,6 +232,7 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
         isLoadingMore: false,
         hasMore: false,
         error: error,
+        invalidatedSharedBookIds: pendingInvalidations,
       );
     }
   }
@@ -224,23 +249,26 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     try {
       final start = DateTime.now();
       final pageSize = _pageSize;
-      debugPrint('[DiscoverGroupController] Fetch more (group=$groupId, offset=${state.items.length}, limit=$pageSize)');
+      debugPrint('[DiscoverGroupController] Fetch more (group=$groupId, offset=${state.items.length}, limit=$pageSize, owner=${state.ownerUserIdFilter})');
       final results = await _groupDao.fetchSharedBooksPage(
         groupId: groupId,
         limit: pageSize,
         offset: state.items.length,
         includeUnavailable: state.includeUnavailable,
         searchQuery: state.searchQuery,
+        ownerUserId: state.ownerUserIdFilter,
       );
       final completedAt = DateTime.now();
       final duration = completedAt.difference(start);
 
-      final updatedItems = [...state.items, ...results];
+      final invalidatedIds = state.invalidatedSharedBookIds;
+      final newResults = results.where((detail) => !invalidatedIds.contains(detail.sharedBook.id)).toList();
+      final updatedItems = [...state.items, ...newResults];
       final hasMore = results.length == pageSize;
       final nextPageSize = _computeNextPageSize(
         currentPageSize: pageSize,
         duration: duration,
-        fetchedCount: results.length,
+        fetchedCount: newResults.length,
       );
       _pageSize = nextPageSize;
       final totalCount = updatedItems.length;
@@ -255,15 +283,18 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
         loadedFromCache: false,
         pageSize: nextPageSize,
         isLargeDataset: isLargeDataset,
+        invalidatedSharedBookIds: <int>{},
       );
 
-      _cache[_cacheKey()] = _DiscoverCacheEntry(
+      final cacheKey = _cacheKey();
+      _cache[cacheKey] = _DiscoverCacheEntry(
         items: updatedItems,
         hasMore: hasMore,
         fetchedAt: completedAt,
         duration: duration,
         pageSize: nextPageSize,
         isLargeDataset: isLargeDataset,
+        invalidatedIds: {},
       );
       debugPrint('[DiscoverGroupController] Append page with ${results.length} items in ${duration.inMilliseconds} ms (nextPageSize=$nextPageSize)');
     } catch (error, stackTrace) {
@@ -288,6 +319,7 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
       loadedFromCache: false,
       pageSize: _pageSize,
       isLargeDataset: false,
+      invalidatedSharedBookIds: <int>{},
     );
     await loadInitial(force: false);
   }
@@ -306,14 +338,114 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
       loadedFromCache: false,
       pageSize: _pageSize,
       isLargeDataset: false,
+      invalidatedSharedBookIds: <int>{},
     );
     await loadInitial(force: false);
+  }
+
+  Future<void> setOwnerFilter(int? userId) async {
+    if (state.ownerUserIdFilter == userId) {
+      return;
+    }
+    _resetPageSize();
+    state = state.copyWith(
+      ownerUserIdFilter: userId,
+      items: <SharedBookDetail>[],
+      hasMore: true,
+      error: null,
+      lastLoadedAt: null,
+      lastLoadDuration: null,
+      loadedFromCache: false,
+      pageSize: _pageSize,
+      isLargeDataset: false,
+      invalidatedSharedBookIds: <int>{},
+    );
+    await loadInitial(force: false);
+  }
+
+  void invalidateSharedBooks(Iterable<int> sharedBookIds) {
+    final ids = sharedBookIds.whereType<int>().toSet();
+    if (ids.isEmpty) {
+      return;
+    }
+    final updatedItems = state.items
+        .where((detail) => !ids.contains(detail.sharedBook.id))
+        .toList(growable: false);
+    state = state.copyWith(
+      items: updatedItems,
+      hasMore: true,
+      invalidatedSharedBookIds: {...state.invalidatedSharedBookIds, ...ids},
+    );
+    final cacheKey = _cacheKey();
+    final cached = _cache[cacheKey];
+    if (cached != null) {
+      final updatedCacheItems = cached.items
+          .where((detail) => !ids.contains(detail.sharedBook.id))
+          .toList(growable: false);
+      _cache[cacheKey] = cached.copyWith(
+        items: updatedCacheItems,
+        hasMore: true,
+        invalidatedIds: {...cached.invalidatedIds, ...ids},
+      );
+    }
+  }
+
+  void upsertSharedBooks(List<SharedBookDetail> updates) {
+    if (updates.isEmpty) {
+      return;
+    }
+
+    final updatedIds = updates.map((detail) => detail.sharedBook.id).toSet();
+    final cacheKey = _cacheKey();
+    final cached = _cache[cacheKey];
+    if (cached != null) {
+      final mergedCacheItems = _mergeDetails(cached.items, updates);
+      final hasMore = cached.hasMore;
+      _cache[cacheKey] = cached.copyWith(
+        items: mergedCacheItems,
+        hasMore: hasMore,
+        invalidatedIds: {...cached.invalidatedIds}..removeAll(updatedIds),
+      );
+    }
+
+    if (state.items.isEmpty) {
+      return;
+    }
+
+    final mergedItems = _mergeDetails(state.items, updates);
+    state = state.copyWith(
+      items: mergedItems,
+      invalidatedSharedBookIds:
+          {...state.invalidatedSharedBookIds}..removeAll(updatedIds),
+    );
+  }
+
+  List<SharedBookDetail> _mergeDetails(
+    List<SharedBookDetail> current,
+    List<SharedBookDetail> updates,
+  ) {
+    final map = {for (final detail in current) detail.sharedBook.id: detail};
+    for (final detail in updates) {
+      map[detail.sharedBook.id] = detail;
+    }
+    final merged = map.values.toList()
+      ..sort((a, b) {
+        final titleA = (a.book?.title ?? '').toLowerCase();
+        final titleB = (b.book?.title ?? '').toLowerCase();
+        final titleCompare = titleA.compareTo(titleB);
+        if (titleCompare != 0) {
+          return titleCompare;
+        }
+        return a.sharedBook.id.compareTo(b.sharedBook.id);
+      });
+    return merged;
   }
 
   _DiscoverCacheKey _cacheKey() => _DiscoverCacheKey(
         groupId: groupId,
         searchQuery: state.searchQuery,
         includeUnavailable: state.includeUnavailable,
+        ownerUserId: state.ownerUserIdFilter,
       );
 
   void _resetPageSize() {
@@ -348,11 +480,13 @@ class _DiscoverCacheKey {
     required this.groupId,
     required this.searchQuery,
     required this.includeUnavailable,
+    required this.ownerUserId,
   });
 
   final int groupId;
   final String searchQuery;
   final bool includeUnavailable;
+  final int? ownerUserId;
 
   @override
   bool operator ==(Object other) {
@@ -360,11 +494,12 @@ class _DiscoverCacheKey {
     return other is _DiscoverCacheKey &&
         other.groupId == groupId &&
         other.searchQuery == searchQuery &&
-        other.includeUnavailable == includeUnavailable;
+        other.includeUnavailable == includeUnavailable &&
+        other.ownerUserId == ownerUserId;
   }
 
   @override
-  int get hashCode => Object.hash(groupId, searchQuery, includeUnavailable);
+  int get hashCode => Object.hash(groupId, searchQuery, includeUnavailable, ownerUserId);
 }
 
 class _DiscoverCacheEntry {
@@ -375,6 +510,7 @@ class _DiscoverCacheEntry {
     required this.duration,
     required this.pageSize,
     required this.isLargeDataset,
+    required this.invalidatedIds,
   });
 
   final List<SharedBookDetail> items;
@@ -383,6 +519,23 @@ class _DiscoverCacheEntry {
   final Duration duration;
   final int pageSize;
   final bool isLargeDataset;
+  final Set<int> invalidatedIds;
 
   bool get isStale => DateTime.now().difference(fetchedAt) > _discoverCacheTtl;
+
+  _DiscoverCacheEntry copyWith({
+    List<SharedBookDetail>? items,
+    bool? hasMore,
+    Set<int>? invalidatedIds,
+  }) {
+    return _DiscoverCacheEntry(
+      items: items ?? this.items,
+      hasMore: hasMore ?? this.hasMore,
+      fetchedAt: fetchedAt,
+      duration: duration,
+      pageSize: pageSize,
+      isLargeDataset: isLargeDataset,
+      invalidatedIds: invalidatedIds ?? this.invalidatedIds,
+    );
+  }
 }

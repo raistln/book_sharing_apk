@@ -224,6 +224,50 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
 
   Future<int> insertSharedBook(SharedBooksCompanion entry) => into(sharedBooks).insert(entry);
 
+  Future<List<SharedBookDetail>> fetchSharedBooksPage({
+    required int groupId,
+    required int limit,
+    required int offset,
+    bool includeUnavailable = false,
+    String? searchQuery,
+  }) {
+    final query = select(sharedBooks).join([
+      leftOuterJoin(books, books.id.equalsExp(sharedBooks.bookId)),
+    ])
+      ..where(
+        sharedBooks.groupId.equals(groupId) &
+            (sharedBooks.isDeleted.equals(false) | sharedBooks.isDeleted.isNull()),
+      );
+
+    if (!includeUnavailable) {
+      query.where(sharedBooks.isAvailable.equals(true));
+    }
+
+    final trimmedQuery = searchQuery?.trim();
+    if (trimmedQuery != null && trimmedQuery.isNotEmpty) {
+      final pattern = '%${trimmedQuery.replaceAll('%', '').replaceAll('_', '')}%';
+      query.where(
+        books.title.like(pattern) |
+            books.author.like(pattern) |
+            books.isbn.like(pattern),
+      );
+    }
+
+    query
+      ..orderBy([
+        OrderingTerm(expression: books.title.lower()),
+        OrderingTerm(expression: sharedBooks.id),
+      ])
+      ..limit(limit, offset: offset);
+
+    return query.map(
+      (row) => SharedBookDetail(
+        sharedBook: row.readTable(sharedBooks),
+        book: row.readTableOrNull(books),
+      ),
+    ).get();
+  }
+
   Future<int> updateSharedBook({required int sharedBookId, required SharedBooksCompanion entry}) {
     return (update(sharedBooks)..where((tbl) => tbl.id.equals(sharedBookId))).write(entry);
   }

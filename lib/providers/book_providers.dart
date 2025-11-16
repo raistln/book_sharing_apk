@@ -21,6 +21,7 @@ import '../services/supabase_book_service.dart';
 import '../services/supabase_user_service.dart';
 import '../data/repositories/group_push_repository.dart';
 import '../services/group_push_controller.dart';
+import '../services/discover_group_controller.dart';
 import 'notification_providers.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -75,6 +76,12 @@ final groupLoanDetailsProvider = StreamProvider.autoDispose
     .family<List<LoanDetail>, int>((ref, groupId) {
   final dao = ref.watch(groupDaoProvider);
   return dao.watchLoanDetailsForGroup(groupId);
+});
+
+final discoverGroupControllerProvider = StateNotifierProvider.autoDispose
+    .family<DiscoverGroupController, DiscoverGroupState, int>((ref, groupId) {
+  final dao = ref.watch(groupDaoProvider);
+  return DiscoverGroupController(groupDao: dao, groupId: groupId);
 });
 
 final groupInvitationDetailsProvider = StreamProvider.autoDispose

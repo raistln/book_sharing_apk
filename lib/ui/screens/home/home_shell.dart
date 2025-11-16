@@ -29,6 +29,7 @@ import '../../../services/google_books_client.dart';
 import '../../../services/loan_controller.dart';
 import '../../../services/open_library_client.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/discover_group_controller.dart';
 import '../../../services/stats_service.dart';
 import '../../widgets/cover_preview.dart';
 import '../../widgets/import_books_dialog.dart';
@@ -37,6 +38,102 @@ import '../auth/pin_setup_screen.dart';
 final _currentTabProvider = StateProvider<int>((ref) => 0);
 
 enum _BookFormResult { saved, deleted }
+
+class _DiscoverMetricsBanner extends StatelessWidget {
+  const _DiscoverMetricsBanner({required this.state});
+
+  final DiscoverGroupState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final timestamp = state.lastLoadedAt;
+    final duration = state.lastLoadDuration;
+    final parts = <String>[
+      'items=${state.items.length}',
+      'page=${state.pageSize}',
+      if (duration != null) 'dur=${duration.inMilliseconds}ms',
+      'cache=${state.loadedFromCache ? 'hit' : 'miss'}',
+      'large=${state.isLargeDataset ? 'yes' : 'no'}',
+      if (timestamp != null) 'ts=${DateFormat.Hms().format(timestamp)}',
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        parts.join(' · '),
+        style: theme.textTheme.bodySmall,
+      ),
+    );
+  }
+}
+
+class DiscoverLargeDatasetBanner extends StatelessWidget {
+  const DiscoverLargeDatasetBanner({
+    super.key,
+    required this.onSearchTap,
+    required this.canIncludeUnavailable,
+    this.onIncludeUnavailable,
+  });
+
+  final VoidCallback onSearchTap;
+  final bool canIncludeUnavailable;
+  final VoidCallback? onIncludeUnavailable;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.tune, color: theme.colorScheme.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Este grupo tiene muchos libros compartidos. Usa la búsqueda o ajusta los filtros para encontrar más rápido.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: onSearchTap,
+                icon: const Icon(Icons.search),
+                label: const Text('Buscar o filtrar'),
+              ),
+              if (canIncludeUnavailable && onIncludeUnavailable != null)
+                OutlinedButton.icon(
+                  onPressed: onIncludeUnavailable,
+                  icon: const Icon(Icons.visibility_outlined),
+                  label: const Text('Ver no disponibles'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _DiscoverBookDetailPage extends ConsumerStatefulWidget {
   const _DiscoverBookDetailPage({required this.group, required this.sharedBookId});
@@ -241,7 +338,8 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
                               Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: Card(
-                                    color: theme.colorScheme.surfaceTint.withOpacity(0.08),
+                                    color: theme.colorScheme.surfaceTint
+                                        .withValues(alpha: 0.08),
                                     child: Padding(
                                       padding: const EdgeInsets.all(16),
                                       child: Column(
@@ -722,6 +820,7 @@ List<SharedBookDetail> _filterSharedBooksForDiscover({
   required List<SharedBookDetail> details,
   required LocalUser? activeUser,
   required List<Book> ownBooks,
+  bool includeUnavailable = false,
 }) {
   final activeUserId = activeUser?.id;
   final isbnSet = <String>{};
@@ -747,7 +846,9 @@ List<SharedBookDetail> _filterSharedBooksForDiscover({
     }
 
     if (!sharedBook.isAvailable) {
-      return false;
+      if (!includeUnavailable) {
+        return false;
+      }
     }
 
     final book = detail.book;
@@ -4377,146 +4478,382 @@ class _DiscoverTab extends ConsumerWidget {
   }
 }
 
-class _DiscoverGroupPage extends ConsumerWidget {
+class _DiscoverGroupPage extends ConsumerStatefulWidget {
   const _DiscoverGroupPage({required this.group});
 
   final Group group;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DiscoverGroupPage> createState() => _DiscoverGroupPageState();
+}
+
+class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
+  late final TextEditingController _searchController;
+  late final ScrollController _scrollController;
+  late final FocusNode _searchFocusNode;
+  Timer? _searchDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _scrollController = ScrollController()..addListener(_onScroll);
+    _searchFocusNode = FocusNode();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchFocusNode.dispose();
+    _searchController
+      ..removeListener(_onSearchChanged)
+      ..dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 200) {
+      ref
+          .read(discoverGroupControllerProvider(widget.group.id).notifier)
+          .loadMore();
+    }
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text;
+    final currentState = ref.read(discoverGroupControllerProvider(widget.group.id));
+    if (query == currentState.searchQuery) {
+      return;
+    }
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      ref
+          .read(discoverGroupControllerProvider(widget.group.id).notifier)
+          .updateSearch(query);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final sharedBooksAsync = ref.watch(sharedBookDetailsProvider(group.id));
-    final ownBooksAsync = ref.watch(bookListProvider);
+    final group = widget.group;
+    final state = ref.watch(discoverGroupControllerProvider(group.id));
+    final controller =
+        ref.read(discoverGroupControllerProvider(group.id).notifier);
     final activeUser = ref.watch(activeUserProvider).value;
+    final ownBooksAsync = ref.watch(bookListProvider);
+    final showLargeDatasetNotice = state.isLargeDataset && state.searchQuery.isEmpty;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(group.name),
       ),
       body: SafeArea(
-        child: sharedBooksAsync.when(
-          data: (sharedDetails) => ownBooksAsync.when(
-            data: (ownBooks) {
-              final filtered = _filterSharedBooksForDiscover(
-                details: sharedDetails,
-                activeUser: activeUser,
-                ownBooks: ownBooks,
-              );
-
-              if (filtered.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.menu_book_outlined, size: 56),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No hay libros disponibles para descubrir en este grupo.',
-                          style: theme.textTheme.titleMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Cuando otros miembros compartan libros compatibles, aparecerán aquí.',
-                          style: theme.textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
-              return ListView.separated(
-                padding: const EdgeInsets.all(24),
-                itemCount: filtered.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final detail = filtered[index];
-                  final book = detail.book;
-                  final title = book?.title ?? 'Libro sin título';
-                  final author = (book?.author ?? '').trim();
-                  final availability =
-                      detail.sharedBook.isAvailable ? 'Disponible' : 'No disponible';
-
-                  return Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.menu_book_outlined),
-                      title: Text(title),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (author.isNotEmpty) Text(author),
-                          Text(availability),
-                        ],
-                      ),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => _DiscoverBookDetailPage(
-                              group: group,
-                              sharedBookId: detail.sharedBook.id,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  );
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _DiscoverSearchBar(
+                controller: _searchController,
+                onClear: () {
+                  _searchController.clear();
+                  controller.updateSearch('');
                 },
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline, size: 48),
-                    const SizedBox(height: 12),
-                    Text(
-                      'No pudimos cargar tu biblioteca.',
-                      style: theme.textTheme.titleMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$error',
-                      style: theme.textTheme.bodySmall,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+                isLoading: state.isLoadingInitial,
+                focusNode: _searchFocusNode,
               ),
-            ),
-          ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
                 children: [
-                  const Icon(Icons.error_outline, size: 48),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No pudimos cargar los libros compartidos.',
-                    style: theme.textTheme.titleMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$error',
-                    style: theme.textTheme.bodySmall,
-                    textAlign: TextAlign.center,
+                  FilterChip(
+                    label: const Text('Incluir no disponibles'),
+                    selected: state.includeUnavailable,
+                    onSelected: (value) {
+                      controller.setIncludeUnavailable(value);
+                    },
                   ),
                 ],
               ),
-            ),
+              if (kDebugMode) ...[
+                const SizedBox(height: 12),
+                _DiscoverMetricsBanner(state: state),
+              ],
+              if (showLargeDatasetNotice) ...[
+                const SizedBox(height: 12),
+                DiscoverLargeDatasetBanner(
+                  onSearchTap: () {
+                    _scrollController.animateTo(
+                      0,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                    );
+                    _searchFocusNode.requestFocus();
+                  },
+                  canIncludeUnavailable: !state.includeUnavailable,
+                  onIncludeUnavailable: state.includeUnavailable
+                      ? null
+                      : () => controller.setIncludeUnavailable(true),
+                ),
+              ],
+              const SizedBox(height: 16),
+              Expanded(
+                child: ownBooksAsync.when(
+                  data: (ownBooks) => _buildResultsList(
+                    theme: theme,
+                    state: state,
+                    controller: controller,
+                    ownBooks: ownBooks,
+                    activeUser: activeUser,
+                  ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, _) => _DiscoverErrorView(
+                    message: 'No pudimos cargar tu biblioteca.',
+                    details: '$error',
+                    onRetry: () => controller.refresh(),
+                  ),
+                ),
+              ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResultsList({
+    required ThemeData theme,
+    required DiscoverGroupState state,
+    required DiscoverGroupController controller,
+    required List<Book> ownBooks,
+    required LocalUser? activeUser,
+  }) {
+    if (state.isLoadingInitial && state.items.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state.error != null && state.items.isEmpty) {
+      return _DiscoverErrorView(
+        message: 'No pudimos cargar los libros compartidos.',
+        details: '${state.error}',
+        onRetry: () => controller.refresh(),
+      );
+    }
+
+    final filtered = _filterSharedBooksForDiscover(
+      details: state.items,
+      activeUser: activeUser,
+      ownBooks: ownBooks,
+      includeUnavailable: state.includeUnavailable,
+    );
+
+    if (filtered.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.menu_book_outlined, size: 56),
+              const SizedBox(height: 12),
+              Text(
+                state.searchQuery.isEmpty
+                    ? 'No hay libros disponibles para descubrir en este grupo.'
+                    : 'No encontramos libros que coincidan con tu búsqueda.',
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              if (state.searchQuery.isEmpty)
+                Text(
+                  'Cuando otros miembros compartan libros compatibles, aparecerán aquí.',
+                  style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                )
+              else
+                Text(
+                  'Prueba con otro término o restablece los filtros.',
+                  style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => controller.refresh(),
+      child: ListView.separated(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: filtered.length + (state.hasMore ? 1 : 0),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          if (index >= filtered.length) {
+            if (state.error != null) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  children: [
+                    Text(
+                      'Error al cargar más resultados.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => controller.loadMore(),
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final detail = filtered[index];
+          final book = detail.book;
+          final title = book?.title ?? 'Libro sin título';
+          final author = (book?.author ?? '').trim();
+          final availability =
+              detail.sharedBook.isAvailable ? 'Disponible' : 'No disponible';
+
+          return Card(
+            child: ListTile(
+              leading: const Icon(Icons.menu_book_outlined),
+              title: Text(title),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (author.isNotEmpty) Text(author),
+                  Text(availability),
+                ],
+              ),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => _DiscoverBookDetailPage(
+                      group: widget.group,
+                      sharedBookId: detail.sharedBook.id,
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DiscoverSearchBar extends StatelessWidget {
+  const _DiscoverSearchBar({
+    required this.controller,
+    required this.onClear,
+    required this.isLoading,
+    required this.focusNode,
+  });
+
+  final TextEditingController controller;
+  final VoidCallback onClear;
+  final bool isLoading;
+  final FocusNode focusNode;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, _) {
+        final hasText = value.text.isNotEmpty;
+        Widget? suffix;
+        if (isLoading) {
+          suffix = const Padding(
+            padding: EdgeInsets.all(12),
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        } else if (hasText) {
+          suffix = IconButton(
+            onPressed: onClear,
+            icon: const Icon(Icons.clear),
+          );
+        }
+
+        return TextField(
+          controller: controller,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.search),
+            hintText: 'Buscar por título, autor o ISBN',
+            suffixIcon: suffix,
+          ),
+          textInputAction: TextInputAction.search,
+        );
+      },
+    );
+  }
+}
+
+class _DiscoverErrorView extends StatelessWidget {
+  const _DiscoverErrorView({
+    required this.message,
+    required this.details,
+    required this.onRetry,
+  });
+
+  final String message;
+  final String details;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              style: theme.textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              details,
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+            ),
+          ],
         ),
       ),
     );

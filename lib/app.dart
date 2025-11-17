@@ -11,6 +11,8 @@ import 'ui/screens/home/home_shell.dart';
 import 'ui/screens/auth/existing_account_login_screen.dart';
 import 'ui/widgets/inactivity_listener.dart';
 import 'ui/screens/splash_screen.dart';
+import 'ui/screens/onboarding/onboarding_intro_screen.dart';
+import 'ui/screens/onboarding/onboarding_wizard_screen.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
@@ -68,6 +70,8 @@ class BookSharingApp extends ConsumerWidget {
         PinSetupScreen.routeName: (context) => const PinSetupScreen(),
         ExistingAccountLoginScreen.routeName: (context) =>
             const ExistingAccountLoginScreen(),
+        OnboardingIntroScreen.routeName: (context) => const OnboardingIntroScreen(),
+        OnboardingWizardScreen.routeName: (context) => const OnboardingWizardScreen(),
         HomeShell.routeName: (context) => const InactivityListener(child: HomeShell()),
       },
     );

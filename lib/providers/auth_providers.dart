@@ -207,6 +207,7 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(status: AuthStatus.loading);
     await _authService.setPin(pin);
     _userSyncController.markPendingChanges();
+    await _userSyncController.sync();
     await _authService.unlockSession();
     state = state.copyWith(
       status: AuthStatus.unlocked,
@@ -214,7 +215,6 @@ class AuthController extends StateNotifier<AuthState> {
       lockUntil: null,
     );
     _cancelLockTimer();
-    unawaited(_userSyncController.sync());
   }
 
   Future<void> clearPin() async {

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/auth_providers.dart';
+import '../../../providers/book_providers.dart';
 import 'auth/lock_screen.dart';
 import 'auth/pin_setup_screen.dart';
 import 'home/home_shell.dart';
+import 'onboarding/onboarding_intro_screen.dart';
+import 'onboarding/onboarding_wizard_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -24,10 +27,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     });
   }
 
-  void _navigate(String routeName) {
+  Future<void> _navigate(String routeName) async {
     if (_navigated) return;
     _navigated = true;
-    Navigator.of(context).pushReplacementNamed(routeName);
+    await Navigator.of(context).pushReplacementNamed(routeName);
   }
 
   @override
@@ -38,7 +41,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       final status = next.status;
 
       if (status == AuthStatus.unlocked) {
-        _navigate(HomeShell.routeName);
+        _handleUnlocked();
       } else if (status == AuthStatus.needsPin) {
         _navigate(PinSetupScreen.routeName);
       } else if (status == AuthStatus.locked) {
@@ -58,5 +61,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleUnlocked() async {
+    final progress = await ref.read(onboardingProgressProvider.future);
+    if (!mounted) return;
+
+    if (!progress.introSeen) {
+      await _navigate(OnboardingIntroScreen.routeName);
+      return;
+    }
+
+    if (!progress.completed) {
+      await _navigate(OnboardingWizardScreen.routeName);
+      return;
+    }
+
+    await _navigate(HomeShell.routeName);
   }
 }

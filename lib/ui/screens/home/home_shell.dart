@@ -39,6 +39,69 @@ final _currentTabProvider = StateProvider<int>((ref) => 0);
 
 enum _BookFormResult { saved, deleted }
 
+String _resolveOwnerName(LocalUser? ownerUser, int ownerIdFallback) {
+  if (ownerUser == null) {
+    return 'Miembro $ownerIdFallback';
+  }
+  final username = ownerUser.username.trim();
+  if (username.isEmpty) {
+    return 'Miembro $ownerIdFallback';
+  }
+  return username;
+}
+
+_DiscoverStatusDisplay _resolveStatusDisplay({
+  required ThemeData theme,
+  required SharedBook sharedBook,
+  LoanDetail? loanDetail,
+}) {
+  final scheme = theme.colorScheme;
+  if (loanDetail != null) {
+    final borrowerName = _resolveUserName(loanDetail.borrower);
+    final dueDate = loanDetail.loan.dueDate;
+    final dueDateLabel = dueDate != null ? DateFormat.yMMMd().format(dueDate) : null;
+    if (loanDetail.loan.status == 'pending') {
+      return _DiscoverStatusDisplay(
+        label: 'Reservado',
+        icon: Icons.hourglass_bottom,
+        background: scheme.tertiaryContainer,
+        foreground: scheme.onTertiaryContainer,
+        caption: 'Reservado por $borrowerName',
+      );
+    }
+    if (loanDetail.loan.status == 'accepted') {
+      final caption = dueDateLabel != null
+          ? 'Prestado a $borrowerName · Devolución $dueDateLabel'
+          : 'Prestado a $borrowerName';
+      return _DiscoverStatusDisplay(
+        label: 'Prestado',
+        icon: Icons.import_contacts_outlined,
+        background: scheme.primaryContainer,
+        foreground: scheme.onPrimaryContainer,
+        caption: caption,
+      );
+    }
+  }
+
+  if (!sharedBook.isAvailable) {
+    return _DiscoverStatusDisplay(
+      label: 'No disponible',
+      icon: Icons.block,
+      background: scheme.surfaceContainerHighest,
+      foreground: scheme.onSurface,
+      caption: 'El préstamo está en proceso de actualización.',
+    );
+  }
+
+  return _DiscoverStatusDisplay(
+    label: 'Disponible',
+    icon: Icons.check_circle,
+    background: scheme.secondaryContainer,
+    foreground: scheme.onSecondaryContainer,
+    caption: null,
+  );
+}
+
 class _DiscoverMetricsBanner extends StatelessWidget {
   const _DiscoverMetricsBanner({required this.state});
 
@@ -229,10 +292,15 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
                 ? borrowerLoanDetail
                 : null;
 
-            final ownerName = ownerUser?.username ?? 'Otro miembro';
+            final ownerName = _resolveOwnerName(ownerUser, sharedBook.ownerUserId);
             final author = (book?.author ?? '').trim();
             final isbn = book?.isbn?.trim();
             final description = book?.notes?.trim();
+            final statusDisplay = _resolveStatusDisplay(
+              theme: theme,
+              sharedBook: sharedBook,
+              loanDetail: borrowerLoanDetail ?? otherActiveLoan,
+            );
 
             return CustomScrollView(
               slivers: [
@@ -259,55 +327,84 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              book?.title ?? 'Libro sin título',
-                              style: theme.textTheme.headlineSmall,
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 8,
-                              crossAxisAlignment: WrapCrossAlignment.center,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Chip(
-                                  avatar: const Icon(Icons.group_outlined, size: 18),
-                                  label: Text('Propietario: $ownerName'),
+                                Expanded(
+                                  child: Text(
+                                    book?.title ?? 'Libro sin título',
+                                    style: theme.textTheme.headlineSmall,
+                                  ),
                                 ),
-                                if (author.isNotEmpty)
-                                  Chip(
-                                    avatar: const Icon(Icons.person_outline, size: 18),
-                                    label: Text(author),
+                                const SizedBox(width: 12),
+                                _DiscoverStatusChip(display: statusDisplay),
+                              ],
+                            ),
+                            if (statusDisplay.caption != null) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                statusDisplay.caption!,
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ],
+                            if (author.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.person_outline, size: 18),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      author,
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
                                   ),
-                                if (isbn != null && isbn.isNotEmpty)
-                                  Chip(
-                                    avatar: const Icon(Icons.qr_code_2_outlined, size: 18),
-                                    label: Text('ISBN $isbn'),
-                                  ),
-                                Chip(
-                                  avatar: Icon(
-                                    sharedBook.isAvailable ? Icons.check_circle : Icons.block,
-                                    size: 18,
-                                    color: sharedBook.isAvailable
-                                        ? theme.colorScheme.primary
-                                        : theme.colorScheme.error,
-                                  ),
-                                  label: Text(
-                                    sharedBook.isAvailable ? 'Disponible' : 'No disponible',
+                                ],
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.group_outlined, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Propietario: $ownerName',
+                                    style: theme.textTheme.bodyMedium,
                                   ),
                                 ),
                               ],
                             ),
+                            if (isbn != null && isbn.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  Chip(
+                                    avatar: const Icon(Icons.qr_code_2_outlined, size: 18),
+                                    label: Text('ISBN $isbn'),
+                                  ),
+                                ],
+                              ),
+                            ],
                             const SizedBox(height: 16),
-                            if (description != null && description.isNotEmpty)
-                              Text(
-                                description,
-                                style: theme.textTheme.bodyMedium,
-                              )
-                            else
-                              Text(
-                                'Este libro no tiene una descripción añadida.',
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                (description != null && description.isNotEmpty)
+                                    ? description
+                                    : 'Este libro no tiene una descripción añadida.',
                                 style: theme.textTheme.bodyMedium,
                               ),
+                            ),
                           ],
                         ),
                       ),
@@ -4558,6 +4655,7 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
     final activeUser = ref.watch(activeUserProvider).value;
     final ownBooksAsync = ref.watch(bookListProvider);
     final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
+    final loansAsync = ref.watch(groupLoanDetailsProvider(group.id));
     final showLargeDatasetNotice = state.isLargeDataset && state.searchQuery.isEmpty;
 
     return Scaffold(
@@ -4628,6 +4726,8 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
                     controller: controller,
                     ownBooks: ownBooks,
                     activeUser: activeUser,
+                    members: membersAsync.asData?.value ?? const <GroupMemberDetail>[],
+                    loanDetails: loansAsync.asData?.value ?? const <LoanDetail>[],
                   ),
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (error, _) => _DiscoverErrorView(
@@ -4650,6 +4750,8 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
     required DiscoverGroupController controller,
     required List<Book> ownBooks,
     required LocalUser? activeUser,
+    required List<GroupMemberDetail> members,
+    required List<LoanDetail> loanDetails,
   }) {
     if (state.isLoadingInitial && state.items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -4670,6 +4772,28 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
       includeUnavailable: state.includeUnavailable,
       ownerUserIdFilter: state.ownerUserIdFilter,
     );
+
+    final ownerNames = <int, String>{
+      for (final member in members)
+        member.membership.memberUserId:
+            _resolveOwnerName(member.user, member.membership.memberUserId),
+    };
+
+    final activeLoansBySharedBookId = <int, LoanDetail>{};
+    for (final detail in loanDetails) {
+      final shared = detail.sharedBook;
+      if (shared == null) {
+        continue;
+      }
+      final status = detail.loan.status;
+      if (status != 'pending' && status != 'accepted') {
+        continue;
+      }
+      final entry = activeLoansBySharedBookId[shared.id];
+      if (entry == null || _loanStatusPriority(status) > _loanStatusPriority(entry.loan.status)) {
+        activeLoansBySharedBookId[shared.id] = detail;
+      }
+    }
 
     if (filtered.isEmpty) {
       return Center(
@@ -4745,21 +4869,18 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
           final book = detail.book;
           final title = book?.title ?? 'Libro sin título';
           final author = (book?.author ?? '').trim();
-          final availability =
-              detail.sharedBook.isAvailable ? 'Disponible' : 'No disponible';
+          final ownerName = ownerNames[detail.sharedBook.ownerUserId] ??
+              _resolveOwnerName(null, detail.sharedBook.ownerUserId);
+          final activeLoan = activeLoansBySharedBookId[detail.sharedBook.id];
+          final statusDisplay = _resolveStatusDisplay(
+            theme: theme,
+            sharedBook: detail.sharedBook,
+            loanDetail: activeLoan,
+          );
 
           return Card(
-            child: ListTile(
-              leading: const Icon(Icons.menu_book_outlined),
-              title: Text(title),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (author.isNotEmpty) Text(author),
-                  Text(availability),
-                ],
-              ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -4770,6 +4891,66 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
                   ),
                 );
               },
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: theme.textTheme.titleMedium,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _DiscoverStatusChip(display: statusDisplay),
+                      ],
+                    ),
+                    if (author.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.person_outline, size: 16),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              author,
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.group_outlined, size: 16),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Propietario: $ownerName',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (statusDisplay.caption != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        statusDisplay.caption!,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           );
         },
@@ -4843,6 +5024,66 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
           child: const Icon(Icons.error_outline, size: 20),
         ),
       ],
+    );
+  }
+
+  int _loanStatusPriority(String status) {
+    switch (status) {
+      case 'accepted':
+        return 2;
+      case 'pending':
+        return 1;
+      default:
+        return 0;
+    }
+  }
+}
+
+class _DiscoverStatusDisplay {
+  const _DiscoverStatusDisplay({
+    required this.label,
+    required this.icon,
+    required this.background,
+    required this.foreground,
+    this.caption,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+  final String? caption;
+}
+
+class _DiscoverStatusChip extends StatelessWidget {
+  const _DiscoverStatusChip({required this.display});
+
+  final _DiscoverStatusDisplay display;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: display.background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(display.icon, size: 16, color: display.foreground),
+            const SizedBox(width: 6),
+            Text(
+              display.label,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelSmall
+                  ?.copyWith(color: display.foreground, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -22,6 +22,7 @@ import '../services/supabase_user_service.dart';
 import '../data/repositories/group_push_repository.dart';
 import '../services/group_push_controller.dart';
 import '../services/discover_group_controller.dart';
+import '../services/onboarding_service.dart';
 import 'notification_providers.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -33,6 +34,15 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 final bookDaoProvider = Provider<BookDao>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return BookDao(db);
+});
+
+final onboardingServiceProvider = Provider<OnboardingService>((ref) {
+  return OnboardingService();
+});
+
+final onboardingProgressProvider = FutureProvider<OnboardingProgress>((ref) {
+  final service = ref.watch(onboardingServiceProvider);
+  return service.loadProgress();
 });
 
 final bookRepositoryProvider = Provider<BookRepository>((ref) {

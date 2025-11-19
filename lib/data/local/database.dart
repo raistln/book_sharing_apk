@@ -26,6 +26,38 @@ class LocalUsers extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+class InAppNotifications extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get type => text().withLength(min: 1, max: 64)();
+
+  @ReferenceName('notificationLoans')
+  IntColumn get loanId => integer().nullable().references(Loans, #id)();
+  TextColumn get loanUuid => text().nullable()();
+
+  @ReferenceName('notificationSharedBooks')
+  IntColumn get sharedBookId => integer().nullable().references(SharedBooks, #id)();
+  TextColumn get sharedBookUuid => text().nullable()();
+
+  @ReferenceName('notificationsAuthored')
+  IntColumn get actorUserId => integer().nullable().references(LocalUsers, #id)();
+  @ReferenceName('notificationsReceived')
+  IntColumn get targetUserId => integer().references(LocalUsers, #id)();
+
+  TextColumn get title => text().nullable()();
+  TextColumn get message => text().nullable()();
+  TextColumn get status =>
+      text().withDefault(const Constant('unread')).withLength(min: 1, max: 32)();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 class Books extends Table {
   IntColumn get id => integer().autoIncrement()();
 
@@ -246,6 +278,7 @@ class Loans extends Table {
     SharedBooks,
     GroupInvitations,
     Loans,
+    InAppNotifications,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -254,7 +287,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -304,6 +337,10 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               'ALTER TABLE local_users ADD COLUMN pin_updated_at TIMESTAMP',
             ).catchError((_) {});
+          }
+
+          if (from < 8) {
+            await m.createTable(inAppNotifications);
           }
         },
       );

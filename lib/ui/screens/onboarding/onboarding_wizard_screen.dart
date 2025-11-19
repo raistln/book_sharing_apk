@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/book_providers.dart';
+import '../../../providers/notification_providers.dart';
+import '../../../providers/permission_providers.dart';
 import '../../../services/onboarding_service.dart';
 import '../../widgets/empty_state.dart';
 import '../home/home_shell.dart';
@@ -17,17 +19,28 @@ class OnboardingWizardScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen> {
-  static const _totalSteps = 3;
+  static const _profileStepIndex = 0;
+  static const _groupStepIndex = 1;
+  static const _joinStepIndex = 2;
+  static const _bookStepIndex = 3;
+  static const _summaryStepIndex = 4;
+
+  static const _totalSteps = 5;
 
   final _groupFormKey = GlobalKey<FormState>();
   final _joinFormKey = GlobalKey<FormState>();
   final _bookFormKey = GlobalKey<FormState>();
+  final _profileFormKey = GlobalKey<FormState>();
 
   late final TextEditingController _groupNameController;
   late final TextEditingController _groupDescriptionController;
   late final TextEditingController _joinCodeController;
   late final TextEditingController _bookTitleController;
   late final TextEditingController _bookAuthorController;
+  late final TextEditingController _displayNameController;
+
+  bool _notificationsEnabled = true;
+  bool _savingProfile = false;
 
   int _currentStep = 0;
   final List<bool> _completedSteps = List<bool>.filled(_totalSteps, false);
@@ -42,6 +55,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     _joinCodeController = TextEditingController();
     _bookTitleController = TextEditingController();
     _bookAuthorController = TextEditingController();
+    _displayNameController = TextEditingController();
   }
 
   @override
@@ -51,6 +65,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     _joinCodeController.dispose();
     _bookTitleController.dispose();
     _bookAuthorController.dispose();
+    _displayNameController.dispose();
     super.dispose();
   }
 
@@ -62,6 +77,9 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     await onboardingService.markCompleted();
     ref.invalidate(onboardingProgressProvider);
     if (!mounted) return;
+    final syncController = ref.read(groupSyncControllerProvider.notifier);
+    await syncController.syncGroups();
+    if (!mounted) return;
     navigator.pushNamedAndRemoveUntil(HomeShell.routeName, (route) => false);
   }
 
@@ -72,40 +90,61 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     await onboardingService.markDetailCoachPending(resetSeen: true);
     ref.invalidate(onboardingProgressProvider);
     if (!mounted) return;
+    final syncController = ref.read(groupSyncControllerProvider.notifier);
+    await syncController.syncGroups();
+    if (!mounted) return;
+    messenger.clearSnackBars();
+    final theme = Theme.of(context);
     messenger.showSnackBar(
-      const SnackBar(content: Text('¡Listo! Bienvenido a Book Sharing.')),
+      SnackBar(
+        content: const Text('¡Listo! Bienvenido a Book Sharing.'),
+        backgroundColor: theme.colorScheme.primary,
+      ),
     );
     navigator.pushNamedAndRemoveUntil(HomeShell.routeName, (route) => false);
   }
 
   Future<void> _handleContinue(BuildContext context) async {
     if (_isProcessing) return;
+    setState(() => _isProcessing = true);
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final index = _currentStep;
-    final success = await _runStepAction(context, index, messenger: messenger);
-    if (!mounted) return;
-    if (!success) {
-      return;
-    }
+    try {
+      final success = await _runStepAction(context, index, messenger: messenger);
+      if (!mounted || !success) {
+        return;
+      }
 
-    if (index == _totalSteps - 1) {
-      await _completeWizard(navigator: navigator, messenger: messenger);
-      return;
-    }
+      if (index == _summaryStepIndex) {
+        await _completeWizard(navigator: navigator, messenger: messenger);
+        return;
+      }
 
-    await _markStepCompleted(index, advance: true, messenger: messenger);
+      await _markStepCompleted(index, advance: true, messenger: messenger);
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
   }
 
   Future<void> _handleSkipStep(int index) async {
     if (_isProcessing) return;
+    setState(() => _isProcessing = true);
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    if (index == _totalSteps - 1) {
-      await _completeWizard(navigator: navigator, messenger: messenger);
-      return;
+    try {
+      if (index == _summaryStepIndex) {
+        await _completeWizard(navigator: navigator, messenger: messenger);
+        return;
+      }
+      await _markStepCompleted(index, advance: true, skipped: true, messenger: messenger);
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
     }
-    await _markStepCompleted(index, advance: true, skipped: true, messenger: messenger);
   }
 
   Future<void> _markStepCompleted(int index, {required bool advance, bool skipped = false, required ScaffoldMessengerState messenger}) async {
@@ -138,14 +177,79 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     required ScaffoldMessengerState messenger,
   }) async {
     switch (index) {
-      case 0:
+      case _profileStepIndex:
+        return _configureProfile(context, messenger: messenger);
+      case _groupStepIndex:
         return _createGroup(context, messenger: messenger);
-      case 1:
+      case _joinStepIndex:
         return _joinGroupByCode(context, messenger: messenger);
-      case 2:
+      case _bookStepIndex:
         return _registerBook(context, messenger: messenger);
+      case _summaryStepIndex:
+        return true;
       default:
         return false;
+    }
+  }
+
+  Future<bool> _configureProfile(BuildContext context, {required ScaffoldMessengerState messenger}) async {
+    if (!(_profileFormKey.currentState?.validate() ?? false)) {
+      return false;
+    }
+
+    final userRepository = ref.read(userRepositoryProvider);
+    final permissionService = ref.read(permissionServiceProvider);
+    final userSyncController = ref.read(userSyncControllerProvider.notifier);
+    final displayName = _displayNameController.text.trim();
+
+    setState(() {
+      _savingProfile = true;
+    });
+
+    try {
+      final activeUser = await userRepository.getActiveUser();
+      if (activeUser == null) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Necesitas crear un usuario local antes de continuar.')),
+        );
+        return false;
+      }
+
+      if (displayName == activeUser.username) {
+        // Nothing to update.
+      } else {
+        await userRepository.updateDisplayName(
+          userId: activeUser.id,
+          displayName: displayName,
+        );
+        userSyncController.markPendingChanges();
+      }
+
+      if (_notificationsEnabled) {
+        await permissionService.ensureNotificationPermission();
+        final notificationService = ref.read(notificationServiceProvider);
+        await notificationService.requestPermissions();
+      }
+
+      await userSyncController.sync();
+
+      if (!mounted) return false;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Perfil configurado correctamente.')),
+      );
+      return true;
+    } catch (error) {
+      if (!mounted) return false;
+      messenger.showSnackBar(
+        SnackBar(content: Text('No se pudo actualizar tu perfil: $error')),
+      );
+      return false;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _savingProfile = false;
+        });
+      }
     }
   }
 
@@ -385,10 +489,54 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
 
     return [
       Step(
+        title: const Text('Configura tu perfil'),
+        subtitle: const Text('Personaliza tu nombre y preferencias.'),
+        isActive: _currentStep >= _profileStepIndex,
+        state: _resolveStepState(_profileStepIndex),
+        content: Form(
+          key: _profileFormKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _displayNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre para mostrar',
+                  helperText: 'Tus grupos verán este nombre al solicitar o prestar libros.',
+                ),
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Introduce un nombre válido.';
+                  }
+                  if (value.trim().length < 3) {
+                    return 'El nombre debe tener al menos 3 caracteres.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              SwitchListTile.adaptive(
+                value: _notificationsEnabled,
+                onChanged: _savingProfile
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _notificationsEnabled = value;
+                        });
+                      },
+                title: const Text('Recibir recordatorios y avisos'),
+                subtitle: const Text('Activaremos las notificaciones de préstamos y grupos.'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      Step(
         title: const Text('Crea tu primer grupo'),
         subtitle: const Text('Invita a tus amigos y comparte la biblioteca.'),
-        state: _completedSteps[0] ? StepState.complete : StepState.indexed,
-        isActive: _currentStep >= 0,
+        isActive: _currentStep >= _groupStepIndex,
+        state: _resolveStepState(_groupStepIndex),
         content: Form(
           key: _groupFormKey,
           child: Column(
@@ -419,19 +567,26 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                 controller: _groupDescriptionController,
                 decoration: const InputDecoration(
                   labelText: 'Descripción (opcional)',
-                  hintText: 'Comparte tu objetivo, reglas o notas internas.',
                 ),
-                maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _savingProfile ? null : () => _showGroupInfoSheet(context),
+                  icon: const Icon(Icons.info_outline),
+                  label: const Text('Aprender sobre grupos'),
+                ),
               ),
             ],
           ),
         ),
       ),
       Step(
-        title: const Text('Únete a un grupo por código'),
-        subtitle: const Text('Si recibiste un código de invitación, introdúcelo aquí.'),
-        state: _completedSteps[1] ? StepState.complete : StepState.indexed,
-        isActive: _currentStep >= 1,
+        title: const Text('Únete con un código'),
+        subtitle: const Text('Introduce el código que te compartieron.'),
+        isActive: _currentStep >= _joinStepIndex,
+        state: _resolveStepState(_joinStepIndex),
         content: Form(
           key: _joinFormKey,
           child: Column(
@@ -466,9 +621,9 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
       ),
       Step(
         title: const Text('Registra tu primer libro'),
-        subtitle: const Text('Añade un libro a tu biblioteca personal.'),
-        state: _completedSteps[2] ? StepState.complete : StepState.indexed,
-        isActive: _currentStep >= 2,
+        subtitle: const Text('Compártelo con tu grupo y gestiona préstamos.'),
+        isActive: _currentStep >= _bookStepIndex,
+        state: _resolveStepState(_bookStepIndex),
         content: Form(
           key: _bookFormKey,
           child: Column(
@@ -505,6 +660,157 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
           ),
         ),
       ),
+      Step(
+        title: const Text('Todo listo'),
+        subtitle: const Text('Revisa y empieza a usar la app.'),
+        isActive: _currentStep >= _summaryStepIndex,
+        state: _resolveStepState(_summaryStepIndex),
+        content: _SummaryStep(
+          profileCompleted: _completedSteps[_profileStepIndex],
+          groupCompleted: _completedSteps[_groupStepIndex],
+          joinCompleted: _completedSteps[_joinStepIndex],
+          bookCompleted: _completedSteps[_bookStepIndex],
+        ),
+      ),
     ];
+  }
+
+  StepState _resolveStepState(int index) {
+    if (_currentStep == index) {
+      return StepState.editing;
+    }
+    if (_completedSteps[index]) {
+      return StepState.complete;
+    }
+    return StepState.indexed;
+  }
+
+  Future<void> _showGroupInfoSheet(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => const _GroupInfoBottomSheet(),
+    );
+  }
+}
+
+class _GroupInfoBottomSheet extends StatelessWidget {
+  const _GroupInfoBottomSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('¿Qué es un grupo?', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            Text(
+              'Los grupos reúnen a tus amigos o familiares para compartir bibliotecas locales. '
+              'Desde aquí podrás invitar miembros, gestionar préstamos y llevar un historial conjunto.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Puedes crear varios grupos: uno para tu familia, otro para tu club de lectura, etc. '
+              'Cada grupo tiene sus propias invitaciones y catálogos.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 24),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Entendido'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryStep extends StatelessWidget {
+  const _SummaryStep({
+    required this.profileCompleted,
+    required this.groupCompleted,
+    required this.joinCompleted,
+    required this.bookCompleted,
+  });
+
+  final bool profileCompleted;
+  final bool groupCompleted;
+  final bool joinCompleted;
+  final bool bookCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    Widget buildTile({required String title, required String subtitle, required bool done}) {
+      return ListTile(
+        leading: Icon(
+          done ? Icons.check_circle_outline : Icons.radio_button_unchecked,
+          color: done ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+        ),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: Text(done ? 'Completado' : 'Pendiente'),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '¡Ya casi terminamos!',
+          style: theme.textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Estos son los pasos que configuraste. Puedes volver atrás si quieres ajustar algo antes de empezar.',
+          style: theme.textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Column(
+            children: [
+              buildTile(
+                title: 'Perfil configurado',
+                subtitle: 'Nombre y preferencias básicas.',
+                done: profileCompleted,
+              ),
+              const Divider(height: 1),
+              buildTile(
+                title: 'Primer grupo',
+                subtitle: 'Creaste tu comunidad principal.',
+                done: groupCompleted,
+              ),
+              const Divider(height: 1),
+              buildTile(
+                title: 'Unión por código',
+                subtitle: 'Te uniste a un grupo existente.',
+                done: joinCompleted,
+              ),
+              const Divider(height: 1),
+              buildTile(
+                title: 'Libro registrado',
+                subtitle: 'Añadiste tu primer ejemplar compartido.',
+                done: bookCompleted,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Al pulsar “Finalizar” sincronizaremos tu información y te llevaremos a tu biblioteca.',
+          style: theme.textTheme.bodySmall,
+        ),
+      ],
+    );
   }
 }

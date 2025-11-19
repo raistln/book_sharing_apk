@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/auth_service.dart';
+import '../services/group_sync_controller.dart';
 import '../services/inactivity_service.dart';
 import '../services/sync_service.dart';
 import 'book_providers.dart';
@@ -71,11 +75,19 @@ final isBiometricButtonEnabledProvider = Provider<bool>((ref) {
 });
 
 class AuthController extends StateNotifier<AuthState> {
-  AuthController(this._authService, this._userSyncController)
-      : super(AuthState.initial);
+  AuthController(
+    this._authService,
+    this._userSyncController,
+    this._bookSyncController,
+    this._groupSyncController,
+    this._notificationSyncController,
+  ) : super(AuthState.initial);
 
   final AuthService _authService;
   final SyncController _userSyncController;
+  final SyncController _bookSyncController;
+  final GroupSyncController _groupSyncController;
+  final SyncController _notificationSyncController;
   Timer? _lockTimer;
 
   void _cancelLockTimer() {
@@ -139,7 +151,7 @@ class AuthController extends StateNotifier<AuthState> {
         lockUntil: null,
       );
       _cancelLockTimer();
-      unawaited(_userSyncController.sync());
+      unawaited(_triggerInitialSync());
       return const AuthAttemptResult.success();
     }
 
@@ -188,7 +200,7 @@ class AuthController extends StateNotifier<AuthState> {
         lockUntil: null,
       );
       _cancelLockTimer();
-      unawaited(_userSyncController.sync());
+      unawaited(_triggerInitialSync());
       return true;
     }
 
@@ -215,6 +227,7 @@ class AuthController extends StateNotifier<AuthState> {
       lockUntil: null,
     );
     _cancelLockTimer();
+    unawaited(_triggerInitialSync());
   }
 
   Future<void> clearPin() async {
@@ -239,7 +252,84 @@ class AuthController extends StateNotifier<AuthState> {
     );
     _cancelLockTimer();
     if (runSync) {
-      unawaited(_userSyncController.sync());
+      unawaited(_triggerInitialSync());
+    }
+  }
+
+  Future<void> _triggerInitialSync() async {
+    _log('Inicio de sincronización completa tras desbloqueo.');
+
+    try {
+      await _userSyncController.sync();
+      _log('Sincronización de usuarios completada.');
+    } catch (error, stackTrace) {
+      _log(
+        'Fallo sincronizando usuarios.',
+        error: error,
+        stackTrace: stackTrace,
+        level: 1000,
+      );
+      // Ignore failures, downstream syncs will attempt anyway.
+    }
+
+    _log('Lanzando sincronización de libros.');
+    unawaited(_bookSyncController.sync());
+
+    try {
+      await _groupSyncController.syncGroups();
+      _log('Sincronización de grupos completada.');
+    } catch (error, stackTrace) {
+      // Continue even if group sync fails to avoid blocking other syncs.
+      _log(
+        'Fallo sincronizando grupos.',
+        error: error,
+        stackTrace: stackTrace,
+        level: 1000,
+      );
+    }
+
+    _log('Lanzando sincronización de notificaciones.');
+    try {
+      await _notificationSyncController.sync();
+      _log('Sincronización de notificaciones completada.');
+    } catch (error, stackTrace) {
+      _log(
+        'Fallo sincronizando notificaciones.',
+        error: error,
+        stackTrace: stackTrace,
+        level: 1000,
+      );
+    }
+  }
+
+  void _log(
+    String message, {
+    Object? error,
+    StackTrace? stackTrace,
+    int level = 0,
+  }) {
+    developer.log(
+      message,
+      name: 'AuthController',
+      error: error,
+      stackTrace: stackTrace,
+      level: level,
+    );
+
+    if (!kDebugMode) {
+      return;
+    }
+
+    final buffer = StringBuffer('[AuthController] ')..write(message);
+
+    if (error != null) {
+      buffer.write(' Error: $error');
+    }
+
+    debugPrint(buffer.toString());
+
+    if (error != null && stackTrace != null) {
+      debugPrint(stackTrace.toString());
     }
   }
 
@@ -254,7 +344,17 @@ final authControllerProvider =
     StateNotifierProvider<AuthController, AuthState>((ref) {
   final service = ref.watch(authServiceProvider);
   final userSyncController = ref.watch(userSyncControllerProvider.notifier);
-  return AuthController(service, userSyncController);
+  final bookSyncController = ref.watch(bookSyncControllerProvider.notifier);
+  final groupSyncController = ref.watch(groupSyncControllerProvider.notifier);
+  final notificationSyncController =
+      ref.watch(notificationSyncControllerProvider.notifier);
+  return AuthController(
+    service,
+    userSyncController,
+    bookSyncController,
+    groupSyncController,
+    notificationSyncController,
+  );
 });
 
 final inactivityManagerProvider = Provider<InactivityManager>((ref) {

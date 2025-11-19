@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -77,23 +79,43 @@ class SyncController extends StateNotifier<SyncState> {
   final FetchRemoteChanges? _fetchRemoteChanges;
 
   void markPendingChanges() {
+    if (!mounted) {
+      return;
+    }
     if (!state.hasPendingChanges) {
-      state = state.copyWith(hasPendingChanges: true);
+      _updateStateSafely(() {
+        state = state.copyWith(hasPendingChanges: true);
+      });
     }
   }
 
   void clearError() {
+    if (!mounted) {
+      return;
+    }
     if (state.lastError != null) {
-      state = state.copyWith(lastError: () => null);
+      _updateStateSafely(() {
+        state = state.copyWith(lastError: () => null);
+      });
     }
   }
 
   Future<void> sync() async {
+    if (!mounted) {
+      return;
+    }
     if (state.isSyncing) {
       return;
     }
 
-    state = state.copyWith(isSyncing: true, lastError: () => null);
+    _log('starting sync…');
+
+    if (!mounted) {
+      return;
+    }
+    _updateStateSafely(() {
+      state = state.copyWith(isSyncing: true, lastError: () => null);
+    });
 
     try {
       final user = await _getActiveUser();
@@ -107,24 +129,62 @@ class SyncController extends StateNotifier<SyncState> {
       }
 
       if (_fetchRemoteChanges != null) {
+        _log('fetching remote changes…');
         await _fetchRemoteChanges();
       }
 
       if (state.hasPendingChanges) {
+        _log('pushing local changes…');
         await _pushLocalChanges();
+      } else {
+        _log('no pending changes to push.');
       }
 
-      state = state.copyWith(
-        isSyncing: false,
-        hasPendingChanges: false,
-        lastSyncedAt: DateTime.now(),
-      );
+      _updateStateSafely(() {
+        state = state.copyWith(
+          isSyncing: false,
+          hasPendingChanges: false,
+          lastSyncedAt: DateTime.now(),
+        );
+      });
+      _log('sync finished successfully.');
     } catch (error) {
       final message = error is SyncException ? error.message : error.toString();
-      state = state.copyWith(
-        isSyncing: false,
-        lastError: () => message,
-      );
+      _updateStateSafely(() {
+        state = state.copyWith(
+          isSyncing: false,
+          lastError: () => message,
+        );
+      });
+      _log('sync failed — $message', error: error);
+    }
+  }
+
+  void _updateStateSafely(VoidCallback action) {
+    if (!mounted) {
+      return;
+    }
+    try {
+      action();
+    } on StateError catch (error, stackTrace) {
+      if (mounted) {
+        rethrow;
+      }
+      if (kDebugMode) {
+        debugPrint('SyncController state update skipped after dispose — $error');
+        debugPrint(stackTrace.toString());
+      }
+    }
+  }
+
+  void _log(String message, {Object? error}) {
+    const name = 'SyncController';
+    developer.log(message, name: name, error: error);
+    if (kDebugMode) {
+      debugPrint('[$name] $message');
+      if (error != null) {
+        debugPrint('[$name] Error: $error');
+      }
     }
   }
 }

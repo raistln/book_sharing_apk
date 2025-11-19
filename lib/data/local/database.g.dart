@@ -5926,6 +5926,822 @@ class LoansCompanion extends UpdateCompanion<Loan> {
   }
 }
 
+class $InAppNotificationsTable extends InAppNotifications
+    with TableInfo<$InAppNotificationsTable, InAppNotification> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InAppNotificationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+      'uuid', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+      'type', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 64),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _loanIdMeta = const VerificationMeta('loanId');
+  @override
+  late final GeneratedColumn<int> loanId = GeneratedColumn<int>(
+      'loan_id', aliasedName, true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES loans (id)'));
+  static const VerificationMeta _loanUuidMeta =
+      const VerificationMeta('loanUuid');
+  @override
+  late final GeneratedColumn<String> loanUuid = GeneratedColumn<String>(
+      'loan_uuid', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _sharedBookIdMeta =
+      const VerificationMeta('sharedBookId');
+  @override
+  late final GeneratedColumn<int> sharedBookId = GeneratedColumn<int>(
+      'shared_book_id', aliasedName, true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES shared_books (id)'));
+  static const VerificationMeta _sharedBookUuidMeta =
+      const VerificationMeta('sharedBookUuid');
+  @override
+  late final GeneratedColumn<String> sharedBookUuid = GeneratedColumn<String>(
+      'shared_book_uuid', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _actorUserIdMeta =
+      const VerificationMeta('actorUserId');
+  @override
+  late final GeneratedColumn<int> actorUserId = GeneratedColumn<int>(
+      'actor_user_id', aliasedName, true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES local_users (id)'));
+  static const VerificationMeta _targetUserIdMeta =
+      const VerificationMeta('targetUserId');
+  @override
+  late final GeneratedColumn<int> targetUserId = GeneratedColumn<int>(
+      'target_user_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES local_users (id)'));
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _messageMeta =
+      const VerificationMeta('message');
+  @override
+  late final GeneratedColumn<String> message = GeneratedColumn<String>(
+      'message', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 32),
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('unread'));
+  static const VerificationMeta _isDirtyMeta =
+      const VerificationMeta('isDirty');
+  @override
+  late final GeneratedColumn<bool> isDirty = GeneratedColumn<bool>(
+      'is_dirty', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_dirty" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _isDeletedMeta =
+      const VerificationMeta('isDeleted');
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+      'is_deleted', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_deleted" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _syncedAtMeta =
+      const VerificationMeta('syncedAt');
+  @override
+  late final GeneratedColumn<DateTime> syncedAt = GeneratedColumn<DateTime>(
+      'synced_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        uuid,
+        type,
+        loanId,
+        loanUuid,
+        sharedBookId,
+        sharedBookUuid,
+        actorUserId,
+        targetUserId,
+        title,
+        message,
+        status,
+        isDirty,
+        isDeleted,
+        syncedAt,
+        createdAt,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'in_app_notifications';
+  @override
+  VerificationContext validateIntegrity(Insertable<InAppNotification> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+          _uuidMeta, uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta));
+    } else if (isInserting) {
+      context.missing(_uuidMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+          _typeMeta, type.isAcceptableOrUnknown(data['type']!, _typeMeta));
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('loan_id')) {
+      context.handle(_loanIdMeta,
+          loanId.isAcceptableOrUnknown(data['loan_id']!, _loanIdMeta));
+    }
+    if (data.containsKey('loan_uuid')) {
+      context.handle(_loanUuidMeta,
+          loanUuid.isAcceptableOrUnknown(data['loan_uuid']!, _loanUuidMeta));
+    }
+    if (data.containsKey('shared_book_id')) {
+      context.handle(
+          _sharedBookIdMeta,
+          sharedBookId.isAcceptableOrUnknown(
+              data['shared_book_id']!, _sharedBookIdMeta));
+    }
+    if (data.containsKey('shared_book_uuid')) {
+      context.handle(
+          _sharedBookUuidMeta,
+          sharedBookUuid.isAcceptableOrUnknown(
+              data['shared_book_uuid']!, _sharedBookUuidMeta));
+    }
+    if (data.containsKey('actor_user_id')) {
+      context.handle(
+          _actorUserIdMeta,
+          actorUserId.isAcceptableOrUnknown(
+              data['actor_user_id']!, _actorUserIdMeta));
+    }
+    if (data.containsKey('target_user_id')) {
+      context.handle(
+          _targetUserIdMeta,
+          targetUserId.isAcceptableOrUnknown(
+              data['target_user_id']!, _targetUserIdMeta));
+    } else if (isInserting) {
+      context.missing(_targetUserIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    }
+    if (data.containsKey('message')) {
+      context.handle(_messageMeta,
+          message.isAcceptableOrUnknown(data['message']!, _messageMeta));
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    }
+    if (data.containsKey('is_dirty')) {
+      context.handle(_isDirtyMeta,
+          isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(_isDeletedMeta,
+          isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta));
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(_syncedAtMeta,
+          syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  InAppNotification map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InAppNotification(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      uuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
+      type: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
+      loanId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}loan_id']),
+      loanUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}loan_uuid']),
+      sharedBookId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}shared_book_id']),
+      sharedBookUuid: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}shared_book_uuid']),
+      actorUserId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}actor_user_id']),
+      targetUserId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}target_user_id'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title']),
+      message: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}message']),
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      isDirty: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
+      isDeleted: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_deleted'])!,
+      syncedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}synced_at']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $InAppNotificationsTable createAlias(String alias) {
+    return $InAppNotificationsTable(attachedDatabase, alias);
+  }
+}
+
+class InAppNotification extends DataClass
+    implements Insertable<InAppNotification> {
+  final int id;
+  final String uuid;
+  final String type;
+  final int? loanId;
+  final String? loanUuid;
+  final int? sharedBookId;
+  final String? sharedBookUuid;
+  final int? actorUserId;
+  final int targetUserId;
+  final String? title;
+  final String? message;
+  final String status;
+  final bool isDirty;
+  final bool isDeleted;
+  final DateTime? syncedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const InAppNotification(
+      {required this.id,
+      required this.uuid,
+      required this.type,
+      this.loanId,
+      this.loanUuid,
+      this.sharedBookId,
+      this.sharedBookUuid,
+      this.actorUserId,
+      required this.targetUserId,
+      this.title,
+      this.message,
+      required this.status,
+      required this.isDirty,
+      required this.isDeleted,
+      this.syncedAt,
+      required this.createdAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    map['type'] = Variable<String>(type);
+    if (!nullToAbsent || loanId != null) {
+      map['loan_id'] = Variable<int>(loanId);
+    }
+    if (!nullToAbsent || loanUuid != null) {
+      map['loan_uuid'] = Variable<String>(loanUuid);
+    }
+    if (!nullToAbsent || sharedBookId != null) {
+      map['shared_book_id'] = Variable<int>(sharedBookId);
+    }
+    if (!nullToAbsent || sharedBookUuid != null) {
+      map['shared_book_uuid'] = Variable<String>(sharedBookUuid);
+    }
+    if (!nullToAbsent || actorUserId != null) {
+      map['actor_user_id'] = Variable<int>(actorUserId);
+    }
+    map['target_user_id'] = Variable<int>(targetUserId);
+    if (!nullToAbsent || title != null) {
+      map['title'] = Variable<String>(title);
+    }
+    if (!nullToAbsent || message != null) {
+      map['message'] = Variable<String>(message);
+    }
+    map['status'] = Variable<String>(status);
+    map['is_dirty'] = Variable<bool>(isDirty);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<DateTime>(syncedAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  InAppNotificationsCompanion toCompanion(bool nullToAbsent) {
+    return InAppNotificationsCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      type: Value(type),
+      loanId:
+          loanId == null && nullToAbsent ? const Value.absent() : Value(loanId),
+      loanUuid: loanUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loanUuid),
+      sharedBookId: sharedBookId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sharedBookId),
+      sharedBookUuid: sharedBookUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sharedBookUuid),
+      actorUserId: actorUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(actorUserId),
+      targetUserId: Value(targetUserId),
+      title:
+          title == null && nullToAbsent ? const Value.absent() : Value(title),
+      message: message == null && nullToAbsent
+          ? const Value.absent()
+          : Value(message),
+      status: Value(status),
+      isDirty: Value(isDirty),
+      isDeleted: Value(isDeleted),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory InAppNotification.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InAppNotification(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      type: serializer.fromJson<String>(json['type']),
+      loanId: serializer.fromJson<int?>(json['loanId']),
+      loanUuid: serializer.fromJson<String?>(json['loanUuid']),
+      sharedBookId: serializer.fromJson<int?>(json['sharedBookId']),
+      sharedBookUuid: serializer.fromJson<String?>(json['sharedBookUuid']),
+      actorUserId: serializer.fromJson<int?>(json['actorUserId']),
+      targetUserId: serializer.fromJson<int>(json['targetUserId']),
+      title: serializer.fromJson<String?>(json['title']),
+      message: serializer.fromJson<String?>(json['message']),
+      status: serializer.fromJson<String>(json['status']),
+      isDirty: serializer.fromJson<bool>(json['isDirty']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'type': serializer.toJson<String>(type),
+      'loanId': serializer.toJson<int?>(loanId),
+      'loanUuid': serializer.toJson<String?>(loanUuid),
+      'sharedBookId': serializer.toJson<int?>(sharedBookId),
+      'sharedBookUuid': serializer.toJson<String?>(sharedBookUuid),
+      'actorUserId': serializer.toJson<int?>(actorUserId),
+      'targetUserId': serializer.toJson<int>(targetUserId),
+      'title': serializer.toJson<String?>(title),
+      'message': serializer.toJson<String?>(message),
+      'status': serializer.toJson<String>(status),
+      'isDirty': serializer.toJson<bool>(isDirty),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'syncedAt': serializer.toJson<DateTime?>(syncedAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  InAppNotification copyWith(
+          {int? id,
+          String? uuid,
+          String? type,
+          Value<int?> loanId = const Value.absent(),
+          Value<String?> loanUuid = const Value.absent(),
+          Value<int?> sharedBookId = const Value.absent(),
+          Value<String?> sharedBookUuid = const Value.absent(),
+          Value<int?> actorUserId = const Value.absent(),
+          int? targetUserId,
+          Value<String?> title = const Value.absent(),
+          Value<String?> message = const Value.absent(),
+          String? status,
+          bool? isDirty,
+          bool? isDeleted,
+          Value<DateTime?> syncedAt = const Value.absent(),
+          DateTime? createdAt,
+          DateTime? updatedAt}) =>
+      InAppNotification(
+        id: id ?? this.id,
+        uuid: uuid ?? this.uuid,
+        type: type ?? this.type,
+        loanId: loanId.present ? loanId.value : this.loanId,
+        loanUuid: loanUuid.present ? loanUuid.value : this.loanUuid,
+        sharedBookId:
+            sharedBookId.present ? sharedBookId.value : this.sharedBookId,
+        sharedBookUuid:
+            sharedBookUuid.present ? sharedBookUuid.value : this.sharedBookUuid,
+        actorUserId: actorUserId.present ? actorUserId.value : this.actorUserId,
+        targetUserId: targetUserId ?? this.targetUserId,
+        title: title.present ? title.value : this.title,
+        message: message.present ? message.value : this.message,
+        status: status ?? this.status,
+        isDirty: isDirty ?? this.isDirty,
+        isDeleted: isDeleted ?? this.isDeleted,
+        syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  InAppNotification copyWithCompanion(InAppNotificationsCompanion data) {
+    return InAppNotification(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      type: data.type.present ? data.type.value : this.type,
+      loanId: data.loanId.present ? data.loanId.value : this.loanId,
+      loanUuid: data.loanUuid.present ? data.loanUuid.value : this.loanUuid,
+      sharedBookId: data.sharedBookId.present
+          ? data.sharedBookId.value
+          : this.sharedBookId,
+      sharedBookUuid: data.sharedBookUuid.present
+          ? data.sharedBookUuid.value
+          : this.sharedBookUuid,
+      actorUserId:
+          data.actorUserId.present ? data.actorUserId.value : this.actorUserId,
+      targetUserId: data.targetUserId.present
+          ? data.targetUserId.value
+          : this.targetUserId,
+      title: data.title.present ? data.title.value : this.title,
+      message: data.message.present ? data.message.value : this.message,
+      status: data.status.present ? data.status.value : this.status,
+      isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InAppNotification(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('type: $type, ')
+          ..write('loanId: $loanId, ')
+          ..write('loanUuid: $loanUuid, ')
+          ..write('sharedBookId: $sharedBookId, ')
+          ..write('sharedBookUuid: $sharedBookUuid, ')
+          ..write('actorUserId: $actorUserId, ')
+          ..write('targetUserId: $targetUserId, ')
+          ..write('title: $title, ')
+          ..write('message: $message, ')
+          ..write('status: $status, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      uuid,
+      type,
+      loanId,
+      loanUuid,
+      sharedBookId,
+      sharedBookUuid,
+      actorUserId,
+      targetUserId,
+      title,
+      message,
+      status,
+      isDirty,
+      isDeleted,
+      syncedAt,
+      createdAt,
+      updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InAppNotification &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.type == this.type &&
+          other.loanId == this.loanId &&
+          other.loanUuid == this.loanUuid &&
+          other.sharedBookId == this.sharedBookId &&
+          other.sharedBookUuid == this.sharedBookUuid &&
+          other.actorUserId == this.actorUserId &&
+          other.targetUserId == this.targetUserId &&
+          other.title == this.title &&
+          other.message == this.message &&
+          other.status == this.status &&
+          other.isDirty == this.isDirty &&
+          other.isDeleted == this.isDeleted &&
+          other.syncedAt == this.syncedAt &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class InAppNotificationsCompanion extends UpdateCompanion<InAppNotification> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<String> type;
+  final Value<int?> loanId;
+  final Value<String?> loanUuid;
+  final Value<int?> sharedBookId;
+  final Value<String?> sharedBookUuid;
+  final Value<int?> actorUserId;
+  final Value<int> targetUserId;
+  final Value<String?> title;
+  final Value<String?> message;
+  final Value<String> status;
+  final Value<bool> isDirty;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> syncedAt;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const InAppNotificationsCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.type = const Value.absent(),
+    this.loanId = const Value.absent(),
+    this.loanUuid = const Value.absent(),
+    this.sharedBookId = const Value.absent(),
+    this.sharedBookUuid = const Value.absent(),
+    this.actorUserId = const Value.absent(),
+    this.targetUserId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.message = const Value.absent(),
+    this.status = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  InAppNotificationsCompanion.insert({
+    this.id = const Value.absent(),
+    required String uuid,
+    required String type,
+    this.loanId = const Value.absent(),
+    this.loanUuid = const Value.absent(),
+    this.sharedBookId = const Value.absent(),
+    this.sharedBookUuid = const Value.absent(),
+    this.actorUserId = const Value.absent(),
+    required int targetUserId,
+    this.title = const Value.absent(),
+    this.message = const Value.absent(),
+    this.status = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  })  : uuid = Value(uuid),
+        type = Value(type),
+        targetUserId = Value(targetUserId);
+  static Insertable<InAppNotification> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<String>? type,
+    Expression<int>? loanId,
+    Expression<String>? loanUuid,
+    Expression<int>? sharedBookId,
+    Expression<String>? sharedBookUuid,
+    Expression<int>? actorUserId,
+    Expression<int>? targetUserId,
+    Expression<String>? title,
+    Expression<String>? message,
+    Expression<String>? status,
+    Expression<bool>? isDirty,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? syncedAt,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (type != null) 'type': type,
+      if (loanId != null) 'loan_id': loanId,
+      if (loanUuid != null) 'loan_uuid': loanUuid,
+      if (sharedBookId != null) 'shared_book_id': sharedBookId,
+      if (sharedBookUuid != null) 'shared_book_uuid': sharedBookUuid,
+      if (actorUserId != null) 'actor_user_id': actorUserId,
+      if (targetUserId != null) 'target_user_id': targetUserId,
+      if (title != null) 'title': title,
+      if (message != null) 'message': message,
+      if (status != null) 'status': status,
+      if (isDirty != null) 'is_dirty': isDirty,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  InAppNotificationsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? uuid,
+      Value<String>? type,
+      Value<int?>? loanId,
+      Value<String?>? loanUuid,
+      Value<int?>? sharedBookId,
+      Value<String?>? sharedBookUuid,
+      Value<int?>? actorUserId,
+      Value<int>? targetUserId,
+      Value<String?>? title,
+      Value<String?>? message,
+      Value<String>? status,
+      Value<bool>? isDirty,
+      Value<bool>? isDeleted,
+      Value<DateTime?>? syncedAt,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt}) {
+    return InAppNotificationsCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      type: type ?? this.type,
+      loanId: loanId ?? this.loanId,
+      loanUuid: loanUuid ?? this.loanUuid,
+      sharedBookId: sharedBookId ?? this.sharedBookId,
+      sharedBookUuid: sharedBookUuid ?? this.sharedBookUuid,
+      actorUserId: actorUserId ?? this.actorUserId,
+      targetUserId: targetUserId ?? this.targetUserId,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      status: status ?? this.status,
+      isDirty: isDirty ?? this.isDirty,
+      isDeleted: isDeleted ?? this.isDeleted,
+      syncedAt: syncedAt ?? this.syncedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (loanId.present) {
+      map['loan_id'] = Variable<int>(loanId.value);
+    }
+    if (loanUuid.present) {
+      map['loan_uuid'] = Variable<String>(loanUuid.value);
+    }
+    if (sharedBookId.present) {
+      map['shared_book_id'] = Variable<int>(sharedBookId.value);
+    }
+    if (sharedBookUuid.present) {
+      map['shared_book_uuid'] = Variable<String>(sharedBookUuid.value);
+    }
+    if (actorUserId.present) {
+      map['actor_user_id'] = Variable<int>(actorUserId.value);
+    }
+    if (targetUserId.present) {
+      map['target_user_id'] = Variable<int>(targetUserId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (message.present) {
+      map['message'] = Variable<String>(message.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (isDirty.present) {
+      map['is_dirty'] = Variable<bool>(isDirty.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<DateTime>(syncedAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InAppNotificationsCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('type: $type, ')
+          ..write('loanId: $loanId, ')
+          ..write('loanUuid: $loanUuid, ')
+          ..write('sharedBookId: $sharedBookId, ')
+          ..write('sharedBookUuid: $sharedBookUuid, ')
+          ..write('actorUserId: $actorUserId, ')
+          ..write('targetUserId: $targetUserId, ')
+          ..write('title: $title, ')
+          ..write('message: $message, ')
+          ..write('status: $status, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5938,6 +6754,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $GroupInvitationsTable groupInvitations =
       $GroupInvitationsTable(this);
   late final $LoansTable loans = $LoansTable(this);
+  late final $InAppNotificationsTable inAppNotifications =
+      $InAppNotificationsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5950,7 +6768,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         groupMembers,
         sharedBooks,
         groupInvitations,
-        loans
+        loans,
+        inAppNotifications
       ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
@@ -9189,6 +10008,23 @@ final class $$SharedBooksTableReferences
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
+
+  static MultiTypedResultKey<$InAppNotificationsTable, List<InAppNotification>>
+      _inAppNotificationsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.inAppNotifications,
+              aliasName: $_aliasNameGenerator(
+                  db.sharedBooks.id, db.inAppNotifications.sharedBookId));
+
+  $$InAppNotificationsTableProcessedTableManager get inAppNotificationsRefs {
+    final manager = $$InAppNotificationsTableTableManager(
+            $_db, $_db.inAppNotifications)
+        .filter((f) => f.sharedBookId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_inAppNotificationsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
 }
 
 class $$SharedBooksTableFilterComposer
@@ -9312,6 +10148,27 @@ class $$SharedBooksTableFilterComposer
             $$LoansTableFilterComposer(
               $db: $db,
               $table: $db.loans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> inAppNotificationsRefs(
+      Expression<bool> Function($$InAppNotificationsTableFilterComposer f) f) {
+    final $$InAppNotificationsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.inAppNotifications,
+        getReferencedColumn: (t) => t.sharedBookId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InAppNotificationsTableFilterComposer(
+              $db: $db,
+              $table: $db.inAppNotifications,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -9559,6 +10416,28 @@ class $$SharedBooksTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> inAppNotificationsRefs<T extends Object>(
+      Expression<T> Function($$InAppNotificationsTableAnnotationComposer a) f) {
+    final $$InAppNotificationsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.inAppNotifications,
+            getReferencedColumn: (t) => t.sharedBookId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$InAppNotificationsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.inAppNotifications,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
 }
 
 class $$SharedBooksTableTableManager extends RootTableManager<
@@ -9573,7 +10452,11 @@ class $$SharedBooksTableTableManager extends RootTableManager<
     (SharedBook, $$SharedBooksTableReferences),
     SharedBook,
     PrefetchHooks Function(
-        {bool groupId, bool bookId, bool ownerUserId, bool loansRefs})> {
+        {bool groupId,
+        bool bookId,
+        bool ownerUserId,
+        bool loansRefs,
+        bool inAppNotificationsRefs})> {
   $$SharedBooksTableTableManager(_$AppDatabase db, $SharedBooksTable table)
       : super(TableManagerState(
           db: db,
@@ -9666,10 +10549,14 @@ class $$SharedBooksTableTableManager extends RootTableManager<
               {groupId = false,
               bookId = false,
               ownerUserId = false,
-              loansRefs = false}) {
+              loansRefs = false,
+              inAppNotificationsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [if (loansRefs) db.loans],
+              explicitlyWatchedTables: [
+                if (loansRefs) db.loans,
+                if (inAppNotificationsRefs) db.inAppNotifications
+              ],
               addJoins: <
                   T extends TableManagerState<
                       dynamic,
@@ -9730,6 +10617,19 @@ class $$SharedBooksTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.sharedBookId == item.id),
+                        typedResults: items),
+                  if (inAppNotificationsRefs)
+                    await $_getPrefetchedData<SharedBook, $SharedBooksTable,
+                            InAppNotification>(
+                        currentTable: table,
+                        referencedTable: $$SharedBooksTableReferences
+                            ._inAppNotificationsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$SharedBooksTableReferences(db, table, p0)
+                                .inAppNotificationsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.sharedBookId == item.id),
                         typedResults: items)
                 ];
               },
@@ -9750,7 +10650,11 @@ typedef $$SharedBooksTableProcessedTableManager = ProcessedTableManager<
     (SharedBook, $$SharedBooksTableReferences),
     SharedBook,
     PrefetchHooks Function(
-        {bool groupId, bool bookId, bool ownerUserId, bool loansRefs})>;
+        {bool groupId,
+        bool bookId,
+        bool ownerUserId,
+        bool loansRefs,
+        bool inAppNotificationsRefs})>;
 typedef $$GroupInvitationsTableCreateCompanionBuilder
     = GroupInvitationsCompanion Function({
   Value<int> id,
@@ -10483,6 +11387,23 @@ final class $$LoansTableReferences
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: [item]));
   }
+
+  static MultiTypedResultKey<$InAppNotificationsTable, List<InAppNotification>>
+      _inAppNotificationsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.inAppNotifications,
+              aliasName: $_aliasNameGenerator(
+                  db.loans.id, db.inAppNotifications.loanId));
+
+  $$InAppNotificationsTableProcessedTableManager get inAppNotificationsRefs {
+    final manager =
+        $$InAppNotificationsTableTableManager($_db, $_db.inAppNotifications)
+            .filter((f) => f.loanId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_inAppNotificationsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
 }
 
 class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
@@ -10600,6 +11521,27 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
                   $removeJoinBuilderFromRootComposer,
             ));
     return composer;
+  }
+
+  Expression<bool> inAppNotificationsRefs(
+      Expression<bool> Function($$InAppNotificationsTableFilterComposer f) f) {
+    final $$InAppNotificationsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.inAppNotifications,
+        getReferencedColumn: (t) => t.loanId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InAppNotificationsTableFilterComposer(
+              $db: $db,
+              $table: $db.inAppNotifications,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
   }
 }
 
@@ -10839,6 +11781,28 @@ class $$LoansTableAnnotationComposer
             ));
     return composer;
   }
+
+  Expression<T> inAppNotificationsRefs<T extends Object>(
+      Expression<T> Function($$InAppNotificationsTableAnnotationComposer a) f) {
+    final $$InAppNotificationsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.inAppNotifications,
+            getReferencedColumn: (t) => t.loanId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$InAppNotificationsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.inAppNotifications,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
 }
 
 class $$LoansTableTableManager extends RootTableManager<
@@ -10853,7 +11817,10 @@ class $$LoansTableTableManager extends RootTableManager<
     (Loan, $$LoansTableReferences),
     Loan,
     PrefetchHooks Function(
-        {bool sharedBookId, bool fromUserId, bool toUserId})> {
+        {bool sharedBookId,
+        bool fromUserId,
+        bool toUserId,
+        bool inAppNotificationsRefs})> {
   $$LoansTableTableManager(_$AppDatabase db, $LoansTable table)
       : super(TableManagerState(
           db: db,
@@ -10953,10 +11920,15 @@ class $$LoansTableTableManager extends RootTableManager<
                   (e.readTable(table), $$LoansTableReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: (
-              {sharedBookId = false, fromUserId = false, toUserId = false}) {
+              {sharedBookId = false,
+              fromUserId = false,
+              toUserId = false,
+              inAppNotificationsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [],
+              explicitlyWatchedTables: [
+                if (inAppNotificationsRefs) db.inAppNotifications
+              ],
               addJoins: <
                   T extends TableManagerState<
                       dynamic,
@@ -11003,7 +11975,21 @@ class $$LoansTableTableManager extends RootTableManager<
                 return state;
               },
               getPrefetchedDataCallback: (items) async {
-                return [];
+                return [
+                  if (inAppNotificationsRefs)
+                    await $_getPrefetchedData<Loan, $LoansTable,
+                            InAppNotification>(
+                        currentTable: table,
+                        referencedTable: $$LoansTableReferences
+                            ._inAppNotificationsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LoansTableReferences(db, table, p0)
+                                .inAppNotificationsRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.loanId == item.id),
+                        typedResults: items)
+                ];
               },
             );
           },
@@ -11022,7 +12008,703 @@ typedef $$LoansTableProcessedTableManager = ProcessedTableManager<
     (Loan, $$LoansTableReferences),
     Loan,
     PrefetchHooks Function(
-        {bool sharedBookId, bool fromUserId, bool toUserId})>;
+        {bool sharedBookId,
+        bool fromUserId,
+        bool toUserId,
+        bool inAppNotificationsRefs})>;
+typedef $$InAppNotificationsTableCreateCompanionBuilder
+    = InAppNotificationsCompanion Function({
+  Value<int> id,
+  required String uuid,
+  required String type,
+  Value<int?> loanId,
+  Value<String?> loanUuid,
+  Value<int?> sharedBookId,
+  Value<String?> sharedBookUuid,
+  Value<int?> actorUserId,
+  required int targetUserId,
+  Value<String?> title,
+  Value<String?> message,
+  Value<String> status,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+typedef $$InAppNotificationsTableUpdateCompanionBuilder
+    = InAppNotificationsCompanion Function({
+  Value<int> id,
+  Value<String> uuid,
+  Value<String> type,
+  Value<int?> loanId,
+  Value<String?> loanUuid,
+  Value<int?> sharedBookId,
+  Value<String?> sharedBookUuid,
+  Value<int?> actorUserId,
+  Value<int> targetUserId,
+  Value<String?> title,
+  Value<String?> message,
+  Value<String> status,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+
+final class $$InAppNotificationsTableReferences extends BaseReferences<
+    _$AppDatabase, $InAppNotificationsTable, InAppNotification> {
+  $$InAppNotificationsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $LoansTable _loanIdTable(_$AppDatabase db) => db.loans.createAlias(
+      $_aliasNameGenerator(db.inAppNotifications.loanId, db.loans.id));
+
+  $$LoansTableProcessedTableManager? get loanId {
+    final $_column = $_itemColumn<int>('loan_id');
+    if ($_column == null) return null;
+    final manager = $$LoansTableTableManager($_db, $_db.loans)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_loanIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $SharedBooksTable _sharedBookIdTable(_$AppDatabase db) =>
+      db.sharedBooks.createAlias($_aliasNameGenerator(
+          db.inAppNotifications.sharedBookId, db.sharedBooks.id));
+
+  $$SharedBooksTableProcessedTableManager? get sharedBookId {
+    final $_column = $_itemColumn<int>('shared_book_id');
+    if ($_column == null) return null;
+    final manager = $$SharedBooksTableTableManager($_db, $_db.sharedBooks)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sharedBookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $LocalUsersTable _actorUserIdTable(_$AppDatabase db) =>
+      db.localUsers.createAlias($_aliasNameGenerator(
+          db.inAppNotifications.actorUserId, db.localUsers.id));
+
+  $$LocalUsersTableProcessedTableManager? get actorUserId {
+    final $_column = $_itemColumn<int>('actor_user_id');
+    if ($_column == null) return null;
+    final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_actorUserIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $LocalUsersTable _targetUserIdTable(_$AppDatabase db) =>
+      db.localUsers.createAlias($_aliasNameGenerator(
+          db.inAppNotifications.targetUserId, db.localUsers.id));
+
+  $$LocalUsersTableProcessedTableManager get targetUserId {
+    final $_column = $_itemColumn<int>('target_user_id')!;
+
+    final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_targetUserIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$InAppNotificationsTableFilterComposer
+    extends Composer<_$AppDatabase, $InAppNotificationsTable> {
+  $$InAppNotificationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get loanUuid => $composableBuilder(
+      column: $table.loanUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sharedBookUuid => $composableBuilder(
+      column: $table.sharedBookUuid,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get message => $composableBuilder(
+      column: $table.message, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  $$LoansTableFilterComposer get loanId {
+    final $$LoansTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.loanId,
+        referencedTable: $db.loans,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LoansTableFilterComposer(
+              $db: $db,
+              $table: $db.loans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$SharedBooksTableFilterComposer get sharedBookId {
+    final $$SharedBooksTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.sharedBookId,
+        referencedTable: $db.sharedBooks,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SharedBooksTableFilterComposer(
+              $db: $db,
+              $table: $db.sharedBooks,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableFilterComposer get actorUserId {
+    final $$LocalUsersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.actorUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableFilterComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableFilterComposer get targetUserId {
+    final $$LocalUsersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.targetUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableFilterComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$InAppNotificationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $InAppNotificationsTable> {
+  $$InAppNotificationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get loanUuid => $composableBuilder(
+      column: $table.loanUuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sharedBookUuid => $composableBuilder(
+      column: $table.sharedBookUuid,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get message => $composableBuilder(
+      column: $table.message, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  $$LoansTableOrderingComposer get loanId {
+    final $$LoansTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.loanId,
+        referencedTable: $db.loans,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LoansTableOrderingComposer(
+              $db: $db,
+              $table: $db.loans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$SharedBooksTableOrderingComposer get sharedBookId {
+    final $$SharedBooksTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.sharedBookId,
+        referencedTable: $db.sharedBooks,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SharedBooksTableOrderingComposer(
+              $db: $db,
+              $table: $db.sharedBooks,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableOrderingComposer get actorUserId {
+    final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.actorUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableOrderingComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableOrderingComposer get targetUserId {
+    final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.targetUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableOrderingComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$InAppNotificationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $InAppNotificationsTable> {
+  $$InAppNotificationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get loanUuid =>
+      $composableBuilder(column: $table.loanUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get sharedBookUuid => $composableBuilder(
+      column: $table.sharedBookUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get message =>
+      $composableBuilder(column: $table.message, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDirty =>
+      $composableBuilder(column: $table.isDirty, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$LoansTableAnnotationComposer get loanId {
+    final $$LoansTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.loanId,
+        referencedTable: $db.loans,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LoansTableAnnotationComposer(
+              $db: $db,
+              $table: $db.loans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$SharedBooksTableAnnotationComposer get sharedBookId {
+    final $$SharedBooksTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.sharedBookId,
+        referencedTable: $db.sharedBooks,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SharedBooksTableAnnotationComposer(
+              $db: $db,
+              $table: $db.sharedBooks,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableAnnotationComposer get actorUserId {
+    final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.actorUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableAnnotationComposer get targetUserId {
+    final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.targetUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$InAppNotificationsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $InAppNotificationsTable,
+    InAppNotification,
+    $$InAppNotificationsTableFilterComposer,
+    $$InAppNotificationsTableOrderingComposer,
+    $$InAppNotificationsTableAnnotationComposer,
+    $$InAppNotificationsTableCreateCompanionBuilder,
+    $$InAppNotificationsTableUpdateCompanionBuilder,
+    (InAppNotification, $$InAppNotificationsTableReferences),
+    InAppNotification,
+    PrefetchHooks Function(
+        {bool loanId,
+        bool sharedBookId,
+        bool actorUserId,
+        bool targetUserId})> {
+  $$InAppNotificationsTableTableManager(
+      _$AppDatabase db, $InAppNotificationsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InAppNotificationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InAppNotificationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InAppNotificationsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> uuid = const Value.absent(),
+            Value<String> type = const Value.absent(),
+            Value<int?> loanId = const Value.absent(),
+            Value<String?> loanUuid = const Value.absent(),
+            Value<int?> sharedBookId = const Value.absent(),
+            Value<String?> sharedBookUuid = const Value.absent(),
+            Value<int?> actorUserId = const Value.absent(),
+            Value<int> targetUserId = const Value.absent(),
+            Value<String?> title = const Value.absent(),
+            Value<String?> message = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              InAppNotificationsCompanion(
+            id: id,
+            uuid: uuid,
+            type: type,
+            loanId: loanId,
+            loanUuid: loanUuid,
+            sharedBookId: sharedBookId,
+            sharedBookUuid: sharedBookUuid,
+            actorUserId: actorUserId,
+            targetUserId: targetUserId,
+            title: title,
+            message: message,
+            status: status,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String uuid,
+            required String type,
+            Value<int?> loanId = const Value.absent(),
+            Value<String?> loanUuid = const Value.absent(),
+            Value<int?> sharedBookId = const Value.absent(),
+            Value<String?> sharedBookUuid = const Value.absent(),
+            Value<int?> actorUserId = const Value.absent(),
+            required int targetUserId,
+            Value<String?> title = const Value.absent(),
+            Value<String?> message = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              InAppNotificationsCompanion.insert(
+            id: id,
+            uuid: uuid,
+            type: type,
+            loanId: loanId,
+            loanUuid: loanUuid,
+            sharedBookId: sharedBookId,
+            sharedBookUuid: sharedBookUuid,
+            actorUserId: actorUserId,
+            targetUserId: targetUserId,
+            title: title,
+            message: message,
+            status: status,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$InAppNotificationsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: (
+              {loanId = false,
+              sharedBookId = false,
+              actorUserId = false,
+              targetUserId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (loanId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.loanId,
+                    referencedTable:
+                        $$InAppNotificationsTableReferences._loanIdTable(db),
+                    referencedColumn:
+                        $$InAppNotificationsTableReferences._loanIdTable(db).id,
+                  ) as T;
+                }
+                if (sharedBookId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.sharedBookId,
+                    referencedTable: $$InAppNotificationsTableReferences
+                        ._sharedBookIdTable(db),
+                    referencedColumn: $$InAppNotificationsTableReferences
+                        ._sharedBookIdTable(db)
+                        .id,
+                  ) as T;
+                }
+                if (actorUserId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.actorUserId,
+                    referencedTable: $$InAppNotificationsTableReferences
+                        ._actorUserIdTable(db),
+                    referencedColumn: $$InAppNotificationsTableReferences
+                        ._actorUserIdTable(db)
+                        .id,
+                  ) as T;
+                }
+                if (targetUserId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.targetUserId,
+                    referencedTable: $$InAppNotificationsTableReferences
+                        ._targetUserIdTable(db),
+                    referencedColumn: $$InAppNotificationsTableReferences
+                        ._targetUserIdTable(db)
+                        .id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$InAppNotificationsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $InAppNotificationsTable,
+    InAppNotification,
+    $$InAppNotificationsTableFilterComposer,
+    $$InAppNotificationsTableOrderingComposer,
+    $$InAppNotificationsTableAnnotationComposer,
+    $$InAppNotificationsTableCreateCompanionBuilder,
+    $$InAppNotificationsTableUpdateCompanionBuilder,
+    (InAppNotification, $$InAppNotificationsTableReferences),
+    InAppNotification,
+    PrefetchHooks Function(
+        {bool loanId, bool sharedBookId, bool actorUserId, bool targetUserId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -11043,4 +12725,6 @@ class $AppDatabaseManager {
       $$GroupInvitationsTableTableManager(_db, _db.groupInvitations);
   $$LoansTableTableManager get loans =>
       $$LoansTableTableManager(_db, _db.loans);
+  $$InAppNotificationsTableTableManager get inAppNotifications =>
+      $$InAppNotificationsTableTableManager(_db, _db.inAppNotifications);
 }

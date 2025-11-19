@@ -314,8 +314,20 @@ class LoanRepository {
     return _groupDao.getAllLoanDetails();
   }
 
+  Future<Loan?> findLoanById(int id) {
+    return _groupDao.findLoanById(id);
+  }
+
   Future<SharedBook?> findSharedBookById(int id) {
     return _groupDao.findSharedBookById(id);
+  }
+
+  Future<Book?> findBookById(int id) {
+    return _bookDao.findById(id);
+  }
+
+  Future<LocalUser?> findUserById(int id) {
+    return _userDao.getById(id);
   }
 
   Future<Loan> _requireLoan(int id) async {

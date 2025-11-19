@@ -28,7 +28,10 @@ void main() {
     bookDao = BookDao(db);
     groupDao = GroupDao(db);
     userDao = UserDao(db);
-    bookRepository = BookRepository(bookDao);
+    bookRepository = BookRepository(
+      bookDao,
+      groupDao: groupDao,
+    );
     loanRepository = LoanRepository(
       groupDao: groupDao,
       bookDao: bookDao,

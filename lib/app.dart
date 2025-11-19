@@ -13,6 +13,7 @@ import 'ui/widgets/inactivity_listener.dart';
 import 'ui/screens/splash_screen.dart';
 import 'ui/screens/onboarding/onboarding_intro_screen.dart';
 import 'ui/screens/onboarding/onboarding_wizard_screen.dart';
+import 'ui/widgets/coach_mark_host.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
@@ -64,6 +65,9 @@ class BookSharingApp extends ConsumerWidget {
         Locale('en'),
         Locale('es'),
       ],
+      builder: (context, child) {
+        return CoachMarkOverlayHost(child: child ?? const SizedBox.shrink());
+      },
       home: const SplashScreen(),
       routes: {
         LockScreen.routeName: (context) => const LockScreen(),
@@ -72,7 +76,8 @@ class BookSharingApp extends ConsumerWidget {
             const ExistingAccountLoginScreen(),
         OnboardingIntroScreen.routeName: (context) => const OnboardingIntroScreen(),
         OnboardingWizardScreen.routeName: (context) => const OnboardingWizardScreen(),
-        HomeShell.routeName: (context) => const InactivityListener(child: HomeShell()),
+        HomeShell.routeName: (context) =>
+            const InactivityListener(child: HomeShell()),
       },
     );
   }

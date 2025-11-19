@@ -49,6 +49,10 @@ class GroupSyncController extends StateNotifier<SyncState> {
         throw const SyncException('Configura Supabase antes de sincronizar.');
       }
 
+      if (state.hasPendingChanges) {
+        await _groupRepository.pushLocalChanges(accessToken: accessToken);
+      }
+
       await _groupRepository.syncFromRemote(accessToken: accessToken);
 
       state = state.copyWith(

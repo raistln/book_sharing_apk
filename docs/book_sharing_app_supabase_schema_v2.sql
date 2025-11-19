@@ -462,3 +462,65 @@ CREATE POLICY notifications_insert_self
       WHERE u.id = user_id AND u.auth_user_id = auth.uid()
     )
   );
+  
+create table public.in_app_notifications (
+  id uuid primary key default extensions.uuid_generate_v4(),
+  type text not null check (char_length(type) <= 64),
+
+  -- Relación con préstamos compartidos
+  loan_id uuid references loans(id) on delete set null,
+  shared_book_id uuid references shared_books(id) on delete set null,
+
+  -- Actor/target
+  actor_user_id uuid references local_users(id) on delete set null,
+  target_user_id uuid not null references local_users(id) on delete cascade,
+
+  title text,
+  message text,
+
+  status text not null default 'unread' check (char_length(status) <= 32),
+
+  is_deleted boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index in_app_notifications_target_idx
+  on public.in_app_notifications (target_user_id, is_deleted, status);
+
+create index in_app_notifications_loan_idx
+  on public.in_app_notifications (loan_id);
+
+create index in_app_notifications_shared_book_idx
+  on public.in_app_notifications (shared_book_id);
+
+alter table public.in_app_notifications
+  enable row level security;
+
+-- 1) Asegurar la extensión pg_cron
+create extension if not exists pg_cron;
+
+-- 2) (Opcional) crear/actualizar la función de limpieza
+create or replace function public.purge_in_app_notifications()
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from public.in_app_notifications
+  where (
+      status in ('read', 'dismissed')
+      and updated_at < now() - interval '15 days'
+    )
+    or (
+      status not in ('read', 'dismissed')
+      and updated_at < now() - interval '30 days'
+    );
+$$;
+
+-- 3) Programar el job diario (03:00 AM)
+select cron.schedule(
+  'purge-in-app-notifications',
+  '0 3 * * *',
+  'select public.purge_in_app_notifications();'
+);

@@ -1,8 +1,10 @@
 import 'package:book_sharing_app/data/local/book_dao.dart';
 import 'package:book_sharing_app/data/local/database.dart';
 import 'package:book_sharing_app/data/local/group_dao.dart';
+import 'package:book_sharing_app/data/local/notification_dao.dart';
 import 'package:book_sharing_app/data/local/user_dao.dart';
 import 'package:book_sharing_app/data/repositories/loan_repository.dart';
+import 'package:book_sharing_app/data/repositories/notification_repository.dart';
 import 'package:book_sharing_app/data/repositories/supabase_group_repository.dart';
 import 'package:book_sharing_app/data/repositories/user_repository.dart';
 import 'package:book_sharing_app/services/group_sync_controller.dart';
@@ -21,6 +23,8 @@ void main() {
   late UserDao userDao;
   late BookDao bookDao;
   late LoanRepository loanRepository;
+  late NotificationDao notificationDao;
+  late NotificationRepository notificationRepository;
   late GroupSyncController syncController;
   late _FakeNotificationClient notificationClient;
   late LoanController controller;
@@ -107,11 +111,13 @@ void main() {
     groupDao = GroupDao(db);
     userDao = UserDao(db);
     bookDao = BookDao(db);
+    notificationDao = NotificationDao(db);
     loanRepository = LoanRepository(
       groupDao: groupDao,
       bookDao: bookDao,
       userDao: userDao,
     );
+    notificationRepository = NotificationRepository(notificationDao: notificationDao);
 
     final syncRepository = SupabaseGroupSyncRepository(
       groupDao: groupDao,
@@ -137,6 +143,7 @@ void main() {
       loanRepository: loanRepository,
       groupSyncController: syncController,
       notificationClient: notificationClient,
+      notificationRepository: notificationRepository,
     );
 
     await seedCoreData();

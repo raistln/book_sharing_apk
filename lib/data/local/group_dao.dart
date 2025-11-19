@@ -92,6 +92,25 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
         .get();
   }
 
+  Future<List<Group>> getGroupsForUser(int userId) {
+    final membershipsForUser = alias(groupMembers, 'memberships_for_user_fetch');
+    final query = select(groups).join([
+      leftOuterJoin(
+        membershipsForUser,
+        membershipsForUser.groupId.equalsExp(groups.id) &
+            membershipsForUser.memberUserId.equals(userId) &
+            (membershipsForUser.isDeleted.equals(false) |
+                membershipsForUser.isDeleted.isNull()),
+      ),
+    ])
+      ..where(
+        (groups.isDeleted.equals(false) | groups.isDeleted.isNull()) &
+            (groups.ownerUserId.equals(userId) | membershipsForUser.id.isNotNull()),
+      );
+
+    return query.map((row) => row.readTable(groups)).get();
+  }
+
   Future<Group?> findGroupById(int id) {
     return (select(groups)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
   }
@@ -223,6 +242,25 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
   }
 
   Future<int> insertSharedBook(SharedBooksCompanion entry) => into(sharedBooks).insert(entry);
+
+  Future<SharedBook?> findSharedBookByGroupAndBook({
+    required int groupId,
+    required int bookId,
+  }) {
+    return (select(sharedBooks)
+          ..where(
+            (tbl) => tbl.groupId.equals(groupId) & tbl.bookId.equals(bookId),
+          ))
+        .getSingleOrNull();
+  }
+
+  Future<List<SharedBook>> findSharedBooksByBookId(int bookId) {
+    return (select(sharedBooks)..where((tbl) => tbl.bookId.equals(bookId))).get();
+  }
+
+  Future<List<SharedBook>> getDirtySharedBooks() {
+    return (select(sharedBooks)..where((tbl) => tbl.isDirty.equals(true))).get();
+  }
 
   Future<List<SharedBookDetail>> fetchSharedBooksPage({
     required int groupId,

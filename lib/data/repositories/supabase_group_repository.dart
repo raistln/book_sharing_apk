@@ -1,9 +1,11 @@
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 
 import '../local/book_dao.dart';
 import '../local/database.dart';
 import '../local/group_dao.dart';
 import '../local/user_dao.dart';
+import '../../services/supabase_book_service.dart';
 import '../../services/supabase_group_service.dart';
 
 class SupabaseGroupSyncRepository {
@@ -12,23 +14,35 @@ class SupabaseGroupSyncRepository {
     required UserDao userDao,
     required BookDao bookDao,
     SupabaseGroupService? groupService,
+    SupabaseBookService? bookService,
   })  : _groupDao = groupDao,
         _bookDao = bookDao,
         _userDao = userDao,
-        _groupService = groupService ?? SupabaseGroupService();
+        _groupService = groupService ?? SupabaseGroupService(),
+        _bookService = bookService ?? SupabaseBookService();
 
   final GroupDao _groupDao;
   final BookDao _bookDao;
   final UserDao _userDao;
   final SupabaseGroupService _groupService;
+  final SupabaseBookService _bookService;
 
   Future<void> syncFromRemote({String? accessToken}) async {
     final remoteGroups = await _groupService.fetchGroups(accessToken: accessToken);
     final db = _groupDao.attachedDatabase;
     final now = DateTime.now();
 
+    if (kDebugMode) {
+      debugPrint('[GroupSync] Received ${remoteGroups.length} groups from Supabase');
+    }
+
     await db.transaction(() async {
       for (final remote in remoteGroups) {
+        if (kDebugMode) {
+          debugPrint(
+            '[GroupSync] Processing group ${remote.id} — members=${remote.members.length}, shared=${remote.sharedBooks.length}',
+          );
+        }
         final existingGroup = await _groupDao.findGroupByRemoteId(remote.id);
         final ownerUser = remote.ownerId != null
             ? await _userDao.findByRemoteId(remote.ownerId!)
@@ -77,8 +91,14 @@ class SupabaseGroupSyncRepository {
         }
 
         for (final remoteMember in remote.members) {
-          final localUser = await _userDao.findByRemoteId(remoteMember.userId);
+          final localUser = await _ensureLocalUser(
+            remoteId: remoteMember.userId,
+            createdAtFallback: remoteMember.createdAt,
+          );
           if (localUser == null) {
+            if (kDebugMode) {
+              debugPrint('[GroupSync] Skipping member ${remoteMember.id} — user ${remoteMember.userId} unavailable locally');
+            }
             continue;
           }
 
@@ -121,18 +141,100 @@ class SupabaseGroupSyncRepository {
           }
         }
 
-        for (final remoteShared in remote.sharedBooks) {
+        final sharedRecords = remote.sharedBooks.isNotEmpty
+            ? remote.sharedBooks
+            : await _groupService.fetchSharedBooksForGroup(
+                groupId: remote.id,
+                accessToken: accessToken,
+              );
+
+        if (remote.sharedBooks.isEmpty && kDebugMode) {
+          debugPrint(
+            '[GroupSync] Fallback fetched ${sharedRecords.length} shared books for group ${remote.id}',
+          );
+        }
+
+        for (final remoteShared in sharedRecords) {
           if (remoteShared.bookUuid == null) {
+            if (kDebugMode) {
+              debugPrint('[GroupSync] Shared book ${remoteShared.id} has null bookUuid, skipping');
+            }
             continue;
           }
 
-          final localBook = await _bookDao.findByUuid(remoteShared.bookUuid!);
+          var localBook = await _bookDao.findByUuid(remoteShared.bookUuid!);
           if (localBook == null) {
-            continue;
+            SupabaseBookRecord? remoteBook;
+            try {
+              remoteBook = await _bookService.fetchBookById(
+                id: remoteShared.bookUuid!,
+                accessToken: accessToken,
+              );
+            } catch (error) {
+              if (kDebugMode) {
+                debugPrint(
+                  '[GroupSync] Failed to fetch remote book ${remoteShared.bookUuid}: $error',
+                );
+              }
+              remoteBook = null;
+            }
+
+            if (remoteBook != null) {
+              final bookOwner = await _ensureLocalUser(
+                remoteId: remoteBook.ownerId,
+                createdAtFallback: remoteBook.createdAt,
+              );
+              final sharedOwnerUser = await _ensureLocalUser(
+                remoteId: remoteShared.ownerId,
+                createdAtFallback: remoteShared.createdAt,
+              );
+              final ownerUserIdValue = bookOwner?.id ?? sharedOwnerUser?.id;
+              final ownerRemoteIdValue = bookOwner?.remoteId ?? remoteShared.ownerId;
+
+              await _bookDao.insertBook(
+                BooksCompanion.insert(
+                  uuid: remoteBook.id,
+                  remoteId: Value(remoteBook.id),
+                  ownerUserId: ownerUserIdValue != null
+                      ? Value(ownerUserIdValue)
+                      : const Value<int?>.absent(),
+                  ownerRemoteId: Value(ownerRemoteIdValue),
+                  title: remoteBook.title,
+                  author: Value(remoteBook.author),
+                  isbn: Value(remoteBook.isbn),
+                  barcode: Value(remoteBook.barcode),
+                  coverPath: Value(remoteBook.coverUrl),
+                  status: Value(remoteBook.status),
+                  notes: Value(remoteBook.notes),
+                  isDeleted: Value(remoteBook.isDeleted),
+                  isDirty: const Value(false),
+                  createdAt: Value(remoteBook.createdAt),
+                  updatedAt: Value(remoteBook.updatedAt ?? remoteBook.createdAt),
+                  syncedAt: Value(now),
+                ),
+              );
+
+              localBook = await _bookDao.findByUuid(remoteShared.bookUuid!);
+            } else if (kDebugMode) {
+              debugPrint('[GroupSync] Remote book ${remoteShared.bookUuid} not found on Supabase');
+            }
+
+            if (localBook == null) {
+              if (kDebugMode) {
+                debugPrint('[GroupSync] Skipping shared book ${remoteShared.id} — missing local book ${remoteShared.bookUuid}');
+              }
+              continue;
+            }
           }
 
-          final sharedOwner = await _userDao.findByRemoteId(remoteShared.ownerId);
+          final sharedOwner = await _ensureLocalUser(
+            remoteId: remoteShared.ownerId,
+            createdAtFallback: remoteShared.createdAt,
+          );
           if (sharedOwner == null) {
+            if (kDebugMode) {
+              debugPrint('[GroupSync] Skipping shared book ${remoteShared.id} — owner ${remoteShared.ownerId} unavailable locally');
+            }
             continue;
           }
 
@@ -169,6 +271,9 @@ class SupabaseGroupSyncRepository {
             );
             localSharedId = existingShared.id;
             localSharedUuid = existingShared.uuid;
+            if (kDebugMode) {
+              debugPrint('[GroupSync] Updated shared book ${remoteShared.id} for group $localGroupUuid');
+            }
           } else {
             final insertShared = SharedBooksCompanion.insert(
               uuid: remoteShared.id,
@@ -189,6 +294,9 @@ class SupabaseGroupSyncRepository {
             );
             localSharedId = await _groupDao.insertSharedBook(insertShared);
             localSharedUuid = remoteShared.id;
+            if (kDebugMode) {
+              debugPrint('[GroupSync] Inserted shared book ${remoteShared.id} for group $localGroupUuid');
+            }
           }
 
           for (final remoteLoan in remoteShared.loans) {
@@ -196,6 +304,9 @@ class SupabaseGroupSyncRepository {
             final toUser = await _userDao.findByRemoteId(remoteLoan.toUser);
 
             if (fromUser == null || toUser == null) {
+              if (kDebugMode) {
+                debugPrint('[GroupSync] Skipping loan ${remoteLoan.id} — from=${remoteLoan.fromUser} to=${remoteLoan.toUser} missing locally');
+              }
               continue;
             }
 
@@ -265,5 +376,192 @@ class SupabaseGroupSyncRepository {
         }
       }
     });
+  }
+
+  Future<void> pushLocalChanges({String? accessToken}) async {
+    final dirtySharedBooks = await _groupDao.getDirtySharedBooks();
+    if (dirtySharedBooks.isEmpty) {
+      if (kDebugMode) {
+        debugPrint('[GroupSync] No shared_books pending upload.');
+      }
+      return;
+    }
+
+    final syncTime = DateTime.now();
+    if (kDebugMode) {
+      debugPrint('[GroupSync] Uploading ${dirtySharedBooks.length} shared book(s) to Supabase');
+    }
+
+    for (final shared in dirtySharedBooks) {
+      if (shared.isDeleted) {
+        final remoteId = shared.remoteId;
+
+        if (remoteId != null && remoteId.isNotEmpty) {
+          try {
+            await _groupService.deleteSharedBook(
+              id: remoteId,
+              updatedAt: shared.updatedAt,
+              accessToken: accessToken,
+            );
+          } catch (error) {
+            if (kDebugMode) {
+              debugPrint('[GroupSync] Failed to delete shared book ${shared.uuid} remotely: $error');
+            }
+            rethrow;
+          }
+        }
+
+        await _groupDao.updateSharedBookFields(
+          sharedBookId: shared.id,
+          entry: SharedBooksCompanion(
+            isDirty: const Value(false),
+            syncedAt: Value(syncTime),
+          ),
+        );
+        continue;
+      }
+
+      final group = await _groupDao.findGroupById(shared.groupId);
+      if (group == null) {
+        if (kDebugMode) {
+          debugPrint('[GroupSync] Skipping shared book ${shared.uuid}: group ${shared.groupId} missing locally');
+        }
+        continue;
+      }
+
+      final groupRemoteId = group.remoteId;
+      if (groupRemoteId == null || groupRemoteId.isEmpty) {
+        if (kDebugMode) {
+          debugPrint('[GroupSync] Skipping shared book ${shared.uuid}: group ${group.id} lacks remoteId');
+        }
+        continue;
+      }
+
+      final owner = await _userDao.getById(shared.ownerUserId);
+      final ownerRemoteId = (shared.ownerRemoteId != null && shared.ownerRemoteId!.isNotEmpty)
+          ? shared.ownerRemoteId!
+          : owner?.remoteId;
+      if (ownerRemoteId == null || ownerRemoteId.isEmpty) {
+        if (kDebugMode) {
+          debugPrint('[GroupSync] Skipping shared book ${shared.uuid}: owner ${shared.ownerUserId} lacks remoteId');
+        }
+        continue;
+      }
+
+      final book = await _bookDao.findById(shared.bookId);
+      final remoteBookId = book?.remoteId ?? shared.bookUuid;
+      if (remoteBookId.isEmpty) {
+        if (kDebugMode) {
+          debugPrint('[GroupSync] Skipping shared book ${shared.uuid}: book ${shared.bookId} lacks remoteId');
+        }
+        continue;
+      }
+
+      final provisionalRemoteId = shared.remoteId ?? shared.uuid;
+
+      try {
+        var ensuredRemoteId = provisionalRemoteId;
+
+        if (shared.remoteId == null) {
+          ensuredRemoteId = await _groupService.createSharedBook(
+            id: provisionalRemoteId,
+            groupId: groupRemoteId,
+            bookUuid: remoteBookId,
+            ownerId: ownerRemoteId,
+            visibility: shared.visibility,
+            isAvailable: shared.isAvailable,
+            isDeleted: shared.isDeleted,
+            createdAt: shared.createdAt,
+            updatedAt: shared.updatedAt,
+            accessToken: accessToken,
+          );
+          if (kDebugMode) {
+            debugPrint('[GroupSync] Created remote shared book ${shared.uuid} -> $ensuredRemoteId');
+          }
+        } else {
+          final updated = await _groupService.updateSharedBook(
+            id: provisionalRemoteId,
+            groupId: groupRemoteId,
+            bookUuid: remoteBookId,
+            ownerId: ownerRemoteId,
+            visibility: shared.visibility,
+            isAvailable: shared.isAvailable,
+            isDeleted: shared.isDeleted,
+            updatedAt: shared.updatedAt,
+            accessToken: accessToken,
+          );
+
+          if (!updated) {
+            ensuredRemoteId = await _groupService.createSharedBook(
+              id: provisionalRemoteId,
+              groupId: groupRemoteId,
+              bookUuid: remoteBookId,
+              ownerId: ownerRemoteId,
+              visibility: shared.visibility,
+              isAvailable: shared.isAvailable,
+              isDeleted: shared.isDeleted,
+              createdAt: shared.createdAt,
+              updatedAt: shared.updatedAt,
+              accessToken: accessToken,
+            );
+            if (kDebugMode) {
+              debugPrint('[GroupSync] Remote shared book ${shared.uuid} missing, recreated as $ensuredRemoteId');
+            }
+          }
+        }
+
+        await _groupDao.updateSharedBookFields(
+          sharedBookId: shared.id,
+          entry: SharedBooksCompanion(
+            remoteId: Value(ensuredRemoteId),
+            ownerRemoteId: Value(ownerRemoteId),
+            isDirty: const Value(false),
+            syncedAt: Value(syncTime),
+          ),
+        );
+      } catch (error) {
+        if (kDebugMode) {
+          debugPrint('[GroupSync] Failed to push shared book ${shared.uuid}: $error');
+        }
+        rethrow;
+      }
+    }
+  }
+
+  Future<LocalUser?> _ensureLocalUser({
+    required String remoteId,
+    required DateTime createdAtFallback,
+  }) async {
+    var localUser = await _userDao.findByRemoteId(remoteId);
+    if (localUser != null) {
+      return localUser;
+    }
+
+    final sanitizedId = remoteId.replaceAll(RegExp('[^a-zA-Z0-9]'), '');
+    final suffix = sanitizedId.isNotEmpty
+        ? (sanitizedId.length >= 8 ? sanitizedId.substring(0, 8) : sanitizedId.padRight(8, '0'))
+        : '00000000';
+    final placeholderUsername = 'miembro_$suffix';
+    final now = DateTime.now();
+
+    try {
+      final userId = await _userDao.insertUser(
+        LocalUsersCompanion.insert(
+          uuid: remoteId,
+          username: placeholderUsername,
+          remoteId: Value(remoteId),
+          isDeleted: const Value(false),
+          isDirty: const Value(false),
+          createdAt: Value(createdAtFallback),
+          updatedAt: Value(now),
+          syncedAt: Value(now),
+        ),
+      );
+      localUser = await _userDao.getById(userId);
+    } catch (_) {
+      localUser = await _userDao.findByRemoteId(remoteId);
+    }
+
+    return localUser;
   }
 }

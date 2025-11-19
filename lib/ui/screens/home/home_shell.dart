@@ -15,23 +15,30 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../config/supabase_defaults.dart';
 import '../../../data/local/database.dart';
 import '../../../data/local/group_dao.dart';
+import '../../../data/models/in_app_notification_status.dart';
+import '../../../data/models/in_app_notification_type.dart';
 import '../../../providers/api_providers.dart';
 import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
 import '../../../providers/permission_providers.dart';
-import '../../../providers/stats_providers.dart';
-import '../../../providers/settings_providers.dart';
-import '../../../providers/theme_providers.dart';
 import '../../../providers/notification_providers.dart';
+import '../../../providers/settings_providers.dart';
+import '../../../providers/stats_providers.dart';
+import '../../../providers/theme_providers.dart';
 import '../../../services/book_export_service.dart';
+import '../../../services/coach_marks/coach_mark_controller.dart';
+import '../../../services/coach_marks/coach_mark_models.dart';
 import '../../../services/cover_image_service_base.dart';
+import '../../../services/discover_group_controller.dart';
 import '../../../services/google_books_client.dart';
 import '../../../services/loan_controller.dart';
-import '../../../services/open_library_client.dart';
 import '../../../services/notification_service.dart';
-import '../../../services/discover_group_controller.dart';
+import '../../../services/onboarding_service.dart';
+import '../../../services/open_library_client.dart';
 import '../../../services/stats_service.dart';
+import '../../widgets/coach_mark_target.dart';
 import '../../widgets/cover_preview.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/import_books_dialog.dart';
 import '../auth/pin_setup_screen.dart';
 
@@ -43,11 +50,139 @@ String _resolveOwnerName(LocalUser? ownerUser, int ownerIdFallback) {
   if (ownerUser == null) {
     return 'Miembro $ownerIdFallback';
   }
+
   final username = ownerUser.username.trim();
   if (username.isEmpty) {
     return 'Miembro $ownerIdFallback';
   }
   return username;
+}
+
+class _SyncBanner extends ConsumerWidget {
+  const _SyncBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final syncState = ref.watch(groupSyncControllerProvider);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    final isSyncing = syncState.isSyncing;
+    final hasError = syncState.lastError != null;
+    final hasPending = syncState.hasPendingChanges;
+
+    if (!isSyncing && !hasError && !hasPending) {
+      return const SizedBox.shrink();
+    }
+
+    Color background;
+    Color foreground;
+    IconData icon;
+    String message;
+
+    if (isSyncing) {
+      background = colors.primaryContainer;
+      foreground = colors.onPrimaryContainer;
+      icon = Icons.sync_outlined;
+      message = 'Sincronizando grupos...';
+    } else if (hasError) {
+      background = colors.errorContainer;
+      foreground = colors.onErrorContainer;
+      icon = Icons.error_outline;
+      final error = syncState.lastError!;
+      message = error.length > 140 ? '${error.substring(0, 137)}…' : error;
+    } else {
+      background = colors.surfaceContainerHigh;
+      foreground = colors.onSurface;
+      icon = Icons.cloud_upload_outlined;
+      message = 'Cambios locales listos para sincronizar.';
+    }
+
+    late final Widget trailing;
+    if (isSyncing) {
+      trailing = const SizedBox(
+        height: 20,
+        width: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    } else if (hasError) {
+      trailing = Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          TextButton.icon(
+            onPressed: () => unawaited(_performSync(context, ref)),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Reintentar'),
+            style: TextButton.styleFrom(foregroundColor: foreground),
+          ),
+          IconButton(
+            onPressed: () => ref.read(groupSyncControllerProvider.notifier).clearError(),
+            icon: Icon(Icons.close, color: foreground),
+            tooltip: 'Descartar',
+          ),
+        ],
+      );
+    } else {
+      trailing = Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          onPressed: () => unawaited(_performSync(context, ref)),
+          icon: const Icon(Icons.sync_outlined),
+          label: const Text('Sincronizar ahora'),
+          style: TextButton.styleFrom(foregroundColor: foreground),
+        ),
+      );
+    }
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      child: Material(
+        key: ValueKey<String>(
+          isSyncing
+              ? 'sync-banner-syncing'
+              : hasError
+                  ? 'sync-banner-error'
+                  : 'sync-banner-pending',
+        ),
+        color: background,
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(icon, color: foreground),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        message,
+                        style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
+                      ),
+                    ),
+                    if (isSyncing) ...[
+                      const SizedBox(width: 12),
+                      trailing,
+                    ],
+                  ],
+                ),
+                if (!isSyncing) ...[
+                  const SizedBox(height: 8),
+                  trailing,
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 _DiscoverStatusDisplay _resolveStatusDisplay({
@@ -57,16 +192,19 @@ _DiscoverStatusDisplay _resolveStatusDisplay({
 }) {
   final scheme = theme.colorScheme;
   if (loanDetail != null) {
-    final borrowerName = _resolveUserName(loanDetail.borrower);
+    final borrower = loanDetail.borrower;
+    final borrowerName = borrower != null
+        ? _resolveUserName(borrower)
+        : 'otro lector';
     final dueDate = loanDetail.loan.dueDate;
     final dueDateLabel = dueDate != null ? DateFormat.yMMMd().format(dueDate) : null;
     if (loanDetail.loan.status == 'pending') {
       return _DiscoverStatusDisplay(
-        label: 'Reservado',
+        label: 'Solicitud pendiente',
         icon: Icons.hourglass_bottom,
         background: scheme.tertiaryContainer,
         foreground: scheme.onTertiaryContainer,
-        caption: 'Reservado por $borrowerName',
+        caption: 'Solicitado por $borrowerName',
       );
     }
     if (loanDetail.loan.status == 'accepted') {
@@ -209,6 +347,56 @@ class _DiscoverBookDetailPage extends ConsumerStatefulWidget {
 }
 
 class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage> {
+  bool _pendingDetailCoach = false;
+  bool _detailTargetsReady = false;
+  bool _detailCoachTriggered = false;
+  bool _waitingDetailCompletion = false;
+
+  late ProviderSubscription<AsyncValue<OnboardingProgress>> _detailProgressSub;
+  late ProviderSubscription<CoachMarkState> _detailCoachSub;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _detailProgressSub = ref.listenManual<AsyncValue<OnboardingProgress>>(
+      onboardingProgressProvider,
+      (previous, next) {
+        final progress = next.asData?.value;
+        if (progress != null && progress.shouldShowDetailCoach) {
+          _pendingDetailCoach = true;
+          _maybeTriggerDetailCoach();
+        }
+      },
+    );
+
+    _detailCoachSub = ref.listenManual<CoachMarkState>(
+      coachMarkControllerProvider,
+      (previous, next) {
+        if (_waitingDetailCompletion &&
+            previous?.sequence == CoachMarkSequence.detail &&
+            next.sequence != CoachMarkSequence.detail &&
+            !next.isVisible &&
+            next.queue.isEmpty) {
+          _waitingDetailCompletion = false;
+          _pendingDetailCoach = false;
+          unawaited(() async {
+            final onboarding = ref.read(onboardingServiceProvider);
+            await onboarding.markDetailCoachSeen();
+            ref.invalidate(onboardingProgressProvider);
+          }());
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _detailProgressSub.close();
+    _detailCoachSub.close();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -277,6 +465,16 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
             final LoanDetail? borrowerLoanDetail = borrowerLoan;
             final hasOtherActiveLoan = otherActiveLoan != null;
 
+            final notificationsAsync = ref.watch(inAppNotificationsProvider);
+            final unreadBookNotifications = notificationsAsync.maybeWhen(
+              data: (notifications) => notifications
+                  .where((notification) =>
+                      notification.sharedBookId == sharedBook.id &&
+                      notification.status == InAppNotificationStatus.unread)
+                  .toList(),
+              orElse: () => const <InAppNotification>[],
+            );
+
             final canRequest = borrower != null && borrowerLoanDetail == null && !hasOtherActiveLoan;
             final canCancel = borrower != null &&
                 borrowerLoanDetail != null &&
@@ -301,6 +499,15 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
               sharedBook: sharedBook,
               loanDetail: borrowerLoanDetail ?? otherActiveLoan,
             );
+
+            if (!_detailTargetsReady) {
+              final hasRequestTarget = canRequest;
+              final hasOwnerTarget = pendingOwnerLoan != null && owner != null;
+              if (hasRequestTarget || hasOwnerTarget) {
+                _detailTargetsReady = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) => _maybeTriggerDetailCoach());
+              }
+            }
 
             return CustomScrollView(
               slivers: [
@@ -414,6 +621,15 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            if (unreadBookNotifications.isNotEmpty) ...[
+                              ...unreadBookNotifications.map(
+                                (notification) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _InAppNotificationBanner(notification: notification),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
                             Text('Acciones', style: theme.textTheme.titleMedium),
                             const SizedBox(height: 12),
                             if (otherActiveLoan != null)
@@ -456,15 +672,18 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
                                             spacing: 12,
                                             runSpacing: 8,
                                             children: [
-                                              FilledButton.icon(
-                                                onPressed: loanState.isLoading
-                                                    ? null
-                                                    : () => _handleOwnerAccept(
-                                                          owner: owner,
-                                                          detail: pendingOwnerLoan,
-                                                        ),
-                                                icon: const Icon(Icons.check_circle_outline),
-                                                label: const Text('Aceptar solicitud'),
+                                              CoachMarkTarget(
+                                                id: CoachMarkId.groupManageInvitations,
+                                                child: FilledButton.icon(
+                                                  onPressed: loanState.isLoading
+                                                      ? null
+                                                      : () => _handleOwnerAccept(
+                                                            owner: owner,
+                                                            detail: pendingOwnerLoan,
+                                                          ),
+                                                  icon: const Icon(Icons.check_circle_outline),
+                                                  label: const Text('Aceptar solicitud'),
+                                                ),
                                               ),
                                               OutlinedButton.icon(
                                                 onPressed: loanState.isLoading
@@ -526,13 +745,17 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
     try {
       await controller.requestLoan(sharedBook: sharedBook, borrower: borrower);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Solicitud enviada.')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Solicitud enviada.',
+        isError: false,
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo enviar la solicitud: $error')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'No se pudo enviar la solicitud: $error',
+        isError: true,
       );
     }
   }
@@ -542,13 +765,17 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
     try {
       await controller.cancelLoan(loan: loan, borrower: borrower);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Solicitud cancelada.')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Solicitud cancelada.',
+        isError: false,
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo cancelar la solicitud: $error')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'No se pudo cancelar la solicitud: $error',
+        isError: true,
       );
     }
   }
@@ -558,13 +785,17 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
     try {
       await controller.acceptLoan(loan: detail.loan, owner: owner);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Solicitud aceptada.')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Solicitud aceptada.',
+        isError: false,
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo aceptar la solicitud: $error')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'No se pudo aceptar la solicitud: $error',
+        isError: true,
       );
     }
   }
@@ -574,13 +805,17 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
     try {
       await controller.rejectLoan(loan: detail.loan, owner: owner);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Solicitud rechazada.')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Solicitud rechazada.',
+        isError: false,
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo rechazar la solicitud: $error')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'No se pudo rechazar la solicitud: $error',
+        isError: true,
       );
     }
   }
@@ -627,15 +862,18 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
   }) sync* {
     if (canRequest && borrower != null) {
       final LocalUser borrowerNonNull = borrower;
-      yield FilledButton.icon(
-        onPressed: loanState.isLoading
-            ? null
-            : () => _requestLoan(
-                  sharedBook: sharedBook,
-                  borrower: borrowerNonNull,
-                ),
-        icon: const Icon(Icons.handshake_outlined),
-        label: const Text('Solicitar préstamo'),
+      yield CoachMarkTarget(
+        id: CoachMarkId.bookDetailRequestLoan,
+        child: FilledButton.icon(
+          onPressed: loanState.isLoading
+              ? null
+              : () => _requestLoan(
+                    sharedBook: sharedBook,
+                    borrower: borrowerNonNull,
+                  ),
+          icon: const Icon(Icons.handshake_outlined),
+          label: const Text('Solicitar préstamo'),
+        ),
       );
     }
 
@@ -656,6 +894,17 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
         ),
       );
     }
+  }
+
+  void _maybeTriggerDetailCoach() {
+    if (!_pendingDetailCoach || _detailCoachTriggered || !_detailTargetsReady) {
+      return;
+    }
+
+    final controller = ref.read(coachMarkControllerProvider.notifier);
+    _detailCoachTriggered = true;
+    _waitingDetailCompletion = true;
+    unawaited(controller.beginSequence(CoachMarkSequence.detail));
   }
 }
 
@@ -729,11 +978,15 @@ class _ActiveLoansList extends ConsumerWidget {
   Future<void> _openLoanDetail(BuildContext context, WidgetRef ref, StatsActiveLoan loan) async {
     final groupId = loan.groupId;
     final sharedBookId = loan.sharedBookId;
-    final messenger = ScaffoldMessenger.of(context);
 
     if (groupId == null || sharedBookId == null) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('No pudimos abrir el detalle de este préstamo.')),
+      if (!context.mounted) {
+        return;
+      }
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'No pudimos abrir el detalle de este préstamo.',
+        isError: true,
       );
       return;
     }
@@ -742,8 +995,13 @@ class _ActiveLoansList extends ConsumerWidget {
     final group = await groupDao.findGroupById(groupId);
 
     if (group == null) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Este grupo ya no está disponible.')),
+      if (!context.mounted) {
+        return;
+      }
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Este grupo ya no está disponible.',
+        isError: true,
       );
       return;
     }
@@ -791,6 +1049,508 @@ class _ActiveLoansList extends ConsumerWidget {
       default:
         return colors.onSurfaceVariant;
     }
+  }
+}
+
+class _NotificationBell extends ConsumerWidget {
+  const _NotificationBell({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncCount = ref.watch(unreadNotificationCountProvider);
+
+    return asyncCount.when(
+      data: (count) {
+        final displayCount = count > 999 ? 999 : count;
+        final icon = Icon(
+          count > 0 ? Icons.notifications_active_outlined : Icons.notifications_none_outlined,
+        );
+
+        return Tooltip(
+          message: count > 0 ? 'Tienes $count notificaciones' : 'Notificaciones',
+          child: IconButton(
+            onPressed: onPressed,
+            icon: count > 0
+                ? Badge.count(
+                    count: displayCount,
+                    child: icon,
+                  )
+                : icon,
+          ),
+        );
+      },
+      loading: () => const SizedBox(
+        width: 36,
+        height: 36,
+        child: Padding(
+          padding: EdgeInsets.all(8),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      error: (_, __) => IconButton(
+        onPressed: onPressed,
+        icon: const Icon(Icons.notifications_off_outlined),
+        tooltip: 'Notificaciones',
+      ),
+    );
+  }
+}
+
+class _NotificationsSheet extends ConsumerWidget {
+  const _NotificationsSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notificationsAsync = ref.watch(inAppNotificationsProvider);
+    final activeUser = ref.read(activeUserProvider).value;
+    final repository = ref.read(notificationRepositoryProvider);
+    final theme = Theme.of(context);
+    final hasNotifications = notificationsAsync.maybeWhen(
+      data: (notifications) => notifications.isNotEmpty,
+      orElse: () => false,
+    );
+
+    void showSnack(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+
+    Future<void> clearAll() async {
+      if (!hasNotifications) {
+        showSnack('No hay notificaciones para limpiar.');
+        return;
+      }
+      if (activeUser == null) {
+        showSnack('Configura un usuario activo antes de limpiar.');
+        return;
+      }
+      try {
+        await repository.clearAllForUser(activeUser.id);
+        if (!context.mounted) return;
+        showSnack('Notificaciones borradas.');
+      } catch (error) {
+        if (!context.mounted) return;
+        showSnack('No se pudieron borrar las notificaciones: $error');
+      }
+    }
+
+    return DraggableScrollableSheet(
+      expand: false,
+      minChildSize: 0.25,
+      initialChildSize: 0.6,
+      builder: (context, controller) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Notificaciones',
+                      style: theme.textTheme.titleLarge,
+                    ),
+                  ),
+                  if (hasNotifications)
+                    TextButton.icon(
+                      onPressed: () => unawaited(clearAll()),
+                      icon: const Icon(Icons.delete_sweep_outlined),
+                      label: const Text('Vaciar'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: theme.colorScheme.error,
+                      ),
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Cerrar',
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: notificationsAsync.when(
+                data: (notifications) {
+                  if (notifications.isEmpty) {
+                    return const EmptyState(
+                      icon: Icons.notifications_none_outlined,
+                      title: 'Sin notificaciones',
+                      message:
+                          'Aquí verás las novedades sobre tus préstamos y solicitudes.',
+                    );
+                  }
+
+                  return ListView.separated(
+                    controller: controller,
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                    itemBuilder: (context, index) {
+                      final notification = notifications[index];
+                      return _NotificationListTile(notification: notification);
+                    },
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemCount: notifications.length,
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => EmptyState(
+                  icon: Icons.error_outline,
+                  title: 'No se pudieron cargar',
+                  message: '$error',
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _NotificationListTile extends ConsumerWidget {
+  const _NotificationListTile({required this.notification});
+
+  final InAppNotification notification;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repository = ref.read(notificationRepositoryProvider);
+    final loanController = ref.read(loanControllerProvider.notifier);
+    final loanState = ref.watch(loanControllerProvider);
+    final loanRepository = ref.read(loanRepositoryProvider);
+    final activeUser = ref.watch(activeUserProvider).value;
+    final visuals = _NotificationVisuals.fromNotification(context, notification);
+    final type = InAppNotificationType.fromValue(notification.type);
+
+    final isUnread = notification.status == InAppNotificationStatus.unread;
+    final createdAt = DateFormat.yMMMd().add_Hm().format(notification.createdAt);
+    final isLoanBusy = loanState.isLoading;
+
+    Future<void> markRead() async {
+      await repository.markAs(
+        uuid: notification.uuid,
+        status: InAppNotificationStatus.read,
+      );
+    }
+
+    Future<void> dismiss() async {
+      await repository.softDelete(uuid: notification.uuid);
+    }
+
+    void showSnack(String message, {bool isError = false}) {
+      final theme = Theme.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: isError ? theme.colorScheme.errorContainer : null,
+        ),
+      );
+    }
+
+    Future<void> handleLoanDecision({required bool accept}) async {
+      final owner = activeUser;
+      final loanId = notification.loanId;
+      if (owner == null) {
+        showSnack('Necesitas un usuario activo para gestionar el préstamo.', isError: true);
+        return;
+      }
+      if (loanId == null) {
+        showSnack('No se encontró el préstamo asociado.', isError: true);
+        return;
+      }
+
+      final loan = await loanRepository.findLoanById(loanId);
+      if (loan == null) {
+        if (!context.mounted) return;
+        showSnack('El préstamo ya no está disponible.', isError: true);
+        return;
+      }
+
+      try {
+        if (accept) {
+          await loanController.acceptLoan(loan: loan, owner: owner);
+        } else {
+          await loanController.rejectLoan(loan: loan, owner: owner);
+        }
+        if (!context.mounted) return;
+        await markRead();
+        if (!context.mounted) return;
+        showSnack(accept ? 'Solicitud aceptada.' : 'Solicitud rechazada.');
+      } catch (error) {
+        if (!context.mounted) return;
+        showSnack('No se pudo completar la acción: $error', isError: true);
+      }
+    }
+
+    final canHandleLoanRequest =
+        type == InAppNotificationType.loanRequest && activeUser?.id == notification.targetUserId;
+
+    return Card(
+      color: visuals.background,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(visuals.icon, color: visuals.iconColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        notification.title ?? visuals.defaultTitle,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(color: visuals.textColor),
+                      ),
+                      if ((notification.message ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          notification.message!,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(color: visuals.secondaryTextColor),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Text(
+                        createdAt,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: visuals.secondaryTextColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                if (canHandleLoanRequest && notification.loanId != null) ...[
+                  FilledButton.icon(
+                    onPressed: isLoanBusy ? null : () => handleLoanDecision(accept: true),
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('Aceptar'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: isLoanBusy ? null : () => handleLoanDecision(accept: false),
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: const Text('Rechazar'),
+                  ),
+                ],
+                if (isUnread)
+                  TextButton.icon(
+                    onPressed: markRead,
+                    icon: const Icon(Icons.mark_email_read_outlined),
+                    label: const Text('Marcar como leído'),
+                  ),
+                TextButton.icon(
+                  onPressed: dismiss,
+                  icon: const Icon(Icons.close),
+                  label: const Text('Descartar'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InAppNotificationBanner extends ConsumerWidget {
+  const _InAppNotificationBanner({required this.notification});
+
+  final InAppNotification notification;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repository = ref.read(notificationRepositoryProvider);
+    final visuals = _NotificationVisuals.fromNotification(context, notification);
+    final isUnread = notification.status == InAppNotificationStatus.unread;
+
+    Future<void> markRead() async {
+      await repository.markAs(
+        uuid: notification.uuid,
+        status: InAppNotificationStatus.read,
+      );
+    }
+
+    Future<void> dismiss() async {
+      await repository.softDelete(uuid: notification.uuid);
+    }
+
+    return Material(
+      color: visuals.background,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(visuals.icon, color: visuals.iconColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        notification.title ?? visuals.defaultTitle,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(color: visuals.textColor),
+                      ),
+                      if ((notification.message ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          notification.message!,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(color: visuals.secondaryTextColor),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                if (isUnread)
+                  TextButton.icon(
+                    onPressed: markRead,
+                    icon: const Icon(Icons.mark_email_read_outlined),
+                    label: const Text('Marcar como leído'),
+                    style: TextButton.styleFrom(foregroundColor: visuals.textColor),
+                  ),
+                TextButton.icon(
+                  onPressed: dismiss,
+                  icon: const Icon(Icons.close),
+                  label: const Text('Descartar'),
+                  style: TextButton.styleFrom(foregroundColor: visuals.textColor),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationVisuals {
+  _NotificationVisuals({
+    required this.icon,
+    required this.background,
+    required this.iconColor,
+    required this.textColor,
+    required this.secondaryTextColor,
+    required this.defaultTitle,
+  });
+
+  final IconData icon;
+  final Color background;
+  final Color iconColor;
+  final Color textColor;
+  final Color secondaryTextColor;
+  final String defaultTitle;
+
+  static _NotificationVisuals fromNotification(
+    BuildContext context,
+    InAppNotification notification,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final type = InAppNotificationType.fromValue(notification.type);
+
+    Color background;
+    Color iconColor;
+    Color textColor;
+    Color secondaryTextColor;
+    IconData icon;
+    String defaultTitle;
+
+    switch (type) {
+      case InAppNotificationType.loanAccepted:
+        background = scheme.primaryContainer;
+        iconColor = scheme.onPrimaryContainer;
+        textColor = scheme.onPrimaryContainer;
+        secondaryTextColor = scheme.onPrimaryContainer.withValues(alpha: 0.8);
+        icon = Icons.check_circle_outline;
+        defaultTitle = 'Préstamo aceptado';
+        break;
+      case InAppNotificationType.loanRejected:
+        background = scheme.errorContainer;
+        iconColor = scheme.onErrorContainer;
+        textColor = scheme.onErrorContainer;
+        secondaryTextColor = scheme.onErrorContainer.withValues(alpha: 0.8);
+        icon = Icons.cancel_outlined;
+        defaultTitle = 'Solicitud rechazada';
+        break;
+      case InAppNotificationType.loanCancelled:
+        background = scheme.surfaceContainerHigh;
+        iconColor = scheme.onSurface;
+        textColor = scheme.onSurface;
+        secondaryTextColor = scheme.onSurfaceVariant;
+        icon = Icons.remove_circle_outline;
+        defaultTitle = 'Solicitud cancelada';
+        break;
+      case InAppNotificationType.loanReturned:
+        background = scheme.secondaryContainer;
+        iconColor = scheme.onSecondaryContainer;
+        textColor = scheme.onSecondaryContainer;
+        secondaryTextColor = scheme.onSecondaryContainer.withValues(alpha: 0.8);
+        icon = Icons.assignment_turned_in_outlined;
+        defaultTitle = 'Préstamo devuelto';
+        break;
+      case InAppNotificationType.loanExpired:
+        background = scheme.tertiaryContainer;
+        iconColor = scheme.onTertiaryContainer;
+        textColor = scheme.onTertiaryContainer;
+        secondaryTextColor = scheme.onTertiaryContainer.withValues(alpha: 0.8);
+        icon = Icons.schedule_outlined;
+        defaultTitle = 'Préstamo vencido';
+        break;
+      case InAppNotificationType.loanRequest:
+      default:
+        background = scheme.surfaceContainerHighest;
+        iconColor = scheme.primary;
+        textColor = scheme.onSurface;
+        secondaryTextColor = scheme.onSurfaceVariant;
+        icon = Icons.mark_email_unread_outlined;
+        defaultTitle = 'Nueva solicitud de préstamo';
+        break;
+    }
+
+    return _NotificationVisuals(
+      icon: icon,
+      background: background,
+      iconColor: iconColor,
+      textColor: textColor,
+      secondaryTextColor: secondaryTextColor,
+      defaultTitle: defaultTitle,
+    );
   }
 }
 
@@ -924,16 +1684,18 @@ List<SharedBookDetail> _filterSharedBooksForDiscover({
   final isbnSet = <String>{};
   final titleAuthorSet = <String>{};
 
-  for (final book in ownBooks) {
-    final isbn = book.isbn?.trim();
-    if (isbn != null && isbn.isNotEmpty) {
-      isbnSet.add(isbn.toLowerCase());
-    }
+  if (activeUserId != null) {
+    for (final book in ownBooks.where((book) => book.ownerUserId == activeUserId)) {
+      final isbn = book.isbn?.trim();
+      if (isbn != null && isbn.isNotEmpty) {
+        isbnSet.add(isbn.toLowerCase());
+      }
 
-    final title = book.title.trim().toLowerCase();
-    final author = (book.author ?? '').trim().toLowerCase();
-    if (title.isNotEmpty) {
-      titleAuthorSet.add('$title::$author');
+      final title = book.title.trim().toLowerCase();
+      final author = (book.author ?? '').trim().toLowerCase();
+      if (title.isNotEmpty) {
+        titleAuthorSet.add('$title::$author');
+      }
     }
   }
 
@@ -943,16 +1705,12 @@ List<SharedBookDetail> _filterSharedBooksForDiscover({
       return false;
     }
 
-    if (activeUserId != null &&
-        sharedBook.ownerUserId == activeUserId &&
-        ownerUserIdFilter != sharedBook.ownerUserId) {
+    if (activeUserId != null && sharedBook.ownerUserId == activeUserId) {
       return false;
     }
 
-    if (!sharedBook.isAvailable) {
-      if (!includeUnavailable) {
-        return false;
-      }
+    if (!sharedBook.isAvailable && !includeUnavailable) {
+      return false;
     }
 
     final book = detail.book;
@@ -1189,14 +1947,30 @@ class HomeShell extends ConsumerWidget {
     final currentIndex = ref.watch(_currentTabProvider);
 
     return Scaffold(
-      body: IndexedStack(
-        index: currentIndex,
+      body: Column(
         children: [
-          _LibraryTab(onOpenForm: ({Book? book}) => _showBookFormSheet(context, ref, book: book)),
-          const _CommunityTab(),
-          const _DiscoverTab(),
-          const _StatsTab(),
-          const _SettingsTab(),
+          const _SyncBanner(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: _NotificationBell(
+                onPressed: () => _showNotificationsSheet(context, ref),
+              ),
+            ),
+          ),
+          Expanded(
+            child: IndexedStack(
+              index: currentIndex,
+              children: [
+                _LibraryTab(onOpenForm: ({Book? book}) => _showBookFormSheet(context, ref, book: book)),
+                const _CommunityTab(),
+                const _DiscoverTab(),
+                const _StatsTab(),
+                const _SettingsTab(),
+              ],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -1278,6 +2052,17 @@ class HomeShell extends ConsumerWidget {
     });
   }
 
+  Future<void> _showNotificationsSheet(BuildContext context, WidgetRef ref) async {
+    final theme = Theme.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: theme.colorScheme.surface,
+      builder: (context) => const _NotificationsSheet(),
+    );
+  }
+
   Future<void> _showBookFormSheet(BuildContext context, WidgetRef ref, {Book? book}) async {
     final result = await showModalBottomSheet<_BookFormResult>(
       context: context,
@@ -1290,17 +2075,19 @@ class HomeShell extends ConsumerWidget {
 
     switch (result) {
       case _BookFormResult.saved:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(book == null
-                ? 'Libro añadido a tu biblioteca.'
-                : 'Libro actualizado correctamente.'),
-          ),
+        _showFeedbackSnackBar(
+          context: context,
+          message: book == null
+              ? 'Libro añadido a tu biblioteca.'
+              : 'Libro actualizado correctamente.',
+          isError: false,
         );
         break;
       case _BookFormResult.deleted:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Libro eliminado.')),
+        _showFeedbackSnackBar(
+          context: context,
+          message: 'Libro eliminado.',
+          isError: false,
         );
         break;
     }
@@ -1309,8 +2096,10 @@ class HomeShell extends ConsumerWidget {
   Future<void> _clearPin(BuildContext context, WidgetRef ref) async {
     await ref.read(authControllerProvider.notifier).clearPin();
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('PIN borrado (solo debug).')),
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'PIN borrado (solo debug).',
+      isError: false,
     );
     Navigator.of(context)
         .pushNamedAndRemoveUntil(PinSetupScreen.routeName, (route) => false);
@@ -1325,30 +2114,15 @@ class _EmptyLibraryState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.menu_book_outlined,
-              size: 96, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(height: 16),
-          const Text(
-            'No tienes libros guardados todavía.',
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Escanea códigos, busca en catálogos o añade datos manualmente.\nMientras tanto, puedes registrar uno a mano.',
-            style: Theme.of(context).textTheme.bodySmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: onAddBook,
-            icon: const Icon(Icons.add_circle_outline),
-            label: const Text('Añadir primer libro'),
-          ),
-        ],
+    return EmptyState(
+      icon: Icons.menu_book_outlined,
+      title: 'Tu biblioteca está vacía',
+      message:
+          'Registra tu primer libro para organizar préstamos y compartir lecturas con tu grupo.',
+      action: EmptyStateAction(
+        label: 'Registrar libro',
+        icon: Icons.add_circle_outline,
+        onPressed: onAddBook,
       ),
     );
   }
@@ -1755,6 +2529,7 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
                   DropdownMenuItem(value: 'available', child: Text('Disponible')),
                   DropdownMenuItem(value: 'loaned', child: Text('Prestado')),
                   DropdownMenuItem(value: 'archived', child: Text('Archivado')),
+                  DropdownMenuItem(value: 'private', child: Text('Privado')),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -1787,9 +2562,8 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
                     const SizedBox(width: 12),
                   ],
                   TextButton(
-                    onPressed: _submitting
-                        ? null
-                        : () => Navigator.of(context).maybePop(false),
+                    onPressed:
+                        _submitting ? null : () => Navigator.of(context).maybePop(),
                     child: const Text('Cancelar'),
                   ),
                   const SizedBox(width: 12),
@@ -1814,7 +2588,6 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
 
   Future<void> _submit(BuildContext context) async {
     final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     if (_submitting) return;
 
     final valid = _formKey.currentState?.validate() ?? false;
@@ -1833,6 +2606,19 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
       final isbn = _isbnController.text.trim();
       final barcode = _barcodeController.text.trim();
       final notes = _notesController.text.trim();
+
+      final activeUser = ref.read(activeUserProvider).value;
+
+      if (!_isEditing && activeUser == null) {
+        if (context.mounted) {
+          _showFeedbackSnackBar(
+            context: context,
+            message: 'Necesitas un usuario activo para compartir tus libros.',
+            isError: true,
+          );
+        }
+        return;
+      }
 
       if (_isEditing) {
         final book = widget.initialBook!;
@@ -1857,6 +2643,7 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
           coverPath: _coverPath,
           notes: notes.isEmpty ? null : notes,
           status: _status,
+          owner: activeUser,
         );
       }
 
@@ -1871,12 +2658,17 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
       }
 
       if (!mounted) return;
-      navigator.pop(_BookFormResult.saved);
+      if (context.mounted) {
+        navigator.pop(_BookFormResult.saved);
+      }
     } catch (err) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Error al guardar el libro: $err')),
-      );
+      if (context.mounted) {
+        _showFeedbackSnackBar(
+          context: context,
+          message: 'Error al guardar el libro: $err',
+          isError: true,
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -1891,7 +2683,6 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
     if (book == null) return;
 
     final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1920,7 +2711,18 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
     final coverService = ref.read(coverImageServiceProvider);
 
     try {
-      await repository.deleteBook(book);
+      final removedSharedBooks = await repository.deleteBook(book);
+      if (removedSharedBooks.isNotEmpty) {
+        final grouped = <int, List<int>>{};
+        for (final shared in removedSharedBooks) {
+          grouped.putIfAbsent(shared.groupId, () => <int>[]).add(shared.id);
+        }
+        for (final entry in grouped.entries) {
+          ref
+              .read(discoverGroupControllerProvider(entry.key).notifier)
+              .invalidateSharedBooks(entry.value);
+        }
+      }
       final existingCover = book.coverPath;
       if (existingCover != null) {
         await coverService.deleteCover(existingCover);
@@ -1929,8 +2731,10 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
       navigator.pop(_BookFormResult.deleted);
     } catch (err) {
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('No se pudo eliminar: $err')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'No se pudo eliminar: $err',
+        isError: true,
       );
     } finally {
       if (context.mounted) {
@@ -1946,10 +2750,10 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
     final granted = await permissionService.ensureCameraPermission();
     if (!granted) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Necesitas habilitar la cámara para seleccionar una portada.'),
-        ),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Necesitas habilitar la cámara para seleccionar una portada.',
+        isError: true,
       );
       return;
     }
@@ -2454,8 +3258,10 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
     final activeUser = await ref.read(userRepositoryProvider).getActiveUser();
     if (activeUser == null) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Crea un usuario antes de añadir reseñas.')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Crea un usuario antes de añadir reseñas.',
+        isError: true,
       );
       return;
     }
@@ -2468,21 +3274,24 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
         author: activeUser,
       );
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Reseña añadida.')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Reseña añadida.',
+        isError: false,
       );
     } catch (err) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al guardar reseña: $err')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Error al guardar reseña: $err',
+        isError: true,
       );
     }
   }
 
   Future<void> _handleExport() async {
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    final contextRef = context;
+    final ctx = context;
 
     try {
       final repository = ref.read(bookRepositoryProvider);
@@ -2490,17 +3299,20 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
 
       final books = await repository.fetchActiveBooks();
       if (books.isEmpty) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('No hay libros para exportar.')),
+        if (!ctx.mounted) return;
+        _showFeedbackSnackBar(
+          context: ctx,
+          message: 'No hay libros para exportar.',
+          isError: true,
         );
         return;
       }
 
       final reviews = await repository.fetchActiveReviews();
 
-      if (!contextRef.mounted) return;
+      if (!ctx.mounted) return;
       final format = await showModalBottomSheet<BookExportFormat>(
-        context: contextRef,
+        context: ctx,
         builder: (sheetContext) => SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -2529,9 +3341,9 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
         return;
       }
 
-      if (!contextRef.mounted) return;
+      if (!ctx.mounted) return;
       final action = await showModalBottomSheet<_ExportAction>(
-        context: contextRef,
+        context: ctx,
         builder: (sheetContext) => SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -2585,15 +3397,19 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
           mimeType: _mapMimeType(extension),
         );
 
-        if (!mounted) return;
-        messenger.showSnackBar(
-          SnackBar(content: Text('Archivo guardado como ${result.fileName}.')),
+        if (!ctx.mounted) return;
+        _showFeedbackSnackBar(
+          context: ctx,
+          message: 'Archivo guardado como ${result.fileName}.',
+          isError: false,
         );
       }
     } catch (err) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('No se pudo exportar: $err')),
+      if (!ctx.mounted) return;
+      _showFeedbackSnackBar(
+        context: ctx,
+        message: 'No se pudo exportar: $err',
+        isError: true,
       );
     }
   }
@@ -3556,8 +4372,10 @@ Future<void> _showInvitationQrDialog(BuildContext context, String code) {
 
 void _copyToClipboard(BuildContext context, String value) {
   Clipboard.setData(ClipboardData(text: value));
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Código copiado al portapapeles.')),
+  _showFeedbackSnackBar(
+    context: context,
+    message: 'Código copiado al portapapeles.',
+    isError: false,
   );
 }
 
@@ -3901,34 +4719,15 @@ class _EmptyCommunityState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.groups_outlined, size: 88, color: theme.colorScheme.primary),
-            const SizedBox(height: 16),
-            Text(
-              'Todavía no tienes grupos sincronizados.',
-              style: theme.textTheme.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Sincroniza con Supabase para traer tus comunidades, miembros y libros compartidos.',
-              style: theme.textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: onSync,
-              icon: const Icon(Icons.sync_outlined),
-              label: const Text('Sincronizar ahora'),
-            ),
-          ],
-        ),
+    return EmptyState(
+      icon: Icons.groups_outlined,
+      title: 'Sincroniza tus grupos',
+      message:
+          'Conecta con Supabase para traer tus comunidades, miembros y libros compartidos.',
+      action: EmptyStateAction(
+        label: 'Sincronizar ahora',
+        icon: Icons.sync_outlined,
+        onPressed: () => unawaited(onSync()),
       ),
     );
   }
@@ -3975,15 +4774,62 @@ class _ErrorCommunityState extends StatelessWidget {
   }
 }
 
-class _GroupCard extends ConsumerWidget {
+class _GroupCard extends ConsumerStatefulWidget {
   const _GroupCard({required this.group, required this.onSync});
 
   final Group group;
   final Future<void> Function() onSync;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_GroupCard> createState() => _GroupCardState();
+}
+
+class _GroupCardState extends ConsumerState<_GroupCard> {
+  bool _waitingDetailCompletion = false;
+  late ProviderSubscription<CoachMarkState> _groupCardCoachSub;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final initialState = ref.read(coachMarkControllerProvider);
+    if (initialState.sequence == CoachMarkSequence.detail) {
+      _waitingDetailCompletion = true;
+    }
+
+    _groupCardCoachSub = ref.listenManual<CoachMarkState>(
+      coachMarkControllerProvider,
+      (previous, next) {
+        if (next.sequence == CoachMarkSequence.detail) {
+          _waitingDetailCompletion = true;
+        }
+
+        if (_waitingDetailCompletion &&
+            previous?.sequence == CoachMarkSequence.detail &&
+            next.sequence != CoachMarkSequence.detail &&
+            !next.isVisible &&
+            next.queue.isEmpty) {
+          _waitingDetailCompletion = false;
+          unawaited(() async {
+            final onboarding = ref.read(onboardingServiceProvider);
+            await onboarding.markDetailCoachSeen();
+            ref.invalidate(onboardingProgressProvider);
+          }());
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _groupCardCoachSub.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final group = widget.group;
     final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
     final sharedBooksAsync = ref.watch(sharedBookDetailsProvider(group.id));
     final loansAsync = ref.watch(groupLoanDetailsProvider(group.id));
@@ -4043,6 +4889,35 @@ class _GroupCard extends ConsumerWidget {
         );
     }
 
+    final bool highlightManageInvitations = activeUser != null && isAdmin;
+
+    Widget? menuButton;
+    if (menuEntries.isNotEmpty) {
+      final popup = PopupMenuButton<_GroupMenuAction>(
+        icon: const Icon(Icons.more_vert),
+        tooltip: 'Acciones del grupo',
+        enabled: !isGroupBusy,
+        itemBuilder: (context) => menuEntries,
+        onSelected: (action) {
+          unawaited(
+            _onGroupMenuAction(
+              context: context,
+              ref: ref,
+              action: action,
+              group: group,
+            ),
+          );
+        },
+      );
+
+      menuButton = highlightManageInvitations
+          ? CoachMarkTarget(
+              id: CoachMarkId.groupManageInvitations,
+              child: popup,
+            )
+          : popup;
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -4072,27 +4947,11 @@ class _GroupCard extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      onPressed: isGroupBusy ? null : () => onSync(),
+                      onPressed: isGroupBusy ? null : () => widget.onSync(),
                       icon: const Icon(Icons.sync_outlined),
                       tooltip: 'Sincronizar grupo',
                     ),
-                    if (menuEntries.isNotEmpty)
-                      PopupMenuButton<_GroupMenuAction>(
-                        icon: const Icon(Icons.more_vert),
-                        tooltip: 'Acciones del grupo',
-                        enabled: !isGroupBusy,
-                        itemBuilder: (context) => menuEntries,
-                        onSelected: (action) {
-                          unawaited(
-                            _onGroupMenuAction(
-                              context: context,
-                              ref: ref,
-                              action: action,
-                              group: group,
-                            ),
-                          );
-                        },
-                      ),
+                    if (menuButton != null) menuButton,
                   ],
                 ),
               ],
@@ -4492,24 +5351,16 @@ class _DiscoverTab extends ConsumerWidget {
               child: groupsAsync.when(
                 data: (groups) {
                   if (groups.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.groups_outlined, size: 56),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Aún no perteneces a ningún grupo.',
-                            style: theme.textTheme.titleMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Crea un grupo o únete mediante un código para empezar a compartir libros.',
-                            style: theme.textTheme.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                    return EmptyState(
+                      icon: Icons.groups_outlined,
+                      title: 'Aún no perteneces a ningún grupo',
+                      message:
+                          'Crea un grupo o únete con un código para empezar a compartir libros y gestionar préstamos.',
+                      action: EmptyStateAction(
+                        label: 'Unirme o sincronizar',
+                        icon: Icons.sync_outlined,
+                        variant: EmptyStateActionVariant.text,
+                        onPressed: () => unawaited(_syncNow(context, ref)),
                       ),
                     );
                   }
@@ -4596,6 +5447,12 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
   late final ScrollController _scrollController;
   late final FocusNode _searchFocusNode;
   Timer? _searchDebounce;
+  bool _pendingDiscoverCoach = false;
+  bool _discoverTargetsReady = false;
+  bool _discoverCoachTriggered = false;
+  bool _waitingDiscoverCompletion = false;
+  late ProviderSubscription<AsyncValue<OnboardingProgress>> _discoverProgressSub;
+  late ProviderSubscription<CoachMarkState> _discoverCoachSub;
 
   @override
   void initState() {
@@ -4604,6 +5461,36 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
     _scrollController = ScrollController()..addListener(_onScroll);
     _searchFocusNode = FocusNode();
     _searchController.addListener(_onSearchChanged);
+
+    _discoverProgressSub = ref.listenManual<AsyncValue<OnboardingProgress>>(
+      onboardingProgressProvider,
+      (previous, next) {
+        final progress = next.asData?.value;
+        if (progress != null && progress.shouldShowDiscoverCoach) {
+          _pendingDiscoverCoach = true;
+          _maybeTriggerDiscoverCoach();
+        }
+      },
+    );
+
+    _discoverCoachSub = ref.listenManual<CoachMarkState>(
+      coachMarkControllerProvider,
+      (previous, next) {
+        if (_waitingDiscoverCompletion &&
+            previous?.sequence == CoachMarkSequence.discover &&
+            next.sequence != CoachMarkSequence.discover &&
+            !next.isVisible &&
+            next.queue.isEmpty) {
+          _waitingDiscoverCompletion = false;
+          _pendingDiscoverCoach = false;
+          unawaited(() async {
+            final onboarding = ref.read(onboardingServiceProvider);
+            await onboarding.markDiscoverCoachSeen();
+            ref.invalidate(onboardingProgressProvider);
+          }());
+        }
+      },
+    );
   }
 
   @override
@@ -4616,6 +5503,8 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
+    _discoverProgressSub.close();
+    _discoverCoachSub.close();
     super.dispose();
   }
 
@@ -4643,6 +5532,17 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
           .read(discoverGroupControllerProvider(widget.group.id).notifier)
           .updateSearch(query);
     });
+  }
+
+  void _maybeTriggerDiscoverCoach() {
+    if (!_pendingDiscoverCoach || _discoverCoachTriggered || !_discoverTargetsReady) {
+      return;
+    }
+
+    final controller = ref.read(coachMarkControllerProvider.notifier);
+    _discoverCoachTriggered = true;
+    _waitingDiscoverCompletion = true;
+    unawaited(controller.beginSequence(CoachMarkSequence.discover));
   }
 
   @override
@@ -4678,23 +5578,27 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
                 focusNode: _searchFocusNode,
               ),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  FilterChip(
-                    label: const Text('Incluir no disponibles'),
-                    selected: state.includeUnavailable,
-                    onSelected: (value) {
-                      controller.setIncludeUnavailable(value);
-                    },
-                  ),
-                  ..._buildOwnerFilterChips(
-                    membersAsync: membersAsync,
-                    state: state,
-                    controller: controller,
-                  ),
-                ],
+              CoachMarkTarget(
+                id: CoachMarkId.discoverFilterChips,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilterChip(
+                      label: const Text('Incluir no disponibles'),
+                      selected: state.includeUnavailable,
+                      onSelected: (value) {
+                        controller.setIncludeUnavailable(value);
+                      },
+                    ),
+                    ..._buildOwnerFilterChips(
+                      membersAsync: membersAsync,
+                      state: state,
+                      controller: controller,
+                      activeUser: activeUser,
+                    ),
+                  ],
+                ),
               ),
               if (kDebugMode) ...[
                 const SizedBox(height: 12),
@@ -4773,6 +5677,11 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
       ownerUserIdFilter: state.ownerUserIdFilter,
     );
 
+    if (filtered.isNotEmpty && !_discoverTargetsReady) {
+      _discoverTargetsReady = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeTriggerDiscoverCoach());
+    }
+
     final ownerNames = <int, String>{
       for (final member in members)
         member.membership.memberUserId:
@@ -4796,37 +5705,57 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
     }
 
     if (filtered.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.menu_book_outlined, size: 56),
-              const SizedBox(height: 12),
-              Text(
-                state.searchQuery.isEmpty
-                    ? 'No hay libros disponibles para descubrir en este grupo.'
-                    : 'No encontramos libros que coincidan con tu búsqueda.',
-                style: theme.textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              if (state.searchQuery.isEmpty)
-                Text(
-                  'Cuando otros miembros compartan libros compatibles, aparecerán aquí.',
-                  style: theme.textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                )
-              else
-                Text(
-                  'Prueba con otro término o restablece los filtros.',
-                  style: theme.textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-            ],
-          ),
-        ),
+      final hasSearch = state.searchQuery.isNotEmpty;
+      final ownerFilterActive = state.ownerUserIdFilter != null;
+
+      late final String title;
+      late final String message;
+      EmptyStateAction? action;
+
+      if (hasSearch) {
+        title = 'Sin resultados para tu búsqueda';
+        message = 'Revisa el término ingresado o restablece los filtros para ver más libros.';
+        action = EmptyStateAction(
+          label: 'Limpiar búsqueda',
+          icon: Icons.clear,
+          variant: EmptyStateActionVariant.text,
+          onPressed: () {
+            _searchController.clear();
+            controller.updateSearch('');
+            controller.setOwnerFilter(null);
+          },
+        );
+      } else if (ownerFilterActive) {
+        title = 'Sin libros de este miembro';
+        message =
+            'Prueba con otra persona o vuelve a mostrar todos los libros disponibles.';
+        action = EmptyStateAction(
+          label: 'Quitar filtro',
+          icon: Icons.filter_list_off,
+          variant: EmptyStateActionVariant.text,
+          onPressed: () {
+            controller.setOwnerFilter(null);
+            controller.refresh();
+          },
+        );
+      } else {
+        title = 'Todavía no hay libros para descubrir';
+        message =
+            'Cuando otros miembros compartan ejemplares compatibles, los verás listados aquí.';
+        action = EmptyStateAction(
+          label: 'Actualizar lista',
+          icon: Icons.refresh,
+          variant: EmptyStateActionVariant.text,
+          onPressed: () => controller.refresh(),
+        );
+      }
+
+      return EmptyState(
+        icon: Icons.menu_book_outlined,
+        title: title,
+        message: message,
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+        action: action,
       );
     }
 
@@ -4878,7 +5807,7 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
             loanDetail: activeLoan,
           );
 
-          return Card(
+          final card = Card(
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: () {
@@ -4953,6 +5882,15 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
               ),
             ),
           );
+
+          if (index == 0) {
+            return CoachMarkTarget(
+              id: CoachMarkId.discoverShareBook,
+              child: card,
+            );
+          }
+
+          return card;
         },
       ),
     );
@@ -4962,6 +5900,7 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
     required AsyncValue<List<GroupMemberDetail>> membersAsync,
     required DiscoverGroupState state,
     required DiscoverGroupController controller,
+    required LocalUser? activeUser,
   }) {
     return membersAsync.when(
       data: (members) {
@@ -4989,6 +5928,9 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
           final membership = detail.membership;
           final user = detail.user;
           final userId = membership.memberUserId;
+          if (activeUser?.id == userId) {
+            continue;
+          }
           if (!seen.add(userId)) {
             continue;
           }
@@ -5480,8 +6422,10 @@ class _SettingsTab extends ConsumerWidget {
 
                     await ref.read(authControllerProvider.notifier).clearPin();
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('PIN eliminado.')),
+                    _showFeedbackSnackBar(
+                      context: context,
+                      message: 'PIN eliminado.',
+                      isError: false,
                     );
                     Navigator.of(context).pushNamedAndRemoveUntil(
                       PinSetupScreen.routeName,
@@ -5577,8 +6521,10 @@ class _SettingsTab extends ConsumerWidget {
       BuildContext context, String donationUrl) async {
     final uri = Uri.tryParse(donationUrl);
     if (uri == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El enlace de donación no es válido.')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'El enlace de donación no es válido.',
+        isError: true,
       );
       return;
     }
@@ -5586,14 +6532,18 @@ class _SettingsTab extends ConsumerWidget {
     try {
       final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!launched && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo abrir el enlace de donación.')),
+        _showFeedbackSnackBar(
+          context: context,
+          message: 'No se pudo abrir el enlace de donación.',
+          isError: true,
         );
       }
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al abrir el enlace: $e')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Error al abrir el enlace: $e',
+        isError: true,
       );
     }
   }
@@ -5728,14 +6678,18 @@ class _SettingsTab extends ConsumerWidget {
 
     final state = ref.read(groupSyncControllerProvider);
     if (state.lastError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error de sincronización: ${state.lastError}')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Error de sincronización: ${state.lastError}',
+        isError: true,
       );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sincronización completada.')),
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'Sincronización completada.',
+      isError: false,
     );
   }
 
@@ -5751,8 +6705,10 @@ class _SettingsTab extends ConsumerWidget {
     );
 
     if (result == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('API key de Google Books guardada.')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'API key de Google Books guardada.',
+        isError: false,
       );
     }
   }
@@ -5786,8 +6742,10 @@ class _SettingsTab extends ConsumerWidget {
     await controller.clearApiKey();
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('API key eliminada.')),
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'API key eliminada.',
+        isError: false,
       );
     }
   }

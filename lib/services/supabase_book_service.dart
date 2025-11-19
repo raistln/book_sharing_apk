@@ -84,6 +84,47 @@ class SupabaseBookService {
     );
   }
 
+  Future<SupabaseBookRecord?> fetchBookById({
+    required String id,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/books').replace(
+      queryParameters: {
+        'select':
+            'id,owner_id,title,author,isbn,barcode,cover_url,status,notes,is_deleted,created_at,updated_at',
+        'id': 'eq.$id',
+        'limit': '1',
+      },
+    );
+
+    final response = await _client.get(
+      uri,
+      headers: _buildHeaders(
+        config,
+        accessToken: accessToken,
+      ),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final payload = jsonDecode(response.body);
+      if (payload is List && payload.isNotEmpty) {
+        final record = payload.first;
+        if (record is Map<String, dynamic>) {
+          return SupabaseBookRecord.fromJson(record);
+        }
+      } else if (payload is Map<String, dynamic>) {
+        return SupabaseBookRecord.fromJson(payload);
+      }
+      return null;
+    }
+
+    throw SupabaseBookServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+      response.statusCode,
+    );
+  }
+
   Future<List<SupabaseBookReviewRecord>> fetchReviews({
     required String authorId,
     String? accessToken,

@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/local/book_dao.dart';
 import '../data/local/database.dart';
 import '../data/local/group_dao.dart';
+import '../data/local/notification_dao.dart';
 import '../data/local/user_dao.dart';
 import '../data/repositories/book_repository.dart';
 import '../data/repositories/loan_repository.dart';
+import '../data/repositories/notification_repository.dart';
+import '../data/repositories/supabase_notification_sync_repository.dart';
 import '../data/repositories/supabase_group_repository.dart';
 import '../data/repositories/supabase_book_sync_repository.dart';
 import '../data/repositories/supabase_user_sync_repository.dart';
@@ -16,8 +19,9 @@ import '../services/group_sync_controller.dart';
 import '../services/loan_controller.dart';
 import '../services/sync_service.dart';
 import '../services/supabase_config_service.dart';
-import '../services/supabase_group_service.dart';
 import '../services/supabase_book_service.dart';
+import '../services/supabase_group_service.dart';
+import '../services/supabase_notification_service.dart';
 import '../services/supabase_user_service.dart';
 import '../data/repositories/group_push_repository.dart';
 import '../services/group_push_controller.dart';
@@ -36,6 +40,11 @@ final bookDaoProvider = Provider<BookDao>((ref) {
   return BookDao(db);
 });
 
+final notificationDaoProvider = Provider<NotificationDao>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return NotificationDao(db);
+});
+
 final onboardingServiceProvider = Provider<OnboardingService>((ref) {
   return OnboardingService();
 });
@@ -47,9 +56,13 @@ final onboardingProgressProvider = FutureProvider<OnboardingProgress>((ref) {
 
 final bookRepositoryProvider = Provider<BookRepository>((ref) {
   final dao = ref.watch(bookDaoProvider);
+  final groupDao = ref.watch(groupDaoProvider);
+  final groupSyncController = ref.watch(groupSyncControllerProvider.notifier);
   final syncController = ref.watch(bookSyncControllerProvider.notifier);
   return BookRepository(
     dao,
+    groupDao: groupDao,
+    groupSyncController: groupSyncController,
     bookSyncController: syncController,
   );
 });
@@ -118,6 +131,110 @@ final loanRepositoryProvider = Provider<LoanRepository>((ref) {
     groupDao: groupDao,
     bookDao: bookDao,
     userDao: userDao,
+  );
+});
+
+final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
+  final dao = ref.watch(notificationDaoProvider);
+  final syncController = ref.watch(notificationSyncControllerProvider.notifier);
+  final repository = NotificationRepository(
+    notificationDao: dao,
+    notificationSyncController: syncController,
+  );
+
+  // Ejecuta la limpieza local de notificaciones caducadas en segundo plano.
+  Future.microtask(() => repository.purgeExpired());
+
+  ref.onDispose(repository.dispose);
+
+  return repository;
+});
+
+final supabaseNotificationServiceProvider = Provider<SupabaseNotificationService>((ref) {
+  final service = SupabaseNotificationService();
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+final supabaseNotificationSyncRepositoryProvider =
+    Provider<SupabaseNotificationSyncRepository>((ref) {
+  final notificationDao = ref.watch(notificationDaoProvider);
+  final userDao = ref.watch(userDaoProvider);
+  final groupDao = ref.watch(groupDaoProvider);
+  final service = ref.watch(supabaseNotificationServiceProvider);
+  return SupabaseNotificationSyncRepository(
+    notificationDao: notificationDao,
+    userDao: userDao,
+    groupDao: groupDao,
+    notificationService: service,
+  );
+});
+
+final notificationSyncControllerProvider =
+    StateNotifierProvider<SyncController, SyncState>((ref) {
+  final userRepository = ref.watch(userRepositoryProvider);
+  final syncRepository = ref.watch(supabaseNotificationSyncRepositoryProvider);
+
+  Future<void> fetchRemote() async {
+    final user = await userRepository.getActiveUser();
+    if (user == null) {
+      throw const SyncException('No hay usuario local configurado.');
+    }
+
+    await syncRepository.syncFromRemote(target: user);
+  }
+
+  Future<void> pushLocal() async {
+    final user = await userRepository.getActiveUser();
+    if (user == null) {
+      throw const SyncException('No hay usuario local configurado.');
+    }
+
+    await syncRepository.pushLocalChanges(target: user);
+  }
+
+  final controller = SyncController(
+    getActiveUser: () => userRepository.getActiveUser(),
+    fetchRemoteChanges: fetchRemote,
+    pushLocalChanges: pushLocal,
+    loadConfig: () => const SupabaseConfigService().loadConfig(),
+  );
+
+  ref.onDispose(controller.dispose);
+
+  return controller;
+});
+
+final unreadNotificationCountProvider = StreamProvider.autoDispose<int>((ref) {
+  final activeUserAsync = ref.watch(activeUserProvider);
+  final repository = ref.watch(notificationRepositoryProvider);
+
+  return activeUserAsync.when<Stream<int>>(
+    data: (user) {
+      if (user == null) {
+        return Stream.value(0);
+      }
+      return repository.watchUnreadCount(user.id);
+    },
+    loading: () => Stream.value(0),
+    error: (_, __) => Stream.value(0),
+  );
+});
+
+final inAppNotificationsProvider =
+    StreamProvider.autoDispose<List<InAppNotification>>((ref) {
+  final activeUserAsync = ref.watch(activeUserProvider);
+  final repository = ref.watch(notificationRepositoryProvider);
+
+  return activeUserAsync.when<Stream<List<InAppNotification>>>(
+    data: (user) {
+      if (user == null) {
+        return Stream.value(const <InAppNotification>[]);
+      }
+      return repository.watchForUser(user.id);
+    },
+    loading: () => Stream.value(const <InAppNotification>[]),
+    error: (_, __) => Stream.value(const <InAppNotification>[]),
   );
 });
 
@@ -272,10 +389,12 @@ final loanControllerProvider =
   final repository = ref.watch(loanRepositoryProvider);
   final syncController = ref.watch(groupSyncControllerProvider.notifier);
   final notificationClient = ref.watch(notificationServiceProvider);
+  final notificationRepository = ref.watch(notificationRepositoryProvider);
   return LoanController(
     loanRepository: repository,
     groupSyncController: syncController,
     notificationClient: notificationClient,
+    notificationRepository: notificationRepository,
   );
 });
 

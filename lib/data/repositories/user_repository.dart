@@ -57,6 +57,19 @@ class UserRepository {
     });
   }
 
+  Future<void> updateDisplayName({required int userId, required String displayName}) async {
+    final now = DateTime.now();
+    await _dao.updateUserFields(
+      userId: userId,
+      entry: LocalUsersCompanion(
+        username: Value(displayName),
+        updatedAt: Value(now),
+        isDirty: const Value(true),
+        syncedAt: const Value<DateTime?>(null),
+      ),
+    );
+  }
+
   Future<void> updatePinData({
     required int userId,
     required String pinHash,

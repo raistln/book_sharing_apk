@@ -2,7 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/local/database.dart';
+import '../data/models/in_app_notification_status.dart';
+import '../data/models/in_app_notification_type.dart';
 import '../data/repositories/loan_repository.dart';
+import '../data/repositories/notification_repository.dart';
 import 'group_sync_controller.dart';
 import 'notification_service.dart';
 
@@ -35,14 +38,17 @@ class LoanController extends StateNotifier<LoanActionState> {
     required LoanRepository loanRepository,
     required GroupSyncController groupSyncController,
     required NotificationClient notificationClient,
+    required NotificationRepository notificationRepository,
   })  : _loanRepository = loanRepository,
         _groupSyncController = groupSyncController,
         _notificationClient = notificationClient,
+        _notificationRepository = notificationRepository,
         super(const LoanActionState());
 
   final LoanRepository _loanRepository;
   final GroupSyncController _groupSyncController;
   final NotificationClient _notificationClient;
+  final NotificationRepository _notificationRepository;
 
   static const Duration _dueSoonLeadTime = Duration(hours: 24);
 
@@ -71,6 +77,11 @@ class LoanController extends StateNotifier<LoanActionState> {
         isLoading: false,
         lastSuccess: () => 'Solicitud enviada.',
       );
+      await _notifyLoanRequest(
+        loan: loan,
+        sharedBook: sharedBook,
+        borrower: borrower,
+      );
       return loan;
     } catch (error) {
       state = state.copyWith(
@@ -97,6 +108,10 @@ class LoanController extends StateNotifier<LoanActionState> {
         lastSuccess: () => 'Solicitud cancelada.',
       );
       await _cancelLoanNotifications(result);
+      await _notifyLoanCancelled(
+        loan: result,
+        borrower: borrower,
+      );
       return result;
     } catch (error) {
       state = state.copyWith(
@@ -123,6 +138,10 @@ class LoanController extends StateNotifier<LoanActionState> {
         lastSuccess: () => 'Solicitud rechazada.',
       );
       await _cancelLoanNotifications(result);
+      await _notifyLoanRejected(
+        loan: result,
+        owner: owner,
+      );
       return result;
     } catch (error) {
       state = state.copyWith(
@@ -147,6 +166,10 @@ class LoanController extends StateNotifier<LoanActionState> {
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Préstamo aceptado.',
+      );
+      await _notifyLoanAccepted(
+        loan: result,
+        owner: owner,
       );
       await _scheduleLoanNotifications(result);
       return result;
@@ -175,6 +198,10 @@ class LoanController extends StateNotifier<LoanActionState> {
         lastSuccess: () => 'Préstamo marcado como devuelto.',
       );
       await _cancelLoanNotifications(result);
+      await _notifyLoanReturned(
+        loan: result,
+        actor: actor,
+      );
       return result;
     } catch (error) {
       state = state.copyWith(
@@ -197,6 +224,7 @@ class LoanController extends StateNotifier<LoanActionState> {
         lastSuccess: () => 'Préstamo marcado como expirado.',
       );
       await _cancelLoanNotifications(result);
+      await _notifyLoanExpired(result);
       return result;
     } catch (error) {
       state = state.copyWith(
@@ -283,5 +311,220 @@ class LoanController extends StateNotifier<LoanActionState> {
       NotificationIds.loanDueSoon(uuid),
       NotificationIds.loanExpired(uuid),
     ]);
+  }
+
+  Future<void> _notifyLoanRequest({
+    required Loan loan,
+    required SharedBook sharedBook,
+    required LocalUser borrower,
+  }) async {
+    await _runNotificationTask(() async {
+      final message = await _messageWithBook(
+        loan: loan,
+        sharedBook: sharedBook,
+        fallback: '${borrower.username} solicitó un préstamo.',
+        withTitle: (title) => '${borrower.username} quiere pedir prestado "$title".',
+      );
+
+      await _notificationRepository.createLoanNotification(
+        type: InAppNotificationType.loanRequest,
+        loan: loan,
+        targetUserId: sharedBook.ownerUserId,
+        actorUserId: borrower.id,
+        title: 'Nueva solicitud de préstamo',
+        message: message,
+      );
+    });
+  }
+
+  Future<void> _notifyLoanCancelled({
+    required Loan loan,
+    required LocalUser borrower,
+  }) async {
+    await _runNotificationTask(() async {
+      await _notificationRepository.markLoanNotifications(
+        loanId: loan.id,
+        status: InAppNotificationStatus.dismissed,
+      );
+
+      final message = await _messageWithBook(
+        loan: loan,
+        fallback: '${borrower.username} canceló la solicitud de préstamo.',
+        withTitle: (title) => '${borrower.username} canceló la solicitud para "$title".',
+      );
+
+      await _notificationRepository.createLoanNotification(
+        type: InAppNotificationType.loanCancelled,
+        loan: loan,
+        targetUserId: loan.toUserId,
+        actorUserId: borrower.id,
+        title: 'Solicitud de préstamo cancelada',
+        message: message,
+      );
+    });
+  }
+
+  Future<void> _notifyLoanRejected({
+    required Loan loan,
+    required LocalUser owner,
+  }) async {
+    await _runNotificationTask(() async {
+      await _notificationRepository.markLoanNotifications(
+        loanId: loan.id,
+        status: InAppNotificationStatus.dismissed,
+      );
+
+      final message = await _messageWithBook(
+        loan: loan,
+        fallback: '${owner.username} rechazó tu solicitud de préstamo.',
+        withTitle: (title) => '${owner.username} rechazó tu solicitud para "$title".',
+      );
+
+      await _notificationRepository.createLoanNotification(
+        type: InAppNotificationType.loanRejected,
+        loan: loan,
+        targetUserId: loan.fromUserId,
+        actorUserId: owner.id,
+        title: 'Solicitud de préstamo rechazada',
+        message: message,
+      );
+    });
+  }
+
+  Future<void> _notifyLoanAccepted({
+    required Loan loan,
+    required LocalUser owner,
+  }) async {
+    await _runNotificationTask(() async {
+      await _notificationRepository.markLoanNotifications(
+        loanId: loan.id,
+        status: InAppNotificationStatus.dismissed,
+      );
+
+      final message = await _messageWithBook(
+        loan: loan,
+        fallback: '${owner.username} aceptó tu solicitud de préstamo.',
+        withTitle: (title) => '${owner.username} aceptó tu solicitud para "$title".',
+      );
+
+      await _notificationRepository.createLoanNotification(
+        type: InAppNotificationType.loanAccepted,
+        loan: loan,
+        targetUserId: loan.fromUserId,
+        actorUserId: owner.id,
+        title: 'Préstamo aceptado',
+        message: message,
+      );
+    });
+  }
+
+  Future<void> _notifyLoanReturned({
+    required Loan loan,
+    required LocalUser actor,
+  }) async {
+    await _runNotificationTask(() async {
+      await _notificationRepository.markLoanNotifications(
+        loanId: loan.id,
+        status: InAppNotificationStatus.read,
+      );
+
+      final counterpartId = actor.id == loan.fromUserId ? loan.toUserId : loan.fromUserId;
+      if (counterpartId == actor.id) {
+        return;
+      }
+
+      final message = await _messageWithBook(
+        loan: loan,
+        fallback: '${actor.username} marcó el préstamo como devuelto.',
+        withTitle: (title) => '${actor.username} marcó como devuelto "$title".',
+      );
+
+      await _notificationRepository.createLoanNotification(
+        type: InAppNotificationType.loanReturned,
+        loan: loan,
+        targetUserId: counterpartId,
+        actorUserId: actor.id,
+        title: 'Préstamo marcado como devuelto',
+        message: message,
+      );
+    });
+  }
+
+  Future<void> _notifyLoanExpired(Loan loan) async {
+    await _runNotificationTask(() async {
+      await _notificationRepository.markLoanNotifications(
+        loanId: loan.id,
+        status: InAppNotificationStatus.read,
+      );
+
+      final borrowerMessage = await _messageWithBook(
+        loan: loan,
+        fallback: 'Tu préstamo ha expirado.',
+        withTitle: (title) => 'Tu préstamo de "$title" ha expirado.',
+      );
+
+      await _notificationRepository.createLoanNotification(
+        type: InAppNotificationType.loanExpired,
+        loan: loan,
+        targetUserId: loan.fromUserId,
+        title: 'Préstamo expirado',
+        message: borrowerMessage,
+      );
+
+      final ownerMessage = await _messageWithBook(
+        loan: loan,
+        fallback: 'Un préstamo pendiente ha expirado.',
+        withTitle: (title) => 'El préstamo de "$title" ha expirado.',
+      );
+
+      await _notificationRepository.createLoanNotification(
+        type: InAppNotificationType.loanExpired,
+        loan: loan,
+        targetUserId: loan.toUserId,
+        title: 'Préstamo expirado',
+        message: ownerMessage,
+      );
+    });
+  }
+
+  Future<String> _messageWithBook({
+    required Loan loan,
+    SharedBook? sharedBook,
+    required String fallback,
+    required String Function(String title) withTitle,
+  }) async {
+    final bookTitle = await _resolveBookTitle(
+      sharedBookId: loan.sharedBookId,
+      sharedBook: sharedBook,
+    );
+
+    if (bookTitle != null && bookTitle.isNotEmpty) {
+      return withTitle(bookTitle);
+    }
+    return fallback;
+  }
+
+  Future<String?> _resolveBookTitle({
+    required int sharedBookId,
+    SharedBook? sharedBook,
+  }) async {
+    final localShared = sharedBook ?? await _loanRepository.findSharedBookById(sharedBookId);
+    if (localShared == null) {
+      return null;
+    }
+
+    final book = await _loanRepository.findBookById(localShared.bookId);
+    return book?.title;
+  }
+
+  Future<void> _runNotificationTask(Future<void> Function() task) async {
+    try {
+      await task();
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('[LoanController] Notification task failed: $error');
+        debugPrint(stackTrace.toString());
+      }
+    }
   }
 }

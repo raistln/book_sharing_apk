@@ -166,8 +166,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS local_users_username_unique
 -- 3) TRIGGERS
 -- =====================================================================
 
-CREATE OR REPLACE FUNCTION notify_loan_status_change()
-RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION public.notify_loan_status_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
 BEGIN
   IF (TG_OP = 'INSERT') THEN
     INSERT INTO notifications (user_id, type, message, related_loan)
@@ -194,13 +197,13 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS on_loan_change ON loans;
 CREATE TRIGGER on_loan_change
 AFTER INSERT OR UPDATE ON loans
 FOR EACH ROW
-EXECUTE FUNCTION notify_loan_status_change();
+EXECUTE FUNCTION public.notify_loan_status_change();
 
 -- =====================================================================
 -- 4) ROW LEVEL SECURITY (RLS)

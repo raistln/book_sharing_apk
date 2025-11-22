@@ -23,6 +23,44 @@ class BookImportService {
 
   final BookRepository _bookRepository;
 
+  static const _allowedStatuses = {
+    'available': 'available',
+    'disponible': 'available',
+    'loaned': 'loaned',
+    'prestado': 'loaned',
+    'loaned_out': 'loaned',
+    'archived': 'archived',
+    'archivado': 'archived',
+    'archive': 'archived',
+    'archived_out': 'archived',
+  };
+
+  String _normalizeStatus(String? rawStatus) {
+    if (rawStatus == null) {
+      return 'available';
+    }
+
+    final key = rawStatus.trim().toLowerCase();
+    final mapped = _allowedStatuses[key];
+    if (mapped != null) {
+      return mapped;
+    }
+
+    if (key.isEmpty) {
+      return 'available';
+    }
+
+    if (key.startsWith('loan')) {
+      return 'loaned';
+    }
+
+    if (key.startsWith('archiv')) {
+      return 'archived';
+    }
+
+    return 'available';
+  }
+
   Future<BookImportResult> importFromCsv(
     Uint8List fileData, {
     LocalUser? owner,
@@ -155,8 +193,8 @@ class BookImportService {
           final sanitizedAuthor = _BookDuplicateTracker.sanitize(author);
           final sanitizedIsbn = _BookDuplicateTracker.sanitize(isbn);
           final sanitizedNotes = _BookDuplicateTracker.sanitize(notes);
-          final sanitizedStatus =
-              _BookDuplicateTracker.sanitize(statusValue) ?? 'available';
+          final sanitizedStatus = _BookDuplicateTracker.sanitize(statusValue);
+          final normalizedStatus = _normalizeStatus(sanitizedStatus);
           final sanitizedBarcode = _BookDuplicateTracker.sanitize(barcodeValue);
 
           final duplicateReason = tracker.findDuplicate(
@@ -177,7 +215,7 @@ class BookImportService {
             title: sanitizedTitle,
             author: sanitizedAuthor,
             isbn: sanitizedIsbn,
-            status: sanitizedStatus,
+            status: normalizedStatus,
             notes: sanitizedNotes,
             barcode: sanitizedBarcode,
             owner: owner,
@@ -259,8 +297,8 @@ class BookImportService {
           final sanitizedBarcode =
               _BookDuplicateTracker.sanitize(bookData['barcode']?.toString());
           final sanitizedStatus =
-              _BookDuplicateTracker.sanitize(bookData['status']?.toString()) ??
-                  'available';
+              _BookDuplicateTracker.sanitize(bookData['status']?.toString());
+          final normalizedStatus = _normalizeStatus(sanitizedStatus);
           final sanitizedNotes =
               _BookDuplicateTracker.sanitize(bookData['notes']?.toString());
 
@@ -283,7 +321,7 @@ class BookImportService {
             author: sanitizedAuthor,
             isbn: sanitizedIsbn,
             barcode: sanitizedBarcode,
-            status: sanitizedStatus,
+            status: normalizedStatus,
             notes: sanitizedNotes,
             owner: owner,
           );

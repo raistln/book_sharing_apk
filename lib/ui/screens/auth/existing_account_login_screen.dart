@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
 import '../../screens/home/home_shell.dart';
+import '../../screens/onboarding/onboarding_intro_screen.dart';
 
 class ExistingAccountLoginScreen extends ConsumerStatefulWidget {
   const ExistingAccountLoginScreen({super.key});
@@ -192,8 +193,13 @@ class _ExistingAccountLoginScreenState
 
       if (!mounted || _navigated) return;
       _navigated = true;
+      final progress = await ref.read(onboardingServiceProvider).loadProgress();
+      if (!mounted) return;
+      final routeName = (!progress.introSeen || !progress.completed)
+          ? OnboardingIntroScreen.routeName
+          : HomeShell.routeName;
       Navigator.of(context)
-          .pushNamedAndRemoveUntil(HomeShell.routeName, (route) => false);
+          .pushNamedAndRemoveUntil(routeName, (route) => false);
     } catch (error) {
       if (!mounted) return;
       setState(() {

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as path;
 
+import '../../providers/book_providers.dart';
 import '../../providers/import_providers.dart';
 
 class ImportBooksDialog extends ConsumerStatefulWidget {
@@ -42,12 +43,20 @@ class _ImportBooksDialogState extends ConsumerState<ImportBooksDialog> {
       final file = result.files.single;
       final fileData = File(file.path!).readAsBytesSync();
       final extension = path.extension(file.name).toLowerCase();
-      
+      final activeUser = ref.read(activeUserProvider).value;
+
+      if (activeUser == null) {
+        setState(() {
+          _error = 'No hay usuario activo para importar los libros.';
+        });
+        return;
+      }
+
       final importService = ref.read(bookImportServiceProvider);
       final importResult = extension == '.csv'
-          ? await importService.importFromCsv(fileData)
+          ? await importService.importFromCsv(fileData, owner: activeUser)
           : extension == '.json'
-              ? await importService.importFromJson(fileData)
+              ? await importService.importFromJson(fileData, owner: activeUser)
               : throw UnsupportedError('Formato de archivo no soportado');
 
       setState(() {

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/auth_providers.dart';
+import '../../../providers/book_providers.dart';
 import '../home/home_shell.dart';
+import '../onboarding/onboarding_intro_screen.dart';
 
 class LockScreen extends ConsumerStatefulWidget {
   const LockScreen({super.key});
@@ -55,7 +57,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
       return;
     }
 
-    _navigateToHome();
+    await _navigateAfterUnlock();
   }
 
   Future<void> _tryBiometric() async {
@@ -75,14 +77,19 @@ class _LockScreenState extends ConsumerState<LockScreen> {
       return;
     }
 
-    _navigateToHome();
+    await _navigateAfterUnlock();
   }
 
-  void _navigateToHome() {
+  Future<void> _navigateAfterUnlock() async {
     if (_navigated) return;
     _navigated = true;
+    final progress = await ref.read(onboardingServiceProvider).loadProgress();
+    if (!mounted) return;
+    final routeName = (!progress.introSeen || !progress.completed)
+        ? OnboardingIntroScreen.routeName
+        : HomeShell.routeName;
     Navigator.of(context)
-        .pushNamedAndRemoveUntil(HomeShell.routeName, (route) => false);
+        .pushNamedAndRemoveUntil(routeName, (route) => false);
   }
 
   @override

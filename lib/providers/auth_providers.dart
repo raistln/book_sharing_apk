@@ -121,15 +121,13 @@ class AuthController extends StateNotifier<AuthState> {
       return;
     }
 
-    final isLocked = await _authService.isSessionLocked();
+    await _authService.lockSession();
+    _cancelLockTimer();
     state = state.copyWith(
-      status: isLocked ? AuthStatus.locked : AuthStatus.unlocked,
+      status: AuthStatus.locked,
       failedAttempts: 0,
       lockUntil: null,
     );
-    if (!isLocked) {
-      _cancelLockTimer();
-    }
   }
 
   Future<AuthAttemptResult> unlockWithPin(String pin) async {

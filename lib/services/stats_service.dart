@@ -67,8 +67,8 @@ class StatsService {
 
   static const _countableStatuses = {'accepted', 'returned', 'expired'};
 
-  Future<StatsSummary> loadSummary() async {
-    final books = await _bookRepository.fetchActiveBooks();
+  Future<StatsSummary> loadSummary({LocalUser? owner}) async {
+    final books = await _bookRepository.fetchActiveBooks(ownerUserId: owner?.id);
     final loanDetails = await _loanRepository.getAllLoanDetails();
 
     final totalLoans = loanDetails.length;

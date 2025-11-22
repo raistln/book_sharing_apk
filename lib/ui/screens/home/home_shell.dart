@@ -2347,6 +2347,8 @@ class _BookListTile extends ConsumerWidget {
         return 'Prestado';
       case 'archived':
         return 'Archivado';
+      case 'private':
+        return 'Privado';
       default:
         return status;
     }
@@ -2378,12 +2380,14 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
   bool _shouldDeleteInitialOnSave = false;
   bool _isSearching = false;
   String? _searchError;
+  late final CoverImageService _coverImageService;
 
   bool get _isEditing => widget.initialBook != null;
 
   @override
   void initState() {
     super.initState();
+    _coverImageService = ref.read(coverImageServiceProvider);
     final book = widget.initialBook;
     _initialCoverPath = book?.coverPath;
     _coverPath = _initialCoverPath;
@@ -2400,9 +2404,8 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
   @override
   void dispose() {
     if (!_didSubmit) {
-      final service = ref.read(coverImageServiceProvider);
       for (final path in _temporaryCoverPaths) {
-        unawaited(service.deleteCover(path));
+        unawaited(_coverImageService.deleteCover(path));
       }
     }
     _titleController.dispose();
@@ -3297,7 +3300,8 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
       final repository = ref.read(bookRepositoryProvider);
       final exportService = ref.read(bookExportServiceProvider);
 
-      final books = await repository.fetchActiveBooks();
+      final activeUser = ref.read(activeUserProvider).value;
+      final books = await repository.fetchActiveBooks(ownerUserId: activeUser?.id);
       if (books.isEmpty) {
         if (!ctx.mounted) return;
         _showFeedbackSnackBar(
@@ -6395,15 +6399,15 @@ class _SettingsTab extends ConsumerWidget {
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.cancel_outlined),
-                  title: const Text('Eliminar PIN y bloquear'),
-                  subtitle: const Text('Requiere configuración nuevamente.'),
+                  title: const Text('Eliminar PIN y cambiar de usuario'),
+                  subtitle: const Text('Vuelve al inicio para configurar otra cuenta.'),
                   onTap: () async {
                     final confirmed = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('¿Eliminar PIN?'),
+                        title: const Text('¿Eliminar PIN y salir de la cuenta?'),
                         content: const Text(
-                          'La sesión se bloqueará y deberás configurar un nuevo PIN.',
+                          'Se eliminará el PIN actual y tendrás que iniciar sesión o configurar un nuevo usuario.',
                         ),
                         actions: [
                           TextButton(

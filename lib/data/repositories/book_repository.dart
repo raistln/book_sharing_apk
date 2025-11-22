@@ -42,9 +42,11 @@ class BookRepository {
     unawaited(controller.sync());
   }
 
-  Stream<List<Book>> watchAll() => _bookDao.watchActiveBooks();
+  Stream<List<Book>> watchAll({int? ownerUserId}) =>
+      _bookDao.watchActiveBooks(ownerUserId: ownerUserId);
 
-  Future<List<Book>> fetchActiveBooks() => _bookDao.getActiveBooks();
+  Future<List<Book>> fetchActiveBooks({int? ownerUserId}) =>
+      _bookDao.getActiveBooks(ownerUserId: ownerUserId);
 
   Stream<List<BookReview>> watchReviews(int bookId) =>
       _bookDao.watchReviewsForBook(bookId);

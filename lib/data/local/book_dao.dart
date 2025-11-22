@@ -8,19 +8,30 @@ part 'book_dao.g.dart';
 class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
   BookDao(super.db);
 
-  Stream<List<Book>> watchActiveBooks() {
-    return (select(books)
-          ..where((tbl) =>
-              tbl.isDeleted.equals(false) | tbl.isDeleted.isNull()))
-        .watch();
+  Stream<List<Book>> watchActiveBooks({int? ownerUserId}) {
+    final query = select(books)
+      ..where(
+        (tbl) => tbl.isDeleted.equals(false) | tbl.isDeleted.isNull(),
+      );
+
+    if (ownerUserId != null) {
+      query.where((tbl) => tbl.ownerUserId.equals(ownerUserId));
+    }
+
+    return query.watch();
   }
 
-  Future<List<Book>> getActiveBooks() {
-    return (select(books)
-          ..where(
-            (tbl) => tbl.isDeleted.equals(false) | tbl.isDeleted.isNull(),
-          ))
-        .get();
+  Future<List<Book>> getActiveBooks({int? ownerUserId}) {
+    final query = select(books)
+      ..where(
+        (tbl) => tbl.isDeleted.equals(false) | tbl.isDeleted.isNull(),
+      );
+
+    if (ownerUserId != null) {
+      query.where((tbl) => tbl.ownerUserId.equals(ownerUserId));
+    }
+
+    return query.get();
   }
 
   Future<Book?> findByUuid(String uuid) {

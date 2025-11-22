@@ -347,7 +347,18 @@ final coverImageServiceProvider = Provider<CoverImageService>((ref) {
 
 final bookListProvider = StreamProvider.autoDispose((ref) {
   final repository = ref.watch(bookRepositoryProvider);
-  return repository.watchAll();
+  final activeUserAsync = ref.watch(activeUserProvider);
+
+  return activeUserAsync.when<Stream<List<Book>>>(
+    data: (user) {
+      if (user == null) {
+        return Stream.value(const <Book>[]);
+      }
+      return repository.watchAll(ownerUserId: user.id);
+    },
+    loading: () => Stream.value(const <Book>[]),
+    error: (_, __) => Stream.value(const <Book>[]),
+  );
 });
 
 final bookReviewsProvider =

@@ -13,11 +13,30 @@ final statsServiceProvider = Provider<StatsService>((ref) {
 
 final statsSummaryProvider = StreamProvider.autoDispose<StatsSummary>((ref) {
   final service = ref.watch(statsServiceProvider);
+  final activeUserAsync = ref.watch(activeUserProvider);
   final controller = StreamController<StatsSummary>();
 
   Future<void> emitSummary() async {
     try {
-      final summary = await service.loadSummary();
+      final owner = activeUserAsync.asData?.value;
+      if (owner == null) {
+        if (!controller.isClosed) {
+          controller.add(
+            const StatsSummary(
+              totalBooks: 0,
+              totalLoans: 0,
+              activeLoans: 0,
+              returnedLoans: 0,
+              expiredLoans: 0,
+              topBooks: [],
+              activeLoanDetails: [],
+            ),
+          );
+        }
+        return;
+      }
+
+      final summary = await service.loadSummary(owner: owner);
       if (!controller.isClosed) {
         controller.add(summary);
       }

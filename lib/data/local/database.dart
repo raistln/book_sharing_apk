@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -349,7 +350,12 @@ class AppDatabase extends _$AppDatabase {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dir = await getApplicationDocumentsDirectory();
-    final dbFile = File(p.join(dir.path, 'book_sharing.sqlite'));
+    final dbPath = p.join(dir.path, 'book_sharing.sqlite');
+    assert(() {
+      developer.log('Opening local database at $dbPath', name: 'AppDatabase');
+      return true;
+    }());
+    final dbFile = File(dbPath);
     return NativeDatabase.createInBackground(dbFile);
   });
 }

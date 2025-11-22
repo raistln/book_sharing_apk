@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
 import '../home/home_shell.dart';
+import '../onboarding/onboarding_intro_screen.dart';
 import 'existing_account_login_screen.dart';
 
 class PinSetupScreen extends ConsumerStatefulWidget {
@@ -37,14 +38,25 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       if (!mounted || _navigated) return;
       if (next.status == AuthStatus.unlocked) {
         _navigated = true;
-        Navigator.of(context)
-            .pushNamedAndRemoveUntil(HomeShell.routeName, (route) => false);
+        Future<void>.microtask(() async {
+          final progress = await ref.read(onboardingServiceProvider).loadProgress();
+          if (!mounted) return;
+          final routeName = (!progress.introSeen || !progress.completed)
+              ? OnboardingIntroScreen.routeName
+              : HomeShell.routeName;
+          if (!mounted) return;
+          Navigator.of(context)
+              .pushNamedAndRemoveUntil(routeName, (route) => false);
+        });
       }
     });
 
     final authState = ref.watch(authControllerProvider);
+    final activeUserAsync = ref.watch(activeUserProvider);
+    final activeUser = activeUserAsync.asData?.value;
     final isLoading =
         authState.status == AuthStatus.loading || _isSubmitting;
+    final isExistingUser = activeUser != null;
 
     return Scaffold(
       body: SafeArea(
@@ -65,18 +77,20 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _usernameController,
-                    enabled: !isLoading,
-                    textCapitalization: TextCapitalization.none,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Nombre de usuario',
-                      border: OutlineInputBorder(),
-                      hintText: 'Ej. ana_lectora',
+                  if (!isExistingUser) ...[
+                    TextField(
+                      controller: _usernameController,
+                      enabled: !isLoading,
+                      textCapitalization: TextCapitalization.none,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre de usuario',
+                        border: OutlineInputBorder(),
+                        hintText: 'Ej. ana_lectora',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 12),
+                  ],
                   TextField(
                     controller: _pinController,
                     enabled: !isLoading,
@@ -112,16 +126,17 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                     label: const Text('Guardar PIN'),
                   ),
                   const SizedBox(height: 12),
-                  TextButton.icon(
-                    onPressed: isLoading
-                        ? null
-                        : () {
-                            Navigator.of(context)
-                                .pushNamed(ExistingAccountLoginScreen.routeName);
-                          },
-                    icon: const Icon(Icons.person_search),
-                    label: const Text('Ya tengo cuenta'),
-                  ),
+                  if (!isExistingUser)
+                    TextButton.icon(
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              Navigator.of(context)
+                                  .pushNamed(ExistingAccountLoginScreen.routeName);
+                            },
+                      icon: const Icon(Icons.person_search),
+                      label: const Text('Ya tengo cuenta'),
+                    ),
                   const SizedBox(height: 12),
                   if (_errorMessage != null)
                     Text(
@@ -145,16 +160,20 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   Future<void> _submit() async {
     if (_isSubmitting) return;
 
+    final activeUser = ref.read(activeUserProvider).value;
+    final hasExistingUser = activeUser != null;
     final username = _usernameController.text.trim();
     final pin = _pinController.text.trim();
     final confirm = _confirmController.text.trim();
 
-    if (username.length < 3) {
-      setState(() {
-        _errorMessage =
-            'El nombre de usuario debe tener al menos 3 caracteres.';
-      });
-      return;
+    if (!hasExistingUser) {
+      if (username.length < 3) {
+        setState(() {
+          _errorMessage =
+              'El nombre de usuario debe tener al menos 3 caracteres.';
+        });
+        return;
+      }
     }
 
     if (pin.length < 4) {
@@ -177,21 +196,23 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
     });
 
     try {
-      final supabaseService = ref.read(supabaseUserServiceProvider);
-      final isAvailable = await supabaseService.isUsernameAvailable(username);
+      if (!hasExistingUser) {
+        final supabaseService = ref.read(supabaseUserServiceProvider);
+        final isAvailable = await supabaseService.isUsernameAvailable(username);
 
-      if (!isAvailable) {
-        if (!mounted) return;
-        setState(() {
-          _errorMessage =
-              'Ese nombre de usuario ya existe en Supabase. Prueba con otro.';
-        });
-        return;
+        if (!isAvailable) {
+          if (!mounted) return;
+          setState(() {
+            _errorMessage =
+                'Ese nombre de usuario ya existe en Supabase. Prueba con otro.';
+          });
+          return;
+        }
+
+        final userRepository = ref.read(userRepositoryProvider);
+        await userRepository.createUser(username: username);
+        ref.read(userSyncControllerProvider.notifier).markPendingChanges();
       }
-
-      final userRepository = ref.read(userRepositoryProvider);
-      await userRepository.createUser(username: username);
-      ref.read(userSyncControllerProvider.notifier).markPendingChanges();
 
       if (!mounted) return;
       await ref.read(authControllerProvider.notifier).configurePin(pin);

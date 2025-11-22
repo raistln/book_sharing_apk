@@ -23,7 +23,10 @@ class BookImportService {
 
   final BookRepository _bookRepository;
 
-  Future<BookImportResult> importFromCsv(Uint8List fileData) async {
+  Future<BookImportResult> importFromCsv(
+    Uint8List fileData, {
+    LocalUser? owner,
+  }) async {
     try {
       var csvString = utf8.decode(fileData);
       debugPrint('CSV String: $csvString');
@@ -117,7 +120,9 @@ class BookImportService {
 
       Iterable<Book> existingBooks = const [];
       try {
-        existingBooks = await _bookRepository.fetchActiveBooks();
+        existingBooks = await _bookRepository.fetchActiveBooks(
+          ownerUserId: owner?.id,
+        );
       } catch (error, stackTrace) {
         debugPrint('No se pudieron obtener libros existentes para evitar duplicados: $error');
         debugPrint('$stackTrace');
@@ -175,6 +180,7 @@ class BookImportService {
             status: sanitizedStatus,
             notes: sanitizedNotes,
             barcode: sanitizedBarcode,
+            owner: owner,
           );
           tracker.register(
             title: sanitizedTitle,
@@ -203,7 +209,10 @@ class BookImportService {
     }
   }
 
-  Future<BookImportResult> importFromJson(Uint8List fileData) async {
+  Future<BookImportResult> importFromJson(
+    Uint8List fileData, {
+    LocalUser? owner,
+  }) async {
     try {
       final jsonString = utf8.decode(fileData);
       final List<dynamic> jsonData = jsonDecode(jsonString);
@@ -222,7 +231,9 @@ class BookImportService {
 
       Iterable<Book> existingBooks = const [];
       try {
-        existingBooks = await _bookRepository.fetchActiveBooks();
+        existingBooks = await _bookRepository.fetchActiveBooks(
+          ownerUserId: owner?.id,
+        );
       } catch (error, stackTrace) {
         debugPrint('No se pudieron obtener libros existentes para evitar duplicados: $error');
         debugPrint('$stackTrace');
@@ -274,6 +285,7 @@ class BookImportService {
             barcode: sanitizedBarcode,
             status: sanitizedStatus,
             notes: sanitizedNotes,
+            owner: owner,
           );
           tracker.register(
             title: sanitizedTitle,

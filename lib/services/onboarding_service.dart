@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OnboardingProgress {
@@ -44,6 +45,13 @@ class OnboardingService {
     final detailPending = prefs.getBool(_detailCoachPendingKey) ?? false;
     final detailSeen = prefs.getBool(_detailCoachSeenKey) ?? false;
 
+    if (kDebugMode) {
+      debugPrint('[OnboardingService] loadProgress: '
+          'introSeen=$introSeen, completed=$completed, currentStep=$currentStep, '
+          'discoverPending=$discoverPending, discoverSeen=$discoverSeen, '
+          'detailPending=$detailPending, detailSeen=$detailSeen');
+    }
+
     return OnboardingProgress(
       introSeen: introSeen,
       completed: completed,
@@ -58,17 +66,26 @@ class OnboardingService {
   Future<void> markIntroSeen() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_introSeenKey, true);
+    if (kDebugMode) {
+      debugPrint('[OnboardingService] markIntroSeen');
+    }
   }
 
   Future<void> saveCurrentStep(int stepIndex) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_currentStepKey, stepIndex);
     await prefs.setBool(_completedKey, false);
+    if (kDebugMode) {
+      debugPrint('[OnboardingService] saveCurrentStep -> stepIndex=$stepIndex');
+    }
   }
 
   Future<void> clearCurrentStep() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_currentStepKey);
+    if (kDebugMode) {
+      debugPrint('[OnboardingService] clearCurrentStep');
+    }
   }
 
   Future<void> markCompleted() async {
@@ -76,6 +93,9 @@ class OnboardingService {
     await prefs.setBool(_introSeenKey, true);
     await prefs.remove(_currentStepKey);
     await prefs.setBool(_completedKey, true);
+    if (kDebugMode) {
+      debugPrint('[OnboardingService] markCompleted');
+    }
   }
 
   Future<void> reset() async {
@@ -87,6 +107,9 @@ class OnboardingService {
     await prefs.remove(_discoverCoachSeenKey);
     await prefs.remove(_detailCoachPendingKey);
     await prefs.remove(_detailCoachSeenKey);
+    if (kDebugMode) {
+      debugPrint('[OnboardingService] reset all flags');
+    }
   }
 
   Future<void> markDiscoverCoachPending({bool resetSeen = false}) async {

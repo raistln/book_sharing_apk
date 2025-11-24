@@ -74,13 +74,13 @@ class StatsService {
     final totalLoans = loanDetails.length;
     final activeLoanDetails = loanDetails
         .where(
-          (detail) => detail.loan.status == 'accepted' || detail.loan.status == 'pending',
+          (detail) => detail.loan.status == 'accepted' || detail.loan.status == 'pending' || detail.loan.status == 'loaned',
         )
         .map(
           (detail) => StatsActiveLoan(
             loanUuid: detail.loan.uuid,
             bookTitle: _resolveActiveLoanTitle(detail, books),
-            borrowerName: _resolveUserName(detail.borrower),
+            borrowerName: detail.loan.externalBorrowerName ?? _resolveUserName(detail.borrower),
             status: detail.loan.status,
             startDate: detail.loan.startDate,
             dueDate: detail.loan.dueDate,

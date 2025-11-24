@@ -3635,6 +3635,9 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
         dueDate: result['dueDate'] as DateTime,
       );
 
+      // Sync to update book status in groups
+      await ref.read(groupSyncControllerProvider.notifier).syncGroups();
+
       if (!context.mounted) return;
       _showFeedbackSnackBar(
         context: context,

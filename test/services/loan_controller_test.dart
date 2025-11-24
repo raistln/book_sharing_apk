@@ -283,14 +283,20 @@ void main() {
   test('markReturned cancels scheduled notifications', () async {
     final loan = await createPendingLoan(dueOffset: const Duration(days: 4));
     final accepted = await controller.acceptLoan(loan: loan, owner: owner);
+    
+    final loaned = await controller.markAsLoaned(
+      loan: accepted,
+      actor: owner,
+      dueDate: DateTime.now().add(const Duration(days: 14)),
+    );
 
-    final dueSoonId = NotificationIds.loanDueSoon(accepted.uuid);
-    final expiredId = NotificationIds.loanExpired(accepted.uuid);
+    final dueSoonId = NotificationIds.loanDueSoon(loaned.uuid);
+    final expiredId = NotificationIds.loanExpired(loaned.uuid);
 
-    // Clear cancellations originating from the acceptance flow.
+    // Clear cancellations originating from the acceptance/loaned flow.
     notificationClient.cancelledIds.clear();
 
-    final result = await controller.markReturned(loan: accepted, actor: owner);
+    final result = await controller.markReturned(loan: loaned, actor: owner);
 
     expect(result.status, 'returned');
     expect(notificationClient.cancelledIds.toSet(), {dueSoonId, expiredId});

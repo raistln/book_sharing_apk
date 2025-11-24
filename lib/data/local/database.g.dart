@@ -5077,9 +5077,9 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
       const VerificationMeta('fromUserId');
   @override
   late final GeneratedColumn<int> fromUserId = GeneratedColumn<int>(
-      'from_user_id', aliasedName, false,
+      'from_user_id', aliasedName, true,
       type: DriftSqlType.int,
-      requiredDuringInsert: true,
+      requiredDuringInsert: false,
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('REFERENCES local_users (id)'));
   static const VerificationMeta _fromRemoteIdMeta =
@@ -5103,6 +5103,18 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
   late final GeneratedColumn<String> toRemoteId = GeneratedColumn<String>(
       'to_remote_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _externalBorrowerNameMeta =
+      const VerificationMeta('externalBorrowerName');
+  @override
+  late final GeneratedColumn<String> externalBorrowerName =
+      GeneratedColumn<String>('external_borrower_name', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _externalBorrowerContactMeta =
+      const VerificationMeta('externalBorrowerContact');
+  @override
+  late final GeneratedColumn<String> externalBorrowerContact =
+      GeneratedColumn<String>('external_borrower_contact', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -5191,6 +5203,8 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
         fromRemoteId,
         toUserId,
         toRemoteId,
+        externalBorrowerName,
+        externalBorrowerContact,
         status,
         startDate,
         dueDate,
@@ -5246,8 +5260,6 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
           _fromUserIdMeta,
           fromUserId.isAcceptableOrUnknown(
               data['from_user_id']!, _fromUserIdMeta));
-    } else if (isInserting) {
-      context.missing(_fromUserIdMeta);
     }
     if (data.containsKey('from_remote_id')) {
       context.handle(
@@ -5266,6 +5278,19 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
           _toRemoteIdMeta,
           toRemoteId.isAcceptableOrUnknown(
               data['to_remote_id']!, _toRemoteIdMeta));
+    }
+    if (data.containsKey('external_borrower_name')) {
+      context.handle(
+          _externalBorrowerNameMeta,
+          externalBorrowerName.isAcceptableOrUnknown(
+              data['external_borrower_name']!, _externalBorrowerNameMeta));
+    }
+    if (data.containsKey('external_borrower_contact')) {
+      context.handle(
+          _externalBorrowerContactMeta,
+          externalBorrowerContact.isAcceptableOrUnknown(
+              data['external_borrower_contact']!,
+              _externalBorrowerContactMeta));
     }
     if (data.containsKey('status')) {
       context.handle(_statusMeta,
@@ -5331,13 +5356,19 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
       sharedBookUuid: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}shared_book_uuid'])!,
       fromUserId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}from_user_id'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}from_user_id']),
       fromRemoteId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}from_remote_id']),
       toUserId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}to_user_id'])!,
       toRemoteId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}to_remote_id']),
+      externalBorrowerName: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}external_borrower_name']),
+      externalBorrowerContact: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}external_borrower_contact']),
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       startDate: attachedDatabase.typeMapping
@@ -5373,10 +5404,12 @@ class Loan extends DataClass implements Insertable<Loan> {
   final String? remoteId;
   final int sharedBookId;
   final String sharedBookUuid;
-  final int fromUserId;
+  final int? fromUserId;
   final String? fromRemoteId;
   final int toUserId;
   final String? toRemoteId;
+  final String? externalBorrowerName;
+  final String? externalBorrowerContact;
   final String status;
   final DateTime startDate;
   final DateTime? dueDate;
@@ -5393,10 +5426,12 @@ class Loan extends DataClass implements Insertable<Loan> {
       this.remoteId,
       required this.sharedBookId,
       required this.sharedBookUuid,
-      required this.fromUserId,
+      this.fromUserId,
       this.fromRemoteId,
       required this.toUserId,
       this.toRemoteId,
+      this.externalBorrowerName,
+      this.externalBorrowerContact,
       required this.status,
       required this.startDate,
       this.dueDate,
@@ -5417,13 +5452,22 @@ class Loan extends DataClass implements Insertable<Loan> {
     }
     map['shared_book_id'] = Variable<int>(sharedBookId);
     map['shared_book_uuid'] = Variable<String>(sharedBookUuid);
-    map['from_user_id'] = Variable<int>(fromUserId);
+    if (!nullToAbsent || fromUserId != null) {
+      map['from_user_id'] = Variable<int>(fromUserId);
+    }
     if (!nullToAbsent || fromRemoteId != null) {
       map['from_remote_id'] = Variable<String>(fromRemoteId);
     }
     map['to_user_id'] = Variable<int>(toUserId);
     if (!nullToAbsent || toRemoteId != null) {
       map['to_remote_id'] = Variable<String>(toRemoteId);
+    }
+    if (!nullToAbsent || externalBorrowerName != null) {
+      map['external_borrower_name'] = Variable<String>(externalBorrowerName);
+    }
+    if (!nullToAbsent || externalBorrowerContact != null) {
+      map['external_borrower_contact'] =
+          Variable<String>(externalBorrowerContact);
     }
     map['status'] = Variable<String>(status);
     map['start_date'] = Variable<DateTime>(startDate);
@@ -5455,7 +5499,9 @@ class Loan extends DataClass implements Insertable<Loan> {
           : Value(remoteId),
       sharedBookId: Value(sharedBookId),
       sharedBookUuid: Value(sharedBookUuid),
-      fromUserId: Value(fromUserId),
+      fromUserId: fromUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fromUserId),
       fromRemoteId: fromRemoteId == null && nullToAbsent
           ? const Value.absent()
           : Value(fromRemoteId),
@@ -5463,6 +5509,12 @@ class Loan extends DataClass implements Insertable<Loan> {
       toRemoteId: toRemoteId == null && nullToAbsent
           ? const Value.absent()
           : Value(toRemoteId),
+      externalBorrowerName: externalBorrowerName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(externalBorrowerName),
+      externalBorrowerContact: externalBorrowerContact == null && nullToAbsent
+          ? const Value.absent()
+          : Value(externalBorrowerContact),
       status: Value(status),
       startDate: Value(startDate),
       dueDate: dueDate == null && nullToAbsent
@@ -5493,10 +5545,14 @@ class Loan extends DataClass implements Insertable<Loan> {
       remoteId: serializer.fromJson<String?>(json['remoteId']),
       sharedBookId: serializer.fromJson<int>(json['sharedBookId']),
       sharedBookUuid: serializer.fromJson<String>(json['sharedBookUuid']),
-      fromUserId: serializer.fromJson<int>(json['fromUserId']),
+      fromUserId: serializer.fromJson<int?>(json['fromUserId']),
       fromRemoteId: serializer.fromJson<String?>(json['fromRemoteId']),
       toUserId: serializer.fromJson<int>(json['toUserId']),
       toRemoteId: serializer.fromJson<String?>(json['toRemoteId']),
+      externalBorrowerName:
+          serializer.fromJson<String?>(json['externalBorrowerName']),
+      externalBorrowerContact:
+          serializer.fromJson<String?>(json['externalBorrowerContact']),
       status: serializer.fromJson<String>(json['status']),
       startDate: serializer.fromJson<DateTime>(json['startDate']),
       dueDate: serializer.fromJson<DateTime?>(json['dueDate']),
@@ -5518,10 +5574,13 @@ class Loan extends DataClass implements Insertable<Loan> {
       'remoteId': serializer.toJson<String?>(remoteId),
       'sharedBookId': serializer.toJson<int>(sharedBookId),
       'sharedBookUuid': serializer.toJson<String>(sharedBookUuid),
-      'fromUserId': serializer.toJson<int>(fromUserId),
+      'fromUserId': serializer.toJson<int?>(fromUserId),
       'fromRemoteId': serializer.toJson<String?>(fromRemoteId),
       'toUserId': serializer.toJson<int>(toUserId),
       'toRemoteId': serializer.toJson<String?>(toRemoteId),
+      'externalBorrowerName': serializer.toJson<String?>(externalBorrowerName),
+      'externalBorrowerContact':
+          serializer.toJson<String?>(externalBorrowerContact),
       'status': serializer.toJson<String>(status),
       'startDate': serializer.toJson<DateTime>(startDate),
       'dueDate': serializer.toJson<DateTime?>(dueDate),
@@ -5541,10 +5600,12 @@ class Loan extends DataClass implements Insertable<Loan> {
           Value<String?> remoteId = const Value.absent(),
           int? sharedBookId,
           String? sharedBookUuid,
-          int? fromUserId,
+          Value<int?> fromUserId = const Value.absent(),
           Value<String?> fromRemoteId = const Value.absent(),
           int? toUserId,
           Value<String?> toRemoteId = const Value.absent(),
+          Value<String?> externalBorrowerName = const Value.absent(),
+          Value<String?> externalBorrowerContact = const Value.absent(),
           String? status,
           DateTime? startDate,
           Value<DateTime?> dueDate = const Value.absent(),
@@ -5561,11 +5622,17 @@ class Loan extends DataClass implements Insertable<Loan> {
         remoteId: remoteId.present ? remoteId.value : this.remoteId,
         sharedBookId: sharedBookId ?? this.sharedBookId,
         sharedBookUuid: sharedBookUuid ?? this.sharedBookUuid,
-        fromUserId: fromUserId ?? this.fromUserId,
+        fromUserId: fromUserId.present ? fromUserId.value : this.fromUserId,
         fromRemoteId:
             fromRemoteId.present ? fromRemoteId.value : this.fromRemoteId,
         toUserId: toUserId ?? this.toUserId,
         toRemoteId: toRemoteId.present ? toRemoteId.value : this.toRemoteId,
+        externalBorrowerName: externalBorrowerName.present
+            ? externalBorrowerName.value
+            : this.externalBorrowerName,
+        externalBorrowerContact: externalBorrowerContact.present
+            ? externalBorrowerContact.value
+            : this.externalBorrowerContact,
         status: status ?? this.status,
         startDate: startDate ?? this.startDate,
         dueDate: dueDate.present ? dueDate.value : this.dueDate,
@@ -5596,6 +5663,12 @@ class Loan extends DataClass implements Insertable<Loan> {
       toUserId: data.toUserId.present ? data.toUserId.value : this.toUserId,
       toRemoteId:
           data.toRemoteId.present ? data.toRemoteId.value : this.toRemoteId,
+      externalBorrowerName: data.externalBorrowerName.present
+          ? data.externalBorrowerName.value
+          : this.externalBorrowerName,
+      externalBorrowerContact: data.externalBorrowerContact.present
+          ? data.externalBorrowerContact.value
+          : this.externalBorrowerContact,
       status: data.status.present ? data.status.value : this.status,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
       dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
@@ -5623,6 +5696,8 @@ class Loan extends DataClass implements Insertable<Loan> {
           ..write('fromRemoteId: $fromRemoteId, ')
           ..write('toUserId: $toUserId, ')
           ..write('toRemoteId: $toRemoteId, ')
+          ..write('externalBorrowerName: $externalBorrowerName, ')
+          ..write('externalBorrowerContact: $externalBorrowerContact, ')
           ..write('status: $status, ')
           ..write('startDate: $startDate, ')
           ..write('dueDate: $dueDate, ')
@@ -5638,26 +5713,29 @@ class Loan extends DataClass implements Insertable<Loan> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      uuid,
-      remoteId,
-      sharedBookId,
-      sharedBookUuid,
-      fromUserId,
-      fromRemoteId,
-      toUserId,
-      toRemoteId,
-      status,
-      startDate,
-      dueDate,
-      returnedAt,
-      cancelledAt,
-      isDirty,
-      isDeleted,
-      syncedAt,
-      createdAt,
-      updatedAt);
+  int get hashCode => Object.hashAll([
+        id,
+        uuid,
+        remoteId,
+        sharedBookId,
+        sharedBookUuid,
+        fromUserId,
+        fromRemoteId,
+        toUserId,
+        toRemoteId,
+        externalBorrowerName,
+        externalBorrowerContact,
+        status,
+        startDate,
+        dueDate,
+        returnedAt,
+        cancelledAt,
+        isDirty,
+        isDeleted,
+        syncedAt,
+        createdAt,
+        updatedAt
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5671,6 +5749,8 @@ class Loan extends DataClass implements Insertable<Loan> {
           other.fromRemoteId == this.fromRemoteId &&
           other.toUserId == this.toUserId &&
           other.toRemoteId == this.toRemoteId &&
+          other.externalBorrowerName == this.externalBorrowerName &&
+          other.externalBorrowerContact == this.externalBorrowerContact &&
           other.status == this.status &&
           other.startDate == this.startDate &&
           other.dueDate == this.dueDate &&
@@ -5689,10 +5769,12 @@ class LoansCompanion extends UpdateCompanion<Loan> {
   final Value<String?> remoteId;
   final Value<int> sharedBookId;
   final Value<String> sharedBookUuid;
-  final Value<int> fromUserId;
+  final Value<int?> fromUserId;
   final Value<String?> fromRemoteId;
   final Value<int> toUserId;
   final Value<String?> toRemoteId;
+  final Value<String?> externalBorrowerName;
+  final Value<String?> externalBorrowerContact;
   final Value<String> status;
   final Value<DateTime> startDate;
   final Value<DateTime?> dueDate;
@@ -5713,6 +5795,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     this.fromRemoteId = const Value.absent(),
     this.toUserId = const Value.absent(),
     this.toRemoteId = const Value.absent(),
+    this.externalBorrowerName = const Value.absent(),
+    this.externalBorrowerContact = const Value.absent(),
     this.status = const Value.absent(),
     this.startDate = const Value.absent(),
     this.dueDate = const Value.absent(),
@@ -5730,10 +5814,12 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     this.remoteId = const Value.absent(),
     required int sharedBookId,
     required String sharedBookUuid,
-    required int fromUserId,
+    this.fromUserId = const Value.absent(),
     this.fromRemoteId = const Value.absent(),
     required int toUserId,
     this.toRemoteId = const Value.absent(),
+    this.externalBorrowerName = const Value.absent(),
+    this.externalBorrowerContact = const Value.absent(),
     this.status = const Value.absent(),
     this.startDate = const Value.absent(),
     this.dueDate = const Value.absent(),
@@ -5747,7 +5833,6 @@ class LoansCompanion extends UpdateCompanion<Loan> {
   })  : uuid = Value(uuid),
         sharedBookId = Value(sharedBookId),
         sharedBookUuid = Value(sharedBookUuid),
-        fromUserId = Value(fromUserId),
         toUserId = Value(toUserId);
   static Insertable<Loan> custom({
     Expression<int>? id,
@@ -5759,6 +5844,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     Expression<String>? fromRemoteId,
     Expression<int>? toUserId,
     Expression<String>? toRemoteId,
+    Expression<String>? externalBorrowerName,
+    Expression<String>? externalBorrowerContact,
     Expression<String>? status,
     Expression<DateTime>? startDate,
     Expression<DateTime>? dueDate,
@@ -5780,6 +5867,10 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       if (fromRemoteId != null) 'from_remote_id': fromRemoteId,
       if (toUserId != null) 'to_user_id': toUserId,
       if (toRemoteId != null) 'to_remote_id': toRemoteId,
+      if (externalBorrowerName != null)
+        'external_borrower_name': externalBorrowerName,
+      if (externalBorrowerContact != null)
+        'external_borrower_contact': externalBorrowerContact,
       if (status != null) 'status': status,
       if (startDate != null) 'start_date': startDate,
       if (dueDate != null) 'due_date': dueDate,
@@ -5799,10 +5890,12 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       Value<String?>? remoteId,
       Value<int>? sharedBookId,
       Value<String>? sharedBookUuid,
-      Value<int>? fromUserId,
+      Value<int?>? fromUserId,
       Value<String?>? fromRemoteId,
       Value<int>? toUserId,
       Value<String?>? toRemoteId,
+      Value<String?>? externalBorrowerName,
+      Value<String?>? externalBorrowerContact,
       Value<String>? status,
       Value<DateTime>? startDate,
       Value<DateTime?>? dueDate,
@@ -5823,6 +5916,9 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       fromRemoteId: fromRemoteId ?? this.fromRemoteId,
       toUserId: toUserId ?? this.toUserId,
       toRemoteId: toRemoteId ?? this.toRemoteId,
+      externalBorrowerName: externalBorrowerName ?? this.externalBorrowerName,
+      externalBorrowerContact:
+          externalBorrowerContact ?? this.externalBorrowerContact,
       status: status ?? this.status,
       startDate: startDate ?? this.startDate,
       dueDate: dueDate ?? this.dueDate,
@@ -5865,6 +5961,14 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     }
     if (toRemoteId.present) {
       map['to_remote_id'] = Variable<String>(toRemoteId.value);
+    }
+    if (externalBorrowerName.present) {
+      map['external_borrower_name'] =
+          Variable<String>(externalBorrowerName.value);
+    }
+    if (externalBorrowerContact.present) {
+      map['external_borrower_contact'] =
+          Variable<String>(externalBorrowerContact.value);
     }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
@@ -5911,6 +6015,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
           ..write('fromRemoteId: $fromRemoteId, ')
           ..write('toUserId: $toUserId, ')
           ..write('toRemoteId: $toRemoteId, ')
+          ..write('externalBorrowerName: $externalBorrowerName, ')
+          ..write('externalBorrowerContact: $externalBorrowerContact, ')
           ..write('status: $status, ')
           ..write('startDate: $startDate, ')
           ..write('dueDate: $dueDate, ')
@@ -6990,6 +7096,40 @@ final class $$LocalUsersTableReferences
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
+
+  static MultiTypedResultKey<$InAppNotificationsTable, List<InAppNotification>>
+      _notificationsAuthoredTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.inAppNotifications,
+              aliasName: $_aliasNameGenerator(
+                  db.localUsers.id, db.inAppNotifications.actorUserId));
+
+  $$InAppNotificationsTableProcessedTableManager get notificationsAuthored {
+    final manager = $$InAppNotificationsTableTableManager(
+            $_db, $_db.inAppNotifications)
+        .filter((f) => f.actorUserId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_notificationsAuthoredTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$InAppNotificationsTable, List<InAppNotification>>
+      _notificationsReceivedTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.inAppNotifications,
+              aliasName: $_aliasNameGenerator(
+                  db.localUsers.id, db.inAppNotifications.targetUserId));
+
+  $$InAppNotificationsTableProcessedTableManager get notificationsReceived {
+    final manager = $$InAppNotificationsTableTableManager(
+            $_db, $_db.inAppNotifications)
+        .filter((f) => f.targetUserId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_notificationsReceivedTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
 }
 
 class $$LocalUsersTableFilterComposer
@@ -7218,6 +7358,48 @@ class $$LocalUsersTableFilterComposer
             $$LoansTableFilterComposer(
               $db: $db,
               $table: $db.loans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> notificationsAuthored(
+      Expression<bool> Function($$InAppNotificationsTableFilterComposer f) f) {
+    final $$InAppNotificationsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.inAppNotifications,
+        getReferencedColumn: (t) => t.actorUserId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InAppNotificationsTableFilterComposer(
+              $db: $db,
+              $table: $db.inAppNotifications,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> notificationsReceived(
+      Expression<bool> Function($$InAppNotificationsTableFilterComposer f) f) {
+    final $$InAppNotificationsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.inAppNotifications,
+        getReferencedColumn: (t) => t.targetUserId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InAppNotificationsTableFilterComposer(
+              $db: $db,
+              $table: $db.inAppNotifications,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -7507,6 +7689,50 @@ class $$LocalUsersTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> notificationsAuthored<T extends Object>(
+      Expression<T> Function($$InAppNotificationsTableAnnotationComposer a) f) {
+    final $$InAppNotificationsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.inAppNotifications,
+            getReferencedColumn: (t) => t.actorUserId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$InAppNotificationsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.inAppNotifications,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
+
+  Expression<T> notificationsReceived<T extends Object>(
+      Expression<T> Function($$InAppNotificationsTableAnnotationComposer a) f) {
+    final $$InAppNotificationsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.inAppNotifications,
+            getReferencedColumn: (t) => t.targetUserId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$InAppNotificationsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.inAppNotifications,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
 }
 
 class $$LocalUsersTableTableManager extends RootTableManager<
@@ -7529,7 +7755,9 @@ class $$LocalUsersTableTableManager extends RootTableManager<
         bool groupInvitationsSent,
         bool groupInvitationsAccepted,
         bool loansRequested,
-        bool loansReceived})> {
+        bool loansReceived,
+        bool notificationsAuthored,
+        bool notificationsReceived})> {
   $$LocalUsersTableTableManager(_$AppDatabase db, $LocalUsersTable table)
       : super(TableManagerState(
           db: db,
@@ -7611,7 +7839,9 @@ class $$LocalUsersTableTableManager extends RootTableManager<
               groupInvitationsSent = false,
               groupInvitationsAccepted = false,
               loansRequested = false,
-              loansReceived = false}) {
+              loansReceived = false,
+              notificationsAuthored = false,
+              notificationsReceived = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
@@ -7623,7 +7853,9 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                 if (groupInvitationsSent) db.groupInvitations,
                 if (groupInvitationsAccepted) db.groupInvitations,
                 if (loansRequested) db.loans,
-                if (loansReceived) db.loans
+                if (loansReceived) db.loans,
+                if (notificationsAuthored) db.inAppNotifications,
+                if (notificationsReceived) db.inAppNotifications
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -7744,6 +7976,32 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem: (item,
                                 referencedItems) =>
                             referencedItems.where((e) => e.toUserId == item.id),
+                        typedResults: items),
+                  if (notificationsAuthored)
+                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
+                            InAppNotification>(
+                        currentTable: table,
+                        referencedTable: $$LocalUsersTableReferences
+                            ._notificationsAuthoredTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LocalUsersTableReferences(db, table, p0)
+                                .notificationsAuthored,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.actorUserId == item.id),
+                        typedResults: items),
+                  if (notificationsReceived)
+                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
+                            InAppNotification>(
+                        currentTable: table,
+                        referencedTable: $$LocalUsersTableReferences
+                            ._notificationsReceivedTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LocalUsersTableReferences(db, table, p0)
+                                .notificationsReceived,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.targetUserId == item.id),
                         typedResults: items)
                 ];
               },
@@ -7772,7 +8030,9 @@ typedef $$LocalUsersTableProcessedTableManager = ProcessedTableManager<
         bool groupInvitationsSent,
         bool groupInvitationsAccepted,
         bool loansRequested,
-        bool loansReceived})>;
+        bool loansReceived,
+        bool notificationsAuthored,
+        bool notificationsReceived})>;
 typedef $$BooksTableCreateCompanionBuilder = BooksCompanion Function({
   Value<int> id,
   required String uuid,
@@ -10010,18 +10270,18 @@ final class $$SharedBooksTableReferences
   }
 
   static MultiTypedResultKey<$InAppNotificationsTable, List<InAppNotification>>
-      _inAppNotificationsRefsTable(_$AppDatabase db) =>
+      _notificationSharedBooksTable(_$AppDatabase db) =>
           MultiTypedResultKey.fromTable(db.inAppNotifications,
               aliasName: $_aliasNameGenerator(
                   db.sharedBooks.id, db.inAppNotifications.sharedBookId));
 
-  $$InAppNotificationsTableProcessedTableManager get inAppNotificationsRefs {
+  $$InAppNotificationsTableProcessedTableManager get notificationSharedBooks {
     final manager = $$InAppNotificationsTableTableManager(
             $_db, $_db.inAppNotifications)
         .filter((f) => f.sharedBookId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache =
-        $_typedResult.readTableOrNull(_inAppNotificationsRefsTable($_db));
+        $_typedResult.readTableOrNull(_notificationSharedBooksTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -10156,7 +10416,7 @@ class $$SharedBooksTableFilterComposer
     return f(composer);
   }
 
-  Expression<bool> inAppNotificationsRefs(
+  Expression<bool> notificationSharedBooks(
       Expression<bool> Function($$InAppNotificationsTableFilterComposer f) f) {
     final $$InAppNotificationsTableFilterComposer composer = $composerBuilder(
         composer: this,
@@ -10417,7 +10677,7 @@ class $$SharedBooksTableAnnotationComposer
     return f(composer);
   }
 
-  Expression<T> inAppNotificationsRefs<T extends Object>(
+  Expression<T> notificationSharedBooks<T extends Object>(
       Expression<T> Function($$InAppNotificationsTableAnnotationComposer a) f) {
     final $$InAppNotificationsTableAnnotationComposer composer =
         $composerBuilder(
@@ -10456,7 +10716,7 @@ class $$SharedBooksTableTableManager extends RootTableManager<
         bool bookId,
         bool ownerUserId,
         bool loansRefs,
-        bool inAppNotificationsRefs})> {
+        bool notificationSharedBooks})> {
   $$SharedBooksTableTableManager(_$AppDatabase db, $SharedBooksTable table)
       : super(TableManagerState(
           db: db,
@@ -10550,12 +10810,12 @@ class $$SharedBooksTableTableManager extends RootTableManager<
               bookId = false,
               ownerUserId = false,
               loansRefs = false,
-              inAppNotificationsRefs = false}) {
+              notificationSharedBooks = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
                 if (loansRefs) db.loans,
-                if (inAppNotificationsRefs) db.inAppNotifications
+                if (notificationSharedBooks) db.inAppNotifications
               ],
               addJoins: <
                   T extends TableManagerState<
@@ -10618,15 +10878,15 @@ class $$SharedBooksTableTableManager extends RootTableManager<
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.sharedBookId == item.id),
                         typedResults: items),
-                  if (inAppNotificationsRefs)
+                  if (notificationSharedBooks)
                     await $_getPrefetchedData<SharedBook, $SharedBooksTable,
                             InAppNotification>(
                         currentTable: table,
                         referencedTable: $$SharedBooksTableReferences
-                            ._inAppNotificationsRefsTable(db),
+                            ._notificationSharedBooksTable(db),
                         managerFromTypedResult: (p0) =>
                             $$SharedBooksTableReferences(db, table, p0)
-                                .inAppNotificationsRefs,
+                                .notificationSharedBooks,
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.sharedBookId == item.id),
@@ -10654,7 +10914,7 @@ typedef $$SharedBooksTableProcessedTableManager = ProcessedTableManager<
         bool bookId,
         bool ownerUserId,
         bool loansRefs,
-        bool inAppNotificationsRefs})>;
+        bool notificationSharedBooks})>;
 typedef $$GroupInvitationsTableCreateCompanionBuilder
     = GroupInvitationsCompanion Function({
   Value<int> id,
@@ -11304,10 +11564,12 @@ typedef $$LoansTableCreateCompanionBuilder = LoansCompanion Function({
   Value<String?> remoteId,
   required int sharedBookId,
   required String sharedBookUuid,
-  required int fromUserId,
+  Value<int?> fromUserId,
   Value<String?> fromRemoteId,
   required int toUserId,
   Value<String?> toRemoteId,
+  Value<String?> externalBorrowerName,
+  Value<String?> externalBorrowerContact,
   Value<String> status,
   Value<DateTime> startDate,
   Value<DateTime?> dueDate,
@@ -11325,10 +11587,12 @@ typedef $$LoansTableUpdateCompanionBuilder = LoansCompanion Function({
   Value<String?> remoteId,
   Value<int> sharedBookId,
   Value<String> sharedBookUuid,
-  Value<int> fromUserId,
+  Value<int?> fromUserId,
   Value<String?> fromRemoteId,
   Value<int> toUserId,
   Value<String?> toRemoteId,
+  Value<String?> externalBorrowerName,
+  Value<String?> externalBorrowerContact,
   Value<String> status,
   Value<DateTime> startDate,
   Value<DateTime?> dueDate,
@@ -11363,9 +11627,9 @@ final class $$LoansTableReferences
   static $LocalUsersTable _fromUserIdTable(_$AppDatabase db) => db.localUsers
       .createAlias($_aliasNameGenerator(db.loans.fromUserId, db.localUsers.id));
 
-  $$LocalUsersTableProcessedTableManager get fromUserId {
-    final $_column = $_itemColumn<int>('from_user_id')!;
-
+  $$LocalUsersTableProcessedTableManager? get fromUserId {
+    final $_column = $_itemColumn<int>('from_user_id');
+    if ($_column == null) return null;
     final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
         .filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_fromUserIdTable($_db));
@@ -11389,18 +11653,17 @@ final class $$LoansTableReferences
   }
 
   static MultiTypedResultKey<$InAppNotificationsTable, List<InAppNotification>>
-      _inAppNotificationsRefsTable(_$AppDatabase db) =>
+      _notificationLoansTable(_$AppDatabase db) =>
           MultiTypedResultKey.fromTable(db.inAppNotifications,
               aliasName: $_aliasNameGenerator(
                   db.loans.id, db.inAppNotifications.loanId));
 
-  $$InAppNotificationsTableProcessedTableManager get inAppNotificationsRefs {
+  $$InAppNotificationsTableProcessedTableManager get notificationLoans {
     final manager =
         $$InAppNotificationsTableTableManager($_db, $_db.inAppNotifications)
             .filter((f) => f.loanId.id.sqlEquals($_itemColumn<int>('id')!));
 
-    final cache =
-        $_typedResult.readTableOrNull(_inAppNotificationsRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(_notificationLoansTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -11432,6 +11695,14 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
 
   ColumnFilters<String> get toRemoteId => $composableBuilder(
       column: $table.toRemoteId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get externalBorrowerName => $composableBuilder(
+      column: $table.externalBorrowerName,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get externalBorrowerContact => $composableBuilder(
+      column: $table.externalBorrowerContact,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnFilters(column));
@@ -11523,7 +11794,7 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
     return composer;
   }
 
-  Expression<bool> inAppNotificationsRefs(
+  Expression<bool> notificationLoans(
       Expression<bool> Function($$InAppNotificationsTableFilterComposer f) f) {
     final $$InAppNotificationsTableFilterComposer composer = $composerBuilder(
         composer: this,
@@ -11573,6 +11844,14 @@ class $$LoansTableOrderingComposer
 
   ColumnOrderings<String> get toRemoteId => $composableBuilder(
       column: $table.toRemoteId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get externalBorrowerName => $composableBuilder(
+      column: $table.externalBorrowerName,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get externalBorrowerContact => $composableBuilder(
+      column: $table.externalBorrowerContact,
+      builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnOrderings(column));
@@ -11692,6 +11971,12 @@ class $$LoansTableAnnotationComposer
   GeneratedColumn<String> get toRemoteId => $composableBuilder(
       column: $table.toRemoteId, builder: (column) => column);
 
+  GeneratedColumn<String> get externalBorrowerName => $composableBuilder(
+      column: $table.externalBorrowerName, builder: (column) => column);
+
+  GeneratedColumn<String> get externalBorrowerContact => $composableBuilder(
+      column: $table.externalBorrowerContact, builder: (column) => column);
+
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
@@ -11782,7 +12067,7 @@ class $$LoansTableAnnotationComposer
     return composer;
   }
 
-  Expression<T> inAppNotificationsRefs<T extends Object>(
+  Expression<T> notificationLoans<T extends Object>(
       Expression<T> Function($$InAppNotificationsTableAnnotationComposer a) f) {
     final $$InAppNotificationsTableAnnotationComposer composer =
         $composerBuilder(
@@ -11820,7 +12105,7 @@ class $$LoansTableTableManager extends RootTableManager<
         {bool sharedBookId,
         bool fromUserId,
         bool toUserId,
-        bool inAppNotificationsRefs})> {
+        bool notificationLoans})> {
   $$LoansTableTableManager(_$AppDatabase db, $LoansTable table)
       : super(TableManagerState(
           db: db,
@@ -11837,10 +12122,12 @@ class $$LoansTableTableManager extends RootTableManager<
             Value<String?> remoteId = const Value.absent(),
             Value<int> sharedBookId = const Value.absent(),
             Value<String> sharedBookUuid = const Value.absent(),
-            Value<int> fromUserId = const Value.absent(),
+            Value<int?> fromUserId = const Value.absent(),
             Value<String?> fromRemoteId = const Value.absent(),
             Value<int> toUserId = const Value.absent(),
             Value<String?> toRemoteId = const Value.absent(),
+            Value<String?> externalBorrowerName = const Value.absent(),
+            Value<String?> externalBorrowerContact = const Value.absent(),
             Value<String> status = const Value.absent(),
             Value<DateTime> startDate = const Value.absent(),
             Value<DateTime?> dueDate = const Value.absent(),
@@ -11862,6 +12149,8 @@ class $$LoansTableTableManager extends RootTableManager<
             fromRemoteId: fromRemoteId,
             toUserId: toUserId,
             toRemoteId: toRemoteId,
+            externalBorrowerName: externalBorrowerName,
+            externalBorrowerContact: externalBorrowerContact,
             status: status,
             startDate: startDate,
             dueDate: dueDate,
@@ -11879,10 +12168,12 @@ class $$LoansTableTableManager extends RootTableManager<
             Value<String?> remoteId = const Value.absent(),
             required int sharedBookId,
             required String sharedBookUuid,
-            required int fromUserId,
+            Value<int?> fromUserId = const Value.absent(),
             Value<String?> fromRemoteId = const Value.absent(),
             required int toUserId,
             Value<String?> toRemoteId = const Value.absent(),
+            Value<String?> externalBorrowerName = const Value.absent(),
+            Value<String?> externalBorrowerContact = const Value.absent(),
             Value<String> status = const Value.absent(),
             Value<DateTime> startDate = const Value.absent(),
             Value<DateTime?> dueDate = const Value.absent(),
@@ -11904,6 +12195,8 @@ class $$LoansTableTableManager extends RootTableManager<
             fromRemoteId: fromRemoteId,
             toUserId: toUserId,
             toRemoteId: toRemoteId,
+            externalBorrowerName: externalBorrowerName,
+            externalBorrowerContact: externalBorrowerContact,
             status: status,
             startDate: startDate,
             dueDate: dueDate,
@@ -11923,11 +12216,11 @@ class $$LoansTableTableManager extends RootTableManager<
               {sharedBookId = false,
               fromUserId = false,
               toUserId = false,
-              inAppNotificationsRefs = false}) {
+              notificationLoans = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
-                if (inAppNotificationsRefs) db.inAppNotifications
+                if (notificationLoans) db.inAppNotifications
               ],
               addJoins: <
                   T extends TableManagerState<
@@ -11976,15 +12269,15 @@ class $$LoansTableTableManager extends RootTableManager<
               },
               getPrefetchedDataCallback: (items) async {
                 return [
-                  if (inAppNotificationsRefs)
+                  if (notificationLoans)
                     await $_getPrefetchedData<Loan, $LoansTable,
                             InAppNotification>(
                         currentTable: table,
-                        referencedTable: $$LoansTableReferences
-                            ._inAppNotificationsRefsTable(db),
+                        referencedTable:
+                            $$LoansTableReferences._notificationLoansTable(db),
                         managerFromTypedResult: (p0) =>
                             $$LoansTableReferences(db, table, p0)
-                                .inAppNotificationsRefs,
+                                .notificationLoans,
                         referencedItemsForCurrentItem: (item,
                                 referencedItems) =>
                             referencedItems.where((e) => e.loanId == item.id),
@@ -12011,7 +12304,7 @@ typedef $$LoansTableProcessedTableManager = ProcessedTableManager<
         {bool sharedBookId,
         bool fromUserId,
         bool toUserId,
-        bool inAppNotificationsRefs})>;
+        bool notificationLoans})>;
 typedef $$InAppNotificationsTableCreateCompanionBuilder
     = InAppNotificationsCompanion Function({
   Value<int> id,

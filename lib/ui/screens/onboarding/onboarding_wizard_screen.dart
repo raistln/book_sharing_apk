@@ -39,6 +39,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   bool _initializedFromProgress = false;
   bool _isProcessing = false;
   bool _isSynced = false;
+  bool _groupCreated = false;
 
   @override
   void initState() {
@@ -48,16 +49,29 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     _joinCodeController = TextEditingController();
     _bookTitleController = TextEditingController();
     _bookAuthorController = TextEditingController();
+    _groupNameController.addListener(_resetGroupCreatedFlag);
+    _groupDescriptionController.addListener(_resetGroupCreatedFlag);
   }
 
   @override
   void dispose() {
+    _groupNameController.removeListener(_resetGroupCreatedFlag);
+    _groupDescriptionController.removeListener(_resetGroupCreatedFlag);
     _groupNameController.dispose();
     _groupDescriptionController.dispose();
     _joinCodeController.dispose();
     _bookTitleController.dispose();
     _bookAuthorController.dispose();
     super.dispose();
+  }
+
+  void _resetGroupCreatedFlag() {
+    if (!_groupCreated) {
+      return;
+    }
+    setState(() {
+      _groupCreated = false;
+    });
   }
 
   Future<void> _skipWizard(BuildContext context) async {
@@ -182,6 +196,10 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   }
 
   Future<bool> _createGroup(BuildContext context, {required ScaffoldMessengerState messenger}) async {
+    if (_groupCreated) {
+      return true;
+    }
+
     final activeUser = ref.read(activeUserProvider).value;
     if (activeUser == null || !_isSynced) {
       messenger.showSnackBar(
@@ -206,6 +224,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         owner: activeUser,
       );
       if (!mounted) return false;
+      _groupCreated = true;
       messenger.showSnackBar(
         SnackBar(content: Text('Grupo "$name" creado correctamente.')),
       );
@@ -316,6 +335,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
       _completedSteps[i] = true;
     }
     _currentStep = currentStep.clamp(0, _totalSteps - 1);
+    _groupCreated = _completedSteps[_groupStepIndex];
   }
 
   @override

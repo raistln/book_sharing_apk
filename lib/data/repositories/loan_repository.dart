@@ -56,7 +56,7 @@ class LoanRepository {
           uuid: _uuid.v4(),
           sharedBookId: sharedBook.id,
           sharedBookUuid: sharedBook.uuid,
-          fromUserId: borrower.id,
+          fromUserId: Value(borrower.id),
           fromRemoteId: borrower.remoteId != null
               ? Value(borrower.remoteId)
               : const Value.absent(),
@@ -80,6 +80,79 @@ class LoanRepository {
       final inserted = await _groupDao.findLoanById(loanId);
       if (inserted == null) {
         throw const LoanException('No se pudo crear el préstamo.');
+      }
+      return inserted;
+    });
+  }
+
+  Future<Loan> createManualLoan({
+    required SharedBook sharedBook,
+    required LocalUser owner,
+    required String borrowerName,
+    required DateTime dueDate,
+    String? borrowerContact,
+  }) async {
+    if (borrowerName.trim().isEmpty) {
+      throw const LoanException('El nombre del prestatario es requerido.');
+    }
+
+    if (!sharedBook.isAvailable) {
+      throw const LoanException('El libro compartido no está disponible para préstamo.');
+    }
+
+    final book = await _requireBook(sharedBook.bookId);
+    final now = DateTime.now();
+
+    return _db.transaction(() async {
+      final loanId = await _groupDao.insertLoan(
+        LoansCompanion.insert(
+          uuid: _uuid.v4(),
+          sharedBookId: sharedBook.id,
+          sharedBookUuid: sharedBook.uuid,
+          fromUserId: const Value<int?>(null), // No user for manual loans
+          fromRemoteId: const Value.absent(),
+          toUserId: owner.id,
+          toRemoteId: owner.remoteId != null
+              ? Value(owner.remoteId)
+              : const Value.absent(),
+          externalBorrowerName: Value(borrowerName.trim()),
+          externalBorrowerContact: borrowerContact != null
+              ? Value(borrowerContact.trim())
+              : const Value.absent(),
+          status: const Value('loaned'), // Goes directly to loaned
+          dueDate: Value(dueDate),
+          startDate: Value(now),
+          isDirty: const Value(true),
+          isDeleted: const Value(false),
+          syncedAt: const Value<DateTime?>(null),
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+
+      await _groupDao.updateSharedBookFields(
+        sharedBookId: sharedBook.id,
+        entry: SharedBooksCompanion(
+          isAvailable: const Value(false),
+          isDirty: const Value(true),
+          syncedAt: const Value<DateTime?>(null),
+          updatedAt: Value(now),
+        ),
+      );
+
+      await _bookDao.updateBookFields(
+        bookId: book.id,
+        entry: BooksCompanion(
+          status: const Value('loaned'),
+          isDirty: const Value(true),
+          syncedAt: const Value<DateTime?>(null),
+          updatedAt: Value(now),
+        ),
+      );
+
+      final inserted = await _groupDao.findLoanById(loanId);
+      if (inserted == null) {
+        throw const LoanException('No se pudo crear el préstamo manual.');
       }
       return inserted;
     });
@@ -166,7 +239,6 @@ class LoanRepository {
     }
 
     final sharedBook = await _requireSharedBook(current.sharedBookId);
-    final book = await _requireBook(sharedBook.bookId);
     final now = DateTime.now();
 
     await _db.transaction(() async {
@@ -193,6 +265,45 @@ class LoanRepository {
         ),
       );
 
+      // Note: Book status is NOT set to 'loaned' here
+      // It will be set when markAsLoaned is called after physical handoff
+    });
+
+    return _requireLoan(current.id);
+  }
+
+  Future<Loan> markAsLoaned({
+    required Loan loan,
+    required LocalUser actor,
+    required DateTime dueDate,
+  }) async {
+    final current = await _requireLoan(loan.id);
+
+    if (current.status != 'accepted') {
+      throw const LoanException('Solo los préstamos aceptados se pueden marcar como prestados.');
+    }
+
+    // Verify actor is owner or borrower
+    if (actor.id != current.toUserId && actor.id != current.fromUserId) {
+      throw const LoanException('Solo el propietario o el solicitante pueden marcar como prestado.');
+    }
+
+    final sharedBook = await _requireSharedBook(current.sharedBookId);
+    final book = await _requireBook(sharedBook.bookId);
+    final now = DateTime.now();
+
+    await _db.transaction(() async {
+      await _groupDao.updateLoanStatus(
+        loanId: current.id,
+        entry: LoansCompanion(
+          status: const Value('loaned'),
+          dueDate: Value(dueDate),
+          isDirty: const Value(true),
+          syncedAt: const Value<DateTime?>(null),
+          updatedAt: Value(now),
+        ),
+      );
+
       await _bookDao.updateBookFields(
         bookId: book.id,
         entry: BooksCompanion(
@@ -213,8 +324,8 @@ class LoanRepository {
   }) async {
     final current = await _requireLoan(loan.id);
 
-    if (current.status != 'accepted') {
-      throw const LoanException('Solo los préstamos aceptados se pueden marcar como devueltos.');
+    if (current.status != 'loaned') {
+      throw const LoanException('Solo los préstamos activos se pueden marcar como devueltos.');
     }
 
     if (actor.id != current.toUserId && actor.id != current.fromUserId) {
@@ -316,6 +427,10 @@ class LoanRepository {
 
   Future<Loan?> findLoanById(int id) {
     return _groupDao.findLoanById(id);
+  }
+
+  Future<Loan?> findLoanByUuid(String uuid) {
+    return _groupDao.findLoanByUuid(uuid);
   }
 
   Future<SharedBook?> findSharedBookById(int id) {

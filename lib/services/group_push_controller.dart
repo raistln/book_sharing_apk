@@ -3,6 +3,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/local/database.dart';
+import '../data/local/group_dao.dart';
+import '../data/repositories/book_repository.dart';
 import '../data/repositories/group_push_repository.dart';
 import 'group_sync_controller.dart';
 import 'notification_service.dart';
@@ -36,14 +38,20 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required GroupPushRepository groupPushRepository,
     required GroupSyncController groupSyncController,
     required NotificationClient notificationClient,
+    required BookRepository bookRepository,
+    required GroupDao groupDao,
   })  : _groupPushRepository = groupPushRepository,
         _groupSyncController = groupSyncController,
         _notificationClient = notificationClient,
+        _bookRepository = bookRepository,
+        _groupDao = groupDao,
         super(const GroupActionState());
 
   final GroupPushRepository _groupPushRepository;
   final GroupSyncController _groupSyncController;
   final NotificationClient _notificationClient;
+  final BookRepository _bookRepository;
+  final GroupDao _groupDao;
 
   void dismissError() {
     state = state.copyWith(lastError: () => null);
@@ -317,6 +325,15 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         accessToken: accessToken,
       );
       _groupSyncController.markPendingChanges();
+      
+      // If invitation was accepted, share existing books with the group
+      if (newStatus == 'accepted') {
+        await _bookRepository.shareExistingBooksWithGroup(
+          group: group,
+          owner: user,
+        );
+      }
+      
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () =>
@@ -346,6 +363,16 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         accessToken: accessToken,
       );
       _groupSyncController.markPendingChanges();
+      
+      // Share existing books with the newly joined group
+      final group = await _groupDao.findGroupById(invitation.groupId);
+      if (group != null) {
+        await _bookRepository.shareExistingBooksWithGroup(
+          group: group,
+          owner: user,
+        );
+      }
+      
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Te uniste al grupo.',

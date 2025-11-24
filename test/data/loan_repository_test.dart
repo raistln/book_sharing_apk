@@ -76,7 +76,7 @@ void main() {
       );
     });
 
-    test('acceptLoan marks shared book unavailable and book as loaned', () async {
+    test('acceptLoan marks shared book unavailable and book status remains available until markAsLoaned', () async {
       final pending = await repository.requestLoan(
         sharedBook: sharedBook,
         borrower: borrower,
@@ -88,7 +88,19 @@ void main() {
       final updatedShared = await groupDao.findSharedBookById(sharedBook.id);
       expect(updatedShared?.isAvailable, isFalse);
 
-      final updatedBook = await bookDao.findById(book.id);
+      // Book status should NOT change yet
+      var updatedBook = await bookDao.findById(book.id);
+      expect(updatedBook?.status, 'available');
+
+      // Now mark as loaned
+      final loaned = await repository.markAsLoaned(
+        loan: accepted,
+        actor: owner,
+        dueDate: DateTime.now().add(const Duration(days: 14)),
+      );
+      expect(loaned.status, 'loaned');
+
+      updatedBook = await bookDao.findById(book.id);
       expect(updatedBook?.status, 'loaned');
     });
 
@@ -125,8 +137,14 @@ void main() {
         borrower: borrower,
       );
       final accepted = await repository.acceptLoan(loan: pending, owner: owner);
+      
+      final loaned = await repository.markAsLoaned(
+        loan: accepted,
+        actor: owner,
+        dueDate: DateTime.now().add(const Duration(days: 14)),
+      );
 
-      final returned = await repository.markReturned(loan: accepted, actor: owner);
+      final returned = await repository.markReturned(loan: loaned, actor: owner);
       expect(returned.status, 'returned');
 
       final updatedShared = await groupDao.findSharedBookById(sharedBook.id);

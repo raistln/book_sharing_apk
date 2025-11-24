@@ -252,30 +252,46 @@ class GroupPushRepository {
     final memberRemoteUuid = _uuid.v4();
 
     return _db.transaction(() async {
-      final existing = await _groupDao.findMember(
+      final existing = await _groupDao.findMemberIncludingDeleted(
         groupId: group.id,
         userId: user.id,
       );
-      if (existing != null && !existing.isDeleted) {
-        throw GroupPushException('El usuario ya es miembro del grupo.');
-      }
+      if (existing != null) {
+        if (!existing.isDeleted) {
+          throw GroupPushException('El usuario ya es miembro del grupo.');
+        }
 
-      await _groupDao.insertMember(
-        GroupMembersCompanion.insert(
-          uuid: memberRemoteUuid,
-          remoteId: Value(memberRemoteUuid),
-          groupId: group.id,
-          groupUuid: group.uuid,
-          memberUserId: user.id,
-          memberRemoteId: Value(localUser.remoteId!),
-          role: Value(role),
-          isDirty: const Value(false),
-          isDeleted: const Value(false),
-          syncedAt: Value(now),
-          createdAt: Value(now),
-          updatedAt: Value(now),
-        ),
-      );
+        // Reactivate existing member
+        await _groupDao.updateMemberFields(
+          memberId: existing.id,
+          entry: GroupMembersCompanion(
+            role: Value(role),
+            isDeleted: const Value(false),
+            isDirty: const Value(false),
+            syncedAt: Value(now),
+            updatedAt: Value(now),
+            // Update remoteId if needed, though it should be stable
+            remoteId: Value(memberRemoteUuid),
+          ),
+        );
+      } else {
+        await _groupDao.insertMember(
+          GroupMembersCompanion.insert(
+            uuid: memberRemoteUuid,
+            remoteId: Value(memberRemoteUuid),
+            groupId: group.id,
+            groupUuid: group.uuid,
+            memberUserId: user.id,
+            memberRemoteId: Value(localUser.remoteId!),
+            role: Value(role),
+            isDirty: const Value(false),
+            isDeleted: const Value(false),
+            syncedAt: Value(now),
+            createdAt: Value(now),
+            updatedAt: Value(now),
+          ),
+        );
+      }
 
       final member = (await _groupDao.findMemberByRemoteId(memberRemoteUuid))!;
 
@@ -333,12 +349,8 @@ class GroupPushRepository {
       timestamp: now,
     );
 
-    await _patch(
+    await _delete(
       path: '/rest/v1/group_members?id=eq.${member.remoteId ?? member.uuid}',
-      body: {
-        'is_deleted': true,
-        'updated_at': now.toIso8601String(),
-      },
       accessToken: accessToken,
     );
   }

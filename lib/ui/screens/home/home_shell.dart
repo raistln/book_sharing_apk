@@ -8,9 +8,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../config/supabase_defaults.dart';
 import '../../../data/local/database.dart';
@@ -41,10 +43,137 @@ import '../../widgets/cover_preview.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/import_books_dialog.dart';
 import '../auth/pin_setup_screen.dart';
-
 final _currentTabProvider = StateProvider<int>((ref) => 0);
 
 enum _BookFormResult { saved, deleted }
+
+class _BarcodeScannerSheet extends StatefulWidget {
+  const _BarcodeScannerSheet();
+
+  @override
+  State<_BarcodeScannerSheet> createState() => _BarcodeScannerSheetState();
+}
+
+class _BarcodeScannerSheetState extends State<_BarcodeScannerSheet> {
+  late final MobileScannerController _controller;
+  bool _handled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleDetection(BarcodeCapture capture) {
+    if (_handled) {
+      return;
+    }
+
+    for (final barcode in capture.barcodes) {
+      final value = barcode.rawValue;
+      if (value != null && value.trim().isNotEmpty) {
+        _handled = true;
+        _controller.stop();
+        if (mounted) {
+          Navigator.of(context).pop(value.trim());
+        }
+        return;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Escanea el código de barras',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Cerrar',
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            AspectRatio(
+              aspectRatio: 3 / 4,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.black,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: MobileScanner(
+                    controller: _controller,
+                    onDetect: _handleDetection,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Alinea el código de barras dentro del recuadro. La lectura se completará automáticamente.',
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton.icon(
+                  onPressed: () async {
+                    final hasTorch = _controller.hasTorch;
+                    if (!hasTorch) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Este dispositivo no tiene linterna.')),
+                      );
+                      return;
+                    }
+                    await _controller.toggleTorch();
+                  },
+                  icon: const Icon(Icons.flashlight_on_outlined),
+                  label: const Text('Linterna'),
+                ),
+                TextButton.icon(
+                  onPressed: () async {
+                    await _controller.switchCamera();
+                  },
+                  icon: const Icon(Icons.cameraswitch_outlined),
+                  label: const Text('Cambiar cámara'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 String _resolveOwnerName(LocalUser? ownerUser, int ownerIdFallback) {
   if (ownerUser == null) {
@@ -1918,6 +2047,7 @@ enum _GroupMenuAction {
   manageMembers,
   manageInvitations,
   delete,
+  leaveGroup,
 }
 
 enum _MemberAction {
@@ -2214,11 +2344,13 @@ class _BookListTile extends ConsumerWidget {
     required this.book,
     required this.onTap,
     required this.onAddReview,
+    required this.onCreateManualLoan,
   });
 
   final Book book;
   final VoidCallback onTap;
   final VoidCallback onAddReview;
+  final VoidCallback onCreateManualLoan;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -2332,6 +2464,12 @@ class _BookListTile extends ConsumerWidget {
                 icon: const Icon(Icons.rate_review_outlined),
                 label: const Text('Añadir reseña'),
               ),
+              if (book.status == 'available')
+                FilledButton.icon(
+                  onPressed: onCreateManualLoan,
+                  icon: const Icon(Icons.person_add_outlined),
+                  label: const Text('Préstamo manual'),
+                ),
             ],
           ),
         ],
@@ -2477,9 +2615,26 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
                     child: TextFormField(
                       controller: _barcodeController,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Código barras',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.qr_code_scanner),
+                          tooltip: 'Escanear código',
+                          onPressed: () async {
+                            final result = await showModalBottomSheet<String>(
+                              context: context,
+                              isScrollControlled: true,
+                              useSafeArea: true,
+                              builder: (context) => const _BarcodeScannerSheet(),
+                            );
+                            if (result != null && mounted) {
+                              setState(() {
+                                _barcodeController.text = result;
+                              });
+                            }
+                          },
+                        ),
                       ),
                     ),
                   ),
@@ -3136,6 +3291,7 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
                         book: book,
                         onTap: () => widget.onOpenForm(book: book),
                         onAddReview: () => _showAddReviewDialog(context, book),
+                        onCreateManualLoan: () => _showManualLoanDialog(context, book),
                       );
                     },
                   ),
@@ -3289,6 +3445,205 @@ class _LibraryTabState extends ConsumerState<_LibraryTab> {
         message: 'Error al guardar reseña: $err',
         isError: true,
       );
+    }
+  }
+
+  Future<void> _showManualLoanDialog(BuildContext context, Book book) async {
+    final loanRepository = ref.read(loanRepositoryProvider);
+    final groupDao = ref.read(groupDaoProvider);
+    final theme = Theme.of(context);
+    // ignore: prefer_const_constructors
+    final uuid = Uuid();
+    
+    final nameController = TextEditingController();
+    final contactController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    DateTime? selectedDueDate;
+
+    try {
+      final result = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Préstamo manual de "${book.title}"'),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Prestar a alguien sin la app',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre del prestatario *',
+                        hintText: 'Ej: Juan Pérez',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'El nombre es requerido';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: contactController,
+                      decoration: const InputDecoration(
+                        labelText: 'Contacto (opcional)',
+                        hintText: 'Teléfono o email',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now().add(const Duration(days: 14)),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setState(() => selectedDueDate = picked);
+                        }
+                      },
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text(
+                        selectedDueDate == null
+                            ? 'Seleccionar fecha de devolución *'
+                            : 'Vence: ${DateFormat.yMMMd().format(selectedDueDate!)}',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    if (formKey.currentState?.validate() ?? false) {
+                      if (selectedDueDate == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Selecciona una fecha de devolución'),
+                          ),
+                        );
+                        return;
+                      }
+                      Navigator.pop(context, {
+                        'name': nameController.text.trim(),
+                        'contact': contactController.text.trim(),
+                        'dueDate': selectedDueDate,
+                      });
+                    }
+                  },
+                  child: const Text('Crear préstamo'),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      if (result == null) return;
+
+      // Get active user and first shared book for this book
+      final activeUser = await ref.read(userRepositoryProvider).getActiveUser();
+      if (activeUser == null) {
+        if (!context.mounted) return;
+        _showFeedbackSnackBar(
+          context: context,
+          message: 'Necesitas un usuario activo.',
+          isError: true,
+        );
+        return;
+      }
+
+      // Find a shared book for this book (or create one if needed)
+      final sharedBooks = await groupDao.findSharedBooksByBookId(book.id);
+      SharedBook? sharedBook;
+      
+      if (sharedBooks.isNotEmpty) {
+        sharedBook = sharedBooks.first;
+      } else {
+        // Need to create a shared book first - get user's groups
+        final groups = await groupDao.getGroupsForUser(activeUser.id);
+        if (groups.isEmpty) {
+          if (!context.mounted) return;
+          _showFeedbackSnackBar(
+            context: context,
+            message: 'Necesitas estar en un grupo para crear préstamos.',
+            isError: true,
+          );
+          return;
+        }
+        
+        // Create shared book in first group
+        final group = groups.first;
+        final now = DateTime.now();
+        final sharedBookId = await groupDao.insertSharedBook(
+          SharedBooksCompanion.insert(
+            uuid: uuid.v4(),
+            groupId: group.id,
+            groupUuid: group.uuid,
+            bookId: book.id,
+            bookUuid: book.uuid,
+            ownerUserId: activeUser.id,
+            ownerRemoteId: activeUser.remoteId != null
+                ? Value(activeUser.remoteId!)
+                : const Value.absent(),
+            isAvailable: const Value(true),
+            visibility: const Value('group'),
+            isDirty: const Value(true),
+            isDeleted: const Value(false),
+            syncedAt: const Value(null),
+            createdAt: Value(now),
+            updatedAt: Value(now),
+          ),
+        );
+        sharedBook = await groupDao.findSharedBookById(sharedBookId);
+      }
+
+      if (sharedBook == null) {
+        if (!context.mounted) return;
+        _showFeedbackSnackBar(
+          context: context,
+          message: 'No se pudo preparar el libro para préstamo.',
+          isError: true,
+        );
+        return;
+      }
+
+      // Create the manual loan
+      await loanRepository.createManualLoan(
+        sharedBook: sharedBook,
+        owner: activeUser,
+        borrowerName: result['name'] as String,
+        borrowerContact: (result['contact'] as String).isNotEmpty
+            ? result['contact'] as String
+            : null,
+        dueDate: result['dueDate'] as DateTime,
+      );
+
+      if (!context.mounted) return;
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Préstamo manual creado correctamente.',
+        isError: false,
+      );
+    } finally {
+      nameController.dispose();
+      contactController.dispose();
     }
   }
 
@@ -3509,6 +3864,9 @@ Future<void> _onGroupMenuAction({
     case _GroupMenuAction.delete:
       await _handleDeleteGroup(context, ref, group);
       break;
+    case _GroupMenuAction.leaveGroup:
+      await _handleLeaveGroup(context, ref, group);
+      break;
   }
 }
 
@@ -3653,6 +4011,62 @@ Future<void> _handleDeleteGroup(
   final controller = ref.read(groupPushControllerProvider.notifier);
   try {
     await controller.deleteGroup(group: group);
+  } catch (error) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: error.toString(),
+      isError: true,
+    );
+  }
+}
+
+Future<void> _handleLeaveGroup(BuildContext context, WidgetRef ref, Group group) async {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Salir del grupo'),
+      content: const Text('¿Estás seguro de que quieres salir de este grupo?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Salir'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirm != true) return;
+
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  final activeUser = ref.read(activeUserProvider).value;
+  if (activeUser == null) return;
+
+  final members = await ref.read(groupMemberDetailsProvider(group.id).future);
+  final memberDetail = _findMemberDetail(members, activeUser.id);
+
+  if (memberDetail == null) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'No eres miembro de este grupo',
+      isError: true,
+    );
+    return;
+  }
+
+  try {
+    await controller.removeMember(member: memberDetail.membership);
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'Has salido del grupo',
+      isError: false,
+    );
   } catch (error) {
     if (!context.mounted) return;
     _showFeedbackSnackBar(
@@ -4891,6 +5305,18 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
             child: Text('Eliminar grupo'),
           ),
         );
+    }
+    
+    if (activeUser != null && !isOwner) {
+      if (menuEntries.isNotEmpty) {
+        menuEntries.add(const PopupMenuDivider());
+      }
+      menuEntries.add(
+        const PopupMenuItem<_GroupMenuAction>(
+          value: _GroupMenuAction.leaveGroup,
+          child: Text('Salir del grupo'),
+        ),
+      );
     }
 
     final bool highlightManageInvitations = activeUser != null && isAdmin;
@@ -6407,7 +6833,8 @@ class _SettingsTab extends ConsumerWidget {
                       builder: (context) => AlertDialog(
                         title: const Text('¿Eliminar PIN y salir de la cuenta?'),
                         content: const Text(
-                          'Se eliminará el PIN actual y tendrás que iniciar sesión o configurar un nuevo usuario.',
+                          'Se eliminarán TODOS los datos locales (libros, grupos, préstamos) '
+                          'y tendrás que iniciar sesión o configurar un nuevo usuario.',
                         ),
                         actions: [
                           TextButton(
@@ -6416,7 +6843,10 @@ class _SettingsTab extends ConsumerWidget {
                           ),
                           FilledButton(
                             onPressed: () => Navigator.of(context).pop(true),
-                            child: const Text('Eliminar'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.error,
+                            ),
+                            child: const Text('Eliminar todo'),
                           ),
                         ],
                       ),
@@ -6424,17 +6854,26 @@ class _SettingsTab extends ConsumerWidget {
 
                     if (confirmed != true) return;
 
+                    // Clear PIN first
                     await ref.read(authControllerProvider.notifier).clearPin();
+                    
+                    // Clear all local data
+                    final database = ref.read(appDatabaseProvider);
+                    await database.clearAllData();
+                    
                     if (!context.mounted) return;
-                    _showFeedbackSnackBar(
-                      context: context,
-                      message: 'PIN eliminado.',
-                      isError: false,
+                    
+                    // Show message and close app so user can restart fresh
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Datos eliminados. Reinicia la app para configurar un nuevo usuario.'),
+                        duration: Duration(seconds: 3),
+                      ),
                     );
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      PinSetupScreen.routeName,
-                      (route) => false,
-                    );
+                    
+                    // Wait a moment for the snackbar to show, then close app
+                    await Future.delayed(const Duration(milliseconds: 1500));
+                    SystemNavigator.pop();
                   },
                 ),
               ),
@@ -6753,6 +7192,7 @@ class _SettingsTab extends ConsumerWidget {
       );
     }
   }
+
 }
 
 class _GoogleBooksApiCard extends ConsumerWidget {

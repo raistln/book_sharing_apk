@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
@@ -34,15 +35,18 @@ class NotificationRepository {
     }
     final controller = _notificationSyncController;
     if (controller == null) {
+      developer.log('[_scheduleSync] No sync controller available', name: 'NotificationRepository');
       return;
     }
 
     if (!controller.mounted) {
+      developer.log('[_scheduleSync] Controller not mounted', name: 'NotificationRepository');
       return;
     }
 
     try {
       controller.markPendingChanges();
+      developer.log('[_scheduleSync] Marked pending changes', name: 'NotificationRepository');
     } on StateError catch (error) {
       if (controller.mounted) {
         rethrow;
@@ -59,12 +63,22 @@ class NotificationRepository {
         return;
       }
       try {
+        developer.log('[_scheduleSync] Starting sync...', name: 'NotificationRepository');
         await controller.sync();
+        developer.log('[_scheduleSync] Sync completed', name: 'NotificationRepository');
       } on StateError catch (error) {
         if (controller.mounted) {
           rethrow;
         }
         debugPrint('NotificationRepository: sync skipped after dispose — $error');
+      } catch (error, stackTrace) {
+        developer.log(
+          '[_scheduleSync] Sync failed: $error',
+          name: 'NotificationRepository',
+          error: error,
+          stackTrace: stackTrace,
+          level: 1000,
+        );
       }
     }));
   }
@@ -81,6 +95,11 @@ class NotificationRepository {
     String? message,
     String status = InAppNotificationStatus.unread,
   }) async {
+    developer.log(
+      '[createNotification] Creating notification: type=${type.value}, targetUserId=$targetUserId, actorUserId=$actorUserId, loanId=$loanId',
+      name: 'NotificationRepository',
+    );
+    
     final now = DateTime.now();
     final entry = InAppNotificationsCompanion(
       uuid: Value(_uuid.v4()),
@@ -102,6 +121,10 @@ class NotificationRepository {
       updatedAt: Value(now),
     );
     final id = await _notificationDao.insert(entry);
+    developer.log(
+      '[createNotification] Notification created with id=$id, scheduling sync...',
+      name: 'NotificationRepository',
+    );
     _scheduleSync();
     return id;
   }

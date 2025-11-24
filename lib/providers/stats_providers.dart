@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/local/database.dart';
 import '../services/stats_service.dart';
 import 'book_providers.dart';
 
@@ -13,12 +14,10 @@ final statsServiceProvider = Provider<StatsService>((ref) {
 
 final statsSummaryProvider = StreamProvider.autoDispose<StatsSummary>((ref) {
   final service = ref.watch(statsServiceProvider);
-  final activeUserAsync = ref.watch(activeUserProvider);
   final controller = StreamController<StatsSummary>();
 
-  Future<void> emitSummary() async {
+  Future<void> emitForUser(LocalUser? owner) async {
     try {
-      final owner = activeUserAsync.asData?.value;
       if (owner == null) {
         if (!controller.isClosed) {
           controller.add(
@@ -47,13 +46,23 @@ final statsSummaryProvider = StreamProvider.autoDispose<StatsSummary>((ref) {
     }
   }
 
-  emitSummary();
+  Future<void> refresh() async {
+    final activeUserState = ref.read(activeUserProvider);
+    await emitForUser(activeUserState.asData?.value);
+  }
+
+  final subscription = ref.listen<AsyncValue<LocalUser?>>(activeUserProvider, (_, next) {
+    emitForUser(next.asData?.value);
+  });
+
+  emitForUser(ref.read(activeUserProvider).asData?.value);
 
   final timer = Timer.periodic(const Duration(seconds: 5), (_) {
-    emitSummary();
+    refresh();
   });
 
   ref.onDispose(() {
+    subscription.close();
     timer.cancel();
     controller.close();
   });

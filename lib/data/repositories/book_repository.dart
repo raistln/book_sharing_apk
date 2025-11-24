@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
@@ -26,20 +27,92 @@ class BookRepository {
   final Uuid _uuid;
   final SyncController? bookSyncController;
 
-  static const _sharedStatuses = {'available', 'loaned', 'archived'};
+
 
   void _markGroupSyncPending() {
-    _groupSyncController?.markPendingChanges();
+    final controller = _groupSyncController;
+    if (controller != null && controller.mounted) {
+      controller.markPendingChanges();
+    }
   }
 
   void _scheduleSync() {
     final controller = bookSyncController;
-    if (controller == null) {
-      return;
+    if (controller != null && controller.mounted) {
+      controller.markPendingChanges();
+      unawaited(controller.sync());
+    }
+  }
+
+  /// Shares all existing books (except private/archived) with a newly joined group
+  Future<void> shareExistingBooksWithGroup({
+    required Group group,
+    required LocalUser owner,
+  }) async {
+    developer.log(
+      '[shareExistingBooksWithGroup] Sharing existing books for user ${owner.id} with group ${group.id}',
+      name: 'BookRepository',
+    );
+
+    final books = await fetchActiveBooks(ownerUserId: owner.id);
+    final now = DateTime.now();
+    var sharedCount = 0;
+
+    for (final book in books) {
+      if (!_shouldShare(book.status)) {
+        developer.log(
+          '[shareExistingBooksWithGroup] Skipping book ${book.id} (status: ${book.status})',
+          name: 'BookRepository',
+        );
+        continue;
+      }
+
+      // Check if already shared
+      final existing = await _groupDao.findSharedBookByGroupAndBook(
+        groupId: group.id,
+        bookId: book.id,
+      );
+
+      if (existing != null) {
+        developer.log(
+          '[shareExistingBooksWithGroup] Book ${book.id} already shared with group ${group.id}',
+          name: 'BookRepository',
+        );
+        continue;
+      }
+
+      // Share the book
+      await _groupDao.insertSharedBook(
+        SharedBooksCompanion.insert(
+          uuid: _uuid.v4(),
+          groupId: group.id,
+          groupUuid: group.uuid,
+          bookId: book.id,
+          bookUuid: book.uuid,
+          ownerUserId: owner.id,
+          ownerRemoteId: owner.remoteId != null
+              ? Value(owner.remoteId!)
+              : const Value.absent(),
+          isAvailable: Value(book.status != 'loaned'),
+          visibility: const Value('group'),
+          isDirty: const Value(true),
+          isDeleted: const Value(false),
+          syncedAt: const Value(null),
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+      sharedCount++;
     }
 
-    controller.markPendingChanges();
-    unawaited(controller.sync());
+    developer.log(
+      '[shareExistingBooksWithGroup] Shared $sharedCount books with group ${group.id}',
+      name: 'BookRepository',
+    );
+
+    if (sharedCount > 0) {
+      _markGroupSyncPending();
+    }
   }
 
   Stream<List<Book>> watchAll({int? ownerUserId}) =>
@@ -190,7 +263,11 @@ class BookRepository {
 
   Future<Book?> findById(int id) => _bookDao.findById(id);
 
-  bool _shouldShare(String status) => _sharedStatuses.contains(status);
+  bool _shouldShare(String status) {
+    // Don't share private or archived books
+    // Only share available and loaned books
+    return status == 'available' || status == 'loaned';
+  }
 
   Future<void> _autoShareBook({
     required int bookId,
@@ -201,10 +278,12 @@ class BookRepository {
     String? ownerRemoteId,
   }) async {
     if (ownerUserId == null) {
+      developer.log('[_autoShareBook] ownerUserId is null, skipping.', name: 'BookRepository');
       return;
     }
 
     final shouldShare = _shouldShare(status);
+    developer.log('[_autoShareBook] Processing book $bookId (status: $status, shouldShare: $shouldShare)', name: 'BookRepository');
 
     if (!shouldShare) {
       final removedSharedBooks =
@@ -217,8 +296,11 @@ class BookRepository {
 
     final groups = await _groupDao.getGroupsForUser(ownerUserId);
     if (groups.isEmpty) {
+      developer.log('[_autoShareBook] User $ownerUserId has no groups to share with.', name: 'BookRepository');
       return;
     }
+    
+    developer.log('[_autoShareBook] Sharing book $bookId with ${groups.length} groups.', name: 'BookRepository');
 
     final db = _groupDao.attachedDatabase;
     var changed = false;

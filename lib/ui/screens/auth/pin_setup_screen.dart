@@ -38,15 +38,15 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       if (!mounted || _navigated) return;
       if (next.status == AuthStatus.unlocked) {
         _navigated = true;
+        final navigator = Navigator.of(context);
+        final onboardingService = ref.read(onboardingServiceProvider);
         Future<void>.microtask(() async {
-          final progress = await ref.read(onboardingServiceProvider).loadProgress();
+          final progress = await onboardingService.loadProgress();
           if (!mounted) return;
           final routeName = (!progress.introSeen || !progress.completed)
               ? OnboardingIntroScreen.routeName
               : HomeShell.routeName;
-          if (!mounted) return;
-          Navigator.of(context)
-              .pushNamedAndRemoveUntil(routeName, (route) => false);
+          navigator.pushNamedAndRemoveUntil(routeName, (route) => false);
         });
       }
     });

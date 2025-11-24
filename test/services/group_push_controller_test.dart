@@ -4,6 +4,7 @@ import 'package:book_sharing_app/data/local/book_dao.dart';
 import 'package:book_sharing_app/data/local/database.dart';
 import 'package:book_sharing_app/data/local/group_dao.dart';
 import 'package:book_sharing_app/data/local/user_dao.dart';
+import 'package:book_sharing_app/data/repositories/book_repository.dart';
 import 'package:book_sharing_app/data/repositories/group_push_repository.dart';
 import 'package:book_sharing_app/data/repositories/supabase_group_repository.dart';
 import 'package:book_sharing_app/data/repositories/user_repository.dart';
@@ -85,6 +86,8 @@ void main() {
       groupPushRepository: groupPushRepository,
       groupSyncController: syncController,
       notificationClient: notificationClient,
+      bookRepository: _FakeBookRepository(),
+      groupDao: groupDao,
     );
   });
 
@@ -328,4 +331,28 @@ class _ImmediateNotification {
   final String body;
   final Map<String, String> payload;
   final List<AndroidNotificationAction> actions;
+}
+
+class _FakeBookRepository extends BookRepository {
+  _FakeBookRepository()
+      : super(
+          _FakeBookDao(),
+          groupDao: _FakeGroupDao(),
+        );
+
+  @override
+  Future<void> shareExistingBooksWithGroup({
+    required Group group,
+    required LocalUser owner,
+  }) async {
+    // No-op for tests
+  }
+}
+
+class _FakeBookDao extends BookDao {
+  _FakeBookDao() : super(AppDatabase.test(NativeDatabase.memory()));
+}
+
+class _FakeGroupDao extends GroupDao {
+  _FakeGroupDao() : super(AppDatabase.test(NativeDatabase.memory()));
 }

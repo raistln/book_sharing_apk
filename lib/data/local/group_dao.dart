@@ -174,6 +174,14 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
         .getSingleOrNull();
   }
 
+  Future<GroupMember?> findMemberIncludingDeleted({required int groupId, required int userId}) {
+    return (select(groupMembers)
+          ..where((tbl) =>
+              tbl.groupId.equals(groupId) &
+              tbl.memberUserId.equals(userId)))
+        .getSingleOrNull();
+  }
+
   Future<GroupMember?> findMemberByRemoteId(String remoteId) {
     return (select(groupMembers)..where((tbl) => tbl.remoteId.equals(remoteId))).getSingleOrNull();
   }
@@ -476,6 +484,10 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
 
   Future<Loan?> findLoanById(int id) {
     return (select(loans)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+  }
+
+  Future<Loan?> findLoanByUuid(String uuid) {
+    return (select(loans)..where((tbl) => tbl.uuid.equals(uuid))).getSingleOrNull();
   }
 
   Future<int> updateLoanFields({required int loanId, required LoansCompanion entry}) {

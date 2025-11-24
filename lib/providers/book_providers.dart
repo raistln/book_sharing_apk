@@ -414,9 +414,13 @@ final groupPushControllerProvider =
   final repository = ref.watch(groupPushRepositoryProvider);
   final syncController = ref.watch(groupSyncControllerProvider.notifier);
   final notificationClient = ref.watch(notificationServiceProvider);
+  final bookRepository = ref.watch(bookRepositoryProvider);
+  final groupDao = ref.watch(groupDaoProvider);
   return GroupPushController(
     groupPushRepository: repository,
     groupSyncController: syncController,
     notificationClient: notificationClient,
+    bookRepository: bookRepository,
+    groupDao: groupDao,
   );
 });

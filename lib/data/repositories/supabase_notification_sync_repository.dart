@@ -64,6 +64,14 @@ class SupabaseNotificationSyncRepository {
       for (final remote in remoteNotifications) {
         final existing = await _notificationDao.findByUuid(remote.id);
 
+        if (existing != null && existing.isDirty) {
+          developer.log(
+            'Omitiendo notificación ${remote.id} durante fetch: cambios locales pendientes.',
+            name: 'SupabaseNotificationSyncRepository',
+          );
+          continue;
+        }
+
         final resolvedActorId = await _resolveUserId(remote.actorUserId);
         final resolvedLoan = await _resolveLoan(remote.loanId);
         final resolvedSharedBook = await _resolveSharedBook(remote.sharedBookId);
@@ -272,18 +280,34 @@ class SupabaseNotificationSyncRepository {
     return user?.remoteId ?? user?.uuid;
   }
 
-  Future<_LoanResolution?> _resolveLoan(String? remoteId) async {
-    if (remoteId == null || remoteId.isEmpty) {
+  Future<_LoanResolution?> _resolveLoan(String? remoteIdOrUuid) async {
+    if (remoteIdOrUuid == null || remoteIdOrUuid.isEmpty) {
       return null;
     }
-    final loan = await _groupDao.findLoanByRemoteId(remoteId);
-    if (loan == null) {
-      return null;
+
+    final byRemote = await _groupDao.findLoanByRemoteId(remoteIdOrUuid);
+    if (byRemote != null) {
+      return _LoanResolution(id: byRemote.id, uuid: byRemote.uuid, remoteId: byRemote.remoteId);
     }
-    return _LoanResolution(id: loan.id, uuid: loan.uuid, remoteId: loan.remoteId);
+
+    final byUuid = await _groupDao.findLoanByUuid(remoteIdOrUuid);
+    if (byUuid != null) {
+      return _LoanResolution(id: byUuid.id, uuid: byUuid.uuid, remoteId: byUuid.remoteId);
+    }
+
+    developer.log(
+      'No encontramos préstamo con identificador $remoteIdOrUuid para enlazar notificación.',
+      name: 'SupabaseNotificationSyncRepository',
+      level: 800,
+    );
+    return null;
   }
 
   Future<String?> _resolveLoanRemoteId(int? loanId, String? loanUuid) async {
+    if (loanUuid != null && loanUuid.isNotEmpty) {
+      return loanUuid;
+    }
+
     if (loanId == null) {
       return null;
     }
@@ -299,12 +323,11 @@ class SupabaseNotificationSyncRepository {
     }
 
     developer.log(
-      'Omitiendo loan_id para notificación: el préstamo ${loan.uuid} aún no tiene remoteId asignado.',
+      'Usando uuid local ${loan.uuid} como identificador remoto de préstamo para notificación.',
       name: 'SupabaseNotificationSyncRepository',
-      level: 800,
     );
 
-    return null;
+    return loan.uuid;
   }
 
   Future<_SharedBookResolution?> _resolveSharedBook(String? remoteId) async {

@@ -104,7 +104,7 @@ class SupabaseGroupSyncRepository {
 
           final existingMember =
               await _groupDao.findMemberByRemoteId(remoteMember.id) ??
-              await _groupDao.findMember(groupId: localGroupId, userId: localUser.id);
+              await _groupDao.findMemberIncludingDeleted(groupId: localGroupId, userId: localUser.id);
 
           final memberRemoteValue = Value(remoteMember.userId);
 
@@ -355,7 +355,7 @@ class SupabaseGroupSyncRepository {
                   remoteId: Value(remoteLoan.id),
                   sharedBookId: localSharedId,
                   sharedBookUuid: localSharedUuid,
-                  fromUserId: fromUser.id,
+                  fromUserId: Value(fromUser.id),
                   fromRemoteId: Value(remoteLoan.fromUser),
                   toUserId: toUser.id,
                   toRemoteId: Value(remoteLoan.toUser),

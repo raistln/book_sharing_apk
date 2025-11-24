@@ -1,13 +1,17 @@
-# Keep annotations and generic type information used by Gson when
-# (de)serializing notification payloads inside flutter_local_notifications.
+# Preserve annotations and generic signatures for Gson.
 -keepattributes Signature
 -keepattributes *Annotation*
 
-# Keep all classes from the flutter_local_notifications Android plugin.
+# Keep all flutter_local_notifications classes and members used by the plugin.
 -keep class com.dexterous.flutterlocalnotifications.** { *; }
 
-# Ensure Gson TypeToken subclasses retain their type parameters.
+# Prevent R8 from stripping the Gson classes used to cache notification details.
+-keep class com.google.gson.Gson { *; }
+-keep class com.google.gson.GsonBuilder { *; }
+-keep class com.google.gson.reflect.TypeToken { *; }
+-keep class com.google.gson.reflect.TypeToken$* { *; }
 -keep class * extends com.google.gson.reflect.TypeToken { *; }
+-keep class com.google.gson.stream.** { *; }
 
 # Keep fields annotated for Gson serialization.
 -keepclassmembers class * {

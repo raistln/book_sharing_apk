@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -72,15 +74,24 @@ class LoanController extends StateNotifier<LoanActionState> {
         borrower: borrower,
         dueDate: dueDate,
       );
+      
+      // Mark group sync as pending (includes loans)
       _groupSyncController.markPendingChanges();
-      state = state.copyWith(
-        isLoading: false,
-        lastSuccess: () => 'Solicitud enviada.',
-      );
+      
+      // Wait for loan to sync to Supabase before creating notification
+      // This prevents FK constraint violations
+      await _groupSyncController.syncGroups();
+      
+      // Now create the notification (it will reference the synced loan)
       await _notifyLoanRequest(
         loan: loan,
         sharedBook: sharedBook,
         borrower: borrower,
+      );
+      
+      state = state.copyWith(
+        isLoading: false,
+        lastSuccess: () => 'Solicitud enviada.',
       );
       return loan;
     } catch (error) {
@@ -170,6 +181,34 @@ class LoanController extends StateNotifier<LoanActionState> {
       await _notifyLoanAccepted(
         loan: result,
         owner: owner,
+      );
+      await _scheduleLoanNotifications(result);
+      return result;
+    } catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        lastError: () => error.toString(),
+      );
+      rethrow;
+    }
+  }
+
+  Future<Loan> markAsLoaned({
+    required Loan loan,
+    required LocalUser actor,
+    required DateTime dueDate,
+  }) async {
+    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    try {
+      final result = await _loanRepository.markAsLoaned(
+        loan: loan,
+        actor: actor,
+        dueDate: dueDate,
+      );
+      _groupSyncController.markPendingChanges();
+      state = state.copyWith(
+        isLoading: false,
+        lastSuccess: () => 'Libro marcado como prestado.',
       );
       await _scheduleLoanNotifications(result);
       return result;
@@ -369,6 +408,9 @@ class LoanController extends StateNotifier<LoanActionState> {
     required LocalUser owner,
   }) async {
     await _runNotificationTask(() async {
+      // Only notify if borrower has an account (not a manual loan)
+      if (loan.fromUserId == null) return;
+
       await _notificationRepository.markLoanNotifications(
         loanId: loan.id,
         status: InAppNotificationStatus.dismissed,
@@ -383,7 +425,7 @@ class LoanController extends StateNotifier<LoanActionState> {
       await _notificationRepository.createLoanNotification(
         type: InAppNotificationType.loanRejected,
         loan: loan,
-        targetUserId: loan.fromUserId,
+        targetUserId: loan.fromUserId!,
         actorUserId: owner.id,
         title: 'Solicitud de préstamo rechazada',
         message: message,
@@ -396,6 +438,9 @@ class LoanController extends StateNotifier<LoanActionState> {
     required LocalUser owner,
   }) async {
     await _runNotificationTask(() async {
+      // Only notify if borrower has an account (not a manual loan)
+      if (loan.fromUserId == null) return;
+
       await _notificationRepository.markLoanNotifications(
         loanId: loan.id,
         status: InAppNotificationStatus.dismissed,
@@ -410,7 +455,7 @@ class LoanController extends StateNotifier<LoanActionState> {
       await _notificationRepository.createLoanNotification(
         type: InAppNotificationType.loanAccepted,
         loan: loan,
-        targetUserId: loan.fromUserId,
+        targetUserId: loan.fromUserId!,
         actorUserId: owner.id,
         title: 'Préstamo aceptado',
         message: message,
@@ -428,8 +473,11 @@ class LoanController extends StateNotifier<LoanActionState> {
         status: InAppNotificationStatus.read,
       );
 
-      final counterpartId = actor.id == loan.fromUserId ? loan.toUserId : loan.fromUserId;
-      if (counterpartId == actor.id) {
+      // Determine counterpart: if actor is borrower, notify owner; if actor is owner, notify borrower
+      final int? counterpartId = actor.id == loan.fromUserId ? loan.toUserId : loan.fromUserId;
+      
+      // Don't notify if counterpart is null (manual loan) or is the same as actor
+      if (counterpartId == null || counterpartId == actor.id) {
         return;
       }
 
@@ -457,19 +505,22 @@ class LoanController extends StateNotifier<LoanActionState> {
         status: InAppNotificationStatus.read,
       );
 
-      final borrowerMessage = await _messageWithBook(
-        loan: loan,
-        fallback: 'Tu préstamo ha expirado.',
-        withTitle: (title) => 'Tu préstamo de "$title" ha expirado.',
-      );
+      // Only notify borrower if they have an account (not a manual loan)
+      if (loan.fromUserId != null) {
+        final borrowerMessage = await _messageWithBook(
+          loan: loan,
+          fallback: 'Tu préstamo ha expirado.',
+          withTitle: (title) => 'Tu préstamo de "$title" ha expirado.',
+        );
 
-      await _notificationRepository.createLoanNotification(
-        type: InAppNotificationType.loanExpired,
-        loan: loan,
-        targetUserId: loan.fromUserId,
-        title: 'Préstamo expirado',
-        message: borrowerMessage,
-      );
+        await _notificationRepository.createLoanNotification(
+          type: InAppNotificationType.loanExpired,
+          loan: loan,
+          targetUserId: loan.fromUserId!,
+          title: 'Préstamo expirado',
+          message: borrowerMessage,
+        );
+      }
 
       final ownerMessage = await _messageWithBook(
         loan: loan,
@@ -521,10 +572,14 @@ class LoanController extends StateNotifier<LoanActionState> {
     try {
       await task();
     } catch (error, stackTrace) {
-      if (kDebugMode) {
-        debugPrint('[LoanController] Notification task failed: $error');
-        debugPrint(stackTrace.toString());
-      }
+      // Always log, not just in debug mode
+      developer.log(
+        'Notification task failed: $error',
+        name: 'LoanController',
+        error: error,
+        stackTrace: stackTrace,
+        level: 900,
+      );
     }
   }
 }

@@ -1,0 +1,170 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../../providers/book_providers.dart';
+import '../../../services/stats_service.dart';
+
+/// Widget that displays a list of active loans
+/// 
+/// Shows loans in pending or accepted status with details like
+/// borrower name, status, request date, and due date.
+class ActiveLoansList extends ConsumerWidget {
+  const ActiveLoansList({super.key, required this.loans});
+
+  final List<StatsActiveLoan> loans;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    if (loans.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Icon(Icons.handshake_outlined, color: theme.colorScheme.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'No tienes préstamos pendientes o en curso en este momento.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: loans.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final loan = loans[index];
+        final dueDate = loan.dueDate;
+        final statusLabel = _statusLabel(loan.status);
+        final statusColor = _statusColor(context, loan.status);
+
+        return Card(
+          child: ListTile(
+            leading: Icon(Icons.inventory_2_outlined, color: statusColor),
+            title: Text(loan.bookTitle),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Solicitante: ${loan.borrowerName}'),
+                Text('Estado: $statusLabel'),
+                Text('Solicitado: ${DateFormat.yMMMd().format(loan.requestedAt)}'),
+                Text(
+                  dueDate != null
+                      ? 'Vence: ${DateFormat.yMMMd().format(dueDate)}'
+                      : 'Sin fecha límite',
+                ),
+              ],
+            ),
+            onTap: () {
+              unawaited(_openLoanDetail(context, ref, loan));
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openLoanDetail(BuildContext context, WidgetRef ref, StatsActiveLoan loan) async {
+    final groupId = loan.groupId;
+    final sharedBookId = loan.sharedBookId;
+
+    if (groupId == null || sharedBookId == null) {
+      if (!context.mounted) {
+        return;
+      }
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'No pudimos abrir el detalle de este préstamo.',
+        isError: true,
+      );
+      return;
+    }
+
+    final groupDao = ref.read(groupDaoProvider);
+    final group = await groupDao.findGroupById(groupId);
+
+    if (group == null) {
+      if (!context.mounted) {
+        return;
+      }
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Este grupo ya no está disponible.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (!context.mounted) {
+      return;
+    }
+
+    // TODO: Navigate to book detail page
+    // This requires importing the book detail page widget
+    // For now, show a message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Navegación a detalle de préstamo')),
+    );
+  }
+ 
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'pending':
+        return 'Pendiente';
+      case 'accepted':
+        return 'En curso';
+      case 'returned':
+        return 'Devuelto';
+      case 'expired':
+        return 'Expirado';
+      default:
+        return status;
+    }
+  }
+
+  Color _statusColor(BuildContext context, String status) {
+    final colors = Theme.of(context).colorScheme;
+    switch (status) {
+      case 'pending':
+        return colors.secondary;
+      case 'accepted':
+        return colors.primary;
+      case 'returned':
+        return colors.tertiary;
+      case 'expired':
+        return colors.error;
+      default:
+        return colors.onSurfaceVariant;
+    }
+  }
+}
+
+/// Helper function to show feedback snackbar
+void _showFeedbackSnackBar({
+  required BuildContext context,
+  required String message,
+  required bool isError,
+}) {
+  if (!context.mounted) return;
+  
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
+    ),
+  );
+}

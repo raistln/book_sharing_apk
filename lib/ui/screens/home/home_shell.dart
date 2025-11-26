@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -43,139 +42,13 @@ import '../../widgets/coach_mark_target.dart';
 import '../../widgets/cover_preview.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/import_books_dialog.dart';
+import '../../widgets/barcode_scanner_sheet.dart';
+import '../../widgets/sync_banner.dart';
 import '../../utils/ui_helpers.dart';
 import '../auth/pin_setup_screen.dart';
 final _currentTabProvider = StateProvider<int>((ref) => 0);
 
 enum _BookFormResult { saved, deleted }
-
-class _BarcodeScannerSheet extends StatefulWidget {
-  const _BarcodeScannerSheet();
-
-  @override
-  State<_BarcodeScannerSheet> createState() => _BarcodeScannerSheetState();
-}
-
-class _BarcodeScannerSheetState extends State<_BarcodeScannerSheet> {
-  late final MobileScannerController _controller;
-  bool _handled = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = MobileScannerController(
-      detectionSpeed: DetectionSpeed.noDuplicates,
-      facing: CameraFacing.back,
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _handleDetection(BarcodeCapture capture) {
-    if (_handled) {
-      return;
-    }
-
-    for (final barcode in capture.barcodes) {
-      final value = barcode.rawValue;
-      if (value != null && value.trim().isNotEmpty) {
-        _handled = true;
-        _controller.stop();
-        if (mounted) {
-          Navigator.of(context).pop(value.trim());
-        }
-        return;
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Escanea el código de barras',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Cerrar',
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            AspectRatio(
-              aspectRatio: 3 / 4,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: Colors.black,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: MobileScanner(
-                    controller: _controller,
-                    onDetect: _handleDetection,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Alinea el código de barras dentro del recuadro. La lectura se completará automáticamente.',
-              style: theme.textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton.icon(
-                  onPressed: () async {
-                    final hasTorch = _controller.hasTorch;
-                    if (!hasTorch) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Este dispositivo no tiene linterna.')),
-                      );
-                      return;
-                    }
-                    await _controller.toggleTorch();
-                  },
-                  icon: const Icon(Icons.flashlight_on_outlined),
-                  label: const Text('Linterna'),
-                ),
-                TextButton.icon(
-                  onPressed: () async {
-                    await _controller.switchCamera();
-                  },
-                  icon: const Icon(Icons.cameraswitch_outlined),
-                  label: const Text('Cambiar cámara'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 String _resolveOwnerName(LocalUser? ownerUser, int ownerIdFallback) {
   if (ownerUser == null) {
@@ -187,133 +60,6 @@ String _resolveOwnerName(LocalUser? ownerUser, int ownerIdFallback) {
     return 'Miembro $ownerIdFallback';
   }
   return username;
-}
-
-class _SyncBanner extends ConsumerWidget {
-  const _SyncBanner();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final syncState = ref.watch(groupSyncControllerProvider);
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
-    final isSyncing = syncState.isSyncing;
-    final hasError = syncState.lastError != null;
-    final hasPending = syncState.hasPendingChanges;
-
-    if (!isSyncing && !hasError && !hasPending) {
-      return const SizedBox.shrink();
-    }
-
-    Color background;
-    Color foreground;
-    IconData icon;
-    String message;
-
-    if (isSyncing) {
-      background = colors.primaryContainer;
-      foreground = colors.onPrimaryContainer;
-      icon = Icons.sync_outlined;
-      message = 'Sincronizando grupos...';
-    } else if (hasError) {
-      background = colors.errorContainer;
-      foreground = colors.onErrorContainer;
-      icon = Icons.error_outline;
-      final error = syncState.lastError!;
-      message = error.length > 140 ? '${error.substring(0, 137)}…' : error;
-    } else {
-      background = colors.surfaceContainerHigh;
-      foreground = colors.onSurface;
-      icon = Icons.cloud_upload_outlined;
-      message = 'Cambios locales listos para sincronizar.';
-    }
-
-    late final Widget trailing;
-    if (isSyncing) {
-      trailing = const SizedBox(
-        height: 20,
-        width: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      );
-    } else if (hasError) {
-      trailing = Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          TextButton.icon(
-            onPressed: () => unawaited(_performSync(context, ref)),
-            icon: const Icon(Icons.refresh),
-            label: const Text('Reintentar'),
-            style: TextButton.styleFrom(foregroundColor: foreground),
-          ),
-          IconButton(
-            onPressed: () => ref.read(groupSyncControllerProvider.notifier).clearError(),
-            icon: Icon(Icons.close, color: foreground),
-            tooltip: 'Descartar',
-          ),
-        ],
-      );
-    } else {
-      trailing = Align(
-        alignment: Alignment.centerRight,
-        child: TextButton.icon(
-          onPressed: () => unawaited(_performSync(context, ref)),
-          icon: const Icon(Icons.sync_outlined),
-          label: const Text('Sincronizar ahora'),
-          style: TextButton.styleFrom(foregroundColor: foreground),
-        ),
-      );
-    }
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 250),
-      child: Material(
-        key: ValueKey<String>(
-          isSyncing
-              ? 'sync-banner-syncing'
-              : hasError
-                  ? 'sync-banner-error'
-                  : 'sync-banner-pending',
-        ),
-        color: background,
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(icon, color: foreground),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        message,
-                        style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
-                      ),
-                    ),
-                    if (isSyncing) ...[
-                      const SizedBox(width: 12),
-                      trailing,
-                    ],
-                  ],
-                ),
-                if (!isSyncing) ...[
-                  const SizedBox(height: 8),
-                  trailing,
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 _DiscoverStatusDisplay _resolveStatusDisplay({
@@ -2099,7 +1845,7 @@ class HomeShell extends ConsumerWidget {
     return Scaffold(
       body: Column(
         children: [
-          const _SyncBanner(),
+          const SyncBanner(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Align(
@@ -2646,7 +2392,7 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
                               context: context,
                               isScrollControlled: true,
                               useSafeArea: true,
-                              builder: (context) => const _BarcodeScannerSheet(),
+                              builder: (context) => const BarcodeScannerSheet(),
                             );
                             if (result != null && mounted) {
                               setState(() {

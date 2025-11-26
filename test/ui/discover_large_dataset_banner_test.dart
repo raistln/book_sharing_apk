@@ -1,4 +1,4 @@
-import 'package:book_sharing_app/ui/screens/home/home_shell.dart';
+import 'package:book_sharing_app/ui/screens/home/tabs/discover_group_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

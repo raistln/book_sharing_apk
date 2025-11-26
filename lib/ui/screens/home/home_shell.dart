@@ -43,6 +43,7 @@ import '../../widgets/coach_mark_target.dart';
 import '../../widgets/cover_preview.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/import_books_dialog.dart';
+import '../../utils/ui_helpers.dart';
 import '../auth/pin_setup_screen.dart';
 final _currentTabProvider = StateProvider<int>((ref) => 0);
 
@@ -884,13 +885,22 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
       if (!mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'No se pudo enviar la solicitud: $error',
+        message: UIHelpers.getFriendlyErrorMessage(error),
         isError: true,
       );
     }
   }
 
   Future<void> _cancelLoan({required Loan loan, required LocalUser borrower}) async {
+    // Confirm before canceling
+    final confirmed = await UIHelpers.showConfirmDialog(
+      context: context,
+      title: '¿Cancelar solicitud?',
+      message: '¿Estás seguro de que quieres cancelar esta solicitud de préstamo?',
+      isDangerous: false,
+    );
+    if (!confirmed) return;
+    
     final controller = ref.read(loanControllerProvider.notifier);
     try {
       await controller.cancelLoan(loan: loan, borrower: borrower);
@@ -904,7 +914,7 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
       if (!mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'No se pudo cancelar la solicitud: $error',
+        message: UIHelpers.getFriendlyErrorMessage(error),
         isError: true,
       );
     }
@@ -924,13 +934,22 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
       if (!mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'No se pudo aceptar la solicitud: $error',
+        message: UIHelpers.getFriendlyErrorMessage(error),
         isError: true,
       );
     }
   }
 
   Future<void> _handleOwnerReject({required LocalUser owner, required LoanDetail detail}) async {
+    // Confirm before rejecting
+    final confirmed = await UIHelpers.showConfirmDialog(
+      context: context,
+      title: '¿Rechazar solicitud?',
+      message: '¿Estás seguro de que quieres rechazar esta solicitud de préstamo?',
+      isDangerous: false,
+    );
+    if (!confirmed) return;
+    
     final controller = ref.read(loanControllerProvider.notifier);
     try {
       await controller.rejectLoan(loan: detail.loan, owner: owner);
@@ -944,7 +963,7 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
       if (!mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'No se pudo rechazar la solicitud: $error',
+        message: UIHelpers.getFriendlyErrorMessage(error),
         isError: true,
       );
     }

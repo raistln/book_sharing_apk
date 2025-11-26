@@ -475,6 +475,69 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Function to send 7-day loan reminders
+CREATE OR REPLACE FUNCTION send_loan_reminders()
+RETURNS void AS $$
+DECLARE
+  reminder_date DATE;
+BEGIN
+  reminder_date := CURRENT_DATE + INTERVAL '7 days';
+  
+  -- Insert notifications for borrowers (7 days before due)
+  INSERT INTO public.loan_notifications (
+    id, loan_id, user_id, type, title, message, status, created_at
+  )
+  SELECT 
+    uuid_generate_v4(),
+    l.id,
+    l.borrower_user_id,
+    'loan_due_soon',
+    'Préstamo próximo a vencer',
+    'Tu préstamo de "' || sb.title || '" vence en 7 días.',
+    'unread',
+    NOW()
+  FROM public.loans l
+  JOIN public.shared_books sb ON sb.id = l.shared_book_id
+  WHERE l.status = 'active'
+    AND DATE(l.due_date) = reminder_date
+    AND l.borrower_user_id IS NOT NULL
+    AND l.is_deleted = false
+    AND NOT EXISTS (
+      SELECT 1 FROM public.loan_notifications ln
+      WHERE ln.loan_id = l.id
+        AND ln.type = 'loan_due_soon'
+        AND ln.user_id = l.borrower_user_id
+        AND DATE(ln.created_at) = CURRENT_DATE
+    );
+    
+  -- Insert notifications for lenders (7 days before due)
+  INSERT INTO public.loan_notifications (
+    id, loan_id, user_id, type, title, message, status, created_at
+  )
+  SELECT 
+    uuid_generate_v4(),
+    l.id,
+    l.lender_user_id,
+    'loan_due_soon',
+    'Préstamo próximo a vencer',
+    'El préstamo de "' || sb.title || '" vence en 7 días.',
+    'unread',
+    NOW()
+  FROM public.loans l
+  JOIN public.shared_books sb ON sb.id = l.shared_book_id
+  WHERE l.status = 'active'
+    AND DATE(l.due_date) = reminder_date
+    AND l.is_deleted = false
+    AND NOT EXISTS (
+      SELECT 1 FROM public.loan_notifications ln
+      WHERE ln.loan_id = l.id
+        AND ln.type = 'loan_due_soon'
+        AND ln.user_id = l.lender_user_id
+        AND DATE(ln.created_at) = CURRENT_DATE
+    );
+END;
+$$ LANGUAGE plpgsql;
+
 -- ============================================================================
 -- STEP 11: SCHEDULE CRON JOBS
 -- ============================================================================
@@ -484,6 +547,13 @@ SELECT cron.schedule(
   'expire-overdue-loans',
   '0 * * * *',
   $$SELECT expire_overdue_loans()$$
+);
+
+-- Schedule 7-day loan reminders (runs daily at 9 AM)
+SELECT cron.schedule(
+  'send-loan-reminders',
+  '0 9 * * *',
+  $$SELECT send_loan_reminders()$$
 );
 
 -- ============================================================================
@@ -506,5 +576,6 @@ BEGIN
   RAISE NOTICE '';
   RAISE NOTICE 'Cron jobs scheduled:';
   RAISE NOTICE '  - expire-overdue-loans (hourly)';
+  RAISE NOTICE '  - send-loan-reminders (daily at 9 AM)';
   RAISE NOTICE '============================================================================';
 END $$;

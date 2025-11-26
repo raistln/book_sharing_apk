@@ -5064,45 +5064,24 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
       requiredDuringInsert: true,
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'REFERENCES shared_books (id) ON DELETE CASCADE'));
-  static const VerificationMeta _sharedBookUuidMeta =
-      const VerificationMeta('sharedBookUuid');
+  static const VerificationMeta _borrowerUserIdMeta =
+      const VerificationMeta('borrowerUserId');
   @override
-  late final GeneratedColumn<String> sharedBookUuid = GeneratedColumn<String>(
-      'shared_book_uuid', aliasedName, false,
-      additionalChecks:
-          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
-      type: DriftSqlType.string,
-      requiredDuringInsert: true);
-  static const VerificationMeta _fromUserIdMeta =
-      const VerificationMeta('fromUserId');
-  @override
-  late final GeneratedColumn<int> fromUserId = GeneratedColumn<int>(
-      'from_user_id', aliasedName, true,
+  late final GeneratedColumn<int> borrowerUserId = GeneratedColumn<int>(
+      'borrower_user_id', aliasedName, true,
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('REFERENCES local_users (id)'));
-  static const VerificationMeta _fromRemoteIdMeta =
-      const VerificationMeta('fromRemoteId');
+  static const VerificationMeta _lenderUserIdMeta =
+      const VerificationMeta('lenderUserId');
   @override
-  late final GeneratedColumn<String> fromRemoteId = GeneratedColumn<String>(
-      'from_remote_id', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _toUserIdMeta =
-      const VerificationMeta('toUserId');
-  @override
-  late final GeneratedColumn<int> toUserId = GeneratedColumn<int>(
-      'to_user_id', aliasedName, false,
+  late final GeneratedColumn<int> lenderUserId = GeneratedColumn<int>(
+      'lender_user_id', aliasedName, false,
       type: DriftSqlType.int,
       requiredDuringInsert: true,
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('REFERENCES local_users (id)'));
-  static const VerificationMeta _toRemoteIdMeta =
-      const VerificationMeta('toRemoteId');
-  @override
-  late final GeneratedColumn<String> toRemoteId = GeneratedColumn<String>(
-      'to_remote_id', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _externalBorrowerNameMeta =
       const VerificationMeta('externalBorrowerName');
   @override
@@ -5123,32 +5102,44 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
           GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 32),
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant('pending'));
-  static const VerificationMeta _startDateMeta =
-      const VerificationMeta('startDate');
+      defaultValue: const Constant('requested'));
+  static const VerificationMeta _requestedAtMeta =
+      const VerificationMeta('requestedAt');
   @override
-  late final GeneratedColumn<DateTime> startDate = GeneratedColumn<DateTime>(
-      'start_date', aliasedName, false,
+  late final GeneratedColumn<DateTime> requestedAt = GeneratedColumn<DateTime>(
+      'requested_at', aliasedName, false,
       type: DriftSqlType.dateTime,
       requiredDuringInsert: false,
       defaultValue: currentDateAndTime);
+  static const VerificationMeta _approvedAtMeta =
+      const VerificationMeta('approvedAt');
+  @override
+  late final GeneratedColumn<DateTime> approvedAt = GeneratedColumn<DateTime>(
+      'approved_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _dueDateMeta =
       const VerificationMeta('dueDate');
   @override
   late final GeneratedColumn<DateTime> dueDate = GeneratedColumn<DateTime>(
       'due_date', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _borrowerReturnedAtMeta =
+      const VerificationMeta('borrowerReturnedAt');
+  @override
+  late final GeneratedColumn<DateTime> borrowerReturnedAt =
+      GeneratedColumn<DateTime>('borrower_returned_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _lenderReturnedAtMeta =
+      const VerificationMeta('lenderReturnedAt');
+  @override
+  late final GeneratedColumn<DateTime> lenderReturnedAt =
+      GeneratedColumn<DateTime>('lender_returned_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _returnedAtMeta =
       const VerificationMeta('returnedAt');
   @override
   late final GeneratedColumn<DateTime> returnedAt = GeneratedColumn<DateTime>(
       'returned_at', aliasedName, true,
-      type: DriftSqlType.dateTime, requiredDuringInsert: false);
-  static const VerificationMeta _cancelledAtMeta =
-      const VerificationMeta('cancelledAt');
-  @override
-  late final GeneratedColumn<DateTime> cancelledAt = GeneratedColumn<DateTime>(
-      'cancelled_at', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
@@ -5198,18 +5189,17 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
         uuid,
         remoteId,
         sharedBookId,
-        sharedBookUuid,
-        fromUserId,
-        fromRemoteId,
-        toUserId,
-        toRemoteId,
+        borrowerUserId,
+        lenderUserId,
         externalBorrowerName,
         externalBorrowerContact,
         status,
-        startDate,
+        requestedAt,
+        approvedAt,
         dueDate,
+        borrowerReturnedAt,
+        lenderReturnedAt,
         returnedAt,
-        cancelledAt,
         isDirty,
         isDeleted,
         syncedAt,
@@ -5247,37 +5237,19 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
     } else if (isInserting) {
       context.missing(_sharedBookIdMeta);
     }
-    if (data.containsKey('shared_book_uuid')) {
+    if (data.containsKey('borrower_user_id')) {
       context.handle(
-          _sharedBookUuidMeta,
-          sharedBookUuid.isAcceptableOrUnknown(
-              data['shared_book_uuid']!, _sharedBookUuidMeta));
+          _borrowerUserIdMeta,
+          borrowerUserId.isAcceptableOrUnknown(
+              data['borrower_user_id']!, _borrowerUserIdMeta));
+    }
+    if (data.containsKey('lender_user_id')) {
+      context.handle(
+          _lenderUserIdMeta,
+          lenderUserId.isAcceptableOrUnknown(
+              data['lender_user_id']!, _lenderUserIdMeta));
     } else if (isInserting) {
-      context.missing(_sharedBookUuidMeta);
-    }
-    if (data.containsKey('from_user_id')) {
-      context.handle(
-          _fromUserIdMeta,
-          fromUserId.isAcceptableOrUnknown(
-              data['from_user_id']!, _fromUserIdMeta));
-    }
-    if (data.containsKey('from_remote_id')) {
-      context.handle(
-          _fromRemoteIdMeta,
-          fromRemoteId.isAcceptableOrUnknown(
-              data['from_remote_id']!, _fromRemoteIdMeta));
-    }
-    if (data.containsKey('to_user_id')) {
-      context.handle(_toUserIdMeta,
-          toUserId.isAcceptableOrUnknown(data['to_user_id']!, _toUserIdMeta));
-    } else if (isInserting) {
-      context.missing(_toUserIdMeta);
-    }
-    if (data.containsKey('to_remote_id')) {
-      context.handle(
-          _toRemoteIdMeta,
-          toRemoteId.isAcceptableOrUnknown(
-              data['to_remote_id']!, _toRemoteIdMeta));
+      context.missing(_lenderUserIdMeta);
     }
     if (data.containsKey('external_borrower_name')) {
       context.handle(
@@ -5296,25 +5268,39 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
       context.handle(_statusMeta,
           status.isAcceptableOrUnknown(data['status']!, _statusMeta));
     }
-    if (data.containsKey('start_date')) {
-      context.handle(_startDateMeta,
-          startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta));
+    if (data.containsKey('requested_at')) {
+      context.handle(
+          _requestedAtMeta,
+          requestedAt.isAcceptableOrUnknown(
+              data['requested_at']!, _requestedAtMeta));
+    }
+    if (data.containsKey('approved_at')) {
+      context.handle(
+          _approvedAtMeta,
+          approvedAt.isAcceptableOrUnknown(
+              data['approved_at']!, _approvedAtMeta));
     }
     if (data.containsKey('due_date')) {
       context.handle(_dueDateMeta,
           dueDate.isAcceptableOrUnknown(data['due_date']!, _dueDateMeta));
+    }
+    if (data.containsKey('borrower_returned_at')) {
+      context.handle(
+          _borrowerReturnedAtMeta,
+          borrowerReturnedAt.isAcceptableOrUnknown(
+              data['borrower_returned_at']!, _borrowerReturnedAtMeta));
+    }
+    if (data.containsKey('lender_returned_at')) {
+      context.handle(
+          _lenderReturnedAtMeta,
+          lenderReturnedAt.isAcceptableOrUnknown(
+              data['lender_returned_at']!, _lenderReturnedAtMeta));
     }
     if (data.containsKey('returned_at')) {
       context.handle(
           _returnedAtMeta,
           returnedAt.isAcceptableOrUnknown(
               data['returned_at']!, _returnedAtMeta));
-    }
-    if (data.containsKey('cancelled_at')) {
-      context.handle(
-          _cancelledAtMeta,
-          cancelledAt.isAcceptableOrUnknown(
-              data['cancelled_at']!, _cancelledAtMeta));
     }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
@@ -5353,16 +5339,10 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
           .read(DriftSqlType.string, data['${effectivePrefix}remote_id']),
       sharedBookId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}shared_book_id'])!,
-      sharedBookUuid: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}shared_book_uuid'])!,
-      fromUserId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}from_user_id']),
-      fromRemoteId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}from_remote_id']),
-      toUserId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}to_user_id'])!,
-      toRemoteId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}to_remote_id']),
+      borrowerUserId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}borrower_user_id']),
+      lenderUserId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}lender_user_id'])!,
       externalBorrowerName: attachedDatabase.typeMapping.read(
           DriftSqlType.string,
           data['${effectivePrefix}external_borrower_name']),
@@ -5371,14 +5351,19 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
           data['${effectivePrefix}external_borrower_contact']),
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
-      startDate: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}start_date'])!,
+      requestedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}requested_at'])!,
+      approvedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}approved_at']),
       dueDate: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}due_date']),
+      borrowerReturnedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}borrower_returned_at']),
+      lenderReturnedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}lender_returned_at']),
       returnedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}returned_at']),
-      cancelledAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}cancelled_at']),
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -5403,18 +5388,17 @@ class Loan extends DataClass implements Insertable<Loan> {
   final String uuid;
   final String? remoteId;
   final int sharedBookId;
-  final String sharedBookUuid;
-  final int? fromUserId;
-  final String? fromRemoteId;
-  final int toUserId;
-  final String? toRemoteId;
+  final int? borrowerUserId;
+  final int lenderUserId;
   final String? externalBorrowerName;
   final String? externalBorrowerContact;
   final String status;
-  final DateTime startDate;
+  final DateTime requestedAt;
+  final DateTime? approvedAt;
   final DateTime? dueDate;
+  final DateTime? borrowerReturnedAt;
+  final DateTime? lenderReturnedAt;
   final DateTime? returnedAt;
-  final DateTime? cancelledAt;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -5425,18 +5409,17 @@ class Loan extends DataClass implements Insertable<Loan> {
       required this.uuid,
       this.remoteId,
       required this.sharedBookId,
-      required this.sharedBookUuid,
-      this.fromUserId,
-      this.fromRemoteId,
-      required this.toUserId,
-      this.toRemoteId,
+      this.borrowerUserId,
+      required this.lenderUserId,
       this.externalBorrowerName,
       this.externalBorrowerContact,
       required this.status,
-      required this.startDate,
+      required this.requestedAt,
+      this.approvedAt,
       this.dueDate,
+      this.borrowerReturnedAt,
+      this.lenderReturnedAt,
       this.returnedAt,
-      this.cancelledAt,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -5451,17 +5434,10 @@ class Loan extends DataClass implements Insertable<Loan> {
       map['remote_id'] = Variable<String>(remoteId);
     }
     map['shared_book_id'] = Variable<int>(sharedBookId);
-    map['shared_book_uuid'] = Variable<String>(sharedBookUuid);
-    if (!nullToAbsent || fromUserId != null) {
-      map['from_user_id'] = Variable<int>(fromUserId);
+    if (!nullToAbsent || borrowerUserId != null) {
+      map['borrower_user_id'] = Variable<int>(borrowerUserId);
     }
-    if (!nullToAbsent || fromRemoteId != null) {
-      map['from_remote_id'] = Variable<String>(fromRemoteId);
-    }
-    map['to_user_id'] = Variable<int>(toUserId);
-    if (!nullToAbsent || toRemoteId != null) {
-      map['to_remote_id'] = Variable<String>(toRemoteId);
-    }
+    map['lender_user_id'] = Variable<int>(lenderUserId);
     if (!nullToAbsent || externalBorrowerName != null) {
       map['external_borrower_name'] = Variable<String>(externalBorrowerName);
     }
@@ -5470,15 +5446,21 @@ class Loan extends DataClass implements Insertable<Loan> {
           Variable<String>(externalBorrowerContact);
     }
     map['status'] = Variable<String>(status);
-    map['start_date'] = Variable<DateTime>(startDate);
+    map['requested_at'] = Variable<DateTime>(requestedAt);
+    if (!nullToAbsent || approvedAt != null) {
+      map['approved_at'] = Variable<DateTime>(approvedAt);
+    }
     if (!nullToAbsent || dueDate != null) {
       map['due_date'] = Variable<DateTime>(dueDate);
     }
+    if (!nullToAbsent || borrowerReturnedAt != null) {
+      map['borrower_returned_at'] = Variable<DateTime>(borrowerReturnedAt);
+    }
+    if (!nullToAbsent || lenderReturnedAt != null) {
+      map['lender_returned_at'] = Variable<DateTime>(lenderReturnedAt);
+    }
     if (!nullToAbsent || returnedAt != null) {
       map['returned_at'] = Variable<DateTime>(returnedAt);
-    }
-    if (!nullToAbsent || cancelledAt != null) {
-      map['cancelled_at'] = Variable<DateTime>(cancelledAt);
     }
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
@@ -5498,17 +5480,10 @@ class Loan extends DataClass implements Insertable<Loan> {
           ? const Value.absent()
           : Value(remoteId),
       sharedBookId: Value(sharedBookId),
-      sharedBookUuid: Value(sharedBookUuid),
-      fromUserId: fromUserId == null && nullToAbsent
+      borrowerUserId: borrowerUserId == null && nullToAbsent
           ? const Value.absent()
-          : Value(fromUserId),
-      fromRemoteId: fromRemoteId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(fromRemoteId),
-      toUserId: Value(toUserId),
-      toRemoteId: toRemoteId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(toRemoteId),
+          : Value(borrowerUserId),
+      lenderUserId: Value(lenderUserId),
       externalBorrowerName: externalBorrowerName == null && nullToAbsent
           ? const Value.absent()
           : Value(externalBorrowerName),
@@ -5516,16 +5491,22 @@ class Loan extends DataClass implements Insertable<Loan> {
           ? const Value.absent()
           : Value(externalBorrowerContact),
       status: Value(status),
-      startDate: Value(startDate),
+      requestedAt: Value(requestedAt),
+      approvedAt: approvedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(approvedAt),
       dueDate: dueDate == null && nullToAbsent
           ? const Value.absent()
           : Value(dueDate),
+      borrowerReturnedAt: borrowerReturnedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(borrowerReturnedAt),
+      lenderReturnedAt: lenderReturnedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lenderReturnedAt),
       returnedAt: returnedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(returnedAt),
-      cancelledAt: cancelledAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(cancelledAt),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -5544,20 +5525,21 @@ class Loan extends DataClass implements Insertable<Loan> {
       uuid: serializer.fromJson<String>(json['uuid']),
       remoteId: serializer.fromJson<String?>(json['remoteId']),
       sharedBookId: serializer.fromJson<int>(json['sharedBookId']),
-      sharedBookUuid: serializer.fromJson<String>(json['sharedBookUuid']),
-      fromUserId: serializer.fromJson<int?>(json['fromUserId']),
-      fromRemoteId: serializer.fromJson<String?>(json['fromRemoteId']),
-      toUserId: serializer.fromJson<int>(json['toUserId']),
-      toRemoteId: serializer.fromJson<String?>(json['toRemoteId']),
+      borrowerUserId: serializer.fromJson<int?>(json['borrowerUserId']),
+      lenderUserId: serializer.fromJson<int>(json['lenderUserId']),
       externalBorrowerName:
           serializer.fromJson<String?>(json['externalBorrowerName']),
       externalBorrowerContact:
           serializer.fromJson<String?>(json['externalBorrowerContact']),
       status: serializer.fromJson<String>(json['status']),
-      startDate: serializer.fromJson<DateTime>(json['startDate']),
+      requestedAt: serializer.fromJson<DateTime>(json['requestedAt']),
+      approvedAt: serializer.fromJson<DateTime?>(json['approvedAt']),
       dueDate: serializer.fromJson<DateTime?>(json['dueDate']),
+      borrowerReturnedAt:
+          serializer.fromJson<DateTime?>(json['borrowerReturnedAt']),
+      lenderReturnedAt:
+          serializer.fromJson<DateTime?>(json['lenderReturnedAt']),
       returnedAt: serializer.fromJson<DateTime?>(json['returnedAt']),
-      cancelledAt: serializer.fromJson<DateTime?>(json['cancelledAt']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -5573,19 +5555,18 @@ class Loan extends DataClass implements Insertable<Loan> {
       'uuid': serializer.toJson<String>(uuid),
       'remoteId': serializer.toJson<String?>(remoteId),
       'sharedBookId': serializer.toJson<int>(sharedBookId),
-      'sharedBookUuid': serializer.toJson<String>(sharedBookUuid),
-      'fromUserId': serializer.toJson<int?>(fromUserId),
-      'fromRemoteId': serializer.toJson<String?>(fromRemoteId),
-      'toUserId': serializer.toJson<int>(toUserId),
-      'toRemoteId': serializer.toJson<String?>(toRemoteId),
+      'borrowerUserId': serializer.toJson<int?>(borrowerUserId),
+      'lenderUserId': serializer.toJson<int>(lenderUserId),
       'externalBorrowerName': serializer.toJson<String?>(externalBorrowerName),
       'externalBorrowerContact':
           serializer.toJson<String?>(externalBorrowerContact),
       'status': serializer.toJson<String>(status),
-      'startDate': serializer.toJson<DateTime>(startDate),
+      'requestedAt': serializer.toJson<DateTime>(requestedAt),
+      'approvedAt': serializer.toJson<DateTime?>(approvedAt),
       'dueDate': serializer.toJson<DateTime?>(dueDate),
+      'borrowerReturnedAt': serializer.toJson<DateTime?>(borrowerReturnedAt),
+      'lenderReturnedAt': serializer.toJson<DateTime?>(lenderReturnedAt),
       'returnedAt': serializer.toJson<DateTime?>(returnedAt),
-      'cancelledAt': serializer.toJson<DateTime?>(cancelledAt),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -5599,18 +5580,17 @@ class Loan extends DataClass implements Insertable<Loan> {
           String? uuid,
           Value<String?> remoteId = const Value.absent(),
           int? sharedBookId,
-          String? sharedBookUuid,
-          Value<int?> fromUserId = const Value.absent(),
-          Value<String?> fromRemoteId = const Value.absent(),
-          int? toUserId,
-          Value<String?> toRemoteId = const Value.absent(),
+          Value<int?> borrowerUserId = const Value.absent(),
+          int? lenderUserId,
           Value<String?> externalBorrowerName = const Value.absent(),
           Value<String?> externalBorrowerContact = const Value.absent(),
           String? status,
-          DateTime? startDate,
+          DateTime? requestedAt,
+          Value<DateTime?> approvedAt = const Value.absent(),
           Value<DateTime?> dueDate = const Value.absent(),
+          Value<DateTime?> borrowerReturnedAt = const Value.absent(),
+          Value<DateTime?> lenderReturnedAt = const Value.absent(),
           Value<DateTime?> returnedAt = const Value.absent(),
-          Value<DateTime?> cancelledAt = const Value.absent(),
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -5621,12 +5601,9 @@ class Loan extends DataClass implements Insertable<Loan> {
         uuid: uuid ?? this.uuid,
         remoteId: remoteId.present ? remoteId.value : this.remoteId,
         sharedBookId: sharedBookId ?? this.sharedBookId,
-        sharedBookUuid: sharedBookUuid ?? this.sharedBookUuid,
-        fromUserId: fromUserId.present ? fromUserId.value : this.fromUserId,
-        fromRemoteId:
-            fromRemoteId.present ? fromRemoteId.value : this.fromRemoteId,
-        toUserId: toUserId ?? this.toUserId,
-        toRemoteId: toRemoteId.present ? toRemoteId.value : this.toRemoteId,
+        borrowerUserId:
+            borrowerUserId.present ? borrowerUserId.value : this.borrowerUserId,
+        lenderUserId: lenderUserId ?? this.lenderUserId,
         externalBorrowerName: externalBorrowerName.present
             ? externalBorrowerName.value
             : this.externalBorrowerName,
@@ -5634,10 +5611,16 @@ class Loan extends DataClass implements Insertable<Loan> {
             ? externalBorrowerContact.value
             : this.externalBorrowerContact,
         status: status ?? this.status,
-        startDate: startDate ?? this.startDate,
+        requestedAt: requestedAt ?? this.requestedAt,
+        approvedAt: approvedAt.present ? approvedAt.value : this.approvedAt,
         dueDate: dueDate.present ? dueDate.value : this.dueDate,
+        borrowerReturnedAt: borrowerReturnedAt.present
+            ? borrowerReturnedAt.value
+            : this.borrowerReturnedAt,
+        lenderReturnedAt: lenderReturnedAt.present
+            ? lenderReturnedAt.value
+            : this.lenderReturnedAt,
         returnedAt: returnedAt.present ? returnedAt.value : this.returnedAt,
-        cancelledAt: cancelledAt.present ? cancelledAt.value : this.cancelledAt,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -5652,17 +5635,12 @@ class Loan extends DataClass implements Insertable<Loan> {
       sharedBookId: data.sharedBookId.present
           ? data.sharedBookId.value
           : this.sharedBookId,
-      sharedBookUuid: data.sharedBookUuid.present
-          ? data.sharedBookUuid.value
-          : this.sharedBookUuid,
-      fromUserId:
-          data.fromUserId.present ? data.fromUserId.value : this.fromUserId,
-      fromRemoteId: data.fromRemoteId.present
-          ? data.fromRemoteId.value
-          : this.fromRemoteId,
-      toUserId: data.toUserId.present ? data.toUserId.value : this.toUserId,
-      toRemoteId:
-          data.toRemoteId.present ? data.toRemoteId.value : this.toRemoteId,
+      borrowerUserId: data.borrowerUserId.present
+          ? data.borrowerUserId.value
+          : this.borrowerUserId,
+      lenderUserId: data.lenderUserId.present
+          ? data.lenderUserId.value
+          : this.lenderUserId,
       externalBorrowerName: data.externalBorrowerName.present
           ? data.externalBorrowerName.value
           : this.externalBorrowerName,
@@ -5670,12 +5648,19 @@ class Loan extends DataClass implements Insertable<Loan> {
           ? data.externalBorrowerContact.value
           : this.externalBorrowerContact,
       status: data.status.present ? data.status.value : this.status,
-      startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      requestedAt:
+          data.requestedAt.present ? data.requestedAt.value : this.requestedAt,
+      approvedAt:
+          data.approvedAt.present ? data.approvedAt.value : this.approvedAt,
       dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
+      borrowerReturnedAt: data.borrowerReturnedAt.present
+          ? data.borrowerReturnedAt.value
+          : this.borrowerReturnedAt,
+      lenderReturnedAt: data.lenderReturnedAt.present
+          ? data.lenderReturnedAt.value
+          : this.lenderReturnedAt,
       returnedAt:
           data.returnedAt.present ? data.returnedAt.value : this.returnedAt,
-      cancelledAt:
-          data.cancelledAt.present ? data.cancelledAt.value : this.cancelledAt,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -5691,18 +5676,17 @@ class Loan extends DataClass implements Insertable<Loan> {
           ..write('uuid: $uuid, ')
           ..write('remoteId: $remoteId, ')
           ..write('sharedBookId: $sharedBookId, ')
-          ..write('sharedBookUuid: $sharedBookUuid, ')
-          ..write('fromUserId: $fromUserId, ')
-          ..write('fromRemoteId: $fromRemoteId, ')
-          ..write('toUserId: $toUserId, ')
-          ..write('toRemoteId: $toRemoteId, ')
+          ..write('borrowerUserId: $borrowerUserId, ')
+          ..write('lenderUserId: $lenderUserId, ')
           ..write('externalBorrowerName: $externalBorrowerName, ')
           ..write('externalBorrowerContact: $externalBorrowerContact, ')
           ..write('status: $status, ')
-          ..write('startDate: $startDate, ')
+          ..write('requestedAt: $requestedAt, ')
+          ..write('approvedAt: $approvedAt, ')
           ..write('dueDate: $dueDate, ')
+          ..write('borrowerReturnedAt: $borrowerReturnedAt, ')
+          ..write('lenderReturnedAt: $lenderReturnedAt, ')
           ..write('returnedAt: $returnedAt, ')
-          ..write('cancelledAt: $cancelledAt, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -5713,29 +5697,27 @@ class Loan extends DataClass implements Insertable<Loan> {
   }
 
   @override
-  int get hashCode => Object.hashAll([
-        id,
-        uuid,
-        remoteId,
-        sharedBookId,
-        sharedBookUuid,
-        fromUserId,
-        fromRemoteId,
-        toUserId,
-        toRemoteId,
-        externalBorrowerName,
-        externalBorrowerContact,
-        status,
-        startDate,
-        dueDate,
-        returnedAt,
-        cancelledAt,
-        isDirty,
-        isDeleted,
-        syncedAt,
-        createdAt,
-        updatedAt
-      ]);
+  int get hashCode => Object.hash(
+      id,
+      uuid,
+      remoteId,
+      sharedBookId,
+      borrowerUserId,
+      lenderUserId,
+      externalBorrowerName,
+      externalBorrowerContact,
+      status,
+      requestedAt,
+      approvedAt,
+      dueDate,
+      borrowerReturnedAt,
+      lenderReturnedAt,
+      returnedAt,
+      isDirty,
+      isDeleted,
+      syncedAt,
+      createdAt,
+      updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5744,18 +5726,17 @@ class Loan extends DataClass implements Insertable<Loan> {
           other.uuid == this.uuid &&
           other.remoteId == this.remoteId &&
           other.sharedBookId == this.sharedBookId &&
-          other.sharedBookUuid == this.sharedBookUuid &&
-          other.fromUserId == this.fromUserId &&
-          other.fromRemoteId == this.fromRemoteId &&
-          other.toUserId == this.toUserId &&
-          other.toRemoteId == this.toRemoteId &&
+          other.borrowerUserId == this.borrowerUserId &&
+          other.lenderUserId == this.lenderUserId &&
           other.externalBorrowerName == this.externalBorrowerName &&
           other.externalBorrowerContact == this.externalBorrowerContact &&
           other.status == this.status &&
-          other.startDate == this.startDate &&
+          other.requestedAt == this.requestedAt &&
+          other.approvedAt == this.approvedAt &&
           other.dueDate == this.dueDate &&
+          other.borrowerReturnedAt == this.borrowerReturnedAt &&
+          other.lenderReturnedAt == this.lenderReturnedAt &&
           other.returnedAt == this.returnedAt &&
-          other.cancelledAt == this.cancelledAt &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -5768,18 +5749,17 @@ class LoansCompanion extends UpdateCompanion<Loan> {
   final Value<String> uuid;
   final Value<String?> remoteId;
   final Value<int> sharedBookId;
-  final Value<String> sharedBookUuid;
-  final Value<int?> fromUserId;
-  final Value<String?> fromRemoteId;
-  final Value<int> toUserId;
-  final Value<String?> toRemoteId;
+  final Value<int?> borrowerUserId;
+  final Value<int> lenderUserId;
   final Value<String?> externalBorrowerName;
   final Value<String?> externalBorrowerContact;
   final Value<String> status;
-  final Value<DateTime> startDate;
+  final Value<DateTime> requestedAt;
+  final Value<DateTime?> approvedAt;
   final Value<DateTime?> dueDate;
+  final Value<DateTime?> borrowerReturnedAt;
+  final Value<DateTime?> lenderReturnedAt;
   final Value<DateTime?> returnedAt;
-  final Value<DateTime?> cancelledAt;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -5790,18 +5770,17 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     this.uuid = const Value.absent(),
     this.remoteId = const Value.absent(),
     this.sharedBookId = const Value.absent(),
-    this.sharedBookUuid = const Value.absent(),
-    this.fromUserId = const Value.absent(),
-    this.fromRemoteId = const Value.absent(),
-    this.toUserId = const Value.absent(),
-    this.toRemoteId = const Value.absent(),
+    this.borrowerUserId = const Value.absent(),
+    this.lenderUserId = const Value.absent(),
     this.externalBorrowerName = const Value.absent(),
     this.externalBorrowerContact = const Value.absent(),
     this.status = const Value.absent(),
-    this.startDate = const Value.absent(),
+    this.requestedAt = const Value.absent(),
+    this.approvedAt = const Value.absent(),
     this.dueDate = const Value.absent(),
+    this.borrowerReturnedAt = const Value.absent(),
+    this.lenderReturnedAt = const Value.absent(),
     this.returnedAt = const Value.absent(),
-    this.cancelledAt = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -5813,18 +5792,17 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     required String uuid,
     this.remoteId = const Value.absent(),
     required int sharedBookId,
-    required String sharedBookUuid,
-    this.fromUserId = const Value.absent(),
-    this.fromRemoteId = const Value.absent(),
-    required int toUserId,
-    this.toRemoteId = const Value.absent(),
+    this.borrowerUserId = const Value.absent(),
+    required int lenderUserId,
     this.externalBorrowerName = const Value.absent(),
     this.externalBorrowerContact = const Value.absent(),
     this.status = const Value.absent(),
-    this.startDate = const Value.absent(),
+    this.requestedAt = const Value.absent(),
+    this.approvedAt = const Value.absent(),
     this.dueDate = const Value.absent(),
+    this.borrowerReturnedAt = const Value.absent(),
+    this.lenderReturnedAt = const Value.absent(),
     this.returnedAt = const Value.absent(),
-    this.cancelledAt = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -5832,25 +5810,23 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     this.updatedAt = const Value.absent(),
   })  : uuid = Value(uuid),
         sharedBookId = Value(sharedBookId),
-        sharedBookUuid = Value(sharedBookUuid),
-        toUserId = Value(toUserId);
+        lenderUserId = Value(lenderUserId);
   static Insertable<Loan> custom({
     Expression<int>? id,
     Expression<String>? uuid,
     Expression<String>? remoteId,
     Expression<int>? sharedBookId,
-    Expression<String>? sharedBookUuid,
-    Expression<int>? fromUserId,
-    Expression<String>? fromRemoteId,
-    Expression<int>? toUserId,
-    Expression<String>? toRemoteId,
+    Expression<int>? borrowerUserId,
+    Expression<int>? lenderUserId,
     Expression<String>? externalBorrowerName,
     Expression<String>? externalBorrowerContact,
     Expression<String>? status,
-    Expression<DateTime>? startDate,
+    Expression<DateTime>? requestedAt,
+    Expression<DateTime>? approvedAt,
     Expression<DateTime>? dueDate,
+    Expression<DateTime>? borrowerReturnedAt,
+    Expression<DateTime>? lenderReturnedAt,
     Expression<DateTime>? returnedAt,
-    Expression<DateTime>? cancelledAt,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -5862,20 +5838,20 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       if (uuid != null) 'uuid': uuid,
       if (remoteId != null) 'remote_id': remoteId,
       if (sharedBookId != null) 'shared_book_id': sharedBookId,
-      if (sharedBookUuid != null) 'shared_book_uuid': sharedBookUuid,
-      if (fromUserId != null) 'from_user_id': fromUserId,
-      if (fromRemoteId != null) 'from_remote_id': fromRemoteId,
-      if (toUserId != null) 'to_user_id': toUserId,
-      if (toRemoteId != null) 'to_remote_id': toRemoteId,
+      if (borrowerUserId != null) 'borrower_user_id': borrowerUserId,
+      if (lenderUserId != null) 'lender_user_id': lenderUserId,
       if (externalBorrowerName != null)
         'external_borrower_name': externalBorrowerName,
       if (externalBorrowerContact != null)
         'external_borrower_contact': externalBorrowerContact,
       if (status != null) 'status': status,
-      if (startDate != null) 'start_date': startDate,
+      if (requestedAt != null) 'requested_at': requestedAt,
+      if (approvedAt != null) 'approved_at': approvedAt,
       if (dueDate != null) 'due_date': dueDate,
+      if (borrowerReturnedAt != null)
+        'borrower_returned_at': borrowerReturnedAt,
+      if (lenderReturnedAt != null) 'lender_returned_at': lenderReturnedAt,
       if (returnedAt != null) 'returned_at': returnedAt,
-      if (cancelledAt != null) 'cancelled_at': cancelledAt,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -5889,18 +5865,17 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       Value<String>? uuid,
       Value<String?>? remoteId,
       Value<int>? sharedBookId,
-      Value<String>? sharedBookUuid,
-      Value<int?>? fromUserId,
-      Value<String?>? fromRemoteId,
-      Value<int>? toUserId,
-      Value<String?>? toRemoteId,
+      Value<int?>? borrowerUserId,
+      Value<int>? lenderUserId,
       Value<String?>? externalBorrowerName,
       Value<String?>? externalBorrowerContact,
       Value<String>? status,
-      Value<DateTime>? startDate,
+      Value<DateTime>? requestedAt,
+      Value<DateTime?>? approvedAt,
       Value<DateTime?>? dueDate,
+      Value<DateTime?>? borrowerReturnedAt,
+      Value<DateTime?>? lenderReturnedAt,
       Value<DateTime?>? returnedAt,
-      Value<DateTime?>? cancelledAt,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -5911,19 +5886,18 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       uuid: uuid ?? this.uuid,
       remoteId: remoteId ?? this.remoteId,
       sharedBookId: sharedBookId ?? this.sharedBookId,
-      sharedBookUuid: sharedBookUuid ?? this.sharedBookUuid,
-      fromUserId: fromUserId ?? this.fromUserId,
-      fromRemoteId: fromRemoteId ?? this.fromRemoteId,
-      toUserId: toUserId ?? this.toUserId,
-      toRemoteId: toRemoteId ?? this.toRemoteId,
+      borrowerUserId: borrowerUserId ?? this.borrowerUserId,
+      lenderUserId: lenderUserId ?? this.lenderUserId,
       externalBorrowerName: externalBorrowerName ?? this.externalBorrowerName,
       externalBorrowerContact:
           externalBorrowerContact ?? this.externalBorrowerContact,
       status: status ?? this.status,
-      startDate: startDate ?? this.startDate,
+      requestedAt: requestedAt ?? this.requestedAt,
+      approvedAt: approvedAt ?? this.approvedAt,
       dueDate: dueDate ?? this.dueDate,
+      borrowerReturnedAt: borrowerReturnedAt ?? this.borrowerReturnedAt,
+      lenderReturnedAt: lenderReturnedAt ?? this.lenderReturnedAt,
       returnedAt: returnedAt ?? this.returnedAt,
-      cancelledAt: cancelledAt ?? this.cancelledAt,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -5947,20 +5921,11 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     if (sharedBookId.present) {
       map['shared_book_id'] = Variable<int>(sharedBookId.value);
     }
-    if (sharedBookUuid.present) {
-      map['shared_book_uuid'] = Variable<String>(sharedBookUuid.value);
+    if (borrowerUserId.present) {
+      map['borrower_user_id'] = Variable<int>(borrowerUserId.value);
     }
-    if (fromUserId.present) {
-      map['from_user_id'] = Variable<int>(fromUserId.value);
-    }
-    if (fromRemoteId.present) {
-      map['from_remote_id'] = Variable<String>(fromRemoteId.value);
-    }
-    if (toUserId.present) {
-      map['to_user_id'] = Variable<int>(toUserId.value);
-    }
-    if (toRemoteId.present) {
-      map['to_remote_id'] = Variable<String>(toRemoteId.value);
+    if (lenderUserId.present) {
+      map['lender_user_id'] = Variable<int>(lenderUserId.value);
     }
     if (externalBorrowerName.present) {
       map['external_borrower_name'] =
@@ -5973,17 +5938,24 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
-    if (startDate.present) {
-      map['start_date'] = Variable<DateTime>(startDate.value);
+    if (requestedAt.present) {
+      map['requested_at'] = Variable<DateTime>(requestedAt.value);
+    }
+    if (approvedAt.present) {
+      map['approved_at'] = Variable<DateTime>(approvedAt.value);
     }
     if (dueDate.present) {
       map['due_date'] = Variable<DateTime>(dueDate.value);
     }
+    if (borrowerReturnedAt.present) {
+      map['borrower_returned_at'] =
+          Variable<DateTime>(borrowerReturnedAt.value);
+    }
+    if (lenderReturnedAt.present) {
+      map['lender_returned_at'] = Variable<DateTime>(lenderReturnedAt.value);
+    }
     if (returnedAt.present) {
       map['returned_at'] = Variable<DateTime>(returnedAt.value);
-    }
-    if (cancelledAt.present) {
-      map['cancelled_at'] = Variable<DateTime>(cancelledAt.value);
     }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
@@ -6010,18 +5982,17 @@ class LoansCompanion extends UpdateCompanion<Loan> {
           ..write('uuid: $uuid, ')
           ..write('remoteId: $remoteId, ')
           ..write('sharedBookId: $sharedBookId, ')
-          ..write('sharedBookUuid: $sharedBookUuid, ')
-          ..write('fromUserId: $fromUserId, ')
-          ..write('fromRemoteId: $fromRemoteId, ')
-          ..write('toUserId: $toUserId, ')
-          ..write('toRemoteId: $toRemoteId, ')
+          ..write('borrowerUserId: $borrowerUserId, ')
+          ..write('lenderUserId: $lenderUserId, ')
           ..write('externalBorrowerName: $externalBorrowerName, ')
           ..write('externalBorrowerContact: $externalBorrowerContact, ')
           ..write('status: $status, ')
-          ..write('startDate: $startDate, ')
+          ..write('requestedAt: $requestedAt, ')
+          ..write('approvedAt: $approvedAt, ')
           ..write('dueDate: $dueDate, ')
+          ..write('borrowerReturnedAt: $borrowerReturnedAt, ')
+          ..write('lenderReturnedAt: $lenderReturnedAt, ')
           ..write('returnedAt: $returnedAt, ')
-          ..write('cancelledAt: $cancelledAt, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -6848,6 +6819,623 @@ class InAppNotificationsCompanion extends UpdateCompanion<InAppNotification> {
   }
 }
 
+class $LoanNotificationsTable extends LoanNotifications
+    with TableInfo<$LoanNotificationsTable, LoanNotification> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LoanNotificationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+      'uuid', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _remoteIdMeta =
+      const VerificationMeta('remoteId');
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+      'remote_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _loanIdMeta = const VerificationMeta('loanId');
+  @override
+  late final GeneratedColumn<int> loanId = GeneratedColumn<int>(
+      'loan_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES loans (id) ON DELETE CASCADE'));
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<int> userId = GeneratedColumn<int>(
+      'user_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES local_users (id) ON DELETE CASCADE'));
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+      'type', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 50),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _messageMeta =
+      const VerificationMeta('message');
+  @override
+  late final GeneratedColumn<String> message = GeneratedColumn<String>(
+      'message', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('unread'));
+  static const VerificationMeta _readAtMeta = const VerificationMeta('readAt');
+  @override
+  late final GeneratedColumn<DateTime> readAt = GeneratedColumn<DateTime>(
+      'read_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _isDirtyMeta =
+      const VerificationMeta('isDirty');
+  @override
+  late final GeneratedColumn<bool> isDirty = GeneratedColumn<bool>(
+      'is_dirty', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_dirty" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _syncedAtMeta =
+      const VerificationMeta('syncedAt');
+  @override
+  late final GeneratedColumn<DateTime> syncedAt = GeneratedColumn<DateTime>(
+      'synced_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        uuid,
+        remoteId,
+        loanId,
+        userId,
+        type,
+        title,
+        message,
+        status,
+        readAt,
+        isDirty,
+        syncedAt,
+        createdAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'loan_notifications';
+  @override
+  VerificationContext validateIntegrity(Insertable<LoanNotification> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+          _uuidMeta, uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta));
+    } else if (isInserting) {
+      context.missing(_uuidMeta);
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(_remoteIdMeta,
+          remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta));
+    }
+    if (data.containsKey('loan_id')) {
+      context.handle(_loanIdMeta,
+          loanId.isAcceptableOrUnknown(data['loan_id']!, _loanIdMeta));
+    } else if (isInserting) {
+      context.missing(_loanIdMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(_userIdMeta,
+          userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta));
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+          _typeMeta, type.isAcceptableOrUnknown(data['type']!, _typeMeta));
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('message')) {
+      context.handle(_messageMeta,
+          message.isAcceptableOrUnknown(data['message']!, _messageMeta));
+    } else if (isInserting) {
+      context.missing(_messageMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    }
+    if (data.containsKey('read_at')) {
+      context.handle(_readAtMeta,
+          readAt.isAcceptableOrUnknown(data['read_at']!, _readAtMeta));
+    }
+    if (data.containsKey('is_dirty')) {
+      context.handle(_isDirtyMeta,
+          isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(_syncedAtMeta,
+          syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LoanNotification map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LoanNotification(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      uuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
+      remoteId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}remote_id']),
+      loanId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}loan_id'])!,
+      userId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}user_id'])!,
+      type: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      message: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}message'])!,
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      readAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}read_at']),
+      isDirty: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
+      syncedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}synced_at']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $LoanNotificationsTable createAlias(String alias) {
+    return $LoanNotificationsTable(attachedDatabase, alias);
+  }
+}
+
+class LoanNotification extends DataClass
+    implements Insertable<LoanNotification> {
+  final int id;
+  final String uuid;
+  final String? remoteId;
+  final int loanId;
+  final int userId;
+  final String type;
+  final String title;
+  final String message;
+  final String status;
+  final DateTime? readAt;
+  final bool isDirty;
+  final DateTime? syncedAt;
+  final DateTime createdAt;
+  const LoanNotification(
+      {required this.id,
+      required this.uuid,
+      this.remoteId,
+      required this.loanId,
+      required this.userId,
+      required this.type,
+      required this.title,
+      required this.message,
+      required this.status,
+      this.readAt,
+      required this.isDirty,
+      this.syncedAt,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    map['loan_id'] = Variable<int>(loanId);
+    map['user_id'] = Variable<int>(userId);
+    map['type'] = Variable<String>(type);
+    map['title'] = Variable<String>(title);
+    map['message'] = Variable<String>(message);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || readAt != null) {
+      map['read_at'] = Variable<DateTime>(readAt);
+    }
+    map['is_dirty'] = Variable<bool>(isDirty);
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<DateTime>(syncedAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  LoanNotificationsCompanion toCompanion(bool nullToAbsent) {
+    return LoanNotificationsCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+      loanId: Value(loanId),
+      userId: Value(userId),
+      type: Value(type),
+      title: Value(title),
+      message: Value(message),
+      status: Value(status),
+      readAt:
+          readAt == null && nullToAbsent ? const Value.absent() : Value(readAt),
+      isDirty: Value(isDirty),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory LoanNotification.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LoanNotification(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+      loanId: serializer.fromJson<int>(json['loanId']),
+      userId: serializer.fromJson<int>(json['userId']),
+      type: serializer.fromJson<String>(json['type']),
+      title: serializer.fromJson<String>(json['title']),
+      message: serializer.fromJson<String>(json['message']),
+      status: serializer.fromJson<String>(json['status']),
+      readAt: serializer.fromJson<DateTime?>(json['readAt']),
+      isDirty: serializer.fromJson<bool>(json['isDirty']),
+      syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'remoteId': serializer.toJson<String?>(remoteId),
+      'loanId': serializer.toJson<int>(loanId),
+      'userId': serializer.toJson<int>(userId),
+      'type': serializer.toJson<String>(type),
+      'title': serializer.toJson<String>(title),
+      'message': serializer.toJson<String>(message),
+      'status': serializer.toJson<String>(status),
+      'readAt': serializer.toJson<DateTime?>(readAt),
+      'isDirty': serializer.toJson<bool>(isDirty),
+      'syncedAt': serializer.toJson<DateTime?>(syncedAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  LoanNotification copyWith(
+          {int? id,
+          String? uuid,
+          Value<String?> remoteId = const Value.absent(),
+          int? loanId,
+          int? userId,
+          String? type,
+          String? title,
+          String? message,
+          String? status,
+          Value<DateTime?> readAt = const Value.absent(),
+          bool? isDirty,
+          Value<DateTime?> syncedAt = const Value.absent(),
+          DateTime? createdAt}) =>
+      LoanNotification(
+        id: id ?? this.id,
+        uuid: uuid ?? this.uuid,
+        remoteId: remoteId.present ? remoteId.value : this.remoteId,
+        loanId: loanId ?? this.loanId,
+        userId: userId ?? this.userId,
+        type: type ?? this.type,
+        title: title ?? this.title,
+        message: message ?? this.message,
+        status: status ?? this.status,
+        readAt: readAt.present ? readAt.value : this.readAt,
+        isDirty: isDirty ?? this.isDirty,
+        syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  LoanNotification copyWithCompanion(LoanNotificationsCompanion data) {
+    return LoanNotification(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      loanId: data.loanId.present ? data.loanId.value : this.loanId,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      type: data.type.present ? data.type.value : this.type,
+      title: data.title.present ? data.title.value : this.title,
+      message: data.message.present ? data.message.value : this.message,
+      status: data.status.present ? data.status.value : this.status,
+      readAt: data.readAt.present ? data.readAt.value : this.readAt,
+      isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoanNotification(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('loanId: $loanId, ')
+          ..write('userId: $userId, ')
+          ..write('type: $type, ')
+          ..write('title: $title, ')
+          ..write('message: $message, ')
+          ..write('status: $status, ')
+          ..write('readAt: $readAt, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, uuid, remoteId, loanId, userId, type,
+      title, message, status, readAt, isDirty, syncedAt, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LoanNotification &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.remoteId == this.remoteId &&
+          other.loanId == this.loanId &&
+          other.userId == this.userId &&
+          other.type == this.type &&
+          other.title == this.title &&
+          other.message == this.message &&
+          other.status == this.status &&
+          other.readAt == this.readAt &&
+          other.isDirty == this.isDirty &&
+          other.syncedAt == this.syncedAt &&
+          other.createdAt == this.createdAt);
+}
+
+class LoanNotificationsCompanion extends UpdateCompanion<LoanNotification> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<String?> remoteId;
+  final Value<int> loanId;
+  final Value<int> userId;
+  final Value<String> type;
+  final Value<String> title;
+  final Value<String> message;
+  final Value<String> status;
+  final Value<DateTime?> readAt;
+  final Value<bool> isDirty;
+  final Value<DateTime?> syncedAt;
+  final Value<DateTime> createdAt;
+  const LoanNotificationsCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.loanId = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.type = const Value.absent(),
+    this.title = const Value.absent(),
+    this.message = const Value.absent(),
+    this.status = const Value.absent(),
+    this.readAt = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  LoanNotificationsCompanion.insert({
+    this.id = const Value.absent(),
+    required String uuid,
+    this.remoteId = const Value.absent(),
+    required int loanId,
+    required int userId,
+    required String type,
+    required String title,
+    required String message,
+    this.status = const Value.absent(),
+    this.readAt = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  })  : uuid = Value(uuid),
+        loanId = Value(loanId),
+        userId = Value(userId),
+        type = Value(type),
+        title = Value(title),
+        message = Value(message);
+  static Insertable<LoanNotification> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<String>? remoteId,
+    Expression<int>? loanId,
+    Expression<int>? userId,
+    Expression<String>? type,
+    Expression<String>? title,
+    Expression<String>? message,
+    Expression<String>? status,
+    Expression<DateTime>? readAt,
+    Expression<bool>? isDirty,
+    Expression<DateTime>? syncedAt,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (loanId != null) 'loan_id': loanId,
+      if (userId != null) 'user_id': userId,
+      if (type != null) 'type': type,
+      if (title != null) 'title': title,
+      if (message != null) 'message': message,
+      if (status != null) 'status': status,
+      if (readAt != null) 'read_at': readAt,
+      if (isDirty != null) 'is_dirty': isDirty,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  LoanNotificationsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? uuid,
+      Value<String?>? remoteId,
+      Value<int>? loanId,
+      Value<int>? userId,
+      Value<String>? type,
+      Value<String>? title,
+      Value<String>? message,
+      Value<String>? status,
+      Value<DateTime?>? readAt,
+      Value<bool>? isDirty,
+      Value<DateTime?>? syncedAt,
+      Value<DateTime>? createdAt}) {
+    return LoanNotificationsCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      remoteId: remoteId ?? this.remoteId,
+      loanId: loanId ?? this.loanId,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      status: status ?? this.status,
+      readAt: readAt ?? this.readAt,
+      isDirty: isDirty ?? this.isDirty,
+      syncedAt: syncedAt ?? this.syncedAt,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    if (loanId.present) {
+      map['loan_id'] = Variable<int>(loanId.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<int>(userId.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (message.present) {
+      map['message'] = Variable<String>(message.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (readAt.present) {
+      map['read_at'] = Variable<DateTime>(readAt.value);
+    }
+    if (isDirty.present) {
+      map['is_dirty'] = Variable<bool>(isDirty.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<DateTime>(syncedAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoanNotificationsCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('loanId: $loanId, ')
+          ..write('userId: $userId, ')
+          ..write('type: $type, ')
+          ..write('title: $title, ')
+          ..write('message: $message, ')
+          ..write('status: $status, ')
+          ..write('readAt: $readAt, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6862,6 +7450,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LoansTable loans = $LoansTable(this);
   late final $InAppNotificationsTable inAppNotifications =
       $InAppNotificationsTable(this);
+  late final $LoanNotificationsTable loanNotifications =
+      $LoanNotificationsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6875,7 +7465,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         sharedBooks,
         groupInvitations,
         loans,
-        inAppNotifications
+        inAppNotifications,
+        loanNotifications
       ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
@@ -6920,6 +7511,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
                 limitUpdateKind: UpdateKind.delete),
             result: [
               TableUpdate('loans', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('loans',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('loan_notifications', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('local_users',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('loan_notifications', kind: UpdateKind.delete),
             ],
           ),
         ],
@@ -7068,31 +7673,32 @@ final class $$LocalUsersTableReferences
         manager.$state.copyWith(prefetchedData: cache));
   }
 
-  static MultiTypedResultKey<$LoansTable, List<Loan>> _loansRequestedTable(
+  static MultiTypedResultKey<$LoansTable, List<Loan>> _loansBorrowerTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.loans,
           aliasName:
-              $_aliasNameGenerator(db.localUsers.id, db.loans.fromUserId));
+              $_aliasNameGenerator(db.localUsers.id, db.loans.borrowerUserId));
 
-  $$LoansTableProcessedTableManager get loansRequested {
+  $$LoansTableProcessedTableManager get loansBorrower {
     final manager = $$LoansTableTableManager($_db, $_db.loans)
-        .filter((f) => f.fromUserId.id.sqlEquals($_itemColumn<int>('id')!));
+        .filter((f) => f.borrowerUserId.id.sqlEquals($_itemColumn<int>('id')!));
 
-    final cache = $_typedResult.readTableOrNull(_loansRequestedTable($_db));
+    final cache = $_typedResult.readTableOrNull(_loansBorrowerTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
 
-  static MultiTypedResultKey<$LoansTable, List<Loan>> _loansReceivedTable(
+  static MultiTypedResultKey<$LoansTable, List<Loan>> _loansLenderTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.loans,
-          aliasName: $_aliasNameGenerator(db.localUsers.id, db.loans.toUserId));
+          aliasName:
+              $_aliasNameGenerator(db.localUsers.id, db.loans.lenderUserId));
 
-  $$LoansTableProcessedTableManager get loansReceived {
+  $$LoansTableProcessedTableManager get loansLender {
     final manager = $$LoansTableTableManager($_db, $_db.loans)
-        .filter((f) => f.toUserId.id.sqlEquals($_itemColumn<int>('id')!));
+        .filter((f) => f.lenderUserId.id.sqlEquals($_itemColumn<int>('id')!));
 
-    final cache = $_typedResult.readTableOrNull(_loansReceivedTable($_db));
+    final cache = $_typedResult.readTableOrNull(_loansLenderTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -7127,6 +7733,23 @@ final class $$LocalUsersTableReferences
 
     final cache =
         $_typedResult.readTableOrNull(_notificationsReceivedTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$LoanNotificationsTable, List<LoanNotification>>
+      _loanNotificationsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.loanNotifications,
+              aliasName: $_aliasNameGenerator(
+                  db.localUsers.id, db.loanNotifications.userId));
+
+  $$LoanNotificationsTableProcessedTableManager get loanNotificationsRefs {
+    final manager =
+        $$LoanNotificationsTableTableManager($_db, $_db.loanNotifications)
+            .filter((f) => f.userId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_loanNotificationsRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -7324,13 +7947,13 @@ class $$LocalUsersTableFilterComposer
     return f(composer);
   }
 
-  Expression<bool> loansRequested(
+  Expression<bool> loansBorrower(
       Expression<bool> Function($$LoansTableFilterComposer f) f) {
     final $$LoansTableFilterComposer composer = $composerBuilder(
         composer: this,
         getCurrentColumn: (t) => t.id,
         referencedTable: $db.loans,
-        getReferencedColumn: (t) => t.fromUserId,
+        getReferencedColumn: (t) => t.borrowerUserId,
         builder: (joinBuilder,
                 {$addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer}) =>
@@ -7345,13 +7968,13 @@ class $$LocalUsersTableFilterComposer
     return f(composer);
   }
 
-  Expression<bool> loansReceived(
+  Expression<bool> loansLender(
       Expression<bool> Function($$LoansTableFilterComposer f) f) {
     final $$LoansTableFilterComposer composer = $composerBuilder(
         composer: this,
         getCurrentColumn: (t) => t.id,
         referencedTable: $db.loans,
-        getReferencedColumn: (t) => t.toUserId,
+        getReferencedColumn: (t) => t.lenderUserId,
         builder: (joinBuilder,
                 {$addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer}) =>
@@ -7400,6 +8023,27 @@ class $$LocalUsersTableFilterComposer
             $$InAppNotificationsTableFilterComposer(
               $db: $db,
               $table: $db.inAppNotifications,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> loanNotificationsRefs(
+      Expression<bool> Function($$LoanNotificationsTableFilterComposer f) f) {
+    final $$LoanNotificationsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.loanNotifications,
+        getReferencedColumn: (t) => t.userId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LoanNotificationsTableFilterComposer(
+              $db: $db,
+              $table: $db.loanNotifications,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -7648,13 +8292,13 @@ class $$LocalUsersTableAnnotationComposer
     return f(composer);
   }
 
-  Expression<T> loansRequested<T extends Object>(
+  Expression<T> loansBorrower<T extends Object>(
       Expression<T> Function($$LoansTableAnnotationComposer a) f) {
     final $$LoansTableAnnotationComposer composer = $composerBuilder(
         composer: this,
         getCurrentColumn: (t) => t.id,
         referencedTable: $db.loans,
-        getReferencedColumn: (t) => t.fromUserId,
+        getReferencedColumn: (t) => t.borrowerUserId,
         builder: (joinBuilder,
                 {$addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer}) =>
@@ -7669,13 +8313,13 @@ class $$LocalUsersTableAnnotationComposer
     return f(composer);
   }
 
-  Expression<T> loansReceived<T extends Object>(
+  Expression<T> loansLender<T extends Object>(
       Expression<T> Function($$LoansTableAnnotationComposer a) f) {
     final $$LoansTableAnnotationComposer composer = $composerBuilder(
         composer: this,
         getCurrentColumn: (t) => t.id,
         referencedTable: $db.loans,
-        getReferencedColumn: (t) => t.toUserId,
+        getReferencedColumn: (t) => t.lenderUserId,
         builder: (joinBuilder,
                 {$addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer}) =>
@@ -7733,6 +8377,28 @@ class $$LocalUsersTableAnnotationComposer
                 ));
     return f(composer);
   }
+
+  Expression<T> loanNotificationsRefs<T extends Object>(
+      Expression<T> Function($$LoanNotificationsTableAnnotationComposer a) f) {
+    final $$LoanNotificationsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.loanNotifications,
+            getReferencedColumn: (t) => t.userId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$LoanNotificationsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.loanNotifications,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
 }
 
 class $$LocalUsersTableTableManager extends RootTableManager<
@@ -7754,10 +8420,11 @@ class $$LocalUsersTableTableManager extends RootTableManager<
         bool sharedBooksOwned,
         bool groupInvitationsSent,
         bool groupInvitationsAccepted,
-        bool loansRequested,
-        bool loansReceived,
+        bool loansBorrower,
+        bool loansLender,
         bool notificationsAuthored,
-        bool notificationsReceived})> {
+        bool notificationsReceived,
+        bool loanNotificationsRefs})> {
   $$LocalUsersTableTableManager(_$AppDatabase db, $LocalUsersTable table)
       : super(TableManagerState(
           db: db,
@@ -7838,10 +8505,11 @@ class $$LocalUsersTableTableManager extends RootTableManager<
               sharedBooksOwned = false,
               groupInvitationsSent = false,
               groupInvitationsAccepted = false,
-              loansRequested = false,
-              loansReceived = false,
+              loansBorrower = false,
+              loansLender = false,
               notificationsAuthored = false,
-              notificationsReceived = false}) {
+              notificationsReceived = false,
+              loanNotificationsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
@@ -7852,10 +8520,11 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                 if (sharedBooksOwned) db.sharedBooks,
                 if (groupInvitationsSent) db.groupInvitations,
                 if (groupInvitationsAccepted) db.groupInvitations,
-                if (loansRequested) db.loans,
-                if (loansReceived) db.loans,
+                if (loansBorrower) db.loans,
+                if (loansLender) db.loans,
                 if (notificationsAuthored) db.inAppNotifications,
-                if (notificationsReceived) db.inAppNotifications
+                if (notificationsReceived) db.inAppNotifications,
+                if (loanNotificationsRefs) db.loanNotifications
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -7951,31 +8620,31 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.acceptedUserId == item.id),
                         typedResults: items),
-                  if (loansRequested)
-                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
-                            Loan>(
-                        currentTable: table,
-                        referencedTable: $$LocalUsersTableReferences
-                            ._loansRequestedTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $$LocalUsersTableReferences(db, table, p0)
-                                .loansRequested,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.fromUserId == item.id),
-                        typedResults: items),
-                  if (loansReceived)
+                  if (loansBorrower)
                     await $_getPrefetchedData<LocalUser, $LocalUsersTable,
                             Loan>(
                         currentTable: table,
                         referencedTable:
-                            $$LocalUsersTableReferences._loansReceivedTable(db),
+                            $$LocalUsersTableReferences._loansBorrowerTable(db),
                         managerFromTypedResult: (p0) =>
                             $$LocalUsersTableReferences(db, table, p0)
-                                .loansReceived,
-                        referencedItemsForCurrentItem: (item,
-                                referencedItems) =>
-                            referencedItems.where((e) => e.toUserId == item.id),
+                                .loansBorrower,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.borrowerUserId == item.id),
+                        typedResults: items),
+                  if (loansLender)
+                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
+                            Loan>(
+                        currentTable: table,
+                        referencedTable:
+                            $$LocalUsersTableReferences._loansLenderTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LocalUsersTableReferences(db, table, p0)
+                                .loansLender,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.lenderUserId == item.id),
                         typedResults: items),
                   if (notificationsAuthored)
                     await $_getPrefetchedData<LocalUser, $LocalUsersTable,
@@ -8002,6 +8671,19 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.targetUserId == item.id),
+                        typedResults: items),
+                  if (loanNotificationsRefs)
+                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
+                            LoanNotification>(
+                        currentTable: table,
+                        referencedTable: $$LocalUsersTableReferences
+                            ._loanNotificationsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LocalUsersTableReferences(db, table, p0)
+                                .loanNotificationsRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.userId == item.id),
                         typedResults: items)
                 ];
               },
@@ -8029,10 +8711,11 @@ typedef $$LocalUsersTableProcessedTableManager = ProcessedTableManager<
         bool sharedBooksOwned,
         bool groupInvitationsSent,
         bool groupInvitationsAccepted,
-        bool loansRequested,
-        bool loansReceived,
+        bool loansBorrower,
+        bool loansLender,
         bool notificationsAuthored,
-        bool notificationsReceived})>;
+        bool notificationsReceived,
+        bool loanNotificationsRefs})>;
 typedef $$BooksTableCreateCompanionBuilder = BooksCompanion Function({
   Value<int> id,
   required String uuid,
@@ -11563,18 +12246,17 @@ typedef $$LoansTableCreateCompanionBuilder = LoansCompanion Function({
   required String uuid,
   Value<String?> remoteId,
   required int sharedBookId,
-  required String sharedBookUuid,
-  Value<int?> fromUserId,
-  Value<String?> fromRemoteId,
-  required int toUserId,
-  Value<String?> toRemoteId,
+  Value<int?> borrowerUserId,
+  required int lenderUserId,
   Value<String?> externalBorrowerName,
   Value<String?> externalBorrowerContact,
   Value<String> status,
-  Value<DateTime> startDate,
+  Value<DateTime> requestedAt,
+  Value<DateTime?> approvedAt,
   Value<DateTime?> dueDate,
+  Value<DateTime?> borrowerReturnedAt,
+  Value<DateTime?> lenderReturnedAt,
   Value<DateTime?> returnedAt,
-  Value<DateTime?> cancelledAt,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -11586,18 +12268,17 @@ typedef $$LoansTableUpdateCompanionBuilder = LoansCompanion Function({
   Value<String> uuid,
   Value<String?> remoteId,
   Value<int> sharedBookId,
-  Value<String> sharedBookUuid,
-  Value<int?> fromUserId,
-  Value<String?> fromRemoteId,
-  Value<int> toUserId,
-  Value<String?> toRemoteId,
+  Value<int?> borrowerUserId,
+  Value<int> lenderUserId,
   Value<String?> externalBorrowerName,
   Value<String?> externalBorrowerContact,
   Value<String> status,
-  Value<DateTime> startDate,
+  Value<DateTime> requestedAt,
+  Value<DateTime?> approvedAt,
   Value<DateTime?> dueDate,
+  Value<DateTime?> borrowerReturnedAt,
+  Value<DateTime?> lenderReturnedAt,
   Value<DateTime?> returnedAt,
-  Value<DateTime?> cancelledAt,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -11624,29 +12305,31 @@ final class $$LoansTableReferences
         manager.$state.copyWith(prefetchedData: [item]));
   }
 
-  static $LocalUsersTable _fromUserIdTable(_$AppDatabase db) => db.localUsers
-      .createAlias($_aliasNameGenerator(db.loans.fromUserId, db.localUsers.id));
+  static $LocalUsersTable _borrowerUserIdTable(_$AppDatabase db) =>
+      db.localUsers.createAlias(
+          $_aliasNameGenerator(db.loans.borrowerUserId, db.localUsers.id));
 
-  $$LocalUsersTableProcessedTableManager? get fromUserId {
-    final $_column = $_itemColumn<int>('from_user_id');
+  $$LocalUsersTableProcessedTableManager? get borrowerUserId {
+    final $_column = $_itemColumn<int>('borrower_user_id');
     if ($_column == null) return null;
     final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
         .filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_fromUserIdTable($_db));
+    final item = $_typedResult.readTableOrNull(_borrowerUserIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: [item]));
   }
 
-  static $LocalUsersTable _toUserIdTable(_$AppDatabase db) => db.localUsers
-      .createAlias($_aliasNameGenerator(db.loans.toUserId, db.localUsers.id));
+  static $LocalUsersTable _lenderUserIdTable(_$AppDatabase db) =>
+      db.localUsers.createAlias(
+          $_aliasNameGenerator(db.loans.lenderUserId, db.localUsers.id));
 
-  $$LocalUsersTableProcessedTableManager get toUserId {
-    final $_column = $_itemColumn<int>('to_user_id')!;
+  $$LocalUsersTableProcessedTableManager get lenderUserId {
+    final $_column = $_itemColumn<int>('lender_user_id')!;
 
     final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
         .filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_toUserIdTable($_db));
+    final item = $_typedResult.readTableOrNull(_lenderUserIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: [item]));
@@ -11664,6 +12347,23 @@ final class $$LoansTableReferences
             .filter((f) => f.loanId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_notificationLoansTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$LoanNotificationsTable, List<LoanNotification>>
+      _loanNotificationsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.loanNotifications,
+              aliasName: $_aliasNameGenerator(
+                  db.loans.id, db.loanNotifications.loanId));
+
+  $$LoanNotificationsTableProcessedTableManager get loanNotificationsRefs {
+    final manager =
+        $$LoanNotificationsTableTableManager($_db, $_db.loanNotifications)
+            .filter((f) => f.loanId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_loanNotificationsRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -11686,16 +12386,6 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
   ColumnFilters<String> get remoteId => $composableBuilder(
       column: $table.remoteId, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get sharedBookUuid => $composableBuilder(
-      column: $table.sharedBookUuid,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get fromRemoteId => $composableBuilder(
-      column: $table.fromRemoteId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get toRemoteId => $composableBuilder(
-      column: $table.toRemoteId, builder: (column) => ColumnFilters(column));
-
   ColumnFilters<String> get externalBorrowerName => $composableBuilder(
       column: $table.externalBorrowerName,
       builder: (column) => ColumnFilters(column));
@@ -11707,17 +12397,25 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
   ColumnFilters<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get startDate => $composableBuilder(
-      column: $table.startDate, builder: (column) => ColumnFilters(column));
+  ColumnFilters<DateTime> get requestedAt => $composableBuilder(
+      column: $table.requestedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get approvedAt => $composableBuilder(
+      column: $table.approvedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get dueDate => $composableBuilder(
       column: $table.dueDate, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<DateTime> get borrowerReturnedAt => $composableBuilder(
+      column: $table.borrowerReturnedAt,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lenderReturnedAt => $composableBuilder(
+      column: $table.lenderReturnedAt,
+      builder: (column) => ColumnFilters(column));
+
   ColumnFilters<DateTime> get returnedAt => $composableBuilder(
       column: $table.returnedAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get cancelledAt => $composableBuilder(
-      column: $table.cancelledAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -11754,10 +12452,10 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
     return composer;
   }
 
-  $$LocalUsersTableFilterComposer get fromUserId {
+  $$LocalUsersTableFilterComposer get borrowerUserId {
     final $$LocalUsersTableFilterComposer composer = $composerBuilder(
         composer: this,
-        getCurrentColumn: (t) => t.fromUserId,
+        getCurrentColumn: (t) => t.borrowerUserId,
         referencedTable: $db.localUsers,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
@@ -11774,10 +12472,10 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
     return composer;
   }
 
-  $$LocalUsersTableFilterComposer get toUserId {
+  $$LocalUsersTableFilterComposer get lenderUserId {
     final $$LocalUsersTableFilterComposer composer = $composerBuilder(
         composer: this,
-        getCurrentColumn: (t) => t.toUserId,
+        getCurrentColumn: (t) => t.lenderUserId,
         referencedTable: $db.localUsers,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
@@ -11814,6 +12512,27 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
             ));
     return f(composer);
   }
+
+  Expression<bool> loanNotificationsRefs(
+      Expression<bool> Function($$LoanNotificationsTableFilterComposer f) f) {
+    final $$LoanNotificationsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.loanNotifications,
+        getReferencedColumn: (t) => t.loanId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LoanNotificationsTableFilterComposer(
+              $db: $db,
+              $table: $db.loanNotifications,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$LoansTableOrderingComposer
@@ -11834,17 +12553,6 @@ class $$LoansTableOrderingComposer
   ColumnOrderings<String> get remoteId => $composableBuilder(
       column: $table.remoteId, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get sharedBookUuid => $composableBuilder(
-      column: $table.sharedBookUuid,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get fromRemoteId => $composableBuilder(
-      column: $table.fromRemoteId,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get toRemoteId => $composableBuilder(
-      column: $table.toRemoteId, builder: (column) => ColumnOrderings(column));
-
   ColumnOrderings<String> get externalBorrowerName => $composableBuilder(
       column: $table.externalBorrowerName,
       builder: (column) => ColumnOrderings(column));
@@ -11856,17 +12564,25 @@ class $$LoansTableOrderingComposer
   ColumnOrderings<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get startDate => $composableBuilder(
-      column: $table.startDate, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<DateTime> get requestedAt => $composableBuilder(
+      column: $table.requestedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get approvedAt => $composableBuilder(
+      column: $table.approvedAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<DateTime> get dueDate => $composableBuilder(
       column: $table.dueDate, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<DateTime> get borrowerReturnedAt => $composableBuilder(
+      column: $table.borrowerReturnedAt,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lenderReturnedAt => $composableBuilder(
+      column: $table.lenderReturnedAt,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get returnedAt => $composableBuilder(
       column: $table.returnedAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get cancelledAt => $composableBuilder(
-      column: $table.cancelledAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
@@ -11903,10 +12619,10 @@ class $$LoansTableOrderingComposer
     return composer;
   }
 
-  $$LocalUsersTableOrderingComposer get fromUserId {
+  $$LocalUsersTableOrderingComposer get borrowerUserId {
     final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
         composer: this,
-        getCurrentColumn: (t) => t.fromUserId,
+        getCurrentColumn: (t) => t.borrowerUserId,
         referencedTable: $db.localUsers,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
@@ -11923,10 +12639,10 @@ class $$LoansTableOrderingComposer
     return composer;
   }
 
-  $$LocalUsersTableOrderingComposer get toUserId {
+  $$LocalUsersTableOrderingComposer get lenderUserId {
     final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
         composer: this,
-        getCurrentColumn: (t) => t.toUserId,
+        getCurrentColumn: (t) => t.lenderUserId,
         referencedTable: $db.localUsers,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
@@ -11962,15 +12678,6 @@ class $$LoansTableAnnotationComposer
   GeneratedColumn<String> get remoteId =>
       $composableBuilder(column: $table.remoteId, builder: (column) => column);
 
-  GeneratedColumn<String> get sharedBookUuid => $composableBuilder(
-      column: $table.sharedBookUuid, builder: (column) => column);
-
-  GeneratedColumn<String> get fromRemoteId => $composableBuilder(
-      column: $table.fromRemoteId, builder: (column) => column);
-
-  GeneratedColumn<String> get toRemoteId => $composableBuilder(
-      column: $table.toRemoteId, builder: (column) => column);
-
   GeneratedColumn<String> get externalBorrowerName => $composableBuilder(
       column: $table.externalBorrowerName, builder: (column) => column);
 
@@ -11980,17 +12687,23 @@ class $$LoansTableAnnotationComposer
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get startDate =>
-      $composableBuilder(column: $table.startDate, builder: (column) => column);
+  GeneratedColumn<DateTime> get requestedAt => $composableBuilder(
+      column: $table.requestedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get approvedAt => $composableBuilder(
+      column: $table.approvedAt, builder: (column) => column);
 
   GeneratedColumn<DateTime> get dueDate =>
       $composableBuilder(column: $table.dueDate, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get borrowerReturnedAt => $composableBuilder(
+      column: $table.borrowerReturnedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lenderReturnedAt => $composableBuilder(
+      column: $table.lenderReturnedAt, builder: (column) => column);
+
   GeneratedColumn<DateTime> get returnedAt => $composableBuilder(
       column: $table.returnedAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get cancelledAt => $composableBuilder(
-      column: $table.cancelledAt, builder: (column) => column);
 
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
@@ -12027,10 +12740,10 @@ class $$LoansTableAnnotationComposer
     return composer;
   }
 
-  $$LocalUsersTableAnnotationComposer get fromUserId {
+  $$LocalUsersTableAnnotationComposer get borrowerUserId {
     final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
         composer: this,
-        getCurrentColumn: (t) => t.fromUserId,
+        getCurrentColumn: (t) => t.borrowerUserId,
         referencedTable: $db.localUsers,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
@@ -12047,10 +12760,10 @@ class $$LoansTableAnnotationComposer
     return composer;
   }
 
-  $$LocalUsersTableAnnotationComposer get toUserId {
+  $$LocalUsersTableAnnotationComposer get lenderUserId {
     final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
         composer: this,
-        getCurrentColumn: (t) => t.toUserId,
+        getCurrentColumn: (t) => t.lenderUserId,
         referencedTable: $db.localUsers,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
@@ -12088,6 +12801,28 @@ class $$LoansTableAnnotationComposer
                 ));
     return f(composer);
   }
+
+  Expression<T> loanNotificationsRefs<T extends Object>(
+      Expression<T> Function($$LoanNotificationsTableAnnotationComposer a) f) {
+    final $$LoanNotificationsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.loanNotifications,
+            getReferencedColumn: (t) => t.loanId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$LoanNotificationsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.loanNotifications,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
 }
 
 class $$LoansTableTableManager extends RootTableManager<
@@ -12103,9 +12838,10 @@ class $$LoansTableTableManager extends RootTableManager<
     Loan,
     PrefetchHooks Function(
         {bool sharedBookId,
-        bool fromUserId,
-        bool toUserId,
-        bool notificationLoans})> {
+        bool borrowerUserId,
+        bool lenderUserId,
+        bool notificationLoans,
+        bool loanNotificationsRefs})> {
   $$LoansTableTableManager(_$AppDatabase db, $LoansTable table)
       : super(TableManagerState(
           db: db,
@@ -12121,18 +12857,17 @@ class $$LoansTableTableManager extends RootTableManager<
             Value<String> uuid = const Value.absent(),
             Value<String?> remoteId = const Value.absent(),
             Value<int> sharedBookId = const Value.absent(),
-            Value<String> sharedBookUuid = const Value.absent(),
-            Value<int?> fromUserId = const Value.absent(),
-            Value<String?> fromRemoteId = const Value.absent(),
-            Value<int> toUserId = const Value.absent(),
-            Value<String?> toRemoteId = const Value.absent(),
+            Value<int?> borrowerUserId = const Value.absent(),
+            Value<int> lenderUserId = const Value.absent(),
             Value<String?> externalBorrowerName = const Value.absent(),
             Value<String?> externalBorrowerContact = const Value.absent(),
             Value<String> status = const Value.absent(),
-            Value<DateTime> startDate = const Value.absent(),
+            Value<DateTime> requestedAt = const Value.absent(),
+            Value<DateTime?> approvedAt = const Value.absent(),
             Value<DateTime?> dueDate = const Value.absent(),
+            Value<DateTime?> borrowerReturnedAt = const Value.absent(),
+            Value<DateTime?> lenderReturnedAt = const Value.absent(),
             Value<DateTime?> returnedAt = const Value.absent(),
-            Value<DateTime?> cancelledAt = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -12144,18 +12879,17 @@ class $$LoansTableTableManager extends RootTableManager<
             uuid: uuid,
             remoteId: remoteId,
             sharedBookId: sharedBookId,
-            sharedBookUuid: sharedBookUuid,
-            fromUserId: fromUserId,
-            fromRemoteId: fromRemoteId,
-            toUserId: toUserId,
-            toRemoteId: toRemoteId,
+            borrowerUserId: borrowerUserId,
+            lenderUserId: lenderUserId,
             externalBorrowerName: externalBorrowerName,
             externalBorrowerContact: externalBorrowerContact,
             status: status,
-            startDate: startDate,
+            requestedAt: requestedAt,
+            approvedAt: approvedAt,
             dueDate: dueDate,
+            borrowerReturnedAt: borrowerReturnedAt,
+            lenderReturnedAt: lenderReturnedAt,
             returnedAt: returnedAt,
-            cancelledAt: cancelledAt,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -12167,18 +12901,17 @@ class $$LoansTableTableManager extends RootTableManager<
             required String uuid,
             Value<String?> remoteId = const Value.absent(),
             required int sharedBookId,
-            required String sharedBookUuid,
-            Value<int?> fromUserId = const Value.absent(),
-            Value<String?> fromRemoteId = const Value.absent(),
-            required int toUserId,
-            Value<String?> toRemoteId = const Value.absent(),
+            Value<int?> borrowerUserId = const Value.absent(),
+            required int lenderUserId,
             Value<String?> externalBorrowerName = const Value.absent(),
             Value<String?> externalBorrowerContact = const Value.absent(),
             Value<String> status = const Value.absent(),
-            Value<DateTime> startDate = const Value.absent(),
+            Value<DateTime> requestedAt = const Value.absent(),
+            Value<DateTime?> approvedAt = const Value.absent(),
             Value<DateTime?> dueDate = const Value.absent(),
+            Value<DateTime?> borrowerReturnedAt = const Value.absent(),
+            Value<DateTime?> lenderReturnedAt = const Value.absent(),
             Value<DateTime?> returnedAt = const Value.absent(),
-            Value<DateTime?> cancelledAt = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -12190,18 +12923,17 @@ class $$LoansTableTableManager extends RootTableManager<
             uuid: uuid,
             remoteId: remoteId,
             sharedBookId: sharedBookId,
-            sharedBookUuid: sharedBookUuid,
-            fromUserId: fromUserId,
-            fromRemoteId: fromRemoteId,
-            toUserId: toUserId,
-            toRemoteId: toRemoteId,
+            borrowerUserId: borrowerUserId,
+            lenderUserId: lenderUserId,
             externalBorrowerName: externalBorrowerName,
             externalBorrowerContact: externalBorrowerContact,
             status: status,
-            startDate: startDate,
+            requestedAt: requestedAt,
+            approvedAt: approvedAt,
             dueDate: dueDate,
+            borrowerReturnedAt: borrowerReturnedAt,
+            lenderReturnedAt: lenderReturnedAt,
             returnedAt: returnedAt,
-            cancelledAt: cancelledAt,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -12214,13 +12946,15 @@ class $$LoansTableTableManager extends RootTableManager<
               .toList(),
           prefetchHooksCallback: (
               {sharedBookId = false,
-              fromUserId = false,
-              toUserId = false,
-              notificationLoans = false}) {
+              borrowerUserId = false,
+              lenderUserId = false,
+              notificationLoans = false,
+              loanNotificationsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
-                if (notificationLoans) db.inAppNotifications
+                if (notificationLoans) db.inAppNotifications,
+                if (loanNotificationsRefs) db.loanNotifications
               ],
               addJoins: <
                   T extends TableManagerState<
@@ -12245,23 +12979,24 @@ class $$LoansTableTableManager extends RootTableManager<
                         $$LoansTableReferences._sharedBookIdTable(db).id,
                   ) as T;
                 }
-                if (fromUserId) {
+                if (borrowerUserId) {
                   state = state.withJoin(
                     currentTable: table,
-                    currentColumn: table.fromUserId,
+                    currentColumn: table.borrowerUserId,
                     referencedTable:
-                        $$LoansTableReferences._fromUserIdTable(db),
+                        $$LoansTableReferences._borrowerUserIdTable(db),
                     referencedColumn:
-                        $$LoansTableReferences._fromUserIdTable(db).id,
+                        $$LoansTableReferences._borrowerUserIdTable(db).id,
                   ) as T;
                 }
-                if (toUserId) {
+                if (lenderUserId) {
                   state = state.withJoin(
                     currentTable: table,
-                    currentColumn: table.toUserId,
-                    referencedTable: $$LoansTableReferences._toUserIdTable(db),
+                    currentColumn: table.lenderUserId,
+                    referencedTable:
+                        $$LoansTableReferences._lenderUserIdTable(db),
                     referencedColumn:
-                        $$LoansTableReferences._toUserIdTable(db).id,
+                        $$LoansTableReferences._lenderUserIdTable(db).id,
                   ) as T;
                 }
 
@@ -12278,6 +13013,19 @@ class $$LoansTableTableManager extends RootTableManager<
                         managerFromTypedResult: (p0) =>
                             $$LoansTableReferences(db, table, p0)
                                 .notificationLoans,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.loanId == item.id),
+                        typedResults: items),
+                  if (loanNotificationsRefs)
+                    await $_getPrefetchedData<Loan, $LoansTable,
+                            LoanNotification>(
+                        currentTable: table,
+                        referencedTable: $$LoansTableReferences
+                            ._loanNotificationsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LoansTableReferences(db, table, p0)
+                                .loanNotificationsRefs,
                         referencedItemsForCurrentItem: (item,
                                 referencedItems) =>
                             referencedItems.where((e) => e.loanId == item.id),
@@ -12302,9 +13050,10 @@ typedef $$LoansTableProcessedTableManager = ProcessedTableManager<
     Loan,
     PrefetchHooks Function(
         {bool sharedBookId,
-        bool fromUserId,
-        bool toUserId,
-        bool notificationLoans})>;
+        bool borrowerUserId,
+        bool lenderUserId,
+        bool notificationLoans,
+        bool loanNotificationsRefs})>;
 typedef $$InAppNotificationsTableCreateCompanionBuilder
     = InAppNotificationsCompanion Function({
   Value<int> id,
@@ -12998,6 +13747,473 @@ typedef $$InAppNotificationsTableProcessedTableManager = ProcessedTableManager<
     InAppNotification,
     PrefetchHooks Function(
         {bool loanId, bool sharedBookId, bool actorUserId, bool targetUserId})>;
+typedef $$LoanNotificationsTableCreateCompanionBuilder
+    = LoanNotificationsCompanion Function({
+  Value<int> id,
+  required String uuid,
+  Value<String?> remoteId,
+  required int loanId,
+  required int userId,
+  required String type,
+  required String title,
+  required String message,
+  Value<String> status,
+  Value<DateTime?> readAt,
+  Value<bool> isDirty,
+  Value<DateTime?> syncedAt,
+  Value<DateTime> createdAt,
+});
+typedef $$LoanNotificationsTableUpdateCompanionBuilder
+    = LoanNotificationsCompanion Function({
+  Value<int> id,
+  Value<String> uuid,
+  Value<String?> remoteId,
+  Value<int> loanId,
+  Value<int> userId,
+  Value<String> type,
+  Value<String> title,
+  Value<String> message,
+  Value<String> status,
+  Value<DateTime?> readAt,
+  Value<bool> isDirty,
+  Value<DateTime?> syncedAt,
+  Value<DateTime> createdAt,
+});
+
+final class $$LoanNotificationsTableReferences extends BaseReferences<
+    _$AppDatabase, $LoanNotificationsTable, LoanNotification> {
+  $$LoanNotificationsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $LoansTable _loanIdTable(_$AppDatabase db) => db.loans.createAlias(
+      $_aliasNameGenerator(db.loanNotifications.loanId, db.loans.id));
+
+  $$LoansTableProcessedTableManager get loanId {
+    final $_column = $_itemColumn<int>('loan_id')!;
+
+    final manager = $$LoansTableTableManager($_db, $_db.loans)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_loanIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $LocalUsersTable _userIdTable(_$AppDatabase db) =>
+      db.localUsers.createAlias(
+          $_aliasNameGenerator(db.loanNotifications.userId, db.localUsers.id));
+
+  $$LocalUsersTableProcessedTableManager get userId {
+    final $_column = $_itemColumn<int>('user_id')!;
+
+    final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_userIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$LoanNotificationsTableFilterComposer
+    extends Composer<_$AppDatabase, $LoanNotificationsTable> {
+  $$LoanNotificationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get message => $composableBuilder(
+      column: $table.message, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get readAt => $composableBuilder(
+      column: $table.readAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  $$LoansTableFilterComposer get loanId {
+    final $$LoansTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.loanId,
+        referencedTable: $db.loans,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LoansTableFilterComposer(
+              $db: $db,
+              $table: $db.loans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableFilterComposer get userId {
+    final $$LocalUsersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.userId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableFilterComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$LoanNotificationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LoanNotificationsTable> {
+  $$LoanNotificationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get message => $composableBuilder(
+      column: $table.message, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get readAt => $composableBuilder(
+      column: $table.readAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  $$LoansTableOrderingComposer get loanId {
+    final $$LoansTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.loanId,
+        referencedTable: $db.loans,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LoansTableOrderingComposer(
+              $db: $db,
+              $table: $db.loans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableOrderingComposer get userId {
+    final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.userId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableOrderingComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$LoanNotificationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LoanNotificationsTable> {
+  $$LoanNotificationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get message =>
+      $composableBuilder(column: $table.message, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get readAt =>
+      $composableBuilder(column: $table.readAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDirty =>
+      $composableBuilder(column: $table.isDirty, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$LoansTableAnnotationComposer get loanId {
+    final $$LoansTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.loanId,
+        referencedTable: $db.loans,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LoansTableAnnotationComposer(
+              $db: $db,
+              $table: $db.loans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableAnnotationComposer get userId {
+    final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.userId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$LoanNotificationsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LoanNotificationsTable,
+    LoanNotification,
+    $$LoanNotificationsTableFilterComposer,
+    $$LoanNotificationsTableOrderingComposer,
+    $$LoanNotificationsTableAnnotationComposer,
+    $$LoanNotificationsTableCreateCompanionBuilder,
+    $$LoanNotificationsTableUpdateCompanionBuilder,
+    (LoanNotification, $$LoanNotificationsTableReferences),
+    LoanNotification,
+    PrefetchHooks Function({bool loanId, bool userId})> {
+  $$LoanNotificationsTableTableManager(
+      _$AppDatabase db, $LoanNotificationsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LoanNotificationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LoanNotificationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LoanNotificationsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> uuid = const Value.absent(),
+            Value<String?> remoteId = const Value.absent(),
+            Value<int> loanId = const Value.absent(),
+            Value<int> userId = const Value.absent(),
+            Value<String> type = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String> message = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<DateTime?> readAt = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+          }) =>
+              LoanNotificationsCompanion(
+            id: id,
+            uuid: uuid,
+            remoteId: remoteId,
+            loanId: loanId,
+            userId: userId,
+            type: type,
+            title: title,
+            message: message,
+            status: status,
+            readAt: readAt,
+            isDirty: isDirty,
+            syncedAt: syncedAt,
+            createdAt: createdAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String uuid,
+            Value<String?> remoteId = const Value.absent(),
+            required int loanId,
+            required int userId,
+            required String type,
+            required String title,
+            required String message,
+            Value<String> status = const Value.absent(),
+            Value<DateTime?> readAt = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+          }) =>
+              LoanNotificationsCompanion.insert(
+            id: id,
+            uuid: uuid,
+            remoteId: remoteId,
+            loanId: loanId,
+            userId: userId,
+            type: type,
+            title: title,
+            message: message,
+            status: status,
+            readAt: readAt,
+            isDirty: isDirty,
+            syncedAt: syncedAt,
+            createdAt: createdAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$LoanNotificationsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({loanId = false, userId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (loanId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.loanId,
+                    referencedTable:
+                        $$LoanNotificationsTableReferences._loanIdTable(db),
+                    referencedColumn:
+                        $$LoanNotificationsTableReferences._loanIdTable(db).id,
+                  ) as T;
+                }
+                if (userId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.userId,
+                    referencedTable:
+                        $$LoanNotificationsTableReferences._userIdTable(db),
+                    referencedColumn:
+                        $$LoanNotificationsTableReferences._userIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$LoanNotificationsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LoanNotificationsTable,
+    LoanNotification,
+    $$LoanNotificationsTableFilterComposer,
+    $$LoanNotificationsTableOrderingComposer,
+    $$LoanNotificationsTableAnnotationComposer,
+    $$LoanNotificationsTableCreateCompanionBuilder,
+    $$LoanNotificationsTableUpdateCompanionBuilder,
+    (LoanNotification, $$LoanNotificationsTableReferences),
+    LoanNotification,
+    PrefetchHooks Function({bool loanId, bool userId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -13020,4 +14236,6 @@ class $AppDatabaseManager {
       $$LoansTableTableManager(_db, _db.loans);
   $$InAppNotificationsTableTableManager get inAppNotifications =>
       $$InAppNotificationsTableTableManager(_db, _db.inAppNotifications);
+  $$LoanNotificationsTableTableManager get loanNotifications =>
+      $$LoanNotificationsTableTableManager(_db, _db.loanNotifications);
 }

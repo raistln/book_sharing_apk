@@ -1,11 +1,10 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/auth_providers.dart';
-import '../../../providers/book_providers.dart';
 import '../home/home_shell.dart';
-import '../onboarding/onboarding_intro_screen.dart';
 
 class LockScreen extends ConsumerStatefulWidget {
   const LockScreen({super.key});
@@ -17,7 +16,7 @@ class LockScreen extends ConsumerStatefulWidget {
 }
 
 class _LockScreenState extends ConsumerState<LockScreen> {
-  final _pinController = TextEditingController();
+  final _pinController = material.TextEditingController();
   String? _errorMessage;
   bool _navigated = false;
   bool _resetPinOnAttempt = false;
@@ -29,35 +28,32 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   }
 
   Future<void> _tryUnlock() async {
+    if (_pinController.text.isEmpty) return;
+
     setState(() {
       _errorMessage = null;
     });
 
     if (_resetPinOnAttempt) {
-      await ref.read(authControllerProvider.notifier).clearPin();
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = 'PIN limpiado (debug). Configura uno nuevo.';
-        _pinController.clear();
-      });
-      return;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('pin_code');
     }
 
-    final pinValue = _pinController.text.trim();
-    final result =
-        await ref.read(authControllerProvider.notifier).unlockWithPin(pinValue);
+    final result = await ref
+        .read(authControllerProvider.notifier)
+        .unlockWithPin(_pinController.text);
 
-    if (!mounted) return;
-
-    if (!result.success) {
-      setState(() {
-        _errorMessage = result.message ?? 'PIN incorrecto. Intenta de nuevo.';
-        _pinController.clear();
-      });
-      return;
+    if (mounted) {
+      if (result.success) {
+        if (!_navigated) {
+          _navigateToHome();
+        }
+      } else {
+        setState(() {
+          _errorMessage = result.message ?? 'PIN incorrecto. Intenta de nuevo.';
+        });
+      }
     }
-
-    await _navigateAfterUnlock();
   }
 
   Future<void> _tryBiometric() async {
@@ -65,35 +61,34 @@ class _LockScreenState extends ConsumerState<LockScreen> {
       _errorMessage = null;
     });
 
-    final success =
-        await ref.read(authControllerProvider.notifier).unlockWithBiometrics();
+    final success = await ref
+        .read(authControllerProvider.notifier)
+        .unlockWithBiometrics();
 
-    if (!mounted) return;
-
-    if (!success) {
-      setState(() {
-        _errorMessage = 'No fue posible autenticar con biometría.';
-      });
-      return;
+    if (mounted) {
+      if (success) {
+        if (!_navigated) {
+          _navigateToHome();
+        }
+      } else {
+        setState(() {
+          _errorMessage = 'Autenticación fallida';
+        });
+      }
     }
-
-    await _navigateAfterUnlock();
   }
 
-  Future<void> _navigateAfterUnlock() async {
+  void _navigateToHome() {
     if (_navigated) return;
     _navigated = true;
-    final progress = await ref.read(onboardingServiceProvider).loadProgress();
-    if (!mounted) return;
-    final routeName = (!progress.introSeen || !progress.completed)
-        ? OnboardingIntroScreen.routeName
-        : HomeShell.routeName;
-    Navigator.of(context)
-        .pushNamedAndRemoveUntil(routeName, (route) => false);
+    material.Navigator.of(context).pushNamedAndRemoveUntil(
+      HomeShell.routeName,
+      (route) => false,
+    );
   }
 
   @override
-  Widget build(BuildContext context) {
+  material.Widget build(material.BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final status = authState.status;
     final isLoading = status == AuthStatus.loading;
@@ -103,83 +98,83 @@ class _LockScreenState extends ConsumerState<LockScreen> {
         biometricAvailability.maybeWhen(data: (value) => value, orElse: () => false);
     final isBiometricLoading = biometricAvailability.isLoading;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+    return material.Scaffold(
+      body: material.SafeArea(
+        child: material.Padding(
+          padding: const material.EdgeInsets.all(24),
+          child: material.Center(
+            child: material.ConstrainedBox(
+              constraints: const material.BoxConstraints(maxWidth: 420),
+              child: material.Column(
+                mainAxisSize: material.MainAxisSize.min,
                 children: [
-                  Icon(Icons.lock_outline,
-                      size: 96, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(height: 24),
-                  Text(
+                  material.Icon(material.Icons.lock_outline,
+                      size: 96, color: material.Theme.of(context).colorScheme.primary),
+                  const material.SizedBox(height: 24),
+                  material.Text(
                     'Desbloquea tu biblioteca',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                    textAlign: TextAlign.center,
+                    style: material.Theme.of(context).textTheme.headlineSmall,
+                    textAlign: material.TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
-                  TextField(
+                  const material.SizedBox(height: 16),
+                  material.TextField(
                     controller: _pinController,
                     obscureText: true,
                     enabled: !isLoading && !isTemporarilyLocked,
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
+                    textAlign: material.TextAlign.center,
+                    keyboardType: material.TextInputType.number,
+                    decoration: const material.InputDecoration(
                       labelText: 'PIN',
-                      border: OutlineInputBorder(),
+                      border: material.OutlineInputBorder(),
                     ),
                     onSubmitted: (_) => _tryUnlock(),
                   ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
+                  const material.SizedBox(height: 16),
+                  material.FilledButton.icon(
                     onPressed:
                         (isLoading || isTemporarilyLocked) ? null : _tryUnlock,
-                    icon: const Icon(Icons.lock_open),
-                    label: const Text('Desbloquear'),
+                    icon: const material.Icon(material.Icons.lock_open),
+                    label: const material.Text('Desbloquear'),
                   ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
+                  const material.SizedBox(height: 12),
+                  material.OutlinedButton.icon(
                     onPressed:
                         (isLoading || isTemporarilyLocked || !isBiometricEnabled ||
                                 isBiometricLoading)
                             ? null
                             : _tryBiometric,
-                    icon: const Icon(Icons.fingerprint),
-                    label: const Text('Usar biometría'),
+                    icon: const material.Icon(material.Icons.fingerprint),
+                    label: const material.Text('Usar biometría'),
                   ),
                   if (isBiometricLoading) ...[
-                    const SizedBox(height: 8),
-                    const LinearProgressIndicator(minHeight: 2),
+                    const material.SizedBox(height: 8),
+                    const material.CircularProgressIndicator(),
                   ] else if (!isBiometricEnabled) ...[
-                    const SizedBox(height: 8),
-                    Text(
+                    const material.SizedBox(height: 8),
+                    material.Text(
                       'Biometría no disponible en este dispositivo.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                      textAlign: TextAlign.center,
+                      style: material.Theme.of(context).textTheme.bodySmall,
+                      textAlign: material.TextAlign.center,
                     ),
                   ],
-                  const SizedBox(height: 12),
+                  const material.SizedBox(height: 12),
                   if (isTemporarilyLocked)
-                    Text(
+                    material.Text(
                       'Bloqueado temporalmente. Intenta más tarde.',
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
-                      textAlign: TextAlign.center,
+                      style: material.TextStyle(color: material.Theme.of(context).colorScheme.error),
+                      textAlign: material.TextAlign.center,
                     )
                   else if (_errorMessage != null)
-                    Text(
+                    material.Text(
                       _errorMessage!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
-                      textAlign: TextAlign.center,
+                      style: material.TextStyle(color: material.Theme.of(context).colorScheme.error),
+                      textAlign: material.TextAlign.center,
                     ),
                   if (kDebugMode) ...[
-                    const SizedBox(height: 16),
-                    SwitchListTile.adaptive(
-                      title: const Text('Debug: borrar PIN antes de intentar'),
-                      subtitle: const Text(
+                    const material.SizedBox(height: 16),
+                    material.SwitchListTile.adaptive(
+                      title: const material.Text('Debug: borrar PIN antes de intentar'),
+                      subtitle: const material.Text(
                           'Usa para forzar el flujo de configuración en cada intento.'),
                       value: _resetPinOnAttempt,
                       onChanged: isLoading
@@ -192,8 +187,8 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                     ),
                   ],
                   if (isLoading) ...[
-                    const SizedBox(height: 24),
-                    const CircularProgressIndicator(),
+                    const material.SizedBox(height: 8),
+                    const material.CircularProgressIndicator(),
                   ],
                 ],
               ),

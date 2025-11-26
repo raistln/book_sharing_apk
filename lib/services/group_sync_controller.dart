@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/repositories/supabase_group_repository.dart';
@@ -18,11 +21,50 @@ class GroupSyncController extends StateNotifier<SyncState> {
   final SupabaseGroupSyncRepository _groupRepository;
   final UserRepository _userRepository;
   final SupabaseConfigService _configService;
+  
+  Timer? _autoSyncTimer;
+  Timer? _debounceTimer;
+  static const Duration _autoSyncInterval = Duration(seconds: 30);
+  static const Duration _debounceDelay = Duration(milliseconds: 500);
+
+  void startAutoSync() {
+    _autoSyncTimer?.cancel();
+    _autoSyncTimer = Timer.periodic(_autoSyncInterval, (_) {
+      if (!state.isSyncing) {
+        if (kDebugMode) {
+          debugPrint('[AutoSync] Triggering periodic sync (every 30s)');
+        }
+        syncGroups();
+      }
+    });
+    if (kDebugMode) {
+      debugPrint('[AutoSync] Started - will sync every 30 seconds');
+    }
+  }
+
+  void stopAutoSync() {
+    _autoSyncTimer?.cancel();
+    _autoSyncTimer = null;
+    if (kDebugMode) {
+      debugPrint('[AutoSync] Stopped');
+    }
+  }
 
   void markPendingChanges() {
     if (!state.hasPendingChanges) {
       state = state.copyWith(hasPendingChanges: true);
     }
+    // Trigger debounced sync
+    _syncWithDebounce();
+  }
+
+  void _syncWithDebounce() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(_debounceDelay, () {
+      if (!state.isSyncing) {
+        syncGroups();
+      }
+    });
   }
 
   void clearError() {
@@ -33,7 +75,14 @@ class GroupSyncController extends StateNotifier<SyncState> {
 
   Future<void> syncGroups({String? accessToken}) async {
     if (state.isSyncing) {
+      if (kDebugMode) {
+        debugPrint('[AutoSync] Sync already in progress, skipping');
+      }
       return;
+    }
+
+    if (kDebugMode) {
+      debugPrint('[AutoSync] Starting sync...');
     }
 
     state = state.copyWith(isSyncing: true, lastError: () => null);
@@ -50,9 +99,15 @@ class GroupSyncController extends StateNotifier<SyncState> {
       }
 
       if (state.hasPendingChanges) {
+        if (kDebugMode) {
+          debugPrint('[AutoSync] Pushing local changes to Supabase...');
+        }
         await _groupRepository.pushLocalChanges(accessToken: accessToken);
       }
 
+      if (kDebugMode) {
+        debugPrint('[AutoSync] Pulling remote changes from Supabase...');
+      }
       await _groupRepository.syncFromRemote(accessToken: accessToken);
 
       state = state.copyWith(
@@ -60,12 +115,35 @@ class GroupSyncController extends StateNotifier<SyncState> {
         hasPendingChanges: false,
         lastSyncedAt: DateTime.now(),
       );
+      
+      if (kDebugMode) {
+        debugPrint('[AutoSync] ✓ Sync completed successfully');
+      }
     } catch (error) {
       final message = error is SyncException ? error.message : error.toString();
       state = state.copyWith(
         isSyncing: false,
         lastError: () => message,
       );
+      
+      if (kDebugMode) {
+        debugPrint('[AutoSync] ✗ Sync failed: $message');
+        debugPrint('[AutoSync] Will retry in 10 seconds...');
+      }
+      
+      // Auto-retry after delay on error
+      Future.delayed(const Duration(seconds: 10), () {
+        if (!state.isSyncing && state.lastError != null) {
+          syncGroups(accessToken: accessToken);
+        }
+      });
     }
+  }
+
+  @override
+  void dispose() {
+    stopAutoSync();
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 }

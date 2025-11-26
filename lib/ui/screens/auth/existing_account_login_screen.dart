@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/auth_providers.dart';
@@ -18,8 +18,8 @@ class ExistingAccountLoginScreen extends ConsumerStatefulWidget {
 
 class _ExistingAccountLoginScreenState
     extends ConsumerState<ExistingAccountLoginScreen> {
-  final _usernameController = TextEditingController();
-  final _pinController = TextEditingController();
+  final _usernameController = material.TextEditingController();
+  final _pinController = material.TextEditingController();
 
   String? _errorMessage;
   bool _isSubmitting = false;
@@ -33,84 +33,84 @@ class _ExistingAccountLoginScreenState
   }
 
   @override
-  Widget build(BuildContext context) {
+  material.Widget build(material.BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final isLoading =
         _isSubmitting || authState.status == AuthStatus.loading;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
+    return material.Scaffold(
+      body: material.SafeArea(
+        child: material.Padding(
+          padding: const material.EdgeInsets.all(24),
+          child: material.Center(
+            child: material.ConstrainedBox(
+              constraints: const material.BoxConstraints(maxWidth: 420),
+              child: material.Column(
+                mainAxisSize: material.MainAxisSize.min,
+                crossAxisAlignment: material.CrossAxisAlignment.center,
                 children: [
-                  Icon(Icons.login,
-                      size: 96, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(height: 24),
-                  Text(
+                  material.Icon(material.Icons.login,
+                      size: 96, color: material.Theme.of(context).colorScheme.primary),
+                  const material.SizedBox(height: 24),
+                  material.Text(
                     'Inicio con usuario existente',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                    textAlign: TextAlign.center,
+                    style: material.Theme.of(context).textTheme.headlineSmall,
+                    textAlign: material.TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
-                  TextField(
+                  const material.SizedBox(height: 16),
+                  material.TextField(
                     controller: _usernameController,
                     enabled: !isLoading,
-                    textCapitalization: TextCapitalization.none,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
+                    textCapitalization: material.TextCapitalization.none,
+                    textInputAction: material.TextInputAction.next,
+                    decoration: const material.InputDecoration(
                       labelText: 'Nombre de usuario',
-                      border: OutlineInputBorder(),
+                      border: material.OutlineInputBorder(),
                       hintText: 'Ej. ana_lectora',
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
+                  const material.SizedBox(height: 12),
+                  material.TextField(
                     controller: _pinController,
                     enabled: !isLoading,
                     obscureText: true,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
+                    keyboardType: material.TextInputType.number,
+                    textAlign: material.TextAlign.center,
                     maxLength: 6,
-                    decoration: const InputDecoration(
+                    decoration: const material.InputDecoration(
                       labelText: 'PIN',
-                      border: OutlineInputBorder(),
+                      border: material.OutlineInputBorder(),
                       counterText: '',
                     ),
                     onSubmitted: (_) => _submit(),
                   ),
-                  const SizedBox(height: 20),
-                  FilledButton.icon(
+                  const material.SizedBox(height: 20),
+                  material.FilledButton.icon(
                     onPressed: isLoading ? null : _submit,
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Acceder'),
+                    icon: const material.Icon(material.Icons.check_circle_outline),
+                    label: const material.Text('Acceder'),
                   ),
-                  const SizedBox(height: 12),
-                  TextButton(
+                  const material.SizedBox(height: 12),
+                  material.TextButton(
                     onPressed: isLoading
                         ? null
                         : () {
-                            Navigator.of(context).pop();
+                            material.Navigator.of(context).pop();
                           },
-                    child: const Text('Volver'),
+                    child: const material.Text('Volver'),
                   ),
                   if (_errorMessage != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
+                    const material.SizedBox(height: 12),
+                    material.Text(
                       _errorMessage!,
                       style:
-                          TextStyle(color: Theme.of(context).colorScheme.error),
-                      textAlign: TextAlign.center,
+                          material.TextStyle(color: material.Theme.of(context).colorScheme.error),
+                      textAlign: material.TextAlign.center,
                     ),
                   ],
                   if (isLoading) ...[
-                    const SizedBox(height: 24),
-                    const CircularProgressIndicator(),
+                    const material.SizedBox(height: 24),
+                    const material.CircularProgressIndicator(),
                   ],
                 ],
               ),
@@ -198,7 +198,7 @@ class _ExistingAccountLoginScreenState
       final routeName = (!progress.introSeen || !progress.completed)
           ? OnboardingIntroScreen.routeName
           : HomeShell.routeName;
-      Navigator.of(context)
+      material.Navigator.of(context)
           .pushNamedAndRemoveUntil(routeName, (route) => false);
     } catch (error) {
       if (!mounted) return;

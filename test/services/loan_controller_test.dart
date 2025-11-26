@@ -32,7 +32,6 @@ void main() {
   late LocalUser borrower;
   late int groupId;
   late int sharedBookId;
-  late String sharedBookUuid;
 
   Future<void> seedCoreData() async {
     final ownerId = await userDao.insertUser(
@@ -93,7 +92,6 @@ void main() {
       ),
     );
 
-    sharedBookUuid = 'shared-book-uuid';
   }
 
   Future<Loan> createPendingLoan({required Duration dueOffset}) async {
@@ -187,13 +185,11 @@ void main() {
 
     expect(dueSoon.payload, {
       NotificationPayloadKeys.loanId: accepted.uuid,
-      NotificationPayloadKeys.sharedBookUuid: sharedBookUuid,
       NotificationPayloadKeys.sharedBookId: sharedBookId.toString(),
       NotificationPayloadKeys.groupId: groupId.toString(),
     });
     expect(expired.payload, {
       NotificationPayloadKeys.loanId: accepted.uuid,
-      NotificationPayloadKeys.sharedBookUuid: sharedBookUuid,
       NotificationPayloadKeys.sharedBookId: sharedBookId.toString(),
       NotificationPayloadKeys.groupId: groupId.toString(),
     });
@@ -214,7 +210,6 @@ void main() {
     expect(expired.type, NotificationType.loanExpired);
     expect(expired.payload, {
       NotificationPayloadKeys.loanId: accepted.uuid,
-      NotificationPayloadKeys.sharedBookUuid: sharedBookUuid,
       NotificationPayloadKeys.sharedBookId: sharedBookId.toString(),
       NotificationPayloadKeys.groupId: groupId.toString(),
     });
@@ -280,23 +275,20 @@ void main() {
     expect(controller.state.lastSuccess, 'Solicitud rechazada.');
   });
 
-  test('markReturned cancels scheduled notifications', () async {
+  test('markReturned cancels scheduled notifications after double confirmation', () async {
     final loan = await createPendingLoan(dueOffset: const Duration(days: 4));
     final accepted = await controller.acceptLoan(loan: loan, owner: owner);
-    
-    final loaned = await controller.markAsLoaned(
-      loan: accepted,
-      actor: owner,
-      dueDate: DateTime.now().add(const Duration(days: 14)),
-    );
 
-    final dueSoonId = NotificationIds.loanDueSoon(loaned.uuid);
-    final expiredId = NotificationIds.loanExpired(loaned.uuid);
+    final dueSoonId = NotificationIds.loanDueSoon(accepted.uuid);
+    final expiredId = NotificationIds.loanExpired(accepted.uuid);
 
-    // Clear cancellations originating from the acceptance/loaned flow.
+    // Borrower confirms first.
+    final borrowerConfirmation = await controller.markReturned(loan: accepted, actor: borrower);
+
+    // Clear cancellations originating from previous steps.
     notificationClient.cancelledIds.clear();
 
-    final result = await controller.markReturned(loan: loaned, actor: owner);
+    final result = await controller.markReturned(loan: borrowerConfirmation, actor: owner);
 
     expect(result.status, 'returned');
     expect(notificationClient.cancelledIds.toSet(), {dueSoonId, expiredId});

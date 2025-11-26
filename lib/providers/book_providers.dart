@@ -14,6 +14,7 @@ import '../data/repositories/supabase_book_sync_repository.dart';
 import '../data/repositories/supabase_user_sync_repository.dart';
 import '../data/repositories/user_repository.dart';
 import '../services/book_export_service.dart';
+import '../services/loan_export_service.dart';
 import '../services/cover_image_service.dart';
 import '../services/group_sync_controller.dart';
 import '../services/loan_controller.dart';
@@ -99,6 +100,34 @@ final groupLoanDetailsProvider = StreamProvider.autoDispose
     .family<List<LoanDetail>, int>((ref, groupId) {
   final dao = ref.watch(groupDaoProvider);
   return dao.watchLoanDetailsForGroup(groupId);
+});
+
+// Filtered version that shows only loans where user is lender or borrower
+final userRelevantLoansProvider = StreamProvider.autoDispose
+    .family<List<LoanDetail>, int>((ref, groupId) {
+  final dao = ref.watch(groupDaoProvider);
+  final activeUserAsync = ref.watch(activeUserProvider);
+  
+  return activeUserAsync.when<Stream<List<LoanDetail>>>(
+    data: (user) {
+      if (user == null) {
+        return Stream.value(const <LoanDetail>[]);
+      }
+      return dao.watchLoanDetailsForGroup(groupId).map((loans) {
+        // Filter to show only loans where user is lender or borrower
+        // and exclude returned/expired loans
+        return loans.where((detail) {
+          final loan = detail.loan;
+          final isLender = loan.lenderUserId == user.id;
+          final isBorrower = loan.borrowerUserId == user.id;
+          final isActive = loan.status == 'active' || loan.status == 'requested';
+          return (isLender || isBorrower) && isActive;
+        }).toList();
+      });
+    },
+    loading: () => Stream.value(const <LoanDetail>[]),
+    error: (_, __) => Stream.value(const <LoanDetail>[]),
+  );
 });
 
 final discoverGroupControllerProvider = StateNotifierProvider.autoDispose
@@ -369,6 +398,10 @@ final bookReviewsProvider =
 
 final bookExportServiceProvider = Provider<BookExportService>((ref) {
   return const BookExportService();
+});
+
+final loanExportServiceProvider = Provider<LoanExportService>((ref) {
+  return const LoanExportService();
 });
 
 final supabaseGroupSyncRepositoryProvider = Provider<SupabaseGroupSyncRepository>((ref) {

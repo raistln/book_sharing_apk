@@ -43,7 +43,7 @@ class SupabaseUserService {
 
   Future<bool> isUsernameAvailable(String username) async {
     final config = await _loadConfig();
-    final uri = Uri.parse('${config.url}/rest/v1/local_users').replace(
+    final uri = Uri.parse('${config.url}/rest/v1/profiles').replace(
       queryParameters: {
         'username': 'eq.$username',
         'select': 'id',
@@ -87,7 +87,7 @@ class SupabaseUserService {
       query['updated_at'] = 'gte.${updatedAfter.toUtc().toIso8601String()}';
     }
 
-    final uri = Uri.parse('${config.url}/rest/v1/local_users').replace(
+    final uri = Uri.parse('${config.url}/rest/v1/profiles').replace(
       queryParameters: query,
     );
 
@@ -128,7 +128,7 @@ class SupabaseUserService {
     String? accessToken,
   }) async {
     final config = await _loadConfig();
-    final uri = Uri.parse('${config.url}/rest/v1/local_users');
+    final uri = Uri.parse('${config.url}/rest/v1/profiles');
     final response = await _client.post(
       uri,
       headers: _buildHeaders(
@@ -189,7 +189,7 @@ class SupabaseUserService {
     String? accessToken,
   }) async {
     final config = await _loadConfig();
-    final uri = Uri.parse('${config.url}/rest/v1/local_users').replace(
+    final uri = Uri.parse('${config.url}/rest/v1/profiles').replace(
       queryParameters: {
         'id': 'eq.$id',
       },
@@ -238,7 +238,7 @@ class SupabaseUserService {
     String? accessToken,
   }) async {
     final config = await _loadConfig();
-    final uri = Uri.parse('${config.url}/rest/v1/local_users').replace(
+    final uri = Uri.parse('${config.url}/rest/v1/profiles').replace(
       queryParameters: {
         'username': 'eq.$username',
         'select':

@@ -46,10 +46,10 @@ final loanOverviewProvider = FutureProvider<LoanBuckets>((ref) async {
     final loan = detail.loan;
     final status = loan.status;
 
-    final isOwner = loan.toUserId == activeUser.id;
-    final isBorrower = loan.fromUserId == activeUser.id;
+    final isOwner = loan.lenderUserId == activeUser.id;
+    final isBorrower = loan.borrowerUserId == activeUser.id;
 
-    if (status == 'pending') {
+    if (status == 'requested') {
       if (isOwner) {
         incoming.add(detail);
       } else if (isBorrower) {
@@ -58,7 +58,7 @@ final loanOverviewProvider = FutureProvider<LoanBuckets>((ref) async {
       continue;
     }
 
-    if (status == 'accepted') {
+    if (status == 'active') {
       if (isOwner) {
         incoming.add(detail);
       }
@@ -87,7 +87,7 @@ List<LoanDetail> _buildDueSoon(List<LoanDetail> all, DateTime now) {
   final dueList = all
       .where(
         (detail) =>
-            detail.loan.status == 'accepted' &&
+            detail.loan.status == 'active' &&
             detail.loan.dueDate != null &&
             detail.loan.dueDate!.isAfter(now),
       )

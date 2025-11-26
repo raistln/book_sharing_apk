@@ -39,24 +39,28 @@ class StatsTopBook {
 
 class StatsActiveLoan {
   const StatsActiveLoan({
+    required this.loanId,
     required this.loanUuid,
     required this.bookTitle,
     required this.borrowerName,
     required this.status,
-    required this.startDate,
+    required this.requestedAt,
+    required this.isManualLoan,
     this.dueDate,
     this.groupId,
     this.sharedBookId,
   });
 
+  final int loanId;
   final String loanUuid;
   final String bookTitle;
   final String borrowerName;
   final String status;
-  final DateTime startDate;
+  final DateTime requestedAt;
   final DateTime? dueDate;
   final int? groupId;
   final int? sharedBookId;
+  final bool isManualLoan;
 }
 
 class StatsService {
@@ -65,7 +69,7 @@ class StatsService {
   final BookRepository _bookRepository;
   final LoanRepository _loanRepository;
 
-  static const _countableStatuses = {'accepted', 'returned', 'expired'};
+  static const _countableStatuses = {'active', 'returned', 'expired'};
 
   Future<StatsSummary> loadSummary({LocalUser? owner}) async {
     final books = await _bookRepository.fetchActiveBooks(ownerUserId: owner?.id);
@@ -74,18 +78,20 @@ class StatsService {
     final totalLoans = loanDetails.length;
     final activeLoanDetails = loanDetails
         .where(
-          (detail) => detail.loan.status == 'accepted' || detail.loan.status == 'pending' || detail.loan.status == 'loaned',
+          (detail) => detail.loan.status == 'active' || detail.loan.status == 'requested',
         )
         .map(
           (detail) => StatsActiveLoan(
+            loanId: detail.loan.id,
             loanUuid: detail.loan.uuid,
             bookTitle: _resolveActiveLoanTitle(detail, books),
             borrowerName: detail.loan.externalBorrowerName ?? _resolveUserName(detail.borrower),
             status: detail.loan.status,
-            startDate: detail.loan.startDate,
+            requestedAt: detail.loan.requestedAt,
             dueDate: detail.loan.dueDate,
             groupId: detail.sharedBook?.groupId,
             sharedBookId: detail.sharedBook?.id,
+            isManualLoan: detail.loan.externalBorrowerName != null,
           ),
         )
         .toList(growable: false);

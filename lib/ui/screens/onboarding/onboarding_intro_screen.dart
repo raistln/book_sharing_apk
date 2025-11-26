@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/book_providers.dart';
@@ -15,31 +15,31 @@ class OnboardingIntroScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
-  late final PageController _pageController;
+  late final material.PageController _pageController;
   int _currentPage = 0;
   bool _isCompleting = false;
 
   final _slides = const [
     _IntroSlide(
-      icon: Icons.menu_book_outlined,
+      icon: material.Icons.menu_book_outlined,
       title: 'Tu biblioteca personal',
       message:
           'Registra tus libros, añade notas y mantén el control de tus ejemplares disponibles para préstamo.',
     ),
     _IntroSlide(
-      icon: Icons.groups_outlined,
+      icon: material.Icons.groups_outlined,
       title: 'Comparte con tu grupo',
       message:
           'Únete a comunidades, descubre colecciones compartidas y coordina préstamos sin perder el contexto.',
     ),
     _IntroSlide(
-      icon: Icons.handshake_outlined,
+      icon: material.Icons.handshake_outlined,
       title: 'Préstamos con seguimiento',
       message:
           'Solicita, acepta y gestiona préstamos con recordatorios automáticos y estados claros para todos.',
     ),
     _IntroSlide(
-      icon: Icons.sync_outlined,
+      icon: material.Icons.sync_outlined,
       title: 'Sincronización en la nube',
       message:
           'La app se sincroniza con Supabase para mantener tus cambios disponibles en todos tus dispositivos.',
@@ -49,7 +49,7 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+    _pageController = material.PageController();
   }
 
   @override
@@ -58,7 +58,7 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
     super.dispose();
   }
 
-  Future<void> _completeIntro(BuildContext context) async {
+  Future<void> _completeIntro(material.BuildContext context) async {
     if (_isCompleting) {
       return;
     }
@@ -67,7 +67,7 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
     });
 
     final onboardingService = ref.read(onboardingServiceProvider);
-    final navigator = Navigator.of(context);
+    final navigator = material.Navigator.of(context);
     await onboardingService.markIntroSeen();
     await onboardingService.saveCurrentStep(0);
 
@@ -76,25 +76,26 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  @override
+  material.Widget build(material.BuildContext context) {
+    final theme = material.Theme.of(context);
     final isLastPage = _currentPage == _slides.length - 1;
 
-    return Scaffold(
-      appBar: AppBar(
+    return material.Scaffold(
+      appBar: material.AppBar(
         automaticallyImplyLeading: false,
         actions: [
-          TextButton(
+          material.TextButton(
             onPressed: () => _completeIntro(context),
-            child: const Text('Saltar'),
+            child: const material.Text('Saltar'),
           ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
+      body: material.SafeArea(
+        child: material.Column(
           children: [
-            Expanded(
-              child: PageView.builder(
+            material.Expanded(
+              child: material.PageView.builder(
                 controller: _pageController,
                 onPageChanged: (index) {
                   setState(() {
@@ -104,23 +105,23 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
                 itemCount: _slides.length,
                 itemBuilder: (context, index) {
                   final slide = _slides[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  return material.Padding(
+                    padding: const material.EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                    child: material.Column(
+                      mainAxisAlignment: material.MainAxisAlignment.center,
                       children: [
-                        Icon(slide.icon, size: 120, color: theme.colorScheme.primary),
-                        const SizedBox(height: 32),
-                        Text(
+                        material.Icon(slide.icon, size: 120, color: theme.colorScheme.primary),
+                        const material.SizedBox(height: 32),
+                        material.Text(
                           slide.title,
                           style: theme.textTheme.headlineMedium,
-                          textAlign: TextAlign.center,
+                          textAlign: material.TextAlign.center,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
+                        const material.SizedBox(height: 16),
+                        material.Text(
                           slide.message,
                           style: theme.textTheme.bodyLarge,
-                          textAlign: TextAlign.center,
+                          textAlign: material.TextAlign.center,
                         ),
                       ],
                     ),
@@ -128,58 +129,59 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
                 },
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Column(
+            material.Padding(
+              padding: const material.EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: material.Column(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  material.Row(
+                    mainAxisAlignment: material.MainAxisAlignment.center,
                     children: List.generate(
                       _slides.length,
-                      (index) => AnimatedContainer(
+                      (index) => material.AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        margin: const material.EdgeInsets.symmetric(horizontal: 4),
                         height: 8,
                         width: _currentPage == index ? 24 : 8,
-                        decoration: BoxDecoration(
+                        decoration: material.BoxDecoration(
                           color: _currentPage == index
                               ? theme.colorScheme.primary
                               : theme.colorScheme.primary.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: material.BorderRadius.circular(999),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  FilledButton.icon(
+                  const material.SizedBox(height: 24),
+                  material.FilledButton.icon(
                     onPressed: () {
                       if (isLastPage) {
                         _completeIntro(context);
                       } else {
                         _pageController.nextPage(
                           duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeOut,
+                          curve: material.Curves.easeOut,
                         );
                       }
                     },
-                    icon: Icon(isLastPage ? Icons.check_circle_outline : Icons.arrow_forward),
-                    label: Text(isLastPage ? 'Empezar' : 'Siguiente'),
+                    icon: material.Icon(
+                        isLastPage ? material.Icons.check_circle_outline : material.Icons.arrow_forward),
+                    label: material.Text(isLastPage ? 'Empezar' : 'Siguiente'),
                   ),
-                  const SizedBox(height: 12),
-                  TextButton.icon(
+                  const material.SizedBox(height: 12),
+                  material.TextButton.icon(
                     onPressed: () async {
                       if (_isCompleting) return;
                       setState(() {
                         _isCompleting = true;
                       });
                       final onboardingService = ref.read(onboardingServiceProvider);
-                      final navigator = Navigator.of(context);
+                      final navigator = material.Navigator.of(context);
                       await onboardingService.markIntroSeen();
                       if (!mounted) return;
                       navigator.pushReplacementNamed(HomeShell.routeName);
                     },
-                    icon: const Icon(Icons.home_outlined),
-                    label: const Text('Ir a la app (volveré luego)'),
+                    icon: const material.Icon(material.Icons.home_outlined),
+                    label: const material.Text('Ir a la app (volveré luego)'),
                   ),
                 ],
               ),
@@ -198,7 +200,7 @@ class _IntroSlide {
     required this.message,
   });
 
-  final IconData icon;
+  final material.IconData icon;
   final String title;
   final String message;
 }

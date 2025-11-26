@@ -51,19 +51,19 @@ void main() {
       await db.close();
     });
 
-    test('requestLoan creates pending loan for borrower and owner', () async {
+    test('requestLoan creates requested loan for borrower and owner', () async {
       final loan = await repository.requestLoan(
         sharedBook: sharedBook,
         borrower: borrower,
       );
 
-      expect(loan.status, 'pending');
-      expect(loan.fromUserId, borrower.id);
-      expect(loan.toUserId, owner.id);
+      expect(loan.status, 'requested');
+      expect(loan.borrowerUserId, borrower.id);
+      expect(loan.lenderUserId, owner.id);
 
       final stored = await groupDao.findLoanById(loan.id);
       expect(stored, isNotNull);
-      expect(stored!.status, 'pending');
+      expect(stored!.status, 'requested');
 
       final refreshedShared = await groupDao.findSharedBookById(sharedBook.id);
       expect(refreshedShared?.isAvailable, isTrue);
@@ -76,32 +76,21 @@ void main() {
       );
     });
 
-    test('acceptLoan marks shared book unavailable and book status remains available until markAsLoaned', () async {
+    test('acceptLoan marks shared book unavailable but keeps book available', () async {
       final pending = await repository.requestLoan(
         sharedBook: sharedBook,
         borrower: borrower,
       );
 
       final accepted = await repository.acceptLoan(loan: pending, owner: owner);
-      expect(accepted.status, 'accepted');
+      expect(accepted.status, 'active');
 
       final updatedShared = await groupDao.findSharedBookById(sharedBook.id);
       expect(updatedShared?.isAvailable, isFalse);
 
-      // Book status should NOT change yet
-      var updatedBook = await bookDao.findById(book.id);
+      // Book status should NOT change
+      final updatedBook = await bookDao.findById(book.id);
       expect(updatedBook?.status, 'available');
-
-      // Now mark as loaned
-      final loaned = await repository.markAsLoaned(
-        loan: accepted,
-        actor: owner,
-        dueDate: DateTime.now().add(const Duration(days: 14)),
-      );
-      expect(loaned.status, 'loaned');
-
-      updatedBook = await bookDao.findById(book.id);
-      expect(updatedBook?.status, 'loaned');
     });
 
     test('cancelLoan sets status to cancelled with timestamp', () async {
@@ -112,7 +101,6 @@ void main() {
 
       final cancelled = await repository.cancelLoan(loan: pending, borrower: borrower);
       expect(cancelled.status, 'cancelled');
-      expect(cancelled.cancelledAt, isNotNull);
 
       final refreshed = await groupDao.findLoanById(cancelled.id);
       expect(refreshed?.status, 'cancelled');
@@ -131,21 +119,24 @@ void main() {
       expect(refreshedShared?.isAvailable, isTrue);
     });
 
-    test('markReturned frees shared book and book inventory', () async {
+    test('markReturned requires double confirmation and frees inventory', () async {
       final pending = await repository.requestLoan(
         sharedBook: sharedBook,
         borrower: borrower,
       );
       final accepted = await repository.acceptLoan(loan: pending, owner: owner);
-      
-      final loaned = await repository.markAsLoaned(
-        loan: accepted,
-        actor: owner,
-        dueDate: DateTime.now().add(const Duration(days: 14)),
-      );
 
-      final returned = await repository.markReturned(loan: loaned, actor: owner);
+      // Borrower confirms first
+      final borrowerConfirmation = await repository.markReturned(loan: accepted, actor: borrower);
+      expect(borrowerConfirmation.status, 'active');
+      expect(borrowerConfirmation.borrowerReturnedAt, isNotNull);
+      expect(borrowerConfirmation.lenderReturnedAt, isNull);
+
+      // Owner confirms and loan closes
+      final returned = await repository.markReturned(loan: borrowerConfirmation, actor: owner);
       expect(returned.status, 'returned');
+      expect(returned.lenderReturnedAt, isNotNull);
+      expect(returned.returnedAt, isNotNull);
 
       final updatedShared = await groupDao.findSharedBookById(sharedBook.id);
       expect(updatedShared?.isAvailable, isTrue);

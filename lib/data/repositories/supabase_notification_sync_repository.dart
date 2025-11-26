@@ -85,15 +85,9 @@ class SupabaseNotificationSyncRepository {
           loanId: resolvedLoan != null
               ? Value(resolvedLoan.id)
               : const Value<int?>.absent(),
-          loanUuid: remote.loanId != null
-              ? Value(remote.loanId)
-              : const Value<String?>.absent(),
           sharedBookId: resolvedSharedBook != null
               ? Value(resolvedSharedBook.id)
               : const Value<int?>.absent(),
-          sharedBookUuid: remote.sharedBookId != null
-              ? Value(remote.sharedBookId)
-              : const Value<String?>.absent(),
           title: remote.title != null
               ? Value(remote.title)
               : const Value<String?>.absent(),
@@ -133,9 +127,6 @@ class SupabaseNotificationSyncRepository {
             sharedBookId: resolvedSharedBook != null
                 ? Value(resolvedSharedBook.id)
                 : const Value<int?>.absent(),
-            sharedBookUuid: remote.sharedBookId != null
-                ? Value(remote.sharedBookId)
-                : const Value<String?>.absent(),
             title: remote.title != null
                 ? Value(remote.title)
                 : const Value<String?>.absent(),
@@ -179,7 +170,7 @@ class SupabaseNotificationSyncRepository {
         final actorRemoteId = await _resolveUserRemoteId(local.actorUserId);
         final loanRemoteId = await _resolveLoanRemoteId(local.loanId, local.loanUuid);
         final sharedRemoteId =
-            await _resolveSharedBookRemoteId(local.sharedBookId, local.sharedBookUuid);
+            await _resolveSharedBookRemoteId(local.sharedBookId);
 
         final targetUser = await _userDao.getById(local.targetUserId);
         final targetUserRemoteId = targetUser?.remoteId;
@@ -241,9 +232,6 @@ class SupabaseNotificationSyncRepository {
             sharedBookId: resolvedSharedBook != null
                 ? Value(resolvedSharedBook.id)
                 : const Value<int?>.absent(),
-            sharedBookUuid: remote.sharedBookId != null
-                ? Value(remote.sharedBookId)
-                : const Value<String?>.absent(),
             status: Value(remote.status),
             isDeleted: Value(remote.isDeleted),
             isDirty: const Value(false),
@@ -341,10 +329,7 @@ class SupabaseNotificationSyncRepository {
     return _SharedBookResolution(id: shared.id, uuid: shared.uuid, remoteId: shared.remoteId);
   }
 
-  Future<String?> _resolveSharedBookRemoteId(int? sharedId, String? sharedUuid) async {
-    if (sharedUuid != null && sharedUuid.isNotEmpty) {
-      return sharedUuid;
-    }
+  Future<String?> _resolveSharedBookRemoteId(int? sharedId) async {
     if (sharedId == null) {
       return null;
     }

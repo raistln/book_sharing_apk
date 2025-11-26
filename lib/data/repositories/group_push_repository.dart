@@ -572,7 +572,7 @@ class GroupPushRepository {
         'select':
             'id,group_id,inviter_id,accepted_user_id,role,code,status,expires_at,responded_at,created_at,updated_at,'
             'group:groups(id,name,description,owner_id,created_at,updated_at),'
-            'inviter:local_users!group_invitations_inviter_id_fkey(id,username,is_deleted,created_at,updated_at)',
+            'inviter:profiles!group_invitations_inviter_id_fkey(id,username,created_at,updated_at)',
       },
     );
 

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/auth_providers.dart';
@@ -17,9 +17,9 @@ class PinSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
-  final _usernameController = TextEditingController();
-  final _pinController = TextEditingController();
-  final _confirmController = TextEditingController();
+  final _usernameController = material.TextEditingController();
+  final _pinController = material.TextEditingController();
+  final _confirmController = material.TextEditingController();
   String? _errorMessage;
   bool _navigated = false;
   bool _isSubmitting = false;
@@ -33,12 +33,13 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  @override
+  material.Widget build(material.BuildContext context) {
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
       if (!mounted || _navigated) return;
       if (next.status == AuthStatus.unlocked) {
         _navigated = true;
-        final navigator = Navigator.of(context);
+        final navigator = material.Navigator.of(context);
         final onboardingService = ref.read(onboardingServiceProvider);
         Future<void>.microtask(() async {
           final progress = await onboardingService.loadProgress();
@@ -58,95 +59,96 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
         authState.status == AuthStatus.loading || _isSubmitting;
     final isExistingUser = activeUser != null;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
+    return material.Scaffold(
+      body: material.SafeArea(
+        child: material.Padding(
+          padding: const material.EdgeInsets.all(24),
+          child: material.Center(
+            child: material.ConstrainedBox(
+              constraints: const material.BoxConstraints(maxWidth: 420),
+              child: material.Column(
+                mainAxisSize: material.MainAxisSize.min,
+                crossAxisAlignment: material.CrossAxisAlignment.center,
                 children: [
-                  Icon(Icons.pin, size: 96, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(height: 24),
-                  Text(
+                  material.Icon(material.Icons.pin,
+                      size: 96, color: material.Theme.of(context).colorScheme.primary),
+                  const material.SizedBox(height: 24),
+                  material.Text(
                     'Configura un PIN de acceso',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                    textAlign: TextAlign.center,
+                    style: material.Theme.of(context).textTheme.headlineSmall,
+                    textAlign: material.TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
+                  const material.SizedBox(height: 16),
                   if (!isExistingUser) ...[
-                    TextField(
+                    material.TextField(
                       controller: _usernameController,
                       enabled: !isLoading,
-                      textCapitalization: TextCapitalization.none,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
+                      textCapitalization: material.TextCapitalization.none,
+                      textInputAction: material.TextInputAction.next,
+                      decoration: const material.InputDecoration(
                         labelText: 'Nombre de usuario',
-                        border: OutlineInputBorder(),
+                        border: material.OutlineInputBorder(),
                         hintText: 'Ej. ana_lectora',
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const material.SizedBox(height: 12),
                   ],
-                  TextField(
+                  material.TextField(
                     controller: _pinController,
                     enabled: !isLoading,
                     obscureText: true,
                     maxLength: 6,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    decoration: const InputDecoration(
+                    keyboardType: material.TextInputType.number,
+                    textAlign: material.TextAlign.center,
+                    decoration: const material.InputDecoration(
                       labelText: 'PIN nuevo',
-                      border: OutlineInputBorder(),
+                      border: material.OutlineInputBorder(),
                       counterText: '',
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
+                  const material.SizedBox(height: 12),
+                  material.TextField(
                     controller: _confirmController,
                     enabled: !isLoading,
                     obscureText: true,
                     maxLength: 6,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    decoration: const InputDecoration(
+                    keyboardType: material.TextInputType.number,
+                    textAlign: material.TextAlign.center,
+                    decoration: const material.InputDecoration(
                       labelText: 'Confirmar PIN',
-                      border: OutlineInputBorder(),
+                      border: material.OutlineInputBorder(),
                       counterText: '',
                     ),
                     onSubmitted: (_) => _submit(),
                   ),
-                  const SizedBox(height: 20),
-                  FilledButton.icon(
+                  const material.SizedBox(height: 20),
+                  material.FilledButton.icon(
                     onPressed: isLoading ? null : _submit,
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Guardar PIN'),
+                    icon: const material.Icon(material.Icons.check_circle_outline),
+                    label: const material.Text('Guardar PIN'),
                   ),
-                  const SizedBox(height: 12),
+                  const material.SizedBox(height: 12),
                   if (!isExistingUser)
-                    TextButton.icon(
+                    material.TextButton.icon(
                       onPressed: isLoading
                           ? null
                           : () {
-                              Navigator.of(context)
+                              material.Navigator.of(context)
                                   .pushNamed(ExistingAccountLoginScreen.routeName);
                             },
-                      icon: const Icon(Icons.person_search),
-                      label: const Text('Ya tengo cuenta'),
+                      icon: const material.Icon(material.Icons.person_search),
+                      label: const material.Text('Ya tengo cuenta'),
                     ),
-                  const SizedBox(height: 12),
+                  const material.SizedBox(height: 12),
                   if (_errorMessage != null)
-                    Text(
+                    material.Text(
                       _errorMessage!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
-                      textAlign: TextAlign.center,
+                      style: material.TextStyle(color: material.Theme.of(context).colorScheme.error),
+                      textAlign: material.TextAlign.center,
                     ),
                   if (isLoading) ...[
-                    const SizedBox(height: 24),
-                    const CircularProgressIndicator(),
+                    const material.SizedBox(height: 24),
+                    const material.CircularProgressIndicator(),
                   ],
                 ],
               ),

@@ -135,26 +135,32 @@ class SupabaseLoanRecord {
   SupabaseLoanRecord({
     required this.id,
     required this.sharedBookId,
-    required this.fromUser,
-    required this.toUser,
+    required this.borrowerUserId,
+    required this.lenderUserId,
     required this.status,
-    required this.startDate,
+    required this.requestedAt,
+    required this.approvedAt,
     required this.dueDate,
+    required this.borrowerReturnedAt,
+    required this.lenderReturnedAt,
     required this.returnedAt,
-    required this.cancelledAt,
+    required this.isDeleted,
     required this.createdAt,
     required this.updatedAt,
   });
 
   final String id;
   final String sharedBookId;
-  final String fromUser;
-  final String toUser;
+  final String borrowerUserId;
+  final String lenderUserId;
   final String status;
-  final DateTime startDate;
+  final DateTime requestedAt;
+  final DateTime? approvedAt;
   final DateTime? dueDate;
+  final DateTime? borrowerReturnedAt;
+  final DateTime? lenderReturnedAt;
   final DateTime? returnedAt;
-  final DateTime? cancelledAt;
+  final bool isDeleted;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -165,15 +171,20 @@ class SupabaseLoanRecord {
     return SupabaseLoanRecord(
       id: json['id'] as String,
       sharedBookId: json['shared_book_id'] as String,
-      fromUser: json['from_user'] as String,
-      toUser: json['to_user'] as String,
-      status: (json['status'] as String?) ?? 'pending',
-      startDate: DateTime.parse(json['start_date'] as String),
+      borrowerUserId: json['borrower_user_id'] as String? ?? '', // Handle manual loans (null borrower)
+      lenderUserId: json['lender_user_id'] as String,
+      status: (json['status'] as String?) ?? 'requested',
+      requestedAt: DateTime.parse(json['requested_at'] as String),
+      approvedAt: tryParse(json['approved_at'] as String?),
       dueDate: tryParse(json['due_date'] as String?),
+      borrowerReturnedAt: tryParse(json['borrower_returned_at'] as String?),
+      lenderReturnedAt: tryParse(json['lender_returned_at'] as String?),
       returnedAt: tryParse(json['returned_at'] as String?),
-      cancelledAt: tryParse(json['cancelled_at'] as String?),
+      isDeleted: json['is_deleted'] is bool
+          ? json['is_deleted'] as bool
+          : (json['is_deleted'] as num?)?.toInt() == 1,
       createdAt:
-          DateTime.parse((json['created_at'] ?? json['start_date']) as String),
+          DateTime.parse((json['created_at'] ?? json['requested_at']) as String),
       updatedAt: tryParse(json['updated_at'] as String?),
     );
   }
@@ -265,7 +276,7 @@ class SupabaseGroupService {
             'id,name,description,owner_id,created_at,'
             'group_members(id,user_id,role,created_at),'
             'shared_books(id,group_id,book_uuid,owner_id,visibility,is_available,created_at,updated_at,'
-            'loans(id,shared_book_id,from_user,to_user,status,start_date,due_date,returned_at,cancelled_at,created_at,updated_at)),'
+            'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at)),'
             'group_invitations(id,group_id,inviter_id,accepted_user_id,role,code,status,expires_at,responded_at,created_at,updated_at)',
       },
     );
@@ -305,7 +316,7 @@ class SupabaseGroupService {
       queryParameters: {
         'select':
             'id,group_id,book_uuid,owner_id,visibility,is_available,created_at,updated_at,'
-            'loans(id,shared_book_id,from_user,to_user,status,start_date,due_date,returned_at,cancelled_at,created_at,updated_at)',
+            'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at)',
         'group_id': 'eq.$groupId',
         'order': 'created_at.desc',
       },
@@ -345,6 +356,10 @@ class SupabaseGroupService {
     required String groupId,
     required String bookUuid,
     required String ownerId,
+    required String title,
+    String? author,
+    String? isbn,
+    String? coverUrl,
     required String visibility,
     required bool isAvailable,
     required bool isDeleted,
@@ -360,6 +375,10 @@ class SupabaseGroupService {
       'group_id': groupId,
       'book_uuid': bookUuid,
       'owner_id': ownerId,
+      'title': title,
+      'author': author,
+      'isbn': isbn,
+      'cover_url': coverUrl,
       'visibility': visibility,
       'is_available': isAvailable,
       'is_deleted': isDeleted,
@@ -464,6 +483,130 @@ class SupabaseGroupService {
 
     final payload = <String, dynamic>{
       'is_deleted': true,
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+    };
+
+    final response = await _client.patch(
+      uri,
+      headers: _buildHeaders(
+        config,
+        accessToken: accessToken,
+      ),
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode == 404) {
+      return false;
+    }
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return true;
+    }
+
+    throw SupabaseGroupServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+    );
+  }
+
+  Future<String> createLoan({
+    required String id,
+    required String sharedBookId,
+    required String? borrowerUserId,
+    required String lenderUserId,
+    String? externalBorrowerName,
+    String? externalBorrowerContact,
+    required String status,
+    required DateTime requestedAt,
+    DateTime? approvedAt,
+    DateTime? dueDate,
+    DateTime? borrowerReturnedAt,
+    DateTime? lenderReturnedAt,
+    DateTime? returnedAt,
+    required bool isDeleted,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/loans');
+
+    final payload = <String, dynamic>{
+      'id': id,
+      'shared_book_id': sharedBookId,
+      'borrower_user_id': borrowerUserId,
+      'lender_user_id': lenderUserId,
+      'external_borrower_name': externalBorrowerName,
+      'external_borrower_contact': externalBorrowerContact,
+      'status': status,
+      'requested_at': requestedAt.toUtc().toIso8601String(),
+      'approved_at': approvedAt?.toUtc().toIso8601String(),
+      'due_date': dueDate?.toUtc().toIso8601String(),
+      'borrower_returned_at': borrowerReturnedAt?.toUtc().toIso8601String(),
+      'lender_returned_at': lenderReturnedAt?.toUtc().toIso8601String(),
+      'returned_at': returnedAt?.toUtc().toIso8601String(),
+      'is_deleted': isDeleted,
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+    };
+
+    final response = await _client.post(
+      uri,
+      headers: _buildHeaders(
+        config,
+        accessToken: accessToken,
+        preferRepresentation: true,
+      ),
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) {
+        return id;
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is List && decoded.isNotEmpty) {
+        final first = decoded.first;
+        if (first is Map<String, dynamic>) {
+          return (first['id'] as String?) ?? id;
+        }
+      } else if (decoded is Map<String, dynamic>) {
+        return (decoded['id'] as String?) ?? id;
+      }
+      return id;
+    }
+
+    throw SupabaseGroupServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+    );
+  }
+
+  Future<bool> updateLoan({
+    required String id,
+    required String status,
+    DateTime? approvedAt,
+    DateTime? dueDate,
+    DateTime? borrowerReturnedAt,
+    DateTime? lenderReturnedAt,
+    DateTime? returnedAt,
+    required bool isDeleted,
+    required DateTime updatedAt,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/loans').replace(
+      queryParameters: {
+        'id': 'eq.$id',
+      },
+    );
+
+    final payload = <String, dynamic>{
+      'status': status,
+      'approved_at': approvedAt?.toUtc().toIso8601String(),
+      'due_date': dueDate?.toUtc().toIso8601String(),
+      'borrower_returned_at': borrowerReturnedAt?.toUtc().toIso8601String(),
+      'lender_returned_at': lenderReturnedAt?.toUtc().toIso8601String(),
+      'returned_at': returnedAt?.toUtc().toIso8601String(),
+      'is_deleted': isDeleted,
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
 

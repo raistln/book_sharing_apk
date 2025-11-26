@@ -28,6 +28,7 @@ import '../../../providers/settings_providers.dart';
 import '../../../providers/stats_providers.dart';
 import '../../../providers/theme_providers.dart';
 import '../../../services/book_export_service.dart';
+import '../../../services/loan_export_service.dart';
 import '../../../services/coach_marks/coach_mark_controller.dart';
 import '../../../services/coach_marks/coach_mark_models.dart';
 import '../../../services/cover_image_service_base.dart';
@@ -530,7 +531,7 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final sharedBooksAsync = ref.watch(sharedBookDetailsProvider(widget.group.id));
-    final loansAsync = ref.watch(groupLoanDetailsProvider(widget.group.id));
+    final loansAsync = ref.watch(userRelevantLoansProvider(widget.group.id));
     final membersAsync = ref.watch(groupMemberDetailsProvider(widget.group.id));
     final activeUser = ref.watch(activeUserProvider).value;
     final loanState = ref.watch(loanControllerProvider);
@@ -583,7 +584,7 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
                 continue;
               }
 
-              if (activeUser != null && loanDetail.loan.fromUserId == activeUser.id) {
+              if (activeUser != null && loanDetail.loan.borrowerUserId == activeUser.id) {
                 borrowerLoan = loanDetail;
               } else {
                 otherActiveLoan = loanDetail;
@@ -608,14 +609,14 @@ class _DiscoverBookDetailPageState extends ConsumerState<_DiscoverBookDetailPage
             final canCancel = borrower != null &&
                 borrowerLoanDetail != null &&
                 borrowerLoanDetail.loan.status == 'pending' &&
-                borrowerLoanDetail.loan.fromUserId == borrower.id;
+                borrowerLoanDetail.loan.borrowerUserId == borrower.id;
             final LocalUser? owner = ownerUser;
             final LoanDetail? pendingOwnerLoan = borrowerLoanDetail != null &&
                     owner != null &&
                     activeUser != null &&
                     owner.id == activeUser.id &&
                     borrowerLoanDetail.loan.status == 'pending' &&
-                    borrowerLoanDetail.loan.toUserId == owner.id
+                    borrowerLoanDetail.loan.lenderUserId == owner.id
                 ? borrowerLoanDetail
                 : null;
 
@@ -1087,7 +1088,7 @@ class _ActiveLoansList extends ConsumerWidget {
               children: [
                 Text('Solicitante: ${loan.borrowerName}'),
                 Text('Estado: $statusLabel'),
-                Text('Inicio: ${DateFormat.yMMMd().format(loan.startDate)}'),
+                Text('Solicitado: ${DateFormat.yMMMd().format(loan.requestedAt)}'),
                 Text(
                   dueDate != null
                       ? 'Vence: ${DateFormat.yMMMd().format(dueDate)}'
@@ -2677,26 +2678,37 @@ class _BookFormSheetState extends ConsumerState<_BookFormSheet> {
                 pickingSupported: coverService.supportsPicking,
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Estado',
-                  border: OutlineInputBorder(),
+              if (_status == 'loaned')
+                TextFormField(
+                  enabled: false,
+                  initialValue: 'Prestado',
+                  decoration: const InputDecoration(
+                    labelText: 'Estado',
+                    border: OutlineInputBorder(),
+                    helperText: 'No se puede cambiar mientras hay un préstamo activo',
+                  ),
+                )
+              else
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Estado',
+                    border: OutlineInputBorder(),
+                  ),
+                  initialValue: _status,
+                  items: const [
+                    DropdownMenuItem(value: 'available', child: Text('Disponible')),
+                    DropdownMenuItem(value: 'loaned', child: Text('Prestado')),
+                    DropdownMenuItem(value: 'archived', child: Text('Archivado')),
+                    DropdownMenuItem(value: 'private', child: Text('Privado')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _status = value;
+                      });
+                    }
+                  },
                 ),
-                initialValue: _status,
-                items: const [
-                  DropdownMenuItem(value: 'available', child: Text('Disponible')),
-                  DropdownMenuItem(value: 'loaned', child: Text('Prestado')),
-                  DropdownMenuItem(value: 'archived', child: Text('Archivado')),
-                  DropdownMenuItem(value: 'private', child: Text('Privado')),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _status = value;
-                    });
-                  }
-                },
-              ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _notesController,
@@ -5253,7 +5265,7 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
     final group = widget.group;
     final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
     final sharedBooksAsync = ref.watch(sharedBookDetailsProvider(group.id));
-    final loansAsync = ref.watch(groupLoanDetailsProvider(group.id));
+    final loansAsync = ref.watch(userRelevantLoansProvider(group.id));
     final invitationsAsync = ref.watch(groupInvitationDetailsProvider(group.id));
     final activeUserAsync = ref.watch(activeUserProvider);
     final activeUser = activeUserAsync.value;
@@ -5549,12 +5561,13 @@ class _LoansSection extends StatelessWidget {
               final loan = detail.loan;
               final bookTitle = detail.book?.title ?? 'Libro';
               final status = loan.status;
-              final start = DateFormat.yMd().format(loan.startDate);
+              final start = DateFormat.yMd().format(loan.requestedAt);
               final due = loan.dueDate != null
                   ? DateFormat.yMd().format(loan.dueDate!)
                   : 'Sin fecha límite';
-              final isBorrower = activeUser != null && loan.fromUserId == activeUser!.id;
-              final isOwner = activeUser != null && loan.toUserId == activeUser!.id;
+              final isBorrower = activeUser != null && loan.borrowerUserId == activeUser!.id;
+              final isOwner = activeUser != null && loan.lenderUserId == activeUser!.id;
+              final isManualLoan = loan.externalBorrowerName != null;
 
               return Card(
                 margin: EdgeInsets.zero,
@@ -5581,7 +5594,7 @@ class _LoansSection extends StatelessWidget {
                       if (detail.borrower != null || detail.owner != null) ...[
                         const SizedBox(height: 4),
                         Text(
-                          'Solicitante: ${_resolveUserName(detail.borrower)} · '
+                          'Solicitante: ${loan.externalBorrowerName ?? _resolveUserName(detail.borrower)} · '
                           'Propietario: ${_resolveUserName(detail.owner)}',
                           style: theme.textTheme.bodySmall,
                         ),
@@ -5615,7 +5628,7 @@ class _LoansSection extends StatelessWidget {
                               label: const Text('Rechazar'),
                             ),
                           ],
-                          if ((isOwner || isBorrower) && loan.status == 'accepted') ...[
+                          if (((isOwner || isBorrower) && !isManualLoan || (isOwner && isManualLoan)) && loan.status == 'active') ...[
                             FilledButton.icon(
                               onPressed: loanState.isLoading
                                   ? null
@@ -5988,7 +6001,7 @@ class _DiscoverGroupPageState extends ConsumerState<_DiscoverGroupPage> {
     final activeUser = ref.watch(activeUserProvider).value;
     final ownBooksAsync = ref.watch(bookListProvider);
     final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
-    final loansAsync = ref.watch(groupLoanDetailsProvider(group.id));
+    final loansAsync = ref.watch(userRelevantLoansProvider(group.id));
     final showLargeDatasetNotice = state.isLargeDataset && state.searchQuery.isEmpty;
 
     return Scaffold(
@@ -6599,7 +6612,13 @@ class _StatsContent extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Estadísticas generales', style: theme.textTheme.headlineSmall),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Estadísticas generales', style: theme.textTheme.headlineSmall),
+              _ExportLoansButton(onExport: () => _handleExportLoans(context, ref)),
+            ],
+          ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 16,
@@ -7537,5 +7556,63 @@ class _PlaceholderTab extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// Export Loans Button Widget
+class _ExportLoansButton extends StatelessWidget {
+  const _ExportLoansButton({required this.onExport});
+
+  final VoidCallback onExport;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.icon(
+      onPressed: onExport,
+      icon: const Icon(Icons.download),
+      label: const Text('Exportar'),
+    );
+  }
+}
+
+// Export Handler Function
+Future<void> _handleExportLoans(BuildContext context, WidgetRef ref) async {
+  final activeUser = ref.read(activeUserProvider).value;
+  if (activeUser == null) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo identificar el usuario activo')),
+      );
+    }
+    return;
+  }
+
+  try {
+    final dao = ref.read(groupDaoProvider);
+    final loans = await dao.getAllLoanDetails();
+
+    final exportService = LoanExportService();
+    final result = await exportService.exportLoans(
+      loanDetails: loans,
+      activeUser: activeUser,
+    );
+
+    await FileSaver.instance.saveFile(
+      name: result.fileName,
+      bytes: result.bytes,
+      mimeType: MimeType.csv,
+    );
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Historial exportado correctamente')),
+      );
+    }
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al exportar: $error')),
+      );
+    }
   }
 }

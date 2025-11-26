@@ -249,7 +249,6 @@ class SupabaseGroupSyncRepository {
               Value(remoteShared.updatedAt ?? remoteShared.createdAt);
 
           int localSharedId;
-          String localSharedUuid;
 
           if (existingShared != null) {
             await _groupDao.updateSharedBookFields(
@@ -270,7 +269,6 @@ class SupabaseGroupSyncRepository {
               ),
             );
             localSharedId = existingShared.id;
-            localSharedUuid = existingShared.uuid;
             if (kDebugMode) {
               debugPrint('[GroupSync] Updated shared book ${remoteShared.id} for group $localGroupUuid');
             }
@@ -293,19 +291,18 @@ class SupabaseGroupSyncRepository {
               updatedAt: sharedUpdatedValue,
             );
             localSharedId = await _groupDao.insertSharedBook(insertShared);
-            localSharedUuid = remoteShared.id;
             if (kDebugMode) {
               debugPrint('[GroupSync] Inserted shared book ${remoteShared.id} for group $localGroupUuid');
             }
           }
 
           for (final remoteLoan in remoteShared.loans) {
-            final fromUser = await _userDao.findByRemoteId(remoteLoan.fromUser);
-            final toUser = await _userDao.findByRemoteId(remoteLoan.toUser);
+            final borrower = await _userDao.findByRemoteId(remoteLoan.borrowerUserId);
+            final lender = await _userDao.findByRemoteId(remoteLoan.lenderUserId);
 
-            if (fromUser == null || toUser == null) {
+            if (borrower == null || lender == null) {
               if (kDebugMode) {
-                debugPrint('[GroupSync] Skipping loan ${remoteLoan.id} — from=${remoteLoan.fromUser} to=${remoteLoan.toUser} missing locally');
+                debugPrint('[GroupSync] Skipping loan ${remoteLoan.id} — borrower=${remoteLoan.borrowerUserId} lender=${remoteLoan.lenderUserId} missing locally');
               }
               continue;
             }
@@ -319,24 +316,29 @@ class SupabaseGroupSyncRepository {
             final returnedAtValue = remoteLoan.returnedAt != null
                 ? Value(remoteLoan.returnedAt)
                 : const Value<DateTime?>.absent();
-            final cancelledAtValue = remoteLoan.cancelledAt != null
-                ? Value(remoteLoan.cancelledAt)
+            final approvedAtValue = remoteLoan.approvedAt != null
+                ? Value(remoteLoan.approvedAt)
+                : const Value<DateTime?>.absent();
+            final borrowerReturnedAtValue = remoteLoan.borrowerReturnedAt != null
+                ? Value(remoteLoan.borrowerReturnedAt)
+                : const Value<DateTime?>.absent();
+            final lenderReturnedAtValue = remoteLoan.lenderReturnedAt != null
+                ? Value(remoteLoan.lenderReturnedAt)
                 : const Value<DateTime?>.absent();
             final loanUpdatedValue =
                 Value(remoteLoan.updatedAt ?? remoteLoan.createdAt);
 
             final baseLoan = LoansCompanion(
               sharedBookId: Value(localSharedId),
-              sharedBookUuid: Value(localSharedUuid),
-              fromUserId: Value(fromUser.id),
-              fromRemoteId: Value(remoteLoan.fromUser),
-              toUserId: Value(toUser.id),
-              toRemoteId: Value(remoteLoan.toUser),
+              borrowerUserId: Value(borrower.id),
+              lenderUserId: Value(lender.id),
               status: Value(remoteLoan.status),
-              startDate: Value(remoteLoan.startDate),
+              requestedAt: Value(remoteLoan.requestedAt),
+              approvedAt: approvedAtValue,
               dueDate: dueDateValue,
+              borrowerReturnedAt: borrowerReturnedAtValue,
+              lenderReturnedAt: lenderReturnedAtValue,
               returnedAt: returnedAtValue,
-              cancelledAt: cancelledAtValue,
               isDeleted: const Value(false),
               isDirty: const Value(false),
               syncedAt: Value(now),
@@ -354,16 +356,15 @@ class SupabaseGroupSyncRepository {
                   uuid: remoteLoan.id,
                   remoteId: Value(remoteLoan.id),
                   sharedBookId: localSharedId,
-                  sharedBookUuid: localSharedUuid,
-                  fromUserId: Value(fromUser.id),
-                  fromRemoteId: Value(remoteLoan.fromUser),
-                  toUserId: toUser.id,
-                  toRemoteId: Value(remoteLoan.toUser),
+                  borrowerUserId: Value(borrower.id),
+                  lenderUserId: lender.id,
                   status: Value(remoteLoan.status),
-                  startDate: Value(remoteLoan.startDate),
+                  requestedAt: Value(remoteLoan.requestedAt),
+                  approvedAt: approvedAtValue,
                   dueDate: dueDateValue,
+                  borrowerReturnedAt: borrowerReturnedAtValue,
+                  lenderReturnedAt: lenderReturnedAtValue,
                   returnedAt: returnedAtValue,
-                  cancelledAt: cancelledAtValue,
                   isDeleted: const Value(false),
                   isDirty: const Value(false),
                   syncedAt: Value(now),
@@ -380,123 +381,95 @@ class SupabaseGroupSyncRepository {
 
   Future<void> pushLocalChanges({String? accessToken}) async {
     final dirtySharedBooks = await _groupDao.getDirtySharedBooks();
-    if (dirtySharedBooks.isEmpty) {
-      if (kDebugMode) {
-        debugPrint('[GroupSync] No shared_books pending upload.');
-      }
-      return;
-    }
-
-    final syncTime = DateTime.now();
     if (kDebugMode) {
-      debugPrint('[GroupSync] Uploading ${dirtySharedBooks.length} shared book(s) to Supabase');
+      debugPrint('[GroupSync] Found ${dirtySharedBooks.length} dirty shared books');
     }
+    if (dirtySharedBooks.isNotEmpty) {
+      final syncTime = DateTime.now();
+      if (kDebugMode) {
+        debugPrint('[GroupSync] Uploading ${dirtySharedBooks.length} shared book(s) to Supabase');
+      }
 
-    for (final shared in dirtySharedBooks) {
-      if (shared.isDeleted) {
-        final remoteId = shared.remoteId;
+      for (final shared in dirtySharedBooks) {
+        if (shared.isDeleted) {
+          final remoteId = shared.remoteId;
 
-        if (remoteId != null && remoteId.isNotEmpty) {
-          try {
-            await _groupService.deleteSharedBook(
-              id: remoteId,
-              updatedAt: shared.updatedAt,
-              accessToken: accessToken,
-            );
-          } catch (error) {
-            if (kDebugMode) {
-              debugPrint('[GroupSync] Failed to delete shared book ${shared.uuid} remotely: $error');
+          if (remoteId != null && remoteId.isNotEmpty) {
+            try {
+              await _groupService.deleteSharedBook(
+                id: remoteId,
+                updatedAt: shared.updatedAt,
+                accessToken: accessToken,
+              );
+            } catch (error) {
+              if (kDebugMode) {
+                debugPrint('[GroupSync] Failed to delete shared book ${shared.uuid} remotely: $error');
+              }
+              rethrow;
             }
-            rethrow;
           }
-        }
 
-        await _groupDao.updateSharedBookFields(
-          sharedBookId: shared.id,
-          entry: SharedBooksCompanion(
-            isDirty: const Value(false),
-            syncedAt: Value(syncTime),
-          ),
-        );
-        continue;
-      }
-
-      final group = await _groupDao.findGroupById(shared.groupId);
-      if (group == null) {
-        if (kDebugMode) {
-          debugPrint('[GroupSync] Skipping shared book ${shared.uuid}: group ${shared.groupId} missing locally');
-        }
-        continue;
-      }
-
-      final groupRemoteId = group.remoteId;
-      if (groupRemoteId == null || groupRemoteId.isEmpty) {
-        if (kDebugMode) {
-          debugPrint('[GroupSync] Skipping shared book ${shared.uuid}: group ${group.id} lacks remoteId');
-        }
-        continue;
-      }
-
-      final owner = await _userDao.getById(shared.ownerUserId);
-      final ownerRemoteId = (shared.ownerRemoteId != null && shared.ownerRemoteId!.isNotEmpty)
-          ? shared.ownerRemoteId!
-          : owner?.remoteId;
-      if (ownerRemoteId == null || ownerRemoteId.isEmpty) {
-        if (kDebugMode) {
-          debugPrint('[GroupSync] Skipping shared book ${shared.uuid}: owner ${shared.ownerUserId} lacks remoteId');
-        }
-        continue;
-      }
-
-      final book = await _bookDao.findById(shared.bookId);
-      final remoteBookId = book?.remoteId ?? shared.bookUuid;
-      if (remoteBookId.isEmpty) {
-        if (kDebugMode) {
-          debugPrint('[GroupSync] Skipping shared book ${shared.uuid}: book ${shared.bookId} lacks remoteId');
-        }
-        continue;
-      }
-
-      final provisionalRemoteId = shared.remoteId ?? shared.uuid;
-
-      try {
-        var ensuredRemoteId = provisionalRemoteId;
-
-        if (shared.remoteId == null) {
-          ensuredRemoteId = await _groupService.createSharedBook(
-            id: provisionalRemoteId,
-            groupId: groupRemoteId,
-            bookUuid: remoteBookId,
-            ownerId: ownerRemoteId,
-            visibility: shared.visibility,
-            isAvailable: shared.isAvailable,
-            isDeleted: shared.isDeleted,
-            createdAt: shared.createdAt,
-            updatedAt: shared.updatedAt,
-            accessToken: accessToken,
+          await _groupDao.updateSharedBookFields(
+            sharedBookId: shared.id,
+            entry: SharedBooksCompanion(
+              isDirty: const Value(false),
+              syncedAt: Value(syncTime),
+            ),
           );
+          continue;
+        }
+
+        final group = await _groupDao.findGroupById(shared.groupId);
+        if (group == null) {
           if (kDebugMode) {
-            debugPrint('[GroupSync] Created remote shared book ${shared.uuid} -> $ensuredRemoteId');
+            debugPrint('[GroupSync] Skipping shared book ${shared.uuid}: group ${shared.groupId} missing locally');
           }
-        } else {
-          final updated = await _groupService.updateSharedBook(
-            id: provisionalRemoteId,
-            groupId: groupRemoteId,
-            bookUuid: remoteBookId,
-            ownerId: ownerRemoteId,
-            visibility: shared.visibility,
-            isAvailable: shared.isAvailable,
-            isDeleted: shared.isDeleted,
-            updatedAt: shared.updatedAt,
-            accessToken: accessToken,
-          );
+          continue;
+        }
 
-          if (!updated) {
+        final groupRemoteId = group.remoteId;
+        if (groupRemoteId == null || groupRemoteId.isEmpty) {
+          if (kDebugMode) {
+            debugPrint('[GroupSync] Skipping shared book ${shared.uuid}: group ${group.id} lacks remoteId');
+          }
+          continue;
+        }
+
+        final owner = await _userDao.getById(shared.ownerUserId);
+        final ownerRemoteId = (shared.ownerRemoteId != null && shared.ownerRemoteId!.isNotEmpty)
+            ? shared.ownerRemoteId!
+            : owner?.remoteId;
+        if (ownerRemoteId == null || ownerRemoteId.isEmpty) {
+          if (kDebugMode) {
+            debugPrint('[GroupSync] Skipping shared book ${shared.uuid}: owner ${shared.ownerUserId} lacks remoteId');
+          }
+          continue;
+        }
+
+        final book = await _bookDao.findById(shared.bookId);
+        final remoteBookId = book?.remoteId ?? shared.bookUuid;
+        if (remoteBookId.isEmpty) {
+          if (kDebugMode) {
+            debugPrint('[GroupSync] Skipping shared book ${shared.uuid}: book ${shared.bookId} lacks remoteId');
+          }
+          continue;
+        }
+
+        final provisionalRemoteId = shared.remoteId ?? shared.uuid;
+
+        try {
+          var ensuredRemoteId = provisionalRemoteId;
+
+          if (shared.remoteId == null) {
             ensuredRemoteId = await _groupService.createSharedBook(
               id: provisionalRemoteId,
               groupId: groupRemoteId,
               bookUuid: remoteBookId,
               ownerId: ownerRemoteId,
+              title: book?.title ?? '',
+              author: book?.author,
+              isbn: book?.isbn,
+              coverUrl: book?.coverPath,
               visibility: shared.visibility,
               isAvailable: shared.isAvailable,
               isDeleted: shared.isDeleted,
@@ -505,25 +478,186 @@ class SupabaseGroupSyncRepository {
               accessToken: accessToken,
             );
             if (kDebugMode) {
-              debugPrint('[GroupSync] Remote shared book ${shared.uuid} missing, recreated as $ensuredRemoteId');
+              debugPrint('[GroupSync] Created remote shared book ${shared.uuid} -> $ensuredRemoteId');
+            }
+          } else {
+            final updated = await _groupService.updateSharedBook(
+              id: provisionalRemoteId,
+              groupId: groupRemoteId,
+              bookUuid: remoteBookId,
+              ownerId: ownerRemoteId,
+              visibility: shared.visibility,
+              isAvailable: shared.isAvailable,
+              isDeleted: shared.isDeleted,
+              updatedAt: shared.updatedAt,
+              accessToken: accessToken,
+            );
+
+            if (!updated) {
+              ensuredRemoteId = await _groupService.createSharedBook(
+                id: provisionalRemoteId,
+                groupId: groupRemoteId,
+                bookUuid: remoteBookId,
+                ownerId: ownerRemoteId,
+                title: book?.title ?? '',
+                author: book?.author,
+                isbn: book?.isbn,
+                coverUrl: book?.coverPath,
+                visibility: shared.visibility,
+                isAvailable: shared.isAvailable,
+                isDeleted: shared.isDeleted,
+                createdAt: shared.createdAt,
+                updatedAt: shared.updatedAt,
+                accessToken: accessToken,
+              );
+              if (kDebugMode) {
+                debugPrint('[GroupSync] Remote shared book ${shared.uuid} missing, recreated as $ensuredRemoteId');
+              }
             }
           }
-        }
 
-        await _groupDao.updateSharedBookFields(
-          sharedBookId: shared.id,
-          entry: SharedBooksCompanion(
-            remoteId: Value(ensuredRemoteId),
-            ownerRemoteId: Value(ownerRemoteId),
-            isDirty: const Value(false),
-            syncedAt: Value(syncTime),
-          ),
-        );
-      } catch (error) {
-        if (kDebugMode) {
-          debugPrint('[GroupSync] Failed to push shared book ${shared.uuid}: $error');
+          await _groupDao.updateSharedBookFields(
+            sharedBookId: shared.id,
+            entry: SharedBooksCompanion(
+              remoteId: Value(ensuredRemoteId),
+              ownerRemoteId: Value(ownerRemoteId),
+              isDirty: const Value(false),
+              syncedAt: Value(syncTime),
+            ),
+          );
+        } catch (error) {
+          if (kDebugMode) {
+            debugPrint('[GroupSync] Failed to push shared book ${shared.uuid}: $error');
+          }
+          rethrow;
         }
-        rethrow;
+      }
+    }
+
+    final dirtyLoans = await _groupDao.getDirtyLoans();
+    if (kDebugMode) {
+      debugPrint('[GroupSync] Found ${dirtyLoans.length} dirty loans');
+    }
+    if (dirtyLoans.isNotEmpty) {
+      final syncTime = DateTime.now();
+      if (kDebugMode) {
+        debugPrint('[GroupSync] Uploading ${dirtyLoans.length} loan(s) to Supabase');
+      }
+
+      for (final loan in dirtyLoans) {
+        try {
+          final sharedBook = await _groupDao.findSharedBookById(loan.sharedBookId);
+          if (sharedBook == null || sharedBook.remoteId == null) {
+            if (kDebugMode) {
+              debugPrint('[GroupSync] Skipping loan ${loan.uuid}: shared book ${loan.sharedBookId} missing remoteId (book found: ${sharedBook != null})');
+            }
+            continue;
+          }
+
+          final lender = await _userDao.getById(loan.lenderUserId);
+          if (lender == null || lender.remoteId == null) {
+            if (kDebugMode) {
+              debugPrint('[GroupSync] Skipping loan ${loan.uuid}: lender ${loan.lenderUserId} missing remoteId (lender found: ${lender != null})');
+            }
+            continue;
+          }
+
+          String? borrowerRemoteId;
+          if (loan.borrowerUserId != null) {
+            final borrower = await _userDao.getById(loan.borrowerUserId!);
+            if (borrower == null || borrower.remoteId == null) {
+              if (kDebugMode) {
+                debugPrint('[GroupSync] Skipping loan ${loan.uuid}: borrower ${loan.borrowerUserId} missing remoteId');
+              }
+              continue;
+            }
+            borrowerRemoteId = borrower.remoteId;
+          }
+
+          final provisionalRemoteId = loan.remoteId ?? loan.uuid;
+          var ensuredRemoteId = provisionalRemoteId;
+
+          if (kDebugMode) {
+            debugPrint('[GroupSync] Syncing loan ${loan.uuid} (manual: ${loan.externalBorrowerName != null})');
+          }
+
+          if (loan.remoteId == null) {
+             ensuredRemoteId = await _groupService.createLoan(
+              id: provisionalRemoteId,
+              sharedBookId: sharedBook.remoteId!,
+              borrowerUserId: borrowerRemoteId,
+              lenderUserId: lender.remoteId!,
+              externalBorrowerName: loan.externalBorrowerName,
+              externalBorrowerContact: loan.externalBorrowerContact,
+              status: loan.status,
+              requestedAt: loan.requestedAt,
+              approvedAt: loan.approvedAt,
+              dueDate: loan.dueDate,
+              borrowerReturnedAt: loan.borrowerReturnedAt,
+              lenderReturnedAt: loan.lenderReturnedAt,
+              returnedAt: loan.returnedAt,
+              isDeleted: loan.isDeleted,
+              createdAt: loan.createdAt,
+              updatedAt: loan.updatedAt,
+              accessToken: accessToken,
+            );
+            if (kDebugMode) {
+              debugPrint('[GroupSync] Created remote loan ${loan.uuid} -> $ensuredRemoteId');
+            }
+          } else {
+            final updated = await _groupService.updateLoan(
+              id: provisionalRemoteId,
+              status: loan.status,
+              approvedAt: loan.approvedAt,
+              dueDate: loan.dueDate,
+              borrowerReturnedAt: loan.borrowerReturnedAt,
+              lenderReturnedAt: loan.lenderReturnedAt,
+              returnedAt: loan.returnedAt,
+              isDeleted: loan.isDeleted,
+              updatedAt: loan.updatedAt,
+              accessToken: accessToken,
+            );
+
+            if (!updated) {
+               ensuredRemoteId = await _groupService.createLoan(
+                id: provisionalRemoteId,
+                sharedBookId: sharedBook.remoteId!,
+                borrowerUserId: borrowerRemoteId,
+                lenderUserId: lender.remoteId!,
+                externalBorrowerName: loan.externalBorrowerName,
+                externalBorrowerContact: loan.externalBorrowerContact,
+                status: loan.status,
+                requestedAt: loan.requestedAt,
+                approvedAt: loan.approvedAt,
+                dueDate: loan.dueDate,
+                borrowerReturnedAt: loan.borrowerReturnedAt,
+                lenderReturnedAt: loan.lenderReturnedAt,
+                returnedAt: loan.returnedAt,
+                isDeleted: loan.isDeleted,
+                createdAt: loan.createdAt,
+                updatedAt: loan.updatedAt,
+                accessToken: accessToken,
+              );
+              if (kDebugMode) {
+                debugPrint('[GroupSync] Remote loan ${loan.uuid} missing, recreated as $ensuredRemoteId');
+              }
+            }
+          }
+
+          await _groupDao.updateLoanFields(
+            loanId: loan.id,
+            entry: LoansCompanion(
+              remoteId: Value(ensuredRemoteId),
+              isDirty: const Value(false),
+              syncedAt: Value(syncTime),
+            ),
+          );
+        } catch (error) {
+          if (kDebugMode) {
+            debugPrint('[GroupSync] Failed to push loan ${loan.uuid}: $error');
+          }
+          // Don't rethrow, continue with other loans
+        }
       }
     }
   }

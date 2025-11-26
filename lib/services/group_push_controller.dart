@@ -75,6 +75,13 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         owner: owner,
         accessToken: accessToken,
       );
+      
+      // Automatically share existing books with the new group
+      await _bookRepository.shareExistingBooksWithGroup(
+        group: group,
+        owner: owner,
+      );
+
       _groupSyncController.markPendingChanges();
       state = state.copyWith(
         isLoading: false,

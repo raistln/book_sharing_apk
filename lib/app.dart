@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/auth_providers.dart';
+import 'providers/book_providers.dart';
 import 'providers/notification_providers.dart';
 import 'providers/theme_providers.dart';
 import 'ui/screens/auth/lock_screen.dart';
@@ -17,13 +19,69 @@ import 'ui/widgets/coach_mark_host.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
-class BookSharingApp extends ConsumerWidget {
+class BookSharingApp extends ConsumerStatefulWidget {
   const BookSharingApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BookSharingApp> createState() => _BookSharingAppState();
+}
+
+class _BookSharingAppState extends ConsumerState<BookSharingApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (kDebugMode) {
+      debugPrint('[AppLifecycle] State changed to: $state');
+    }
+    
+    if (state == AppLifecycleState.resumed) {
+      // Sync when app comes back to foreground
+      final authState = ref.read(authControllerProvider);
+      if (authState.status == AuthStatus.unlocked) {
+        if (kDebugMode) debugPrint('[AppLifecycle] App resumed & unlocked -> Syncing & Starting AutoSync');
+        ref.read(groupSyncControllerProvider.notifier).syncGroups();
+        ref.read(groupSyncControllerProvider.notifier).startAutoSync();
+      } else {
+        if (kDebugMode) debugPrint('[AppLifecycle] App resumed but auth status is ${authState.status} -> No action');
+      }
+    } else if (state == AppLifecycleState.paused) {
+      // Stop auto-sync when app goes to background to save battery
+      if (kDebugMode) debugPrint('[AppLifecycle] App paused -> Stopping AutoSync');
+      ref.read(groupSyncControllerProvider.notifier).stopAutoSync();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Ensure notification intent notifier is instantiated.
     ref.watch(notificationIntentProvider);
+    
+    // Listen to auth changes to start/stop auto-sync (must be in build)
+    ref.listen<AuthState>(authControllerProvider, (previous, next) {
+      if (kDebugMode) {
+        debugPrint('[AuthListener] Auth status changed: ${previous?.status} -> ${next.status}');
+      }
+      
+      if (next.status == AuthStatus.unlocked && previous?.status != AuthStatus.unlocked) {
+        if (kDebugMode) debugPrint('[AuthListener] Auth unlocked -> Starting AutoSync');
+        ref.read(groupSyncControllerProvider.notifier).startAutoSync();
+      } else if (next.status != AuthStatus.unlocked && previous?.status == AuthStatus.unlocked) {
+        if (kDebugMode) debugPrint('[AuthListener] Auth locked/other -> Stopping AutoSync');
+        ref.read(groupSyncControllerProvider.notifier).stopAutoSync();
+      }
+    });
 
     ref.listen<NotificationIntent?>(notificationIntentProvider, (previous, next) {
       if (next == null) {

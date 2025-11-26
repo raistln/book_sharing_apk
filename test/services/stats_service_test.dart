@@ -111,11 +111,10 @@ void main() {
       LoansCompanion.insert(
         uuid: uuid,
         sharedBookId: sharedBookId,
-        sharedBookUuid: 'shared-book-uuid',
-        fromUserId: Value(borrowerUser.id),
-        toUserId: owner.id,
+        borrowerUserId: Value(borrowerUser.id),
+        lenderUserId: owner.id,
         status: Value(status),
-        startDate: Value(DateTime(2024, 1, 1)),
+        requestedAt: Value(DateTime(2024, 1, 1)),
         dueDate: dueDate != null ? Value(dueDate) : const Value.absent(),
         isDirty: const Value(false),
         isDeleted: const Value(false),
@@ -164,14 +163,14 @@ void main() {
     final secondBorrower = (await userDao.getById(secondBorrowerId))!;
 
     await seedLoan(
-      uuid: 'loan-accepted',
-      status: 'accepted',
+      uuid: 'loan-active',
+      status: 'active',
       dueDate: DateTime(2024, 2, 1),
     );
 
     await seedLoan(
-      uuid: 'loan-pending',
-      status: 'pending',
+      uuid: 'loan-requested',
+      status: 'requested',
       borrowerOverride: borrower,
       dueDate: DateTime(2024, 1, 15),
     );
@@ -180,11 +179,10 @@ void main() {
       LoansCompanion.insert(
         uuid: 'loan-returned',
         sharedBookId: sharedBookId,
-        sharedBookUuid: 'shared-book-uuid',
-        fromUserId: Value(borrower.id),
-        toUserId: owner.id,
+        borrowerUserId: Value(borrower.id),
+        lenderUserId: owner.id,
         status: const Value('returned'),
-        startDate: Value(DateTime(2024, 1, 5)),
+        requestedAt: Value(DateTime(2024, 1, 5)),
         returnedAt: Value(DateTime(2024, 1, 20)),
         isDirty: const Value(false),
         isDeleted: const Value(false),
@@ -197,11 +195,10 @@ void main() {
       LoansCompanion.insert(
         uuid: 'loan-expired',
         sharedBookId: otherSharedBookId,
-        sharedBookUuid: 'shared-book-uuid-2',
-        fromUserId: Value(secondBorrower.id),
-        toUserId: owner.id,
+        borrowerUserId: Value(secondBorrower.id),
+        lenderUserId: owner.id,
         status: const Value('expired'),
-        startDate: Value(DateTime(2024, 1, 10)),
+        requestedAt: Value(DateTime(2024, 1, 10)),
         dueDate: Value(DateTime(2024, 1, 25)),
         isDirty: const Value(false),
         isDeleted: const Value(false),
@@ -219,21 +216,21 @@ void main() {
     expect(summary.expiredLoans, 1);
 
     final activeLoanByUuid = {for (final loan in summary.activeLoanDetails) loan.loanUuid: loan};
-    final acceptedLoan = activeLoanByUuid['loan-accepted'];
-    final pendingLoan = activeLoanByUuid['loan-pending'];
+    final activeLoan = activeLoanByUuid['loan-active'];
+    final requestedLoan = activeLoanByUuid['loan-requested'];
 
-    expect(acceptedLoan, isNotNull);
-    expect(acceptedLoan!.bookTitle, 'Book Title');
-    expect(acceptedLoan.borrowerName, 'Borrower');
-    expect(acceptedLoan.status, 'accepted');
-    expect(acceptedLoan.groupId, groupId);
-    expect(acceptedLoan.sharedBookId, sharedBookId);
-    expect(acceptedLoan.dueDate, DateTime(2024, 2, 1));
+    expect(activeLoan, isNotNull);
+    expect(activeLoan!.bookTitle, 'Book Title');
+    expect(activeLoan.borrowerName, 'Borrower');
+    expect(activeLoan.status, 'active');
+    expect(activeLoan.groupId, groupId);
+    expect(activeLoan.sharedBookId, sharedBookId);
+    expect(activeLoan.dueDate, DateTime(2024, 2, 1));
 
-    expect(pendingLoan, isNotNull);
-    expect(pendingLoan!.status, 'pending');
-    expect(pendingLoan.groupId, groupId);
-    expect(pendingLoan.sharedBookId, sharedBookId);
+    expect(requestedLoan, isNotNull);
+    expect(requestedLoan!.status, 'requested');
+    expect(requestedLoan.groupId, groupId);
+    expect(requestedLoan.sharedBookId, sharedBookId);
 
     expect(summary.topBooks, hasLength(2));
     final topByTitle = {for (final entry in summary.topBooks) entry.title: entry};
@@ -248,11 +245,10 @@ void main() {
       LoansCompanion.insert(
         uuid: 'loan-without-book',
         sharedBookId: sharedBookId,
-        sharedBookUuid: 'shared-book-uuid',
-        fromUserId: Value(borrower.id),
-        toUserId: owner.id,
-        status: const Value('accepted'),
-        startDate: Value(DateTime(2024, 1, 1)),
+        borrowerUserId: Value(borrower.id),
+        lenderUserId: owner.id,
+        status: const Value('active'),
+        requestedAt: Value(DateTime(2024, 1, 1)),
         isDirty: const Value(false),
         isDeleted: const Value(false),
         createdAt: Value(DateTime(2024, 1, 1)),

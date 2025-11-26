@@ -124,7 +124,6 @@ class NotificationDao extends DatabaseAccessor<AppDatabase>
     int? loanId,
     String? loanUuid,
     int? sharedBookId,
-    String? sharedBookUuid,
   }) {
     return updateFields(
       notificationId: notificationId,
@@ -140,9 +139,6 @@ class NotificationDao extends DatabaseAccessor<AppDatabase>
         loanUuid: loanUuid != null ? Value(loanUuid) : const Value<String?>.absent(),
         sharedBookId:
             sharedBookId != null ? Value(sharedBookId) : const Value<int?>.absent(),
-        sharedBookUuid: sharedBookUuid != null
-            ? Value(sharedBookUuid)
-            : const Value<String?>.absent(),
       ),
     );
   }

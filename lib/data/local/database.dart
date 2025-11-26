@@ -241,29 +241,30 @@ class Loans extends Table {
 
   IntColumn get sharedBookId => integer()
       .references(SharedBooks, #id, onDelete: KeyAction.cascade)();
-  TextColumn get sharedBookUuid => text().withLength(min: 1, max: 36)();
 
-  @ReferenceName('loansRequested')
-  IntColumn get fromUserId => integer().nullable().references(LocalUsers, #id)();
-  TextColumn get fromRemoteId => text().nullable()();
+  @ReferenceName('loansBorrower')
+  IntColumn get borrowerUserId => integer().nullable().references(LocalUsers, #id)();
 
-  @ReferenceName('loansReceived')
-  IntColumn get toUserId => integer().references(LocalUsers, #id)();
-  TextColumn get toRemoteId => text().nullable()();
+  @ReferenceName('loansLender')
+  IntColumn get lenderUserId => integer().references(LocalUsers, #id)();
 
   // For manual loans (people without the app)
   TextColumn get externalBorrowerName => text().nullable()();
   TextColumn get externalBorrowerContact => text().nullable()();
 
   TextColumn get status => text()
-      .withDefault(const Constant('pending'))
+      .withDefault(const Constant('requested'))
       .withLength(min: 1, max: 32)();
 
-  DateTimeColumn get startDate =>
+  DateTimeColumn get requestedAt =>
       dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get approvedAt => dateTime().nullable()();
   DateTimeColumn get dueDate => dateTime().nullable()();
+  
+  // Double-confirmation for returns
+  DateTimeColumn get borrowerReturnedAt => dateTime().nullable()();
+  DateTimeColumn get lenderReturnedAt => dateTime().nullable()();
   DateTimeColumn get returnedAt => dateTime().nullable()();
-  DateTimeColumn get cancelledAt => dateTime().nullable()();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
@@ -271,6 +272,27 @@ class Loans extends Table {
 
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class LoanNotifications extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get loanId => integer().references(Loans, #id, onDelete: KeyAction.cascade)();
+  IntColumn get userId => integer().references(LocalUsers, #id, onDelete: KeyAction.cascade)();
+
+  TextColumn get type => text().withLength(min: 1, max: 50)(); // loan_requested, loan_approved, etc.
+  TextColumn get title => text()();
+  TextColumn get message => text()();
+  TextColumn get status => text().withDefault(const Constant('unread'))(); // unread, read, dismissed
+  
+  DateTimeColumn get readAt => dateTime().nullable()();
+  
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+  
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
 @DriftDatabase(
@@ -284,6 +306,7 @@ class Loans extends Table {
     GroupInvitations,
     Loans,
     InAppNotifications,
+    LoanNotifications,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -292,7 +315,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(

@@ -62,6 +62,37 @@ class LoanController extends StateNotifier<LoanActionState> {
     state = state.copyWith(lastSuccess: () => null);
   }
 
+  Future<Loan> createManualLoan({
+    required SharedBook sharedBook,
+    required LocalUser owner,
+    required String borrowerName,
+    required DateTime dueDate,
+    String? borrowerContact,
+  }) async {
+    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    try {
+      final result = await _loanRepository.createManualLoan(
+        sharedBook: sharedBook,
+        owner: owner,
+        borrowerName: borrowerName,
+        dueDate: dueDate,
+        borrowerContact: borrowerContact,
+      );
+      _groupSyncController.markPendingChanges();
+      state = state.copyWith(
+        isLoading: false,
+        lastSuccess: () => 'Préstamo manual registrado.',
+      );
+      return result;
+    } catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        lastError: () => error.toString(),
+      );
+      rethrow;
+    }
+  }
+
   Future<Loan> requestLoan({
     required SharedBook sharedBook,
     required LocalUser borrower,
@@ -193,34 +224,6 @@ class LoanController extends StateNotifier<LoanActionState> {
     }
   }
 
-  Future<Loan> markAsLoaned({
-    required Loan loan,
-    required LocalUser actor,
-    required DateTime dueDate,
-  }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
-    try {
-      final result = await _loanRepository.markAsLoaned(
-        loan: loan,
-        actor: actor,
-        dueDate: dueDate,
-      );
-      _groupSyncController.markPendingChanges();
-      state = state.copyWith(
-        isLoading: false,
-        lastSuccess: () => 'Libro marcado como prestado.',
-      );
-      await _scheduleLoanNotifications(result);
-      return result;
-    } catch (error) {
-      state = state.copyWith(
-        isLoading: false,
-        lastError: () => error.toString(),
-      );
-      rethrow;
-    }
-  }
-
   Future<Loan> markReturned({
     required Loan loan,
     required LocalUser actor,
@@ -285,7 +288,7 @@ class LoanController extends StateNotifier<LoanActionState> {
     final expiredId = NotificationIds.loanExpired(uuid);
     await _notificationClient.cancelMany([dueSoonId, expiredId]);
 
-    if (loan.status != 'accepted') {
+    if (loan.status != 'active') {
       return;
     }
 
@@ -293,7 +296,6 @@ class LoanController extends StateNotifier<LoanActionState> {
 
     final payload = <String, String>{
       NotificationPayloadKeys.loanId: loan.uuid,
-      NotificationPayloadKeys.sharedBookUuid: loan.sharedBookUuid,
       NotificationPayloadKeys.sharedBookId: loan.sharedBookId.toString(),
       if (sharedBook != null)
         NotificationPayloadKeys.groupId: sharedBook.groupId.toString(),
@@ -395,7 +397,7 @@ class LoanController extends StateNotifier<LoanActionState> {
       await _notificationRepository.createLoanNotification(
         type: InAppNotificationType.loanCancelled,
         loan: loan,
-        targetUserId: loan.toUserId,
+        targetUserId: loan.lenderUserId,
         actorUserId: borrower.id,
         title: 'Solicitud de préstamo cancelada',
         message: message,
@@ -409,7 +411,7 @@ class LoanController extends StateNotifier<LoanActionState> {
   }) async {
     await _runNotificationTask(() async {
       // Only notify if borrower has an account (not a manual loan)
-      if (loan.fromUserId == null) return;
+      if (loan.borrowerUserId == null) return;
 
       await _notificationRepository.markLoanNotifications(
         loanId: loan.id,
@@ -425,7 +427,7 @@ class LoanController extends StateNotifier<LoanActionState> {
       await _notificationRepository.createLoanNotification(
         type: InAppNotificationType.loanRejected,
         loan: loan,
-        targetUserId: loan.fromUserId!,
+        targetUserId: loan.borrowerUserId!,
         actorUserId: owner.id,
         title: 'Solicitud de préstamo rechazada',
         message: message,
@@ -439,7 +441,7 @@ class LoanController extends StateNotifier<LoanActionState> {
   }) async {
     await _runNotificationTask(() async {
       // Only notify if borrower has an account (not a manual loan)
-      if (loan.fromUserId == null) return;
+      if (loan.borrowerUserId == null) return;
 
       await _notificationRepository.markLoanNotifications(
         loanId: loan.id,
@@ -455,7 +457,7 @@ class LoanController extends StateNotifier<LoanActionState> {
       await _notificationRepository.createLoanNotification(
         type: InAppNotificationType.loanAccepted,
         loan: loan,
-        targetUserId: loan.fromUserId!,
+        targetUserId: loan.borrowerUserId!,
         actorUserId: owner.id,
         title: 'Préstamo aceptado',
         message: message,
@@ -474,7 +476,7 @@ class LoanController extends StateNotifier<LoanActionState> {
       );
 
       // Determine counterpart: if actor is borrower, notify owner; if actor is owner, notify borrower
-      final int? counterpartId = actor.id == loan.fromUserId ? loan.toUserId : loan.fromUserId;
+      final int? counterpartId = actor.id == loan.borrowerUserId ? loan.lenderUserId : loan.borrowerUserId;
       
       // Don't notify if counterpart is null (manual loan) or is the same as actor
       if (counterpartId == null || counterpartId == actor.id) {
@@ -506,7 +508,7 @@ class LoanController extends StateNotifier<LoanActionState> {
       );
 
       // Only notify borrower if they have an account (not a manual loan)
-      if (loan.fromUserId != null) {
+      if (loan.borrowerUserId != null) {
         final borrowerMessage = await _messageWithBook(
           loan: loan,
           fallback: 'Tu préstamo ha expirado.',
@@ -516,7 +518,7 @@ class LoanController extends StateNotifier<LoanActionState> {
         await _notificationRepository.createLoanNotification(
           type: InAppNotificationType.loanExpired,
           loan: loan,
-          targetUserId: loan.fromUserId!,
+          targetUserId: loan.borrowerUserId!,
           title: 'Préstamo expirado',
           message: borrowerMessage,
         );
@@ -531,7 +533,7 @@ class LoanController extends StateNotifier<LoanActionState> {
       await _notificationRepository.createLoanNotification(
         type: InAppNotificationType.loanExpired,
         loan: loan,
-        targetUserId: loan.toUserId,
+        targetUserId: loan.lenderUserId,
         title: 'Préstamo expirado',
         message: ownerMessage,
       );

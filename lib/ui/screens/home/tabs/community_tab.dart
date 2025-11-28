@@ -16,6 +16,7 @@ import '../../../../services/loan_controller.dart';
 import '../../../widgets/coach_mark_target.dart';
 import '../../../widgets/empty_state.dart';
 import '../../../widgets/loan_feedback_banner.dart';
+import '../../../dialogs/group_form_dialog.dart';
 
 class CommunityTab extends ConsumerWidget {
   const CommunityTab({super.key});
@@ -916,13 +917,7 @@ Future<void> _handleEditGroup(
   WidgetRef ref,
   Group group,
 ) async {
-  final result = await _showGroupFormDialog(
-    context,
-    dialogTitle: 'Editar grupo',
-    confirmLabel: 'Guardar',
-    initialName: group.name,
-    initialDescription: group.description,
-  );
+  final result = await _showGroupFormDialog(context);
 
   if (result == null) {
     return;
@@ -1856,22 +1851,11 @@ Future<void> _shareInvitationCode({
   );
 }
 
-Future<_GroupFormResult?> _showGroupFormDialog(
-  BuildContext context, {
-  String? dialogTitle,
-  String? confirmLabel,
-  String? initialName,
-  String? initialDescription,
-}) {
-  return showDialog<_GroupFormResult>(
+Future<GroupFormResult?> _showGroupFormDialog(BuildContext context) {
+  return showDialog<GroupFormResult>(
     context: context,
     barrierDismissible: false,
-    builder: (dialogContext) => _GroupFormDialog(
-      dialogTitle: dialogTitle,
-      confirmLabel: confirmLabel,
-      initialName: initialName,
-      initialDescription: initialDescription,
-    ),
+    builder: (dialogContext) => const GroupFormDialog(),
   );
 }
 
@@ -1882,109 +1866,6 @@ Future<String?> _showJoinGroupByCodeDialog(BuildContext context) {
     useRootNavigator: true,
     builder: (_) => const _JoinGroupByCodeDialog(),
   );
-}
-
-class _GroupFormResult {
-  const _GroupFormResult({required this.name, this.description});
-
-  final String name;
-  final String? description;
-}
-
-class _GroupFormDialog extends StatefulWidget {
-  const _GroupFormDialog({
-    this.dialogTitle,
-    this.confirmLabel,
-    this.initialName,
-    this.initialDescription,
-  });
-
-  final String? dialogTitle;
-  final String? confirmLabel;
-  final String? initialName;
-  final String? initialDescription;
-
-  @override
-  State<_GroupFormDialog> createState() => _GroupFormDialogState();
-}
-
-class _GroupFormDialogState extends State<_GroupFormDialog> {
-  late final TextEditingController _nameController;
-  late final TextEditingController _descriptionController;
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.initialName ?? '');
-    _descriptionController = TextEditingController(text: widget.initialDescription ?? '');
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.dialogTitle ?? 'Nuevo grupo'),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre del grupo',
-              ),
-              autofocus: true,
-              validator: (value) {
-                final trimmed = value?.trim() ?? '';
-                if (trimmed.isEmpty) {
-                  return 'Introduce un nombre válido.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Descripción',
-              ),
-              minLines: 2,
-              maxLines: 4,
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () {
-            if (!(_formKey.currentState?.validate() ?? false)) {
-              return;
-            }
-            final result = _GroupFormResult(
-              name: _nameController.text.trim(),
-              description: _descriptionController.text.trim().isEmpty
-                  ? null
-                  : _descriptionController.text.trim(),
-            );
-            Navigator.of(context).pop(result);
-          },
-          child: Text(widget.confirmLabel ?? 'Crear'),
-        ),
-      ],
-    );
-  }
 }
 
 class _JoinGroupByCodeDialog extends StatefulWidget {

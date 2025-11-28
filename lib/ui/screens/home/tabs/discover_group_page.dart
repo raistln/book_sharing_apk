@@ -14,7 +14,7 @@ import '../../../../services/discover_group_controller.dart';
 import '../../../../services/onboarding_service.dart';
 import '../../../widgets/coach_mark_target.dart';
 import '../../../widgets/empty_state.dart';
-import '../home_shell.dart' show DiscoverBookDetailPage;
+import 'discover_book_detail_page.dart';
 
 /// Helper function to filter shared books for discovery
 List<SharedBookDetail> _filterSharedBooksForDiscover({

@@ -202,10 +202,9 @@ class SupabaseGroupSyncRepository {
                   title: remoteBook.title,
                   author: Value(remoteBook.author),
                   isbn: Value(remoteBook.isbn),
-                  barcode: Value(remoteBook.barcode),
                   coverPath: Value(remoteBook.coverUrl),
-                  status: Value(remoteBook.status),
-                  notes: Value(remoteBook.notes),
+                  status: Value(remoteBook.isAvailable == true ? 'available' : 'loaned'),
+                  notes: const Value(null), // Notes not stored in shared_books
                   isDeleted: Value(remoteBook.isDeleted),
                   isDirty: const Value(false),
                   createdAt: Value(remoteBook.createdAt),

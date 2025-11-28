@@ -49,7 +49,7 @@ class SupabaseBookService {
     final config = await _loadConfig();
     final query = <String, String>{
       'select':
-          'id,owner_id,title,author,isbn,barcode,cover_url,status,notes,is_deleted,created_at,updated_at',
+          'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_deleted,created_at,updated_at',
       'owner_id': 'eq.$ownerId',
       'order': 'updated_at.asc',
     };
@@ -58,7 +58,7 @@ class SupabaseBookService {
       query['updated_at'] = 'gte.${updatedAfter.toUtc().toIso8601String()}';
     }
 
-    final uri = Uri.parse('${config.url}/rest/v1/books').replace(
+    final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
       queryParameters: query,
     );
 
@@ -89,10 +89,10 @@ class SupabaseBookService {
     String? accessToken,
   }) async {
     final config = await _loadConfig();
-    final uri = Uri.parse('${config.url}/rest/v1/books').replace(
+    final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
       queryParameters: {
         'select':
-            'id,owner_id,title,author,isbn,barcode,cover_url,status,notes,is_deleted,created_at,updated_at',
+            'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_deleted,created_at,updated_at',
         'id': 'eq.$id',
         'limit': '1',
       },
@@ -130,42 +130,14 @@ class SupabaseBookService {
     String? accessToken,
     DateTime? updatedAfter,
   }) async {
-    final config = await _loadConfig();
-    final query = <String, String>{
-      'select':
-          'id,book_id,author_id,rating,review,is_deleted,created_at,updated_at',
-      'author_id': 'eq.$authorId',
-      'order': 'updated_at.asc',
-    };
-
-    if (updatedAfter != null) {
-      query['updated_at'] = 'gte.${updatedAfter.toUtc().toIso8601String()}';
-    }
-
-    final uri = Uri.parse('${config.url}/rest/v1/book_reviews').replace(
-      queryParameters: query,
+    // Book reviews table was removed in schema v4
+    // Return empty list to maintain compatibility
+    developer.log(
+      'fetchReviews called but book_reviews table was removed. Returning empty list.',
+      name: 'SupabaseBookService',
+      level: 900,
     );
-
-    final response = await _client.get(
-      uri,
-      headers: _buildHeaders(
-        config,
-        accessToken: accessToken,
-      ),
-    );
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final payload = jsonDecode(response.body) as List<dynamic>;
-      return payload
-          .whereType<Map<String, dynamic>>()
-          .map(SupabaseBookReviewRecord.fromJson)
-          .toList();
-    }
-
-    throw SupabaseBookServiceException(
-      'Error ${response.statusCode}: ${response.body}',
-      response.statusCode,
-    );
+    return [];
   }
 
   Future<String> createBook({
@@ -174,7 +146,6 @@ class SupabaseBookService {
     required String title,
     String? author,
     String? isbn,
-    String? barcode,
     String? coverUrl,
     required String status,
     String? notes,
@@ -184,18 +155,17 @@ class SupabaseBookService {
     String? accessToken,
   }) async {
     final config = await _loadConfig();
-    final uri = Uri.parse('${config.url}/rest/v1/books');
+    final uri = Uri.parse('${config.url}/rest/v1/shared_books');
 
     final payload = {
-      'id': id,
+      'book_uuid': id,
       'owner_id': ownerId,
       'title': title,
       'author': author,
       'isbn': isbn,
-      'barcode': barcode,
       'cover_url': coverUrl,
-      'status': status,
-      'notes': notes,
+      'visibility': 'group',
+      'is_available': status == 'available',
       'is_deleted': isDeleted,
       'created_at': createdAt.toUtc().toIso8601String(),
       'updated_at': updatedAt.toUtc().toIso8601String(),
@@ -252,7 +222,6 @@ class SupabaseBookService {
     required String title,
     String? author,
     String? isbn,
-    String? barcode,
     String? coverUrl,
     required String status,
     String? notes,
@@ -261,7 +230,7 @@ class SupabaseBookService {
     String? accessToken,
   }) async {
     final config = await _loadConfig();
-    final uri = Uri.parse('${config.url}/rest/v1/books').replace(
+    final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
       queryParameters: {
         'id': 'eq.$id',
       },
@@ -271,10 +240,8 @@ class SupabaseBookService {
       'title': title,
       'author': author,
       'isbn': isbn,
-      'barcode': barcode,
       'cover_url': coverUrl,
-      'status': status,
-      'notes': notes,
+      'is_available': status == 'available',
       'is_deleted': isDeleted,
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
@@ -325,49 +292,15 @@ class SupabaseBookService {
     required DateTime updatedAt,
     String? accessToken,
   }) async {
-    final config = await _loadConfig();
-    final uri = Uri.parse('${config.url}/rest/v1/book_reviews');
-
-    final response = await _client.post(
-      uri,
-      headers: _buildHeaders(
-        config,
-        accessToken: accessToken,
-        preferRepresentation: true,
-      ),
-      body: jsonEncode({
-        'id': id,
-        'book_id': bookId,
-        'author_id': authorId,
-        'rating': rating,
-        'review': review,
-        'is_deleted': isDeleted,
-        'created_at': createdAt.toUtc().toIso8601String(),
-        'updated_at': updatedAt.toUtc().toIso8601String(),
-      }),
+    // Book reviews table was removed in schema v4
+    developer.log(
+      'createReview called but book_reviews table was removed. Throwing exception.',
+      name: 'SupabaseBookService',
+      level: 900,
     );
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (response.body.isEmpty) {
-        return id;
-      }
-
-      final decoded = jsonDecode(response.body);
-      if (decoded is List && decoded.isNotEmpty) {
-        final record = decoded.first;
-        if (record is Map<String, dynamic>) {
-          return (record['id'] as String?) ?? id;
-        }
-      } else if (decoded is Map<String, dynamic>) {
-        return (decoded['id'] as String?) ?? id;
-      }
-
-      return id;
-    }
-
     throw SupabaseBookServiceException(
-      'Error ${response.statusCode}: ${response.body}',
-      response.statusCode,
+      'Book reviews table was removed in schema v4',
+      501, // Not Implemented
     );
   }
 
@@ -379,39 +312,13 @@ class SupabaseBookService {
     required DateTime updatedAt,
     String? accessToken,
   }) async {
-    final config = await _loadConfig();
-    final uri = Uri.parse('${config.url}/rest/v1/book_reviews').replace(
-      queryParameters: {
-        'id': 'eq.$id',
-      },
+    // Book reviews table was removed in schema v4
+    developer.log(
+      'updateReview called but book_reviews table was removed. Returning false.',
+      name: 'SupabaseBookService',
+      level: 900,
     );
-
-    final response = await _client.patch(
-      uri,
-      headers: _buildHeaders(
-        config,
-        accessToken: accessToken,
-      ),
-      body: jsonEncode({
-        'rating': rating,
-        'review': review,
-        'is_deleted': isDeleted,
-        'updated_at': updatedAt.toUtc().toIso8601String(),
-      }),
-    );
-
-    if (response.statusCode == 404) {
-      return false;
-    }
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return true;
-    }
-
-    throw SupabaseBookServiceException(
-      'Error ${response.statusCode}: ${response.body}',
-      response.statusCode,
-    );
+    return false;
   }
 
   void dispose() {
@@ -433,28 +340,30 @@ class SupabaseBookServiceException implements Exception {
 class SupabaseBookRecord {
   const SupabaseBookRecord({
     required this.id,
+    this.groupId,
     required this.ownerId,
+    this.bookUuid,
     required this.title,
     this.author,
     this.isbn,
-    this.barcode,
     this.coverUrl,
-    required this.status,
-    this.notes,
+    this.visibility,
+    this.isAvailable,
     required this.isDeleted,
     required this.createdAt,
     this.updatedAt,
   });
 
   final String id;
+  final String? groupId;
   final String ownerId;
+  final String? bookUuid;
   final String title;
   final String? author;
   final String? isbn;
-  final String? barcode;
   final String? coverUrl;
-  final String status;
-  final String? notes;
+  final String? visibility;
+  final bool? isAvailable;
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -469,14 +378,15 @@ class SupabaseBookRecord {
 
     return SupabaseBookRecord(
       id: json['id'] as String,
+      groupId: json['group_id'] as String?,
       ownerId: json['owner_id'] as String,
+      bookUuid: json['book_uuid'] as String?,
       title: (json['title'] as String?) ?? '',
       author: json['author'] as String?,
       isbn: json['isbn'] as String?,
-      barcode: json['barcode'] as String?,
       coverUrl: json['cover_url'] as String?,
-      status: (json['status'] as String?) ?? 'available',
-      notes: json['notes'] as String?,
+      visibility: json['visibility'] as String?,
+      isAvailable: json['is_available'] as bool?,
       isDeleted: (json['is_deleted'] as bool?) ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: parseDate(json['updated_at']),

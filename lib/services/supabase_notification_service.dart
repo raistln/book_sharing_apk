@@ -8,31 +8,25 @@ import 'supabase_config_service.dart';
 class SupabaseNotificationRecord {
   const SupabaseNotificationRecord({
     required this.id,
+    required this.loanId,
+    required this.userId,
     required this.type,
-    required this.targetUserId,
-    this.actorUserId,
-    this.loanId,
-    this.sharedBookId,
-    this.title,
-    this.message,
+    required this.title,
+    required this.message,
     required this.status,
-    required this.isDeleted,
+    this.readAt,
     required this.createdAt,
-    required this.updatedAt,
   });
 
   final String id;
+  final String loanId;
+  final String userId;
   final String type;
-  final String targetUserId;
-  final String? actorUserId;
-  final String? loanId;
-  final String? sharedBookId;
-  final String? title;
-  final String? message;
+  final String title;
+  final String message;
   final String status;
-  final bool isDeleted;
+  final DateTime? readAt;
   final DateTime createdAt;
-  final DateTime updatedAt;
 
   static DateTime? _tryParseDate(dynamic value) {
     if (value is String && value.isNotEmpty) {
@@ -43,20 +37,17 @@ class SupabaseNotificationRecord {
 
   factory SupabaseNotificationRecord.fromJson(Map<String, dynamic> json) {
     final created = _tryParseDate(json['created_at']);
-    final updated = _tryParseDate(json['updated_at']);
+    final readAt = _tryParseDate(json['read_at']);
     return SupabaseNotificationRecord(
       id: json['id'] as String,
+      loanId: json['loan_id'] as String,
+      userId: json['user_id'] as String,
       type: json['type'] as String,
-      targetUserId: json['target_user_id'] as String,
-      actorUserId: json['actor_user_id'] as String?,
-      loanId: json['loan_id'] as String?,
-      sharedBookId: json['shared_book_id'] as String?,
-      title: json['title'] as String?,
-      message: json['message'] as String?,
+      title: json['title'] as String,
+      message: json['message'] as String,
       status: json['status'] as String? ?? 'unread',
-      isDeleted: (json['is_deleted'] as bool?) ?? false,
+      readAt: readAt,
       createdAt: created ?? DateTime.now(),
-      updatedAt: updated ?? created ?? DateTime.now(),
     );
   }
 }
@@ -64,46 +55,37 @@ class SupabaseNotificationRecord {
 class SupabaseNotificationUpsert {
   const SupabaseNotificationUpsert({
     required this.id,
+    required this.loanId,
+    required this.userId,
     required this.type,
-    required this.targetUserId,
-    this.actorUserId,
-    this.loanId,
-    this.sharedBookId,
-    this.title,
-    this.message,
+    required this.title,
+    required this.message,
     required this.status,
-    required this.isDeleted,
+    this.readAt,
     required this.createdAt,
-    required this.updatedAt,
   });
 
   final String id;
+  final String loanId;
+  final String userId;
   final String type;
-  final String targetUserId;
-  final String? actorUserId;
-  final String? loanId;
-  final String? sharedBookId;
-  final String? title;
-  final String? message;
+  final String title;
+  final String message;
   final String status;
-  final bool isDeleted;
+  final DateTime? readAt;
   final DateTime createdAt;
-  final DateTime updatedAt;
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'type': type,
-      'target_user_id': targetUserId,
-      'actor_user_id': actorUserId,
       'loan_id': loanId,
-      'shared_book_id': sharedBookId,
+      'user_id': userId,
+      'type': type,
       'title': title,
       'message': message,
       'status': status,
-      'is_deleted': isDeleted,
+      'read_at': readAt?.toUtc().toIso8601String(),
       'created_at': createdAt.toUtc().toIso8601String(),
-      'updated_at': updatedAt.toUtc().toIso8601String(),
     };
   }
 }
@@ -168,20 +150,12 @@ class SupabaseNotificationService {
     final config = await _loadConfig();
     final query = <String, String>{
       'select':
-          'id,type,target_user_id,actor_user_id,loan_id,shared_book_id,title,message,status,is_deleted,created_at,updated_at',
-      'target_user_id': 'eq.$targetUserId',
-      'order': 'updated_at.asc',
+          'id,loan_id,user_id,type,title,message,status,read_at,created_at',
+      'user_id': 'eq.$targetUserId',
+      'order': 'created_at.desc',
     };
 
-    if (!includeDeleted) {
-      query['is_deleted'] = 'eq.false';
-    }
-
-    if (updatedAfter != null) {
-      query['updated_at'] = 'gte.${updatedAfter.toUtc().toIso8601String()}';
-    }
-
-    final uri = Uri.parse('${config.url}/rest/v1/in_app_notifications').replace(
+    final uri = Uri.parse('${config.url}/rest/v1/loan_notifications').replace(
       queryParameters: query,
     );
 
@@ -212,7 +186,7 @@ class SupabaseNotificationService {
     String? accessToken,
   }) async {
     final config = await _loadConfig();
-    final uri = Uri.parse('${config.url}/rest/v1/in_app_notifications').replace(
+    final uri = Uri.parse('${config.url}/rest/v1/loan_notifications').replace(
       queryParameters: {'on_conflict': 'id'},
     );
 
@@ -249,17 +223,14 @@ class SupabaseNotificationService {
 
       return SupabaseNotificationRecord(
         id: input.id,
-        type: input.type,
-        targetUserId: input.targetUserId,
-        actorUserId: input.actorUserId,
         loanId: input.loanId,
-        sharedBookId: input.sharedBookId,
+        userId: input.userId,
+        type: input.type,
         title: input.title,
         message: input.message,
         status: input.status,
-        isDeleted: input.isDeleted,
+        readAt: input.readAt,
         createdAt: input.createdAt,
-        updatedAt: input.updatedAt,
       );
     }
 

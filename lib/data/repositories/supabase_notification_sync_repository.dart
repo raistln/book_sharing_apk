@@ -72,34 +72,22 @@ class SupabaseNotificationSyncRepository {
           continue;
         }
 
-        final resolvedActorId = await _resolveUserId(remote.actorUserId);
         final resolvedLoan = await _resolveLoan(remote.loanId);
-        final resolvedSharedBook = await _resolveSharedBook(remote.sharedBookId);
 
         final companion = InAppNotificationsCompanion(
           type: Value(remote.type),
           targetUserId: Value(target.id),
-          actorUserId: resolvedActorId != null
-              ? Value(resolvedActorId)
-              : const Value<int?>.absent(),
           loanId: resolvedLoan != null
               ? Value(resolvedLoan.id)
               : const Value<int?>.absent(),
-          sharedBookId: resolvedSharedBook != null
-              ? Value(resolvedSharedBook.id)
-              : const Value<int?>.absent(),
-          title: remote.title != null
-              ? Value(remote.title)
-              : const Value<String?>.absent(),
-          message: remote.message != null
-              ? Value(remote.message)
-              : const Value<String?>.absent(),
+          loanUuid: Value(remote.loanId),
+          title: Value(remote.title),
+          message: Value(remote.message),
           status: Value(remote.status),
-          isDeleted: Value(remote.isDeleted),
+          isDeleted: const Value(false), // loan_notifications doesn't have is_deleted
           isDirty: const Value(false),
           syncedAt: Value(syncTime),
           createdAt: Value(remote.createdAt),
-          updatedAt: Value(remote.updatedAt),
         );
 
         if (existing != null) {
@@ -115,30 +103,16 @@ class SupabaseNotificationSyncRepository {
             uuid: remote.id,
             type: remote.type,
             targetUserId: target.id,
-            actorUserId: resolvedActorId != null
-                ? Value(resolvedActorId)
-                : const Value<int?>.absent(),
             loanId: resolvedLoan != null
                 ? Value(resolvedLoan.id)
                 : const Value<int?>.absent(),
-            loanUuid: remote.loanId != null
-                ? Value(remote.loanId)
-                : const Value<String?>.absent(),
-            sharedBookId: resolvedSharedBook != null
-                ? Value(resolvedSharedBook.id)
-                : const Value<int?>.absent(),
-            title: remote.title != null
-                ? Value(remote.title)
-                : const Value<String?>.absent(),
-            message: remote.message != null
-                ? Value(remote.message)
-                : const Value<String?>.absent(),
+            loanUuid: Value(remote.loanId),
+            title: Value(remote.title),
+            message: Value(remote.message),
             status: Value(remote.status),
-            isDeleted: Value(remote.isDeleted),
             isDirty: const Value(false),
             syncedAt: Value(syncTime),
             createdAt: Value(remote.createdAt),
-            updatedAt: Value(remote.updatedAt),
           ),
         );
       }
@@ -167,10 +141,7 @@ class SupabaseNotificationSyncRepository {
 
     for (final local in dirtyNotifications) {
       try {
-        final actorRemoteId = await _resolveUserRemoteId(local.actorUserId);
         final loanRemoteId = await _resolveLoanRemoteId(local.loanId, local.loanUuid);
-        final sharedRemoteId =
-            await _resolveSharedBookRemoteId(local.sharedBookId);
 
         final targetUser = await _userDao.getById(local.targetUserId);
         final targetUserRemoteId = targetUser?.remoteId;
@@ -190,17 +161,13 @@ class SupabaseNotificationSyncRepository {
 
         final input = SupabaseNotificationUpsert(
           id: local.uuid,
+          loanId: loanRemoteId ?? '',
+          userId: targetUserRemoteId,
           type: local.type,
-          targetUserId: targetUserRemoteId,
-          actorUserId: actorRemoteId,
-          loanId: loanRemoteId,
-          sharedBookId: sharedRemoteId,
-          title: local.title,
-          message: local.message,
+          title: local.title ?? '',
+          message: local.message ?? '',
           status: local.status,
-          isDeleted: local.isDeleted,
           createdAt: local.createdAt,
-          updatedAt: local.updatedAt,
         );
 
         final remote = await _notificationService.upsertNotification(
@@ -213,30 +180,18 @@ class SupabaseNotificationSyncRepository {
           name: 'SupabaseNotificationSyncRepository',
         );
 
-        final actorId = await _resolveUserId(remote.actorUserId);
         final resolvedLoan = await _resolveLoan(remote.loanId);
-        final resolvedSharedBook = await _resolveSharedBook(remote.sharedBookId);
 
         await _notificationDao.updateFields(
           notificationId: local.id,
           entry: InAppNotificationsCompanion(
-            actorUserId: actorId != null
-                ? Value(actorId)
-                : const Value<int?>.absent(),
             loanId: resolvedLoan != null
                 ? Value(resolvedLoan.id)
                 : const Value<int?>.absent(),
-            loanUuid: remote.loanId != null
-                ? Value(remote.loanId)
-                : const Value<String?>.absent(),
-            sharedBookId: resolvedSharedBook != null
-                ? Value(resolvedSharedBook.id)
-                : const Value<int?>.absent(),
             status: Value(remote.status),
-            isDeleted: Value(remote.isDeleted),
+            isDeleted: const Value(false), // loan_notifications doesn't have is_deleted
             isDirty: const Value(false),
             syncedAt: Value(syncTime),
-            updatedAt: Value(remote.updatedAt),
           ),
         );
       } catch (error, stackTrace) {
@@ -252,22 +207,7 @@ class SupabaseNotificationSyncRepository {
     }
   }
 
-  Future<int?> _resolveUserId(String? remoteId) async {
-    if (remoteId == null || remoteId.isEmpty) {
-      return null;
-    }
-    final user = await _userDao.findByRemoteId(remoteId);
-    return user?.id;
-  }
-
-  Future<String?> _resolveUserRemoteId(int? userId) async {
-    if (userId == null) {
-      return null;
-    }
-    final user = await _userDao.getById(userId);
-    return user?.remoteId ?? user?.uuid;
-  }
-
+  
   Future<_LoanResolution?> _resolveLoan(String? remoteIdOrUuid) async {
     if (remoteIdOrUuid == null || remoteIdOrUuid.isEmpty) {
       return null;
@@ -317,44 +257,10 @@ class SupabaseNotificationSyncRepository {
 
     return loan.uuid;
   }
-
-  Future<_SharedBookResolution?> _resolveSharedBook(String? remoteId) async {
-    if (remoteId == null || remoteId.isEmpty) {
-      return null;
-    }
-    final shared = await _groupDao.findSharedBookByRemoteId(remoteId);
-    if (shared == null) {
-      return null;
-    }
-    return _SharedBookResolution(id: shared.id, uuid: shared.uuid, remoteId: shared.remoteId);
-  }
-
-  Future<String?> _resolveSharedBookRemoteId(int? sharedId) async {
-    if (sharedId == null) {
-      return null;
-    }
-    final shared = await _groupDao.findSharedBookById(sharedId);
-    if (shared == null) {
-      return null;
-    }
-    return shared.remoteId ?? shared.uuid;
-  }
 }
 
 class _LoanResolution {
   const _LoanResolution({
-    required this.id,
-    required this.uuid,
-    this.remoteId,
-  });
-
-  final int id;
-  final String uuid;
-  final String? remoteId;
-}
-
-class _SharedBookResolution {
-  const _SharedBookResolution({
     required this.id,
     required this.uuid,
     this.remoteId,

@@ -7,6 +7,7 @@ import 'providers/notification_providers.dart';
 import 'providers/permission_providers.dart';
 import 'services/notification_service.dart';
 import 'services/permission_service.dart';
+import 'services/backup_scheduler_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +16,13 @@ Future<void> main() async {
 
   final notificationService = NotificationService.instance;
   await notificationService.init();
+
+  // Initialize background backup scheduler
+  try {
+    await BackupSchedulerService.initialize();
+  } catch (e) {
+    debugPrint('Failed to initialize backup scheduler: $e');
+  }
 
   final permissionService = PermissionService();
   await permissionService.ensureNotificationPermission();

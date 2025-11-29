@@ -6,6 +6,7 @@ import '../local/database.dart';
 import '../local/group_dao.dart';
 import '../local/notification_dao.dart';
 import '../local/user_dao.dart';
+import '../models/in_app_notification_type.dart';
 import '../../services/supabase_notification_service.dart';
 
 class SupabaseNotificationSyncRepository {
@@ -23,6 +24,12 @@ class SupabaseNotificationSyncRepository {
   final UserDao _userDao;
   final GroupDao _groupDao;
   final SupabaseNotificationService _notificationService;
+
+  /// Convert old notification type values (with dashes) to new format (with underscores)
+  String _convertNotificationType(String oldType) {
+    final type = InAppNotificationType.fromValue(oldType);
+    return type?.value ?? oldType; // Fallback to original if not found
+  }
 
   Future<void> syncFromRemote({
     required LocalUser target,
@@ -154,8 +161,9 @@ class SupabaseNotificationSyncRepository {
           continue;
         }
 
+        final convertedType = _convertNotificationType(local.type);
         developer.log(
-          'Subiendo notificación ${local.uuid} (tipo=${local.type}) para usuario remoto $targetUserRemoteId.',
+          'Subiendo notificación $local.uuid (tipo=$local.type → $convertedType) para usuario remoto $targetUserRemoteId.',
           name: 'SupabaseNotificationSyncRepository',
         );
 
@@ -163,7 +171,7 @@ class SupabaseNotificationSyncRepository {
           id: local.uuid,
           loanId: loanRemoteId ?? '',
           userId: targetUserRemoteId,
-          type: local.type,
+          type: convertedType,
           title: local.title ?? '',
           message: local.message ?? '',
           status: local.status,

@@ -85,7 +85,7 @@ class NotificationListTile extends ConsumerWidget {
     }
 
     final canHandleLoanRequest =
-        type == InAppNotificationType.loanRequest && activeUser?.id == notification.targetUserId;
+        type == InAppNotificationType.loanRequested && activeUser?.id == notification.targetUserId;
 
     return Card(
       color: visuals.background,

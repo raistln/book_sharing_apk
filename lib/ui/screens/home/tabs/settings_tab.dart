@@ -14,6 +14,8 @@ import '../../../../providers/settings_providers.dart';
 import '../../../../providers/theme_providers.dart';
 import '../../../widgets/import_books_dialog.dart';
 import '../../auth/pin_setup_screen.dart';
+import '../../../../services/backup_scheduler_service.dart';
+import '../../../../providers/cover_refresh_providers.dart';
 
 /// Helper to show feedback snackbar
 void _showFeedbackSnackBar({
@@ -68,6 +70,31 @@ class SettingsTab extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 32),
+              
+              // Sección de Almacenamiento
+              Text(
+                'Almacenamiento',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.broken_image_outlined),
+                  title: const Text('Borrar todas las portadas'),
+                  subtitle: const Text('Libera espacio eliminando las imágenes descargadas.'),
+                  onTap: () => _handleDeleteCovers(context, ref),
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              // Sección de Backup
+              Text(
+                'Copias de seguridad',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 12),
+              const _BackupSection(),
+              const SizedBox(height: 32),
 
               // Sección de seguridad
               Text(
@@ -100,9 +127,42 @@ class SettingsTab extends ConsumerWidget {
                       context: context,
                       builder: (context) => AlertDialog(
                         title: const Text('¿Eliminar PIN y salir de la cuenta?'),
-                        content: const Text(
-                          'Se eliminarán TODOS los datos locales (libros, grupos, préstamos) '
-                          'y tendrás que iniciar sesión o configurar un nuevo usuario.',
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.warning_amber, size: 48, color: Colors.orange),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Se eliminarán TODOS los datos locales (libros, grupos, préstamos) '
+                              'y tendrás que iniciar sesión o configurar un nuevo usuario.',
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.lightbulb_outline, color: Colors.blue.shade700),
+                                  const SizedBox(width: 12),
+                                  const Expanded(
+                                    child: Text(
+                                      '💡 Tip: Exporta tu biblioteca antes de continuar. '
+                                      'Si tienes backups automáticos, búscalos en Descargas/BookSharing/backups.',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                         actions: [
                           TextButton(
@@ -454,6 +514,59 @@ class SettingsTab extends ConsumerWidget {
         context: context,
         message: 'API key eliminada.',
         isError: false,
+      );
+    }
+  }
+
+  Future<void> _handleDeleteCovers(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Borrar todas las portadas?'),
+        content: const Text(
+          'Se eliminarán todas las imágenes de portada descargadas. '
+          'Podrás volver a descargarlas manualmente desde la biblioteca.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Borrar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    final coverService = ref.read(coverRefreshServiceProvider);
+    final activeUser = ref.read(activeUserProvider).value;
+
+    try {
+      final count = await coverService.deleteAllCovers(ownerUserId: activeUser?.id);
+      
+      if (!context.mounted) return;
+      
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Se eliminaron $count portadas.',
+        isError: false,
+      );
+      
+      // Refresh book list to show default covers
+      ref.invalidate(bookListProvider);
+    } catch (e) {
+      if (!context.mounted) return;
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Error al borrar portadas: $e',
+        isError: true,
       );
     }
   }
@@ -940,6 +1053,90 @@ class _PlaceholderTab extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _BackupSection extends StatefulWidget {
+  const _BackupSection();
+
+  @override
+  State<_BackupSection> createState() => _BackupSectionState();
+}
+
+class _BackupSectionState extends State<_BackupSection> {
+  bool _isLoading = true;
+  bool _isEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatus();
+  }
+
+  Future<void> _loadStatus() async {
+    final enabled = await BackupSchedulerService.isAutoBackupEnabled();
+    if (mounted) {
+      setState(() {
+        _isEnabled = enabled;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleBackup(bool value) async {
+    setState(() => _isLoading = true);
+    try {
+      if (value) {
+        await BackupSchedulerService.enableAutoBackup();
+      } else {
+        await BackupSchedulerService.disableAutoBackup();
+      }
+      if (mounted) {
+        setState(() {
+          _isEnabled = value;
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(value 
+              ? 'Backup automático semanal activado' 
+              : 'Backup automático desactivado'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cambiar configuración: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: SwitchListTile(
+        value: _isEnabled,
+        onChanged: _isLoading ? null : _toggleBackup,
+        title: const Text('Backup automático semanal'),
+        subtitle: const Text(
+          'Guarda una copia de tu biblioteca cada semana en segundo plano.',
+        ),
+        secondary: _isLoading 
+          ? const SizedBox(
+              width: 24, 
+              height: 24, 
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.backup_outlined),
       ),
     );
   }

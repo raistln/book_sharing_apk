@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../data/local/database.dart';
 import '../../../../providers/book_providers.dart';
+import '../../../../providers/cover_refresh_providers.dart';
 import '../../../../providers/permission_providers.dart';
 import '../../../../providers/api_providers.dart';
 import '../../../../services/book_export_service.dart';
@@ -1059,6 +1060,25 @@ class LibraryTab extends ConsumerStatefulWidget {
 }
 
 class _LibraryTabState extends ConsumerState<LibraryTab> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Book> _filterBooks(List<Book> books) {
+    if (_searchQuery.isEmpty) return books;
+    
+    return books.where((book) {
+      final title = book.title.toLowerCase();
+      final author = (book.author ?? '').toLowerCase();
+      final query = _searchQuery.toLowerCase();
+      return title.contains(query) || author.contains(query);
+    }).toList();
+  }
+  
   @override
   Widget build(BuildContext context) {
     final booksAsync = ref.watch(bookListProvider);
@@ -1069,6 +1089,7 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
         padding: const EdgeInsets.all(24),
         child: booksAsync.when(
           data: (books) {
+            final filteredBooks = _filterBooks(books);
             if (books.isEmpty) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1104,25 +1125,60 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: _ExportButton(onExport: () => _handleExport()),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    _RefreshCoversButton(onRefresh: () => _handleRefreshCovers()),
+                    const SizedBox(width: 12),
+                    _ExportButton(onExport: () => _handleExport()),
+                  ],
                 ),
                 const SizedBox(height: 12),
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: books.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final book = books[index];
-                      return _BookListTile(
-                        book: book,
-                        onTap: () => widget.onOpenForm(book: book),
-                        onAddReview: () => _showAddReviewDialog(context, book),
-                        onCreateManualLoan: () => _showManualLoanDialog(context, book),
-                      );
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por título o autor...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    onChanged: (value) {
+                      setState(() => _searchQuery = value);
                     },
                   ),
+                ),
+                Expanded(
+                  child: filteredBooks.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No se encontraron libros',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: filteredBooks.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final book = filteredBooks[index];
+                            return _BookListTile(
+                              book: book,
+                              onTap: () => widget.onOpenForm(book: book),
+                              onAddReview: () => _showAddReviewDialog(context, book),
+                              onCreateManualLoan: () => _showManualLoanDialog(context, book),
+                            );
+                          },
+                        ),
                 ),
               ],
             );
@@ -1604,6 +1660,83 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
     }
   }
 
+  Future<void> _handleRefreshCovers() async {
+    if (!mounted) return;
+    final ctx = context;
+
+    final activeUser = ref.read(activeUserProvider).value;
+    final coverRefreshService = ref.read(coverRefreshServiceProvider);
+
+    if (!ctx.mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (context) => AlertDialog(
+        title: const Text('Actualizar portadas'),
+        content: const Text(
+          'Se buscarán portadas para todos los libros que no tengan una. '
+          'Esto puede tardar varios minutos dependiendo de cuántos libros tengas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Actualizar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !ctx.mounted) return;
+
+    // Show progress dialog
+    showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Expanded(child: Text('Actualizando portadas...')),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final result = await coverRefreshService.refreshMissingCovers(
+        ownerUserId: activeUser?.id,
+      );
+
+      if (!ctx.mounted) return;
+      Navigator.pop(ctx); // Close progress dialog
+
+      final message = result.totalProcessed == 0
+          ? 'Todos los libros ya tienen portada.'
+          : 'Portadas actualizadas: ${result.successCount} de ${result.totalProcessed}.';
+
+      _showFeedbackSnackBar(
+        context: ctx,
+        message: message,
+        isError: result.successCount == 0 && result.totalProcessed > 0,
+      );
+
+      // Refresh the book list
+      ref.invalidate(bookListProvider);
+    } catch (e) {
+      if (!ctx.mounted) return;
+      Navigator.pop(ctx); // Close progress dialog
+      _showFeedbackSnackBar(
+        context: ctx,
+        message: 'Error al actualizar portadas: $e',
+        isError: true,
+      );
+    }
+  }
+
 }
 
 class _ExportButton extends StatelessWidget {
@@ -1617,6 +1750,21 @@ class _ExportButton extends StatelessWidget {
       onPressed: onExport,
       icon: const Icon(Icons.file_upload_outlined),
       label: const Text('Exportar biblioteca'),
+    );
+  }
+}
+
+class _RefreshCoversButton extends StatelessWidget {
+  const _RefreshCoversButton({required this.onRefresh});
+
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onRefresh,
+      icon: const Icon(Icons.refresh),
+      label: const Text('Actualizar portadas'),
     );
   }
 }

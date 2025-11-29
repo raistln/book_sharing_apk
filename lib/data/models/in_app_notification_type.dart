@@ -1,10 +1,10 @@
 enum InAppNotificationType {
-  loanRequest('loan-request'),
-  loanAccepted('loan-accepted'),
-  loanRejected('loan-rejected'),
-  loanCancelled('loan-cancelled'),
-  loanReturned('loan-returned'),
-  loanExpired('loan-expired');
+  loanRequested('loan_requested'),
+  loanApproved('loan_approved'),
+  loanRejected('loan_rejected'),
+  loanCancelled('loan_cancelled'),
+  loanReturned('borrower_returned'),
+  loanExpired('loan_expired');
 
   const InAppNotificationType(this.value);
 

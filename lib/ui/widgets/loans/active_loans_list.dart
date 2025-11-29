@@ -5,7 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../providers/book_providers.dart';
+// ignore: unused_import
+import '../../../providers/loan_providers.dart';
+// ignore: unused_import  
+import '../../../providers/auth_providers.dart';
 import '../../../services/stats_service.dart';
+// ignore: unused_import
+import '../../../services/loan_controller.dart';
 
 /// Widget that displays a list of active loans
 /// 
@@ -52,73 +58,72 @@ class ActiveLoansList extends ConsumerWidget {
         final statusColor = _statusColor(context, loan.status);
 
         return Card(
-          child: ListTile(
-            leading: Icon(Icons.inventory_2_outlined, color: statusColor),
-            title: Text(loan.bookTitle),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Solicitante: ${loan.borrowerName}'),
-                Text('Estado: $statusLabel'),
-                Text('Solicitado: ${DateFormat.yMMMd().format(loan.requestedAt)}'),
-                Text(
-                  dueDate != null
-                      ? 'Vence: ${DateFormat.yMMMd().format(dueDate)}'
-                      : 'Sin fecha límite',
+          child: Column(
+            children: [
+              ListTile(
+                leading: Icon(Icons.inventory_2_outlined, color: statusColor),
+                title: Text(loan.bookTitle),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Solicitante: ${loan.borrowerName}'),
+                    Text('Estado: $statusLabel'),
+                    Text('Solicitado: ${DateFormat.yMMMd().format(loan.requestedAt)}'),
+                    Text(
+                      dueDate != null
+                          ? 'Vence: ${DateFormat.yMMMd().format(dueDate)}'
+                          : 'Sin fecha límite',
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            onTap: () {
-              unawaited(_openLoanDetail(context, ref, loan));
-            },
+                onTap: () {
+                  // Navigate to book detail page
+                  // This requires importing the book detail page widget and navigation logic
+                  // For now, show a message to the user
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Navegación a detalle de préstamo')),
+                  );
+                },
+              ),
+              if (loan.status == 'active')
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: () => _markReturned(context, ref, loan),
+                        icon: const Icon(Icons.assignment_turned_in_outlined),
+                        label: const Text('Marcar devuelto'),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         );
       },
     );
   }
 
-  Future<void> _openLoanDetail(BuildContext context, WidgetRef ref, StatsActiveLoan loan) async {
-    final groupId = loan.groupId;
-    final sharedBookId = loan.sharedBookId;
-
-    if (groupId == null || sharedBookId == null) {
-      if (!context.mounted) {
-        return;
-      }
-      _showFeedbackSnackBar(
-        context: context,
-        message: 'No pudimos abrir el detalle de este préstamo.',
-        isError: true,
+  Future<void> _markReturned(BuildContext context, WidgetRef ref, StatsActiveLoan loan) async {
+    final activeUser = ref.read(activeUserProvider).value;
+    if (activeUser == null) return;
+    try {
+      final controller = ref.read(loanControllerProvider.notifier);
+      await controller.markReturned(loan: loan.loan, actor: activeUser);
+      
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Préstamo marcado como devuelto')),
       );
-      return;
-    }
-
-    final groupDao = ref.read(groupDaoProvider);
-    final group = await groupDao.findGroupById(groupId);
-
-    if (group == null) {
-      if (!context.mounted) {
-        return;
-      }
-      _showFeedbackSnackBar(
-        context: context,
-        message: 'Este grupo ya no está disponible.',
-        isError: true,
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
-      return;
     }
-
-    if (!context.mounted) {
-      return;
-    }
-
-    // TODO: Navigate to book detail page
-    // This requires importing the book detail page widget
-    // For now, show a message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navegación a detalle de préstamo')),
-    );
   }
  
   String _statusLabel(String status) {
@@ -151,20 +156,4 @@ class ActiveLoansList extends ConsumerWidget {
         return colors.onSurfaceVariant;
     }
   }
-}
-
-/// Helper function to show feedback snackbar
-void _showFeedbackSnackBar({
-  required BuildContext context,
-  required String message,
-  required bool isError,
-}) {
-  if (!context.mounted) return;
-  
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
-    ),
-  );
 }

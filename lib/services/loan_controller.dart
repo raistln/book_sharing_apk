@@ -368,7 +368,7 @@ class LoanController extends StateNotifier<LoanActionState> {
       );
 
       await _notificationRepository.createLoanNotification(
-        type: InAppNotificationType.loanRequest,
+        type: InAppNotificationType.loanRequested,
         loan: loan,
         targetUserId: sharedBook.ownerUserId,
         actorUserId: borrower.id,
@@ -455,7 +455,7 @@ class LoanController extends StateNotifier<LoanActionState> {
       );
 
       await _notificationRepository.createLoanNotification(
-        type: InAppNotificationType.loanAccepted,
+        type: InAppNotificationType.loanApproved,
         loan: loan,
         targetUserId: loan.borrowerUserId!,
         actorUserId: owner.id,

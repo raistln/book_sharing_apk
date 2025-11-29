@@ -40,6 +40,7 @@ class StatsTopBook {
 class StatsActiveLoan {
   const StatsActiveLoan({
     required this.loanId,
+    required this.loan,
     required this.loanUuid,
     required this.bookTitle,
     required this.borrowerName,
@@ -51,6 +52,7 @@ class StatsActiveLoan {
     this.sharedBookId,
   });
 
+  final Loan loan;
   final int loanId;
   final String loanUuid;
   final String bookTitle;
@@ -82,6 +84,7 @@ class StatsService {
         )
         .map(
           (detail) => StatsActiveLoan(
+            loan: detail.loan,
             loanId: detail.loan.id,
             loanUuid: detail.loan.uuid,
             bookTitle: _resolveActiveLoanTitle(detail, books),

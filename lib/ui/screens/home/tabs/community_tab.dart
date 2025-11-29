@@ -481,22 +481,36 @@ class _SharedBooksSection extends StatelessWidget {
           return Text('No hay libros compartidos todavía.',
               style: theme.textTheme.bodyMedium);
         }
+        
+        final totalBooks = books.length;
+        final availableBooks = books.where((b) => b.sharedBook.isAvailable).length;
+        
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Libros compartidos', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            ...books.map((detail) {
-              final bookTitle = detail.book?.title ?? 'Libro sin título';
-              final visibility = detail.sharedBook.visibility;
-              final availability = detail.sharedBook.isAvailable ? 'Disponible' : 'No disponible';
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.menu_book_outlined),
-                title: Text(bookTitle),
-                subtitle: Text('Visibilidad: $visibility · $availability'),
-              );
-            }),
+            Text('Estadísticas de libros', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    icon: Icons.menu_book_outlined,
+                    label: 'Total',
+                    value: '$totalBooks',
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    icon: Icons.check_circle_outline,
+                    label: 'Disponibles',
+                    value: '$availableBooks',
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
           ],
         );
       },
@@ -506,6 +520,46 @@ class _SharedBooksSection extends StatelessWidget {
       ),
       error: (error, _) => Text('Error cargando libros compartidos: $error',
           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(icon, size: 32, color: color),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -528,18 +582,25 @@ class _LoansSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return loansAsync.when(
+return loansAsync.when(
       data: (loans) {
-        if (loans.isEmpty) {
-          return Text('Sin préstamos registrados por ahora.',
+        // Filter to show only loans where user is involved
+        final userLoans = loans.where((detail) {
+          final loan = detail.loan;
+          return loan.borrowerUserId == activeUser?.id || 
+                 loan.lenderUserId == activeUser?.id;
+        }).toList();
+        
+        if (userLoans.isEmpty) {
+          return Text('No tienes préstamos activos en este grupo.',
               style: theme.textTheme.bodyMedium);
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Préstamos', style: theme.textTheme.titleSmall),
+            Text('Tus préstamos', style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
-            ...loans.map((detail) {
+            ...userLoans.map((detail) {
               final loan = detail.loan;
               final bookTitle = detail.book?.title ?? 'Libro';
               final status = loan.status;
@@ -617,13 +678,6 @@ class _LoansSection extends StatelessWidget {
                                   : () => _markReturned(context, detail),
                               icon: const Icon(Icons.assignment_turned_in_outlined),
                               label: const Text('Marcar devuelto'),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: loanState.isLoading
-                                  ? null
-                                  : () => _expireLoan(context, detail),
-                              icon: const Icon(Icons.hourglass_top_outlined),
-                              label: const Text('Marcar expirado'),
                             ),
                           ],
                           if (detail.sharedBook != null &&
@@ -721,17 +775,6 @@ class _LoansSection extends StatelessWidget {
     } catch (error) {
       if (!context.mounted) return;
       onFeedback('No se pudo marcar como devuelto: $error', true);
-    }
-  }
-
-  Future<void> _expireLoan(BuildContext context, LoanDetail detail) async {
-    try {
-      await loanController.expireLoan(loan: detail.loan);
-      if (!context.mounted) return;
-      onFeedback('Préstamo marcado como expirado.', false);
-    } catch (error) {
-      if (!context.mounted) return;
-      onFeedback('No se pudo marcar como expirado: $error', true);
     }
   }
 

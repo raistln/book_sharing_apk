@@ -36,7 +36,7 @@ class NotificationVisuals {
     String defaultTitle;
 
     switch (type) {
-      case InAppNotificationType.loanAccepted:
+      case InAppNotificationType.loanApproved:
         background = scheme.primaryContainer;
         iconColor = scheme.onPrimaryContainer;
         textColor = scheme.onPrimaryContainer;
@@ -76,7 +76,7 @@ class NotificationVisuals {
         icon = Icons.schedule_outlined;
         defaultTitle = 'Préstamo vencido';
         break;
-      case InAppNotificationType.loanRequest:
+      case InAppNotificationType.loanRequested:
       default:
         background = scheme.surfaceContainerHighest;
         iconColor = scheme.primary;

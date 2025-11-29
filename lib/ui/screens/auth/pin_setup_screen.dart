@@ -213,6 +213,11 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
 
         final userRepository = ref.read(userRepositoryProvider);
         await userRepository.createUser(username: username);
+        
+        // Reset onboarding for new user to show intro and coach marks
+        final onboardingService = ref.read(onboardingServiceProvider);
+        await onboardingService.reset();
+        
         ref.read(userSyncControllerProvider.notifier).markPendingChanges();
       }
 

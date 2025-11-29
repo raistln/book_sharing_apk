@@ -434,6 +434,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                           icon: const Icon(Icons.qr_code_scanner),
                           tooltip: 'Escanear código',
                           onPressed: () async {
+                            final searchContext = context;
                             final result = await showModalBottomSheet<String>(
                               context: context,
                               isScrollControlled: true,
@@ -444,6 +445,10 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                               setState(() {
                                 _barcodeController.text = result;
                               });
+                              // Auto-search after scanning
+                              if (searchContext.mounted) {
+                                _handleSearch(searchContext);
+                              }
                             }
                           },
                         ),

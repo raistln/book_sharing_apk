@@ -157,12 +157,14 @@ class _BookListTile extends ConsumerWidget {
     required this.book,
     required this.onTap,
     required this.onAddReview,
+    required this.onViewReviews,
     required this.onCreateManualLoan,
   });
 
   final Book book;
   final VoidCallback onTap;
   final VoidCallback onAddReview;
+  final VoidCallback onViewReviews;
   final VoidCallback onCreateManualLoan;
 
   @override
@@ -276,6 +278,11 @@ class _BookListTile extends ConsumerWidget {
                 onPressed: onAddReview,
                 icon: const Icon(Icons.rate_review_outlined),
                 label: const Text('Añadir reseña'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onViewReviews,
+                icon: const Icon(Icons.reviews_outlined),
+                label: const Text('Ver reseñas'),
               ),
               if (book.status == 'available')
                 FilledButton.icon(
@@ -1175,6 +1182,7 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                               book: book,
                               onTap: () => widget.onOpenForm(book: book),
                               onAddReview: () => _showAddReviewDialog(context, book),
+                              onViewReviews: () => _showReviewsListDialog(context, book),
                               onCreateManualLoan: () => _showManualLoanDialog(context, book),
                             );
                           },
@@ -1332,6 +1340,125 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
     }
   }
 
+  Future<void> _showReviewsListDialog(BuildContext context, Book book) async {
+    final reviewsAsync = ref.read(bookReviewsProvider(book.id));
+    final theme = Theme.of(context);
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Reseñas de "${book.title}"'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: reviewsAsync.when(
+              data: (reviews) {
+                if (reviews.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.reviews_outlined, size: 48),
+                        SizedBox(height: 16),
+                        Text(
+                          'No hay reseñas todavía',
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: reviews.length,
+                  separatorBuilder: (_, __) => const Divider(),
+                  itemBuilder: (context, index) {
+                    final review = reviews[index];
+                    return FutureBuilder<LocalUser?>(
+                      future: ref.read(loanRepositoryProvider).findUserById(review.authorUserId),
+                      builder: (context, snapshot) {
+                        final authorName = snapshot.data?.username ?? 'Usuario desconocido';
+                        
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  authorName,
+                                  style: theme.textTheme.titleSmall,
+                                ),
+                              ),
+                              ...List.generate(5, (starIndex) {
+                                return Icon(
+                                  starIndex < review.rating
+                                      ? Icons.star
+                                      : Icons.star_border,
+                                  color: Colors.amber,
+                                  size: 16,
+                                );
+                              }),
+                            ],
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormat.yMMMd().format(review.createdAt),
+                                style: theme.textTheme.bodySmall,
+                              ),
+                              if (review.review != null && review.review!.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  review.review!,
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (error, _) => Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error al cargar reseñas: $error',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
   Future<void> _showManualLoanDialog(BuildContext context, Book book) async {
     final loanRepository = ref.read(loanRepositoryProvider);
     final groupDao = ref.read(groupDaoProvider);
@@ -1343,6 +1470,7 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
     final contactController = TextEditingController();
     final formKey = GlobalKey<FormState>();
     DateTime? selectedDueDate;
+    bool noDeadline = false;
 
     try {
       final result = await showDialog<Map<String, dynamic>>(
@@ -1386,25 +1514,42 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now().add(const Duration(days: 14)),
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
-                        );
-                        if (picked != null) {
-                          setState(() => selectedDueDate = picked);
-                        }
+                    CheckboxListTile(
+                      value: noDeadline,
+                      onChanged: (value) {
+                        setState(() {
+                          noDeadline = value ?? false;
+                          if (noDeadline) {
+                            selectedDueDate = null;
+                          }
+                        });
                       },
-                      icon: const Icon(Icons.calendar_today),
-                      label: Text(
-                        selectedDueDate == null
-                            ? 'Seleccionar fecha de devolución *'
-                            : 'Vence: ${DateFormat.yMMMd().format(selectedDueDate!)}',
-                      ),
+                      title: const Text('Sin fecha límite'),
+                      subtitle: const Text('El préstamo no tendrá fecha de vencimiento'),
+                      controlAffinity: ListTileControlAffinity.leading,
                     ),
+                    if (!noDeadline)
+                      const SizedBox(height: 12),
+                    if (!noDeadline)
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now().add(const Duration(days: 14)),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (picked != null) {
+                            setState(() => selectedDueDate = picked);
+                          }
+                        },
+                        icon: const Icon(Icons.calendar_today),
+                        label: Text(
+                          selectedDueDate == null
+                              ? 'Seleccionar fecha de devolución *'
+                              : 'Vence: ${DateFormat.yMMMd().format(selectedDueDate!)}',
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1416,10 +1561,10 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                 FilledButton(
                   onPressed: () {
                     if (formKey.currentState?.validate() ?? false) {
-                      if (selectedDueDate == null) {
+                      if (!noDeadline && selectedDueDate == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Selecciona una fecha de devolución'),
+                            content: Text('Selecciona una fecha de devolución o marca "Sin fecha límite"'),
                           ),
                         );
                         return;
@@ -1427,7 +1572,7 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                       Navigator.pop(context, {
                         'name': nameController.text.trim(),
                         'contact': contactController.text.trim(),
-                        'dueDate': selectedDueDate,
+                        'dueDate': noDeadline ? null : selectedDueDate,
                       });
                     }
                   },

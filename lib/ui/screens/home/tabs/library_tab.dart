@@ -2,18 +2,19 @@ import 'dart:async';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:file_saver/file_saver.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../data/local/database.dart';
 import '../../../../providers/book_providers.dart';
-import '../../../../providers/cover_refresh_providers.dart';
-import '../../../../providers/permission_providers.dart';
 import '../../../../providers/api_providers.dart';
+import '../../../../providers/permission_providers.dart';
+import '../../../../providers/cover_refresh_providers.dart';
 import '../../../../services/book_export_service.dart';
 import '../../../../services/cover_image_service_base.dart';
 import '../../../../services/google_books_client.dart';
@@ -21,6 +22,9 @@ import '../../../../services/open_library_client.dart';
 import '../../../../ui/widgets/barcode_scanner_sheet.dart';
 import '../../../../ui/widgets/cover_preview.dart';
 import '../../../../ui/widgets/empty_state.dart';
+import '../../../widgets/library/book_list.dart';
+import '../../../widgets/library/library_filters.dart';
+import '../../../widgets/library/library_search_bar.dart';
 
 enum _BookSource { openLibrary, googleBooks }
 
@@ -126,191 +130,6 @@ class _EmptyLibraryState extends StatelessWidget {
     );
   }
 
-}
-
-class _RatingStars extends StatelessWidget {
-  const _RatingStars({required this.average});
-
-  final double average;
-
-  @override
-  Widget build(BuildContext context) {
-    final stars = List<Widget>.generate(5, (index) {
-      final starValue = index + 1;
-      IconData icon;
-      if (average >= starValue) {
-        icon = Icons.star;
-      } else if (average >= starValue - 0.5) {
-        icon = Icons.star_half;
-      } else {
-        icon = Icons.star_border;
-      }
-      return Icon(icon, color: Colors.amber, size: 18);
-    });
-
-    return Row(mainAxisSize: MainAxisSize.min, children: stars);
-  }
-}
-
-class _BookListTile extends ConsumerWidget {
-  const _BookListTile({
-    required this.book,
-    required this.onTap,
-    required this.onAddReview,
-    required this.onViewReviews,
-    required this.onCreateManualLoan,
-  });
-
-  final Book book;
-  final VoidCallback onTap;
-  final VoidCallback onAddReview;
-  final VoidCallback onViewReviews;
-  final VoidCallback onCreateManualLoan;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final statusLabel = _statusLabel(book.status);
-    final subtitleParts = [
-      if (book.author?.isNotEmpty == true) book.author,
-      if (book.isbn?.isNotEmpty == true) 'ISBN ${book.isbn}',
-      if (book.barcode?.isNotEmpty == true) 'Código ${book.barcode}',
-    ].whereType<String>().toList();
-
-    final reviewsAsync = ref.watch(bookReviewsProvider(book.id));
-    final theme = Theme.of(context);
-
-    final subtitleWidgets = <Widget>[];
-    if (subtitleParts.isNotEmpty) {
-      subtitleWidgets.add(Text(subtitleParts.join(' · ')));
-    }
-
-    subtitleWidgets.add(
-      Padding(
-        padding: EdgeInsets.only(top: subtitleParts.isNotEmpty ? 4 : 0),
-        child: reviewsAsync.when(
-          data: (reviews) {
-            if (reviews.isEmpty) {
-              return Text(
-                'Sin reseñas todavía',
-                style: theme.textTheme.bodySmall,
-              );
-            }
-            final avg = reviews
-                    .map((r) => r.rating)
-                    .fold<double>(0, (prev, value) => prev + value) /
-                reviews.length;
-            return Row(
-              children: [
-                _RatingStars(average: avg),
-                const SizedBox(width: 8),
-                Text(
-                  '${avg.toStringAsFixed(1)} / 5 · ${reviews.length} reseñas',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-            );
-          },
-          loading: () => const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-          error: (err, _) => Text(
-            'Error cargando reseñas',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.error),
-          ),
-        ),
-      ),
-    );
-
-    subtitleWidgets.add(
-      Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Chip(
-              label: Text(statusLabel),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-              labelStyle: theme.textTheme.labelSmall
-                  ?.copyWith(color: theme.colorScheme.primary),
-            ),
-            Text(
-              DateFormat.yMMMd().format(book.updatedAt),
-              style: theme.textTheme.bodySmall,
-            ),
-          ],
-        ),
-      ),
-    );
-
-    return Card(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: buildCoverPreview(
-              book.coverPath,
-              size: 48,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            title: Text(
-              book.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: subtitleWidgets,
-            ),
-            onTap: onTap,
-          ),
-          OverflowBar(
-            alignment: MainAxisAlignment.end,
-            children: [
-              OutlinedButton.icon(
-                onPressed: onAddReview,
-                icon: const Icon(Icons.rate_review_outlined),
-                label: const Text('Añadir reseña'),
-              ),
-              OutlinedButton.icon(
-                onPressed: onViewReviews,
-                icon: const Icon(Icons.reviews_outlined),
-                label: const Text('Ver reseñas'),
-              ),
-              if (book.status == 'available')
-                FilledButton.icon(
-                  onPressed: onCreateManualLoan,
-                  icon: const Icon(Icons.person_add_outlined),
-                  label: const Text('Préstamo manual'),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _statusLabel(String status) {
-    switch (status) {
-      case 'available':
-        return 'Disponible';
-      case 'loaned':
-        return 'Prestado';
-      case 'archived':
-        return 'Archivado';
-      case 'private':
-        return 'Privado';
-      default:
-        return status;
-    }
-  }
 }
 
 class BookFormSheet extends ConsumerStatefulWidget {
@@ -447,7 +266,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                               context: context,
                               isScrollControlled: true,
                               useSafeArea: true,
-                              builder: (context) => const BarcodeScannerSheet(),
+                              builder: (context) => BarcodeScannerSheet(
+                                onScanned: (barcode) => Navigator.of(context).pop(barcode),
+                              ),
                             );
                             if (result != null && mounted) {
                               setState(() {
@@ -1110,7 +931,10 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                   const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: _ExportButton(onExport: () => _handleExport()),
+                    child: LibraryFilters(
+                      onRefreshCovers: () => _handleExport(),
+                      onExport: () => _handleExport(),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Expanded(
@@ -1135,34 +959,18 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    _RefreshCoversButton(onRefresh: () => _handleRefreshCovers()),
-                    const SizedBox(width: 12),
-                    _ExportButton(onExport: () => _handleExport()),
+                    LibraryFilters(
+                      onRefreshCovers: () => _handleRefreshCovers(),
+                      onExport: () => _handleExport(),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: TextField(
+                  child: LibrarySearchBar(
                     controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Buscar por título o autor...',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : null,
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                    onChanged: (value) {
-                      setState(() => _searchQuery = value);
-                    },
+                    onChanged: (value) => setState(() => _searchQuery = value),
                   ),
                 ),
                 Expanded(
@@ -1173,19 +981,12 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                             style: theme.textTheme.bodyMedium,
                           ),
                         )
-                      : ListView.separated(
-                          itemCount: filteredBooks.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final book = filteredBooks[index];
-                            return _BookListTile(
-                              book: book,
-                              onTap: () => widget.onOpenForm(book: book),
-                              onAddReview: () => _showAddReviewDialog(context, book),
-                              onViewReviews: () => _showReviewsListDialog(context, book),
-                              onCreateManualLoan: () => _showManualLoanDialog(context, book),
-                            );
-                          },
+                      : BookList(
+                          books: filteredBooks,
+                          onBookTap: (book) => widget.onOpenForm(book: book),
+                          onAddReview: (book) => _showAddReviewDialog(context, book),
+                          onViewReviews: (book) => _showReviewsListDialog(context, book),
+                          onCreateManualLoan: (book) => _showManualLoanDialog(context, book),
                         ),
                 ),
               ],
@@ -1883,34 +1684,3 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
   }
 
 }
-
-class _ExportButton extends StatelessWidget {
-  const _ExportButton({required this.onExport});
-
-  final VoidCallback onExport;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onExport,
-      icon: const Icon(Icons.file_upload_outlined),
-      label: const Text('Exportar biblioteca'),
-    );
-  }
-}
-
-class _RefreshCoversButton extends StatelessWidget {
-  const _RefreshCoversButton({required this.onRefresh});
-
-  final VoidCallback onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onRefresh,
-      icon: const Icon(Icons.refresh),
-      label: const Text('Actualizar portadas'),
-    );
-  }
-}
-

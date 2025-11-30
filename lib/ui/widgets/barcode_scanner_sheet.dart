@@ -6,7 +6,12 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 /// Displays a camera view with barcode detection.
 /// Returns the scanned barcode value when detected.
 class BarcodeScannerSheet extends StatefulWidget {
-  const BarcodeScannerSheet({super.key});
+  const BarcodeScannerSheet({
+    super.key,
+    required this.onScanned,
+  });
+
+  final Function(String) onScanned;
 
   @override
   State<BarcodeScannerSheet> createState() => _BarcodeScannerSheetState();
@@ -42,7 +47,8 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
         _handled = true;
         _controller.stop();
         if (mounted) {
-          Navigator.of(context).pop(value.trim());
+          Navigator.of(context).pop();
+          widget.onScanned(value.trim());
         }
         return;
       }

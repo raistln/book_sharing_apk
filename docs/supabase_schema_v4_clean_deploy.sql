@@ -7,77 +7,140 @@
 -- ============================================================================
 
 -- ============================================================================
--- STEP 1: DROP ALL EXISTING CRON JOBS
+-- ⚠️  DANGER ZONE - DATA DESTRUCTION SECTION ⚠️
 -- ============================================================================
--- Drop any existing cron jobs (pg_cron extension)
+-- 
+-- INSTRUCTIONS:
+-- 1. For CLEAN DEPLOY (delete all data): Uncomment lines 16-17
+-- 2. For SAFE UPDATE (preserve data): Keep lines 16-17 commented
+-- 
+-- To activate data deletion, remove the double dashes (--) from lines 16-17:
+--   SET @ENABLE_DATA_DESTRUCTION = true;  -- REMOVE THIS LINE
+--   -- @ENABLE_DATA_DESTRUCTION = true;  -- UNCOMMENT THIS LINE
+--
+-- To disable data deletion, keep lines 16-17 as-is:
+--   SET @ENABLE_DATA_DESTRUCTION = true;  -- REMOVE THIS LINE  
+--   -- @ENABLE_DATA_DESTRUCTION = true;  -- KEEP COMMENTED
+-- ============================================================================
+
+-- SET @ENABLE_DATA_DESTRUCTION = true;  -- REMOVE THIS LINE TO ACTIVATE DESTRUCTION
+-- -- @ENABLE_DATA_DESTRUCTION = true;  -- UNCOMMENT THIS LINE TO ACTIVATE DESTRUCTION
+
+-- ============================================================================
+-- STEP 1: DROP ALL EXISTING CRON JOBS (ONLY IF DESTRUCTION ENABLED)
+-- ============================================================================
 DO $$
-DECLARE
-  job_record RECORD;
 BEGIN
-  FOR job_record IN 
-    SELECT jobid, jobname FROM cron.job
-  LOOP
-    PERFORM cron.unschedule(job_record.jobid);
-    RAISE NOTICE 'Dropped cron job: % (ID: %)', job_record.jobname, job_record.jobid;
-  END LOOP;
-EXCEPTION
-  WHEN undefined_table THEN
-    RAISE NOTICE 'pg_cron not installed, skipping cron job cleanup';
+  IF EXISTS (SELECT 1 WHERE @ENABLE_DATA_DESTRUCTION = true) THEN
+    RAISE NOTICE '🔥 DATA DESTRUCTION ENABLED - Dropping all cron jobs...';
+    
+    -- Drop any existing cron jobs (pg_cron extension)
+    DO $$
+    DECLARE
+      job_record RECORD;
+    BEGIN
+      FOR job_record IN 
+        SELECT jobid, jobname FROM cron.job
+      LOOP
+        PERFORM cron.unschedule(job_record.jobid);
+        RAISE NOTICE 'Dropped cron job: % (ID: %)', job_record.jobname, job_record.jobid;
+      END LOOP;
+    EXCEPTION
+      WHEN undefined_table THEN
+        RAISE NOTICE 'pg_cron not installed, skipping cron job cleanup';
+    END $$;
+  ELSE
+    RAISE NOTICE '🛡️  SAFE MODE - Skipping cron job cleanup';
+  END IF;
 END $$;
 
 -- ============================================================================
--- STEP 2: DROP ALL EXISTING POLICIES
+-- STEP 2: DROP ALL EXISTING POLICIES (ONLY IF DESTRUCTION ENABLED)
 -- ============================================================================
--- Drop all RLS policies on existing tables
 DO $$
-DECLARE
-  pol RECORD;
 BEGIN
-  FOR pol IN 
-    SELECT schemaname, tablename, policyname 
-    FROM pg_policies 
-    WHERE schemaname = 'public'
-  LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I CASCADE', 
-      pol.policyname, pol.schemaname, pol.tablename);
-    RAISE NOTICE 'Dropped policy: % on %.%', pol.policyname, pol.schemaname, pol.tablename;
-  END LOOP;
+  IF EXISTS (SELECT 1 WHERE @ENABLE_DATA_DESTRUCTION = true) THEN
+    RAISE NOTICE '🔥 DATA DESTRUCTION ENABLED - Dropping all RLS policies...';
+    
+    -- Drop all RLS policies on existing tables
+    DO $$
+    DECLARE
+      pol RECORD;
+    BEGIN
+      FOR pol IN 
+        SELECT schemaname, tablename, policyname 
+        FROM pg_policies 
+        WHERE schemaname = 'public'
+      LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I CASCADE', 
+          pol.policyname, pol.schemaname, pol.tablename);
+        RAISE NOTICE 'Dropped policy: % on %.%', pol.policyname, pol.schemaname, pol.tablename;
+      END LOOP;
+    END $$;
+  ELSE
+    RAISE NOTICE '🛡️  SAFE MODE - Skipping RLS policy cleanup';
+  END IF;
 END $$;
 
 -- ============================================================================
--- STEP 3: DROP ALL EXISTING TRIGGERS
+-- STEP 3: DROP ALL EXISTING TRIGGERS (ONLY IF DESTRUCTION ENABLED)
 -- ============================================================================
 DO $$
-DECLARE
-  trig RECORD;
 BEGIN
-  FOR trig IN 
-    SELECT trigger_schema, trigger_name, event_object_table
-    FROM information_schema.triggers
-    WHERE trigger_schema = 'public'
-  LOOP
-    EXECUTE format('DROP TRIGGER IF EXISTS %I ON %I.%I CASCADE', 
-      trig.trigger_name, trig.trigger_schema, trig.event_object_table);
-    RAISE NOTICE 'Dropped trigger: % on %.%', trig.trigger_name, trig.trigger_schema, trig.event_object_table;
-  END LOOP;
+  IF EXISTS (SELECT 1 WHERE @ENABLE_DATA_DESTRUCTION = true) THEN
+    RAISE NOTICE '🔥 DATA DESTRUCTION ENABLED - Dropping all triggers...';
+    
+    -- Drop all triggers on existing tables
+    DO $$
+    DECLARE
+      trig RECORD;
+    BEGIN
+      FOR trig IN 
+        SELECT event_object_table, trigger_name 
+        FROM information_schema.triggers 
+        WHERE trigger_schema = 'public'
+      LOOP
+        EXECUTE format('DROP TRIGGER IF EXISTS %I ON %I CASCADE', 
+          trig.trigger_name, trig.event_object_table);
+        RAISE NOTICE 'Dropped trigger: % on %', trig.trigger_name, trig.event_object_table;
+      END LOOP;
+    END $$;
+  ELSE
+    RAISE NOTICE '🛡️  SAFE MODE - Skipping trigger cleanup';
+  END IF;
 END $$;
 
 -- ============================================================================
--- STEP 4: DROP ALL EXISTING TABLES
+-- STEP 4: DROP ALL EXISTING TABLES (ONLY IF DESTRUCTION ENABLED)
 -- ============================================================================
--- Drop tables in reverse dependency order
-DROP TABLE IF EXISTS public.loan_notifications CASCADE;
-DROP TABLE IF EXISTS public.loans CASCADE;
-DROP TABLE IF EXISTS public.shared_books CASCADE;
-DROP TABLE IF EXISTS public.group_invitations CASCADE;
-DROP TABLE IF EXISTS public.group_members CASCADE;
-DROP TABLE IF EXISTS public.groups CASCADE;
-DROP TABLE IF EXISTS public.profiles CASCADE;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 WHERE @ENABLE_DATA_DESTRUCTION = true) THEN
+    RAISE NOTICE '🔥 DATA DESTRUCTION ENABLED - Dropping all tables...';
+    
+    -- Drop tables in reverse dependency order
+    DROP TABLE IF EXISTS public.loan_notifications CASCADE;
+    DROP TABLE IF EXISTS public.loans CASCADE;
+    DROP TABLE IF EXISTS public.shared_books CASCADE;
+    DROP TABLE IF EXISTS public.group_invitations CASCADE;
+    DROP TABLE IF EXISTS public.group_members CASCADE;
+    DROP TABLE IF EXISTS public.groups CASCADE;
+    DROP TABLE IF EXISTS public.profiles CASCADE;
 
--- Drop any other legacy tables that might exist
-DROP TABLE IF EXISTS public.books CASCADE;
-DROP TABLE IF EXISTS public.book_reviews CASCADE;
-DROP TABLE IF EXISTS public.notifications CASCADE;
+    -- Drop any other legacy tables that might exist
+    DROP TABLE IF EXISTS public.books CASCADE;
+    DROP TABLE IF EXISTS public.book_reviews CASCADE;
+    DROP TABLE IF EXISTS public.notifications CASCADE;
+    
+    RAISE NOTICE '✅ All existing tables dropped successfully';
+  ELSE
+    RAISE NOTICE '🛡️  SAFE MODE - Preserving existing tables';
+  END IF;
+END $$;
+
+-- ============================================================================
+-- END OF DANGER ZONE - Remaining steps are always safe
+-- ============================================================================
 DROP TABLE IF EXISTS public.in_app_notifications CASCADE;
 
 -- ============================================================================

@@ -25,6 +25,8 @@ import '../../../../ui/widgets/empty_state.dart';
 import '../../../widgets/library/book_list.dart';
 import '../../../widgets/library/library_filters.dart';
 import '../../../widgets/library/library_search_bar.dart';
+import '../../../widgets/library/read_status_filter.dart';
+
 
 enum _BookSource { openLibrary, googleBooks }
 
@@ -149,6 +151,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
   final _barcodeController = TextEditingController();
   final _notesController = TextEditingController();
   String _status = 'available';
+  bool _isRead = false;
   bool _submitting = false;
   String? _coverPath;
   late final String? _initialCoverPath;
@@ -175,6 +178,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       _barcodeController.text = book.barcode ?? '';
       _notesController.text = book.notes ?? '';
       _status = book.status;
+      _isRead = book.isRead;
     }
   }
 
@@ -364,6 +368,13 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                   border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                title: const Text('Marcar como leído'),
+                subtitle: const Text('¿Ya has terminado de leer este libro?'),
+                value: _isRead,
+                onChanged: (value) => setState(() => _isRead = value),
+              ),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -445,6 +456,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           coverPath: Value(_coverPath),
           notes: Value(notes.isEmpty ? null : notes),
           status: _status,
+          isRead: _isRead,
           updatedAt: DateTime.now(),
         );
 
@@ -458,6 +470,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           coverPath: _coverPath,
           notes: notes.isEmpty ? null : notes,
           status: _status,
+          isRead: _isRead,
           owner: activeUser,
         );
       }
@@ -890,6 +903,7 @@ class LibraryTab extends ConsumerStatefulWidget {
 class _LibraryTabState extends ConsumerState<LibraryTab> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
+  bool? _readStatusFilter;
   @override
   void dispose() {
     _searchController.dispose();
@@ -897,9 +911,14 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
   }
 
   List<Book> _filterBooks(List<Book> books) {
-    if (_searchQuery.isEmpty) return books;
+    var filtered = books;
+    // Filtrar por estado de lectura
+    if (_readStatusFilter != null) {
+      filtered = filtered.where((b) => b.isRead == _readStatusFilter).toList();
+    }
+    if (_searchQuery.isEmpty) return filtered;
     
-    return books.where((book) {
+    return filtered.where((book) {
       final title = book.title.toLowerCase();
       final author = (book.author ?? '').toLowerCase();
       final query = _searchQuery.toLowerCase();
@@ -957,8 +976,12 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                 ),
                 const SizedBox(height: 16),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    ReadStatusFilter(
+                      selectedFilter: _readStatusFilter,
+                      onChanged: (val) => setState(() => _readStatusFilter = val),
+                    ),
                     LibraryFilters(
                       onRefreshCovers: () => _handleRefreshCovers(),
                       onExport: () => _handleExport(),

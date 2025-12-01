@@ -12,9 +12,9 @@ void main() {
       const actionText = 'Add Book';
 
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
-            body: const EmptyState(
+            body: EmptyState(
               icon: Icons.book,
               title: title,
               message: message,
@@ -136,7 +136,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: const EmptyState(
+            body: EmptyState(
               icon: Icons.book,
               title: 'No Books Found',
               message: 'Start by adding your first book',
@@ -165,9 +165,9 @@ void main() {
       const customColor = Colors.red;
       
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
-            body: const EmptyState(
+            body: EmptyState(
               icon: Icons.book,
               title: 'No Books Found',
               message: 'Start by adding your first book',

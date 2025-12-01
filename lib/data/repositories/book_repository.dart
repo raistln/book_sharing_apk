@@ -134,6 +134,7 @@ class BookRepository {
     String? coverPath,
     String status = 'available',
     String? notes,
+    bool isRead = false,
     LocalUser? owner,
   }) async {
     final now = DateTime.now();
@@ -148,6 +149,7 @@ class BookRepository {
         coverPath: Value(coverPath),
         status: Value(status),
         notes: Value(notes),
+        isRead: Value(isRead),
         ownerUserId: owner != null ? Value(owner.id) : const Value.absent(),
         ownerRemoteId: owner?.remoteId != null
             ? Value(owner!.remoteId)

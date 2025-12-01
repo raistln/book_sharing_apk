@@ -78,6 +78,9 @@ class Books extends Table {
 
   TextColumn get status => text().withDefault(const Constant('available'))();
   TextColumn get notes => text().nullable()();
+  
+  // Read status
+  BoolColumn get isRead => boolean().withDefault(const Constant(false))();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
@@ -315,7 +318,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -379,6 +382,15 @@ class AppDatabase extends _$AppDatabase {
             // For now, we assume existing data is fine.
             // If strict null checks are enforced by SQLite, we might need a more complex migration
             // (create new table, copy data, drop old), but for adding nullable columns, addColumn is enough.
+          }
+
+          if (from < 10) {
+            await m.createTable(loanNotifications);
+          }
+
+          if (from < 11) {
+            // Add isRead column to Books table
+            await m.addColumn(books, books.isRead);
           }
         },
       );

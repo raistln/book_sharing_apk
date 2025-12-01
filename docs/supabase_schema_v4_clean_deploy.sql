@@ -1,5 +1,5 @@
 -- ============================================================================
--- Book Sharing App - Supabase SQL Schema v4 - CLEAN DEPLOYMENT
+-- Book Sharing App - Supabase SQL Schema v5 - CLEAN DEPLOYMENT
 -- ============================================================================
 -- WARNING: This script will DROP ALL existing tables, policies, triggers,
 -- functions, and cron jobs. ALL DATA WILL BE LOST.
@@ -14,28 +14,28 @@
 -- 1. For CLEAN DEPLOY (delete all data): Uncomment lines 16-17
 -- 2. For SAFE UPDATE (preserve data): Keep lines 16-17 commented
 -- 
--- To activate data deletion, remove the double dashes (--) from lines 16-17:
---   SET @ENABLE_DATA_DESTRUCTION = true;  -- REMOVE THIS LINE
---   -- @ENABLE_DATA_DESTRUCTION = true;  -- UNCOMMENT THIS LINE
+-- To activate data deletion, uncomment line 16 and comment line 17:
+--   DO $$ BEGIN PERFORM set_config('app.enable_data_destruction', 'true', false); END $$;
+--   -- DO $$ BEGIN PERFORM set_config('app.enable_data_destruction', 'false', false); END $$;
 --
 -- To disable data deletion, keep lines 16-17 as-is:
---   SET @ENABLE_DATA_DESTRUCTION = true;  -- REMOVE THIS LINE  
---   -- @ENABLE_DATA_DESTRUCTION = true;  -- KEEP COMMENTED
+--   -- DO $$ BEGIN PERFORM set_config('app.enable_data_destruction', 'true', false); END $$;
+--   DO $$ BEGIN PERFORM set_config('app.enable_data_destruction', 'false', false); END $$;
 -- ============================================================================
 
--- SET @ENABLE_DATA_DESTRUCTION = true;  -- REMOVE THIS LINE TO ACTIVATE DESTRUCTION
--- -- @ENABLE_DATA_DESTRUCTION = true;  -- UNCOMMENT THIS LINE TO ACTIVATE DESTRUCTION
+-- Enable data destruction (UNCOMMENT TO ACTIVATE)
+DO $$ BEGIN PERFORM set_config('app.enable_data_destruction', 'true', false); END $$;
+-- DO $$ BEGIN PERFORM set_config('app.enable_data_destruction', 'false', false); END $$;
 
 -- ============================================================================
 -- STEP 1: DROP ALL EXISTING CRON JOBS (ONLY IF DESTRUCTION ENABLED)
 -- ============================================================================
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 WHERE @ENABLE_DATA_DESTRUCTION = true) THEN
+  IF current_setting('app.enable_data_destruction', true) = 'true' THEN
     RAISE NOTICE '🔥 DATA DESTRUCTION ENABLED - Dropping all cron jobs...';
     
     -- Drop any existing cron jobs (pg_cron extension)
-    DO $$
     DECLARE
       job_record RECORD;
     BEGIN
@@ -48,7 +48,7 @@ BEGIN
     EXCEPTION
       WHEN undefined_table THEN
         RAISE NOTICE 'pg_cron not installed, skipping cron job cleanup';
-    END $$;
+    END;
   ELSE
     RAISE NOTICE '🛡️  SAFE MODE - Skipping cron job cleanup';
   END IF;
@@ -59,11 +59,10 @@ END $$;
 -- ============================================================================
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 WHERE @ENABLE_DATA_DESTRUCTION = true) THEN
+  IF current_setting('app.enable_data_destruction', true) = 'true' THEN
     RAISE NOTICE '🔥 DATA DESTRUCTION ENABLED - Dropping all RLS policies...';
     
     -- Drop all RLS policies on existing tables
-    DO $$
     DECLARE
       pol RECORD;
     BEGIN
@@ -76,7 +75,7 @@ BEGIN
           pol.policyname, pol.schemaname, pol.tablename);
         RAISE NOTICE 'Dropped policy: % on %.%', pol.policyname, pol.schemaname, pol.tablename;
       END LOOP;
-    END $$;
+    END;
   ELSE
     RAISE NOTICE '🛡️  SAFE MODE - Skipping RLS policy cleanup';
   END IF;
@@ -87,11 +86,10 @@ END $$;
 -- ============================================================================
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 WHERE @ENABLE_DATA_DESTRUCTION = true) THEN
+  IF current_setting('app.enable_data_destruction', true) = 'true' THEN
     RAISE NOTICE '🔥 DATA DESTRUCTION ENABLED - Dropping all triggers...';
     
     -- Drop all triggers on existing tables
-    DO $$
     DECLARE
       trig RECORD;
     BEGIN
@@ -104,7 +102,7 @@ BEGIN
           trig.trigger_name, trig.event_object_table);
         RAISE NOTICE 'Dropped trigger: % on %', trig.trigger_name, trig.event_object_table;
       END LOOP;
-    END $$;
+    END;
   ELSE
     RAISE NOTICE '🛡️  SAFE MODE - Skipping trigger cleanup';
   END IF;
@@ -115,7 +113,7 @@ END $$;
 -- ============================================================================
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 WHERE @ENABLE_DATA_DESTRUCTION = true) THEN
+  IF current_setting('app.enable_data_destruction', true) = 'true' THEN
     RAISE NOTICE '🔥 DATA DESTRUCTION ENABLED - Dropping all tables...';
     
     -- Drop tables in reverse dependency order
@@ -233,6 +231,9 @@ CREATE TABLE public.shared_books (
   author TEXT,
   isbn TEXT,
   cover_url TEXT,
+  
+  -- Read status
+  is_read BOOLEAN NOT NULL DEFAULT false,
   
   visibility TEXT NOT NULL DEFAULT 'group' CHECK (visibility IN ('private', 'group', 'public')),
   is_available BOOLEAN NOT NULL DEFAULT true,
@@ -626,7 +627,7 @@ SELECT cron.schedule(
 DO $$
 BEGIN
   RAISE NOTICE '============================================================================';
-  RAISE NOTICE 'Schema v4 deployment complete!';
+  RAISE NOTICE 'Schema v5 deployment complete!';
   RAISE NOTICE '============================================================================';
   RAISE NOTICE 'Tables created:';
   RAISE NOTICE '  - profiles';

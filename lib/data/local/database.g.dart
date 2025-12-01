@@ -697,6 +697,15 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
       'notes', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isReadMeta = const VerificationMeta('isRead');
+  @override
+  late final GeneratedColumn<bool> isRead = GeneratedColumn<bool>(
+      'is_read', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_read" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
   @override
@@ -753,6 +762,7 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
         coverPath,
         status,
         notes,
+        isRead,
         isDirty,
         isDeleted,
         syncedAt,
@@ -824,6 +834,10 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
       context.handle(
           _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
     }
+    if (data.containsKey('is_read')) {
+      context.handle(_isReadMeta,
+          isRead.isAcceptableOrUnknown(data['is_read']!, _isReadMeta));
+    }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
           isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
@@ -877,6 +891,8 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       notes: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}notes']),
+      isRead: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_read'])!,
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -909,6 +925,7 @@ class Book extends DataClass implements Insertable<Book> {
   final String? coverPath;
   final String status;
   final String? notes;
+  final bool isRead;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -927,6 +944,7 @@ class Book extends DataClass implements Insertable<Book> {
       this.coverPath,
       required this.status,
       this.notes,
+      required this.isRead,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -963,6 +981,7 @@ class Book extends DataClass implements Insertable<Book> {
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
+    map['is_read'] = Variable<bool>(isRead);
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
     if (!nullToAbsent || syncedAt != null) {
@@ -999,6 +1018,7 @@ class Book extends DataClass implements Insertable<Book> {
       status: Value(status),
       notes:
           notes == null && nullToAbsent ? const Value.absent() : Value(notes),
+      isRead: Value(isRead),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -1025,6 +1045,7 @@ class Book extends DataClass implements Insertable<Book> {
       coverPath: serializer.fromJson<String?>(json['coverPath']),
       status: serializer.fromJson<String>(json['status']),
       notes: serializer.fromJson<String?>(json['notes']),
+      isRead: serializer.fromJson<bool>(json['isRead']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -1048,6 +1069,7 @@ class Book extends DataClass implements Insertable<Book> {
       'coverPath': serializer.toJson<String?>(coverPath),
       'status': serializer.toJson<String>(status),
       'notes': serializer.toJson<String?>(notes),
+      'isRead': serializer.toJson<bool>(isRead),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -1069,6 +1091,7 @@ class Book extends DataClass implements Insertable<Book> {
           Value<String?> coverPath = const Value.absent(),
           String? status,
           Value<String?> notes = const Value.absent(),
+          bool? isRead,
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -1088,6 +1111,7 @@ class Book extends DataClass implements Insertable<Book> {
         coverPath: coverPath.present ? coverPath.value : this.coverPath,
         status: status ?? this.status,
         notes: notes.present ? notes.value : this.notes,
+        isRead: isRead ?? this.isRead,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -1111,6 +1135,7 @@ class Book extends DataClass implements Insertable<Book> {
       coverPath: data.coverPath.present ? data.coverPath.value : this.coverPath,
       status: data.status.present ? data.status.value : this.status,
       notes: data.notes.present ? data.notes.value : this.notes,
+      isRead: data.isRead.present ? data.isRead.value : this.isRead,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -1134,6 +1159,7 @@ class Book extends DataClass implements Insertable<Book> {
           ..write('coverPath: $coverPath, ')
           ..write('status: $status, ')
           ..write('notes: $notes, ')
+          ..write('isRead: $isRead, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -1157,6 +1183,7 @@ class Book extends DataClass implements Insertable<Book> {
       coverPath,
       status,
       notes,
+      isRead,
       isDirty,
       isDeleted,
       syncedAt,
@@ -1178,6 +1205,7 @@ class Book extends DataClass implements Insertable<Book> {
           other.coverPath == this.coverPath &&
           other.status == this.status &&
           other.notes == this.notes &&
+          other.isRead == this.isRead &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -1198,6 +1226,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
   final Value<String?> coverPath;
   final Value<String> status;
   final Value<String?> notes;
+  final Value<bool> isRead;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -1216,6 +1245,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.coverPath = const Value.absent(),
     this.status = const Value.absent(),
     this.notes = const Value.absent(),
+    this.isRead = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -1235,6 +1265,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.coverPath = const Value.absent(),
     this.status = const Value.absent(),
     this.notes = const Value.absent(),
+    this.isRead = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -1255,6 +1286,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
     Expression<String>? coverPath,
     Expression<String>? status,
     Expression<String>? notes,
+    Expression<bool>? isRead,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -1274,6 +1306,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
       if (coverPath != null) 'cover_path': coverPath,
       if (status != null) 'status': status,
       if (notes != null) 'notes': notes,
+      if (isRead != null) 'is_read': isRead,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -1295,6 +1328,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
       Value<String?>? coverPath,
       Value<String>? status,
       Value<String?>? notes,
+      Value<bool>? isRead,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -1313,6 +1347,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
       coverPath: coverPath ?? this.coverPath,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      isRead: isRead ?? this.isRead,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -1360,6 +1395,9 @@ class BooksCompanion extends UpdateCompanion<Book> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (isRead.present) {
+      map['is_read'] = Variable<bool>(isRead.value);
+    }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
     }
@@ -1393,6 +1431,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
           ..write('coverPath: $coverPath, ')
           ..write('status: $status, ')
           ..write('notes: $notes, ')
+          ..write('isRead: $isRead, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -8729,6 +8768,7 @@ typedef $$BooksTableCreateCompanionBuilder = BooksCompanion Function({
   Value<String?> coverPath,
   Value<String> status,
   Value<String?> notes,
+  Value<bool> isRead,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -8748,6 +8788,7 @@ typedef $$BooksTableUpdateCompanionBuilder = BooksCompanion Function({
   Value<String?> coverPath,
   Value<String> status,
   Value<String?> notes,
+  Value<bool> isRead,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -8843,6 +8884,9 @@ class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
 
   ColumnFilters<String> get notes => $composableBuilder(
       column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isRead => $composableBuilder(
+      column: $table.isRead, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -8965,6 +9009,9 @@ class $$BooksTableOrderingComposer
   ColumnOrderings<String> get notes => $composableBuilder(
       column: $table.notes, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get isRead => $composableBuilder(
+      column: $table.isRead, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
 
@@ -9042,6 +9089,9 @@ class $$BooksTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<bool> get isRead =>
+      $composableBuilder(column: $table.isRead, builder: (column) => column);
 
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
@@ -9157,6 +9207,7 @@ class $$BooksTableTableManager extends RootTableManager<
             Value<String?> coverPath = const Value.absent(),
             Value<String> status = const Value.absent(),
             Value<String?> notes = const Value.absent(),
+            Value<bool> isRead = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -9176,6 +9227,7 @@ class $$BooksTableTableManager extends RootTableManager<
             coverPath: coverPath,
             status: status,
             notes: notes,
+            isRead: isRead,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -9195,6 +9247,7 @@ class $$BooksTableTableManager extends RootTableManager<
             Value<String?> coverPath = const Value.absent(),
             Value<String> status = const Value.absent(),
             Value<String?> notes = const Value.absent(),
+            Value<bool> isRead = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -9214,6 +9267,7 @@ class $$BooksTableTableManager extends RootTableManager<
             coverPath: coverPath,
             status: status,
             notes: notes,
+            isRead: isRead,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,

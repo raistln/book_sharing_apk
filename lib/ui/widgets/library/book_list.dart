@@ -181,6 +181,45 @@ class BookListTile extends ConsumerWidget {
                             ),
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        // Read status chip
+                        InkWell(
+                          onTap: () => _toggleReadStatus(ref, book),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: book.isRead
+                                  ? Colors.green.withValues(alpha: 0.2)
+                                  : Colors.grey.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: book.isRead ? Colors.green : Colors.grey,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  book.isRead ? Icons.check_circle : Icons.circle_outlined,
+                                  size: 16,
+                                  color: book.isRead ? Colors.green : Colors.grey,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  book.isRead ? 'Leído' : 'No leído',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: book.isRead ? Colors.green : Colors.grey,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                         const Spacer(),
                         // Action buttons
                         PopupMenuButton<String>(
@@ -300,6 +339,12 @@ class BookListTile extends ConsumerWidget {
         color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
       ),
     );
+  }
+
+  void _toggleReadStatus(WidgetRef ref, Book book) {
+    ref.read(bookDaoProvider).toggleReadStatus(book.id, !book.isRead);
+    // Invalidate provider to refresh UI
+    ref.invalidate(bookListProvider);
   }
 
   Color _getStatusColor(String status, ThemeData theme) {

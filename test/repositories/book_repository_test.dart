@@ -275,6 +275,7 @@ void main() {
           coverPath: 'path',
           status: 'available',
           notes: 'notes',
+          isRead: false,
           ownerUserId: owner.id,
           ownerRemoteId: owner.remoteId ?? 'remote-owner',
           isDirty: false,

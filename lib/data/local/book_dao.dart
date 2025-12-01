@@ -68,6 +68,11 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
     return (select(books)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
   }
 
+  Future<void> toggleReadStatus(int bookId, bool isRead) async {
+    await (update(books)..where((b) => b.id.equals(bookId)))
+        .write(BooksCompanion(isRead: Value(isRead), isDirty: const Value(true)));
+  }
+
   Stream<List<BookReview>> watchReviewsForBook(int bookId) {
     return (select(bookReviews)
           ..where((tbl) =>

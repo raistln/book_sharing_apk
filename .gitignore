@@ -49,4 +49,4 @@ app.*.map.json
 .env
 
 # Documentation - Strategic planning
-docs/future_iterations.md
+docs\future_iterations.md

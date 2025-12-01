@@ -18,6 +18,7 @@ import 'tabs/stats_tab.dart';
 import 'tabs/library_tab.dart';
 import '../../widgets/notifications/notification_bell.dart';
 import '../../widgets/notifications/notifications_sheet.dart';
+import '../../widgets/library/book_form_sheet.dart';
 
 enum _BookFormResult {
   saved,

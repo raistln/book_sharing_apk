@@ -318,7 +318,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -391,6 +391,17 @@ class AppDatabase extends _$AppDatabase {
           if (from < 11) {
             // Add isRead column to Books table
             await m.addColumn(books, books.isRead);
+          }
+
+          if (from < 12) {
+            // Fix for missing borrowerUserId column in Loans table
+            // This column might be missing if a previous migration (around v9) was incomplete
+            try {
+              await m.addColumn(loans, loans.borrowerUserId);
+            } catch (e) {
+              // Column might already exist, ignore error
+              developer.log('Column borrowerUserId already exists or could not be added: $e');
+            }
           }
         },
       );

@@ -487,7 +487,7 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- Apply updated_at trigger to all tables
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles
@@ -522,7 +522,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 CREATE TRIGGER loan_return_confirmation BEFORE UPDATE ON public.loans
   FOR EACH ROW EXECUTE FUNCTION handle_loan_return_confirmation();
@@ -537,7 +537,7 @@ BEGIN
     AND due_date < NOW()
     AND is_deleted = false;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- Function to send 7-day loan reminders
 CREATE OR REPLACE FUNCTION send_loan_reminders()
@@ -600,7 +600,7 @@ BEGIN
         AND DATE(ln.created_at) = CURRENT_DATE
     );
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- ============================================================================
 -- STEP 11: SCHEDULE CRON JOBS

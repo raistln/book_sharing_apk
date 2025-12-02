@@ -1,8 +1,6 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../data/local/database.dart';
 import '../../../providers/book_providers.dart';
@@ -17,8 +15,6 @@ Future<void> showManualLoanDialog(
   final loanRepository = ref.read(loanRepositoryProvider);
   final groupDao = ref.read(groupDaoProvider);
   final theme = Theme.of(context);
-  // ignore: prefer_const_constructors
-  final uuid = Uuid();
   
   final nameController = TextEditingController();
   final contactController = TextEditingController();
@@ -159,52 +155,19 @@ Future<void> showManualLoanDialog(
     if (sharedBooks.isNotEmpty) {
       sharedBook = sharedBooks.first;
     } else {
-      // Need to create a shared book first - get user's groups
-      final groups = await groupDao.getGroupsForUser(activeUser.id);
-      if (groups.isEmpty) {
+      // Use BookRepository to ensure book is shared (creating personal group if needed)
+      final bookRepository = ref.read(bookRepositoryProvider);
+      try {
+        sharedBook = await bookRepository.ensureBookIsShared(book, activeUser);
+      } catch (e) {
         if (!context.mounted) return;
         showFeedbackSnackBar(
           context: context,
-          message: 'Necesitas estar en un grupo para crear préstamos.',
+          message: 'Error preparando el libro: $e',
           isError: true,
         );
         return;
       }
-      
-      // Create shared book in first group
-      final group = groups.first;
-      final now = DateTime.now();
-      final sharedBookId = await groupDao.insertSharedBook(
-        SharedBooksCompanion.insert(
-          uuid: uuid.v4(),
-          groupId: group.id,
-          groupUuid: group.uuid,
-          bookId: book.id,
-          bookUuid: book.uuid,
-          ownerUserId: activeUser.id,
-          ownerRemoteId: activeUser.remoteId != null
-              ? Value(activeUser.remoteId!)
-              : const Value.absent(),
-          isAvailable: const Value(true),
-          visibility: const Value('group'),
-          isDirty: const Value(true),
-          isDeleted: const Value(false),
-          syncedAt: const Value(null),
-          createdAt: Value(now),
-          updatedAt: Value(now),
-        ),
-      );
-      sharedBook = await groupDao.findSharedBookById(sharedBookId);
-    }
-
-    if (sharedBook == null) {
-      if (!context.mounted) return;
-      showFeedbackSnackBar(
-        context: context,
-        message: 'No se pudo preparar el libro para préstamo.',
-        isError: true,
-      );
-      return;
     }
 
     // Create the manual loan
@@ -227,8 +190,13 @@ Future<void> showManualLoanDialog(
       message: 'Préstamo manual creado correctamente.',
       isError: false,
     );
-  } finally {
-    nameController.dispose();
-    contactController.dispose();
+  } catch (err) {
+    if (context.mounted) {
+      showFeedbackSnackBar(
+        context: context,
+        message: 'Error al crear préstamo: ${err.toString()}',
+        isError: true,
+      );
+    }
   }
 }

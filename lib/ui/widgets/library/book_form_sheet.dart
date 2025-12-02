@@ -198,7 +198,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                               useSafeArea: true,
                               builder: (context) => BarcodeScannerSheet(
                                 onScanned: (barcode) {
-                                  Navigator.of(context).pop(barcode);
+                                  // Callback for immediate feedback if needed
                                 },
                               ),
                             );
@@ -259,37 +259,51 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                 pickingSupported: coverService.supportsPicking,
               ),
               const SizedBox(height: 12),
-              if (_status == 'loaned')
-                TextFormField(
-                  enabled: false,
-                  initialValue: 'Prestado',
-                  decoration: const InputDecoration(
-                    labelText: 'Estado',
-                    border: OutlineInputBorder(),
-                    helperText: 'No se puede cambiar mientras hay un préstamo activo',
-                  ),
-                )
-              else
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Estado',
-                    border: OutlineInputBorder(),
-                  ),
-                  initialValue: _status,
-                  items: const [
-                    DropdownMenuItem(value: 'available', child: Text('Disponible')),
-                    DropdownMenuItem(value: 'loaned', child: Text('Prestado')),
-                    DropdownMenuItem(value: 'archived', child: Text('Archivado')),
-                    DropdownMenuItem(value: 'private', child: Text('Privado')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _status = value;
-                      });
-                    }
-                  },
+              DropdownButtonFormField<String>(
+                initialValue: _status,
+                decoration: const InputDecoration(
+                  labelText: 'Estado del libro',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.bookmark_outline),
                 ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'available',
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle_outline, color: Colors.blue, size: 20),
+                        SizedBox(width: 8),
+                        Text('Disponible'),
+                      ],
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'archived',
+                    child: Row(
+                      children: [
+                        Icon(Icons.archive_outlined, color: Colors.orange, size: 20),
+                        SizedBox(width: 8),
+                        Text('Archivado'),
+                      ],
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'private',
+                    child: Row(
+                      children: [
+                        Icon(Icons.lock_outline, color: Colors.purple, size: 20),
+                        SizedBox(width: 8),
+                        Text('Privado'),
+                      ],
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _status = value);
+                  }
+                },
+              ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _notesController,
@@ -302,10 +316,15 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
               ),
               const SizedBox(height: 12),
               SwitchListTile(
-                title: const Text('Marcar como leído'),
-                subtitle: const Text('¿Ya has terminado de leer este libro?'),
+                title: const Text('Estado de lectura'),
+                subtitle: Text(_isRead ? 'Leído' : 'No leído'),
                 value: _isRead,
                 onChanged: (value) => setState(() => _isRead = value),
+                secondary: Icon(
+                  _isRead ? Icons.check_circle : Icons.circle_outlined,
+                  color: _isRead ? Colors.green : Colors.grey,
+                ),
+                activeThumbColor: Colors.green,
               ),
               const SizedBox(height: 20),
               Row(
@@ -419,15 +438,36 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
 
       if (!mounted) return;
       if (context.mounted) {
-        navigator.pop(BookFormResult.saved);
+        navigator.pop();
       }
     } catch (err) {
       if (context.mounted) {
-        showFeedbackSnackBar(
-          context: context,
-          message: 'Error al guardar el libro: $err',
-          isError: true,
-        );
+        final errorMessage = err.toString();
+        
+        // Check if it's a duplicate book error
+        if (errorMessage.contains('Ya tienes ese libro')) {
+          await showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              icon: const Icon(Icons.info_outline, size: 48, color: Colors.blue),
+              title: const Text('Libro duplicado'),
+              content: Text(errorMessage.replaceAll('Exception: ', '')),
+              actions: [
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Entendido'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          // Show error SnackBar for other errors
+          showFeedbackSnackBar(
+            context: context,
+            message: 'Error al guardar el libro: $err',
+            isError: true,
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -488,7 +528,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         await coverService.deleteCover(existingCover);
       }
       if (!context.mounted) return;
-      navigator.pop(BookFormResult.deleted);
+      navigator.pop();
     } catch (err) {
       if (!context.mounted) return;
       showFeedbackSnackBar(

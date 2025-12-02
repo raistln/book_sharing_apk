@@ -162,15 +162,19 @@ class _GroupCardState extends ConsumerState<GroupCard> {
               ],
             ),
             const SizedBox(height: 12),
-            GroupStatsChips(
-              membersAsync: membersAsync,
-              sharedBooksAsync: sharedBooksAsync,
-              loansAsync: loansAsync,
-              invitationsAsync: invitationsAsync,
-            ),
-            const SizedBox(height: 16),
-            SharedBooksSection(sharedBooksAsync: sharedBooksAsync),
-            const SizedBox(height: 12),
+            // Hide stats and shared books for personal loans group
+            if (group.name != 'Prestamos personales') ...[
+              GroupStatsChips(
+                groupId: group.id,
+                membersAsync: membersAsync,
+                sharedBooksAsync: sharedBooksAsync,
+                loansAsync: loansAsync,
+                invitationsAsync: invitationsAsync,
+              ),
+              const SizedBox(height: 16),
+              SharedBooksSection(sharedBooksAsync: sharedBooksAsync),
+              const SizedBox(height: 12),
+            ],
             LoansSection(
               loansAsync: loansAsync,
               activeUser: activeUser,

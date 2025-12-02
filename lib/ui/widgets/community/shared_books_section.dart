@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../data/local/group_dao.dart';
 
 class SharedBooksSection extends StatelessWidget {
   const SharedBooksSection({super.key, required this.sharedBooksAsync});
 
-  final AsyncValue<List<dynamic>> sharedBooksAsync;
+  final AsyncValue<List<SharedBookDetail>> sharedBooksAsync;
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +18,7 @@ class SharedBooksSection extends StatelessWidget {
         }
         
         final totalBooks = books.length;
-        final availableBooks = books.where((b) => b['sharedBook']?['isAvailable'] == true).length;
+        final availableBooks = books.where((b) => b.sharedBook.isAvailable == true).length;
         
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,

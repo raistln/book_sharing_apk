@@ -3,14 +3,9 @@ import 'package:flutter/material.dart';
 
 import '../empty_state.dart';
 
-/// Result enum for book form operations
-enum BookFormResult {
-  saved,
-  deleted,
-}
-
 /// Export action enum for library export
 enum ExportAction { share, download }
+
 
 /// Shows a feedback snackbar with the given message
 void showFeedbackSnackBar({

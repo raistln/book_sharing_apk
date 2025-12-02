@@ -51,9 +51,12 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
         // Haptic feedback
         HapticFeedback.lightImpact();
         
+        // Call callback first
+        widget.onScanned(value.trim());
+        
+        // Then close dialog with the scanned value
         if (mounted) {
-          Navigator.of(context).pop();
-          widget.onScanned(value.trim());
+          Navigator.of(context).pop(value.trim());
         }
         return;
       }

@@ -55,7 +55,12 @@ class DiscoverTab extends ConsumerWidget {
             Expanded(
               child: groupsAsync.when(
                 data: (groups) {
-                  if (groups.isEmpty) {
+                  // Filter out personal loans group from discovery
+                  final discoverableGroups = groups
+                      .where((group) => group.name != 'Prestamos personales')
+                      .toList();
+                  
+                  if (discoverableGroups.isEmpty) {
                     return EmptyState(
                       icon: Icons.groups_outlined,
                       title: 'Aún no perteneces a ningún grupo',
@@ -73,10 +78,10 @@ class DiscoverTab extends ConsumerWidget {
                   return RefreshIndicator(
                     onRefresh: () async => _syncNow(context, ref),
                     child: ListView.separated(
-                      itemCount: groups.length,
+                      itemCount: discoverableGroups.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
-                        final group = groups[index];
+                        final group = discoverableGroups[index];
                         final subtitle = group.description?.trim();
                         return Card(
                           child: ListTile(

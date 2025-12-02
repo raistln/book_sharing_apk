@@ -1,22 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class GroupStatsChips extends StatelessWidget {
+import '../../../data/local/group_dao.dart';
+import '../../../providers/book_providers.dart';
+
+class GroupStatsChips extends ConsumerWidget {
   const GroupStatsChips({
     super.key,
+    required this.groupId,
     required this.membersAsync,
     required this.sharedBooksAsync,
     required this.loansAsync,
     required this.invitationsAsync,
   });
 
+  final int groupId;
   final AsyncValue<List<dynamic>> membersAsync;
   final AsyncValue<List<dynamic>> sharedBooksAsync;
   final AsyncValue<List<dynamic>> loansAsync;
   final AsyncValue<List<dynamic>> invitationsAsync;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeUser = ref.watch(activeUserProvider).value;
+    
     return Wrap(
       spacing: 16,
       runSpacing: 8,
@@ -31,15 +38,80 @@ class GroupStatsChips extends StatelessWidget {
           label: 'Libros compartidos',
           value: sharedBooksAsync,
         ),
-        AsyncCountChip(
-          icon: Icons.swap_horiz_outlined,
-          label: 'Préstamos',
-          value: loansAsync,
+        // User's contributed books
+        if (activeUser != null)
+          sharedBooksAsync.when(
+            data: (books) {
+              final myBooks = (books as List<SharedBookDetail>)
+                  .where((detail) => detail.sharedBook.ownerUserId == activeUser.id)
+                  .length;
+              return Chip(
+                avatar: const Icon(Icons.person_outline, size: 18),
+                label: Text('Mis libros: $myBooks'),
+              );
+            },
+            loading: () => const Chip(
+              avatar: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              label: Text('Cargando...'),
+            ),
+            error: (error, _) => const Chip(
+              avatar: Icon(Icons.error_outline, size: 18),
+              label: Text('Error'),
+            ),
+          ),
+        // Available books
+        sharedBooksAsync.when(
+          data: (books) {
+            final available = (books as List<SharedBookDetail>)
+                .where((detail) => detail.sharedBook.isAvailable)
+                .length;
+            return Chip(
+              avatar: const Icon(Icons.check_circle_outline, size: 18),
+              label: Text('Disponibles: $available'),
+            );
+          },
+          loading: () => const Chip(
+            avatar: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            label: Text('Cargando...'),
+          ),
+          error: (error, _) => const Chip(
+            avatar: Icon(Icons.error_outline, size: 18),
+            label: Text('Error'),
+          ),
         ),
-        AsyncCountChip(
-          icon: Icons.qr_code_2_outlined,
-          label: 'Invitaciones',
-          value: invitationsAsync,
+        // Active loans
+        loansAsync.when(
+          data: (loans) {
+            final active = (loans as List<LoanDetail>)
+                .where((detail) => 
+                    detail.loan.status == 'pending' || 
+                    detail.loan.status == 'accepted')
+                .length;
+            return Chip(
+              avatar: const Icon(Icons.swap_horiz_outlined, size: 18),
+              label: Text('Préstamos activos: $active'),
+            );
+          },
+          loading: () => const Chip(
+            avatar: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            label: Text('Cargando...'),
+          ),
+          error: (error, _) => const Chip(
+            avatar: Icon(Icons.error_outline, size: 18),
+            label: Text('Error'),
+          ),
         ),
       ],
     );

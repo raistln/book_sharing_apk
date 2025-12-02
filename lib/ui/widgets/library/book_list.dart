@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -115,8 +117,8 @@ class BookListTile extends ConsumerWidget {
                 child: book.coverPath != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.asset(
-                          book.coverPath!,
+                        child: Image.file(
+                          File(book.coverPath!),
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => _buildPlaceholder(theme),
                         ),
@@ -194,10 +196,10 @@ class BookListTile extends ConsumerWidget {
                             decoration: BoxDecoration(
                               color: book.isRead
                                   ? Colors.green.withValues(alpha: 0.2)
-                                  : Colors.grey.withValues(alpha: 0.2),
+                                  : Colors.red.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: book.isRead ? Colors.green : Colors.grey,
+                                color: book.isRead ? Colors.green : Colors.red,
                               ),
                             ),
                             child: Row(
@@ -206,13 +208,13 @@ class BookListTile extends ConsumerWidget {
                                 Icon(
                                   book.isRead ? Icons.check_circle : Icons.circle_outlined,
                                   size: 16,
-                                  color: book.isRead ? Colors.green : Colors.grey,
+                                  color: book.isRead ? Colors.green : Colors.red,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   book.isRead ? 'Leído' : 'No leído',
                                   style: theme.textTheme.bodySmall?.copyWith(
-                                    color: book.isRead ? Colors.green : Colors.grey,
+                                    color: book.isRead ? Colors.green : Colors.red,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -350,13 +352,13 @@ class BookListTile extends ConsumerWidget {
   Color _getStatusColor(String status, ThemeData theme) {
     switch (status) {
       case 'available':
-        return Colors.green;
+        return Colors.blue;      // Azul como en el formulario
       case 'loaned':
-        return Colors.orange;
+        return Colors.orange;    // Naranja (consistente)
       case 'archived':
-        return Colors.grey;
+        return Colors.orange;    // Naranja como en el formulario
       case 'private':
-        return Colors.red;
+        return Colors.purple;    // Púrpura como en el formulario
       default:
         return theme.colorScheme.outline;
     }

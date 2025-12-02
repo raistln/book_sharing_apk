@@ -18,6 +18,7 @@ class ReadStatusFilter extends StatelessWidget {
         FilterChip(
           label: const Text('Leídos'),
           selected: selectedFilter == true,
+          showCheckmark: false,
           onSelected: (selected) {
             onChanged(selected ? true : null);
           },
@@ -26,6 +27,7 @@ class ReadStatusFilter extends StatelessWidget {
         FilterChip(
           label: const Text('No leídos'),
           selected: selectedFilter == false,
+          showCheckmark: false,
           onSelected: (selected) {
             onChanged(selected ? false : null);
           },

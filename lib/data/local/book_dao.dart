@@ -73,6 +73,35 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
         .write(BooksCompanion(isRead: Value(isRead), isDirty: const Value(true)));
   }
 
+  /// Find a book by ISBN (excluding deleted books)
+  Future<Book?> findByIsbn(String isbn, {int? ownerUserId}) {
+    final query = select(books)
+      ..where((tbl) => 
+          tbl.isbn.equals(isbn) &
+          (tbl.isDeleted.equals(false) | tbl.isDeleted.isNull()));
+    
+    if (ownerUserId != null) {
+      query.where((tbl) => tbl.ownerUserId.equals(ownerUserId));
+    }
+    
+    return query.getSingleOrNull();
+  }
+
+  /// Find a book by title and author (excluding deleted books)
+  Future<Book?> findByTitleAndAuthor(String title, String author, {int? ownerUserId}) {
+    final query = select(books)
+      ..where((tbl) => 
+          tbl.title.equals(title) &
+          tbl.author.equals(author) &
+          (tbl.isDeleted.equals(false) | tbl.isDeleted.isNull()));
+    
+    if (ownerUserId != null) {
+      query.where((tbl) => tbl.ownerUserId.equals(ownerUserId));
+    }
+    
+    return query.getSingleOrNull();
+  }
+
   Stream<List<BookReview>> watchReviewsForBook(int bookId) {
     return (select(bookReviews)
           ..where((tbl) =>

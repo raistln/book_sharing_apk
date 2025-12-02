@@ -163,6 +163,10 @@ class SupabaseGroupSyncRepository {
           }
 
           var localBook = await _bookDao.findByUuid(remoteShared.bookUuid!);
+          
+          // Also check by remoteId to prevent duplicates
+          localBook ??= await _bookDao.findByRemoteId(remoteShared.bookUuid!);
+          
           if (localBook == null) {
             SupabaseBookRecord? remoteBook;
             try {
@@ -191,27 +195,31 @@ class SupabaseGroupSyncRepository {
               final ownerUserIdValue = bookOwner?.id ?? sharedOwnerUser?.id;
               final ownerRemoteIdValue = bookOwner?.remoteId ?? remoteShared.ownerId;
 
-              await _bookDao.insertBook(
-                BooksCompanion.insert(
-                  uuid: remoteBook.id,
-                  remoteId: Value(remoteBook.id),
-                  ownerUserId: ownerUserIdValue != null
-                      ? Value(ownerUserIdValue)
-                      : const Value<int?>.absent(),
-                  ownerRemoteId: Value(ownerRemoteIdValue),
-                  title: remoteBook.title,
-                  author: Value(remoteBook.author),
-                  isbn: Value(remoteBook.isbn),
-                  coverPath: Value(remoteBook.coverUrl),
-                  status: Value(remoteBook.isAvailable == true ? 'available' : 'loaned'),
-                  notes: const Value(null), // Notes not stored in shared_books
-                  isDeleted: Value(remoteBook.isDeleted),
-                  isDirty: const Value(false),
-                  createdAt: Value(remoteBook.createdAt),
-                  updatedAt: Value(remoteBook.updatedAt ?? remoteBook.createdAt),
-                  syncedAt: Value(now),
-                ),
-              );
+              // Double-check one more time before inserting to prevent race conditions
+              final doubleCheck = await _bookDao.findByUuid(remoteBook.id);
+              if (doubleCheck == null) {
+                await _bookDao.insertBook(
+                  BooksCompanion.insert(
+                    uuid: remoteBook.id,
+                    remoteId: Value(remoteBook.id),
+                    ownerUserId: ownerUserIdValue != null
+                        ? Value(ownerUserIdValue)
+                        : const Value<int?>.absent(),
+                    ownerRemoteId: Value(ownerRemoteIdValue),
+                    title: remoteBook.title,
+                    author: Value(remoteBook.author),
+                    isbn: Value(remoteBook.isbn),
+                    coverPath: Value(remoteBook.coverUrl),
+                    status: Value(remoteBook.isAvailable == true ? 'available' : 'loaned'),
+                    notes: const Value(null), // Notes not stored in shared_books
+                    isDeleted: Value(remoteBook.isDeleted),
+                    isDirty: const Value(false),
+                    createdAt: Value(remoteBook.createdAt),
+                    updatedAt: Value(remoteBook.updatedAt ?? remoteBook.createdAt),
+                    syncedAt: Value(now),
+                  ),
+                );
+              }
 
               localBook = await _bookDao.findByUuid(remoteShared.bookUuid!);
             } else if (kDebugMode) {

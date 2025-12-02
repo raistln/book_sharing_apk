@@ -605,17 +605,17 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     });
 
     try {
-      // Get Google Books API key from provider
-      final googleBooksApiKey = ref.read(googleBooksApiKeyProvider);
+      final apiKeyState = ref.read(googleBooksApiKeyControllerProvider);
+      final apiKey = apiKeyState.valueOrNull;
       bool googleBooksFailed = false;
       List<GoogleBook> googleResults = [];
 
       // Try Google Books API first if API key is available
-      if (googleBooksApiKey.value != null && googleBooksApiKey.value!.isNotEmpty) {
+      if (apiKey != null && apiKey.isNotEmpty) {
         try {
           googleResults = await GoogleBooksApiController.searchBooks(
             query: barcode, // Use barcode as ISBN query
-            apiKey: googleBooksApiKey.value!,
+            apiKey: apiKey,
             maxResults: 3, // Limit to 3 results for faster response
           );
         } catch (err) {

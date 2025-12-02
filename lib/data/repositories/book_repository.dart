@@ -251,12 +251,14 @@ class BookRepository {
 
   Future<bool> updateBook(Book book) async {
     final now = DateTime.now();
-    // Don't use copyWith here - it would overwrite changes from the form
-    // Instead, use toCompanion to convert the book and update only timestamp and dirty flag
-    final companion = book.toCompanion(true).copyWith(
+    
+    // Don't use copyWith here - it would overwrite changes from the format null values are converted to Value(null)
+    // instead of Value.absent(). This allows us to actually set fields to null.
+    final companion = book.toCompanion(false).copyWith(
       updatedAt: Value(now),
       isDirty: const Value(true),
     );
+    
     final result = await _bookDao.updateBook(companion);
     if (result) {
       await _autoShareBook(

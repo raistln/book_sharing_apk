@@ -10,7 +10,7 @@ import '../../../../config/supabase_defaults.dart';
 import '../../../../providers/auth_providers.dart';
 import '../../../../providers/book_providers.dart';
 import '../../../../providers/cover_refresh_providers.dart';
-import '../../../../providers/google_books_api_providers.dart';
+import '../../../../providers/api_providers.dart';
 import '../../../../providers/settings_providers.dart';
 import '../../../../providers/theme_providers.dart';
 import '../../../../services/backup_scheduler_service.dart';
@@ -612,7 +612,7 @@ class SettingsTab extends ConsumerWidget {
 
   Future<void> _handleConfigureGoogleBooksKey(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController();
-    final currentKey = ref.read(googleBooksApiKeyControllerProvider);
+    final currentKey = ref.read(googleBooksApiKeyControllerProvider).valueOrNull;
     
     if (currentKey != null) {
       controller.text = currentKey;
@@ -981,8 +981,13 @@ class _GoogleBooksApiCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final apiKey = ref.watch(googleBooksApiKeyControllerProvider);
+    final apiKeyAsync = ref.watch(googleBooksApiKeyControllerProvider);
+    final apiKey = apiKeyAsync.valueOrNull;
     final hasApiKey = apiKey != null && apiKey.isNotEmpty;
+    final isLoading = apiKeyAsync.isLoading;
+    final errorMessage = apiKeyAsync.whenOrNull(
+      error: (error, _) => error.toString(),
+    );
 
     return Card(
       child: Padding(
@@ -990,6 +995,9 @@ class _GoogleBooksApiCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (isLoading)
+              const LinearProgressIndicator(minHeight: 4),
+            if (isLoading) const SizedBox(height: 12),
             Row(
               children: [
                 Icon(
@@ -1018,19 +1026,28 @@ class _GoogleBooksApiCard extends ConsumerWidget {
                   : 'Configura una API key para buscar libros en Google Books.',
               style: theme.textTheme.bodyMedium,
             ),
+            if (errorMessage != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Error: $errorMessage',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Wrap(
               spacing: 12,
               runSpacing: 8,
               children: [
                 FilledButton.icon(
-                  onPressed: onConfigure,
+                  onPressed: isLoading ? null : onConfigure,
                   icon: const Icon(Icons.key_outlined),
                   label: Text(hasApiKey ? 'Cambiar API key' : 'Configurar API key'),
                 ),
                 if (hasApiKey)
                   OutlinedButton.icon(
-                    onPressed: onClear,
+                    onPressed: isLoading ? null : onClear,
                     icon: const Icon(Icons.delete_outline),
                     label: const Text('Eliminar'),
                   ),

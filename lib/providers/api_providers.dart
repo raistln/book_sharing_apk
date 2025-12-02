@@ -8,10 +8,6 @@ final googleBooksApiServiceProvider = Provider<GoogleBooksApiService>((ref) {
   return GoogleBooksApiService();
 });
 
-final googleBooksApiKeyProvider = Provider<AsyncValue<String?>>((ref) {
-  return ref.watch(googleBooksApiKeyControllerProvider);
-});
-
 final openLibraryClientProvider = Provider<OpenLibraryClient>((ref) {
   final client = OpenLibraryClient();
   ref.onDispose(client.close);
@@ -20,7 +16,18 @@ final openLibraryClientProvider = Provider<OpenLibraryClient>((ref) {
 
 final googleBooksClientProvider = Provider<GoogleBooksClient>((ref) {
   final service = ref.watch(googleBooksApiServiceProvider);
-  final client = GoogleBooksClient(apiService: service);
+  final apiKeyState = ref.watch(googleBooksApiKeyControllerProvider);
+
+  final client = GoogleBooksClient(
+    apiService: service,
+    apiKeyResolver: () async {
+      final inMemoryKey = apiKeyState.valueOrNull;
+      if (inMemoryKey != null && inMemoryKey.isNotEmpty) {
+        return inMemoryKey;
+      }
+      return service.readApiKey();
+    },
+  );
   ref.onDispose(client.close);
   return client;
 });
@@ -34,17 +41,25 @@ class GoogleBooksApiKeyController extends AutoDisposeAsyncNotifier<String?> {
   GoogleBooksApiService get _service => ref.read(googleBooksApiServiceProvider);
 
   @override
-  Future<String?> build() {
-    return _service.readApiKey();
-  }
+  Future<String?> build() => _service.readApiKey();
 
   Future<void> saveApiKey(String apiKey) async {
+    final cleanKey = apiKey.trim();
+    if (cleanKey.isEmpty) {
+      state = AsyncValue.error(
+        ArgumentError('La API key no puede estar vacía'),
+        StackTrace.current,
+      );
+      return;
+    }
+
     state = const AsyncValue.loading();
     try {
-      await _service.saveApiKey(apiKey);
-      state = AsyncValue.data(apiKey.trim().isEmpty ? null : apiKey.trim());
+      await _service.saveApiKey(cleanKey);
+      state = AsyncValue.data(cleanKey);
     } catch (err, stack) {
       state = AsyncValue.error(err, stack);
+      rethrow;
     }
   }
 
@@ -55,6 +70,7 @@ class GoogleBooksApiKeyController extends AutoDisposeAsyncNotifier<String?> {
       state = const AsyncValue.data(null);
     } catch (err, stack) {
       state = AsyncValue.error(err, stack);
+      rethrow;
     }
   }
 }

@@ -339,7 +339,7 @@ CREATE POLICY "Users can view all profiles"
 
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
-  USING (auth.uid() = id);
+  USING ((SELECT auth.uid()) = id);
 
 -- GROUPS
 ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
@@ -350,40 +350,69 @@ CREATE POLICY "Users can view groups they are members of"
     EXISTS (
       SELECT 1 FROM public.group_members
       WHERE group_members.group_id = groups.id
-        AND group_members.user_id = auth.uid()
+        AND group_members.user_id = (SELECT auth.uid())
         AND group_members.is_deleted = false
     )
   );
 
 CREATE POLICY "Group owners can update their groups"
   ON public.groups FOR UPDATE
-  USING (owner_id = auth.uid());
+  USING (owner_id = (SELECT auth.uid()));
 
 CREATE POLICY "Authenticated users can create groups"
   ON public.groups FOR INSERT
-  WITH CHECK (auth.uid() = owner_id);
+  WITH CHECK ((SELECT auth.uid()) = owner_id);
 
 -- GROUP MEMBERS
 ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view members of their groups"
+-- Combined policy to avoid multiple permissive policies for SELECT
+CREATE POLICY "Users can view and owners can manage group members"
   ON public.group_members FOR SELECT
   USING (
+    -- User is member of the group
     EXISTS (
       SELECT 1 FROM public.group_members gm
       WHERE gm.group_id = group_members.group_id
-        AND gm.user_id = auth.uid()
+        AND gm.user_id = (SELECT auth.uid())
         AND gm.is_deleted = false
+    )
+    OR
+    -- User is owner of the group
+    EXISTS (
+      SELECT 1 FROM public.groups
+      WHERE groups.id = group_members.group_id
+        AND groups.owner_id = (SELECT auth.uid())
     )
   );
 
-CREATE POLICY "Group owners can manage members"
-  ON public.group_members FOR ALL
+CREATE POLICY "Group owners can insert/update/delete members"
+  ON public.group_members FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.groups
+      WHERE groups.id = group_members.group_id
+        AND groups.owner_id = (SELECT auth.uid())
+    )
+  );
+
+CREATE POLICY "Group owners can update members"
+  ON public.group_members FOR UPDATE
   USING (
     EXISTS (
       SELECT 1 FROM public.groups
       WHERE groups.id = group_members.group_id
-        AND groups.owner_id = auth.uid()
+        AND groups.owner_id = (SELECT auth.uid())
+    )
+  );
+
+CREATE POLICY "Group owners can delete members"
+  ON public.group_members FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.groups
+      WHERE groups.id = group_members.group_id
+        AND groups.owner_id = (SELECT auth.uid())
     )
   );
 
@@ -396,7 +425,7 @@ CREATE POLICY "Users can view invitations for their groups"
     EXISTS (
       SELECT 1 FROM public.group_members
       WHERE group_members.group_id = group_invitations.group_id
-        AND group_members.user_id = auth.uid()
+        AND group_members.user_id = (SELECT auth.uid())
         AND group_members.is_deleted = false
     )
   );
@@ -407,7 +436,7 @@ CREATE POLICY "Group members can create invitations"
     EXISTS (
       SELECT 1 FROM public.group_members
       WHERE group_members.group_id = group_invitations.group_id
-        AND group_members.user_id = auth.uid()
+        AND group_members.user_id = (SELECT auth.uid())
         AND group_members.is_deleted = false
     )
   );
@@ -415,20 +444,33 @@ CREATE POLICY "Group members can create invitations"
 -- SHARED BOOKS
 ALTER TABLE public.shared_books ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view shared books in their groups"
+-- Combined policy to avoid multiple permissive policies for SELECT
+CREATE POLICY "Users can view shared books in their groups or own books"
   ON public.shared_books FOR SELECT
   USING (
+    -- User is member of the group
     EXISTS (
       SELECT 1 FROM public.group_members
       WHERE group_members.group_id = shared_books.group_id
-        AND group_members.user_id = auth.uid()
+        AND group_members.user_id = (SELECT auth.uid())
         AND group_members.is_deleted = false
     )
+    OR
+    -- User is the owner of the book
+    owner_id = (SELECT auth.uid())
   );
 
-CREATE POLICY "Users can manage their own shared books"
-  ON public.shared_books FOR ALL
-  USING (owner_id = auth.uid());
+CREATE POLICY "Users can insert their own shared books"
+  ON public.shared_books FOR INSERT
+  WITH CHECK (owner_id = (SELECT auth.uid()));
+
+CREATE POLICY "Users can update their own shared books"
+  ON public.shared_books FOR UPDATE
+  USING (owner_id = (SELECT auth.uid()));
+
+CREATE POLICY "Users can delete their own shared books"
+  ON public.shared_books FOR DELETE
+  USING (owner_id = (SELECT auth.uid()));
 
 -- LOANS
 ALTER TABLE public.loans ENABLE ROW LEVEL SECURITY;
@@ -436,13 +478,13 @@ ALTER TABLE public.loans ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view loans they are involved in"
   ON public.loans FOR SELECT
   USING (
-    borrower_user_id = auth.uid() 
-    OR lender_user_id = auth.uid()
+    borrower_user_id = (SELECT auth.uid()) 
+    OR lender_user_id = (SELECT auth.uid())
     OR EXISTS (
       SELECT 1 FROM public.group_members gm
       JOIN public.shared_books sb ON sb.group_id = gm.group_id
       WHERE sb.id = loans.shared_book_id
-        AND gm.user_id = auth.uid()
+        AND gm.user_id = (SELECT auth.uid())
         AND gm.is_deleted = false
     )
   );
@@ -450,15 +492,15 @@ CREATE POLICY "Users can view loans they are involved in"
 CREATE POLICY "Users can create loans for books in their groups"
   ON public.loans FOR INSERT
   WITH CHECK (
-    borrower_user_id = auth.uid()
-    OR lender_user_id = auth.uid()
+    borrower_user_id = (SELECT auth.uid())
+    OR lender_user_id = (SELECT auth.uid())
   );
 
 CREATE POLICY "Users can update their own loans"
   ON public.loans FOR UPDATE
   USING (
-    borrower_user_id = auth.uid()
-    OR lender_user_id = auth.uid()
+    borrower_user_id = (SELECT auth.uid())
+    OR lender_user_id = (SELECT auth.uid())
   );
 
 -- LOAN NOTIFICATIONS
@@ -466,11 +508,11 @@ ALTER TABLE public.loan_notifications ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view their own notifications"
   ON public.loan_notifications FOR SELECT
-  USING (user_id = auth.uid());
+  USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can update their own notifications"
   ON public.loan_notifications FOR UPDATE
-  USING (user_id = auth.uid());
+  USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "System can create notifications"
   ON public.loan_notifications FOR INSERT

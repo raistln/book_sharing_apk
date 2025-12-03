@@ -12,6 +12,7 @@ import '../../../services/cover_image_service_base.dart';
 import '../../../services/google_books_api_controller.dart';
 import '../../../services/google_books_client.dart';
 import '../../../services/open_library_client.dart';
+import '../../../utils/isbn_utils.dart';
 import '../../widgets/barcode_scanner_sheet.dart';
 import '../../widgets/cover_preview.dart';
 import 'library_utils.dart';
@@ -87,6 +88,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
   bool _isSearching = false;
   String? _searchError;
   late final CoverImageService _coverImageService;
+  bool _hasActiveLoans = false;
 
   bool get _isEditing => widget.initialBook != null;
 
@@ -105,6 +107,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       _notesController.text = book.notes ?? '';
       _status = book.status;
       _isRead = book.isRead;
+      
+      // Verificar si el libro tiene préstamos activos
+      _checkActiveLoans(book);
     }
   }
 
@@ -121,6 +126,89 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     _barcodeController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  /// Verifica si el libro tiene préstamos activos
+  Future<void> _checkActiveLoans(Book book) async {
+    try {
+      final groupDao = ref.read(groupDaoProvider);
+      final sharedBooks = await groupDao.findSharedBooksByBookId(book.id);
+      
+      for (final sharedBook in sharedBooks) {
+        final activeLoans = await groupDao.getActiveLoansForSharedBook(sharedBook.id);
+        if (activeLoans.isNotEmpty) {
+          setState(() {
+            _hasActiveLoans = true;
+            _status = 'loaned'; // Mostrar como prestado cuando tiene préstamos activos
+          });
+          return;
+        }
+      }
+      
+      setState(() {
+        _hasActiveLoans = false;
+        // Si no hay préstamos activos, mantener el estado original del libro
+        _status = book.status;
+      });
+    } catch (e) {
+      // Si hay error, asumimos que no hay préstamos activos para no bloquear innecesariamente
+      setState(() {
+        _hasActiveLoans = false;
+        _status = book.status;
+      });
+    }
+  }
+
+  /// Construye la lista de items para el dropdown dinámicamente
+  List<DropdownMenuItem<String>> _buildDropdownItems() {
+    final items = <DropdownMenuItem<String>>[
+      const DropdownMenuItem(
+        value: 'available',
+        child: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.blue, size: 20),
+            SizedBox(width: 8),
+            Text('Disponible'),
+          ],
+        ),
+      ),
+      const DropdownMenuItem(
+        value: 'archived',
+        child: Row(
+          children: [
+            Icon(Icons.archive_outlined, color: Colors.orange, size: 20),
+            SizedBox(width: 8),
+            Text('Archivado'),
+          ],
+        ),
+      ),
+      const DropdownMenuItem(
+        value: 'private',
+        child: Row(
+          children: [
+            Icon(Icons.lock_outline, color: Colors.purple, size: 20),
+            SizedBox(width: 8),
+            Text('Privado'),
+          ],
+        ),
+      ),
+    ];
+
+    // Solo añadir la opción 'prestado' si hay préstamos activos
+    if (_hasActiveLoans) {
+      items.insert(1, const DropdownMenuItem(
+        value: 'loaned',
+        child: Row(
+          children: [
+            Icon(Icons.swap_horiz_outlined, color: Colors.red, size: 20),
+            SizedBox(width: 8),
+            Text('Prestado'),
+          ],
+        ),
+      ));
+    }
+
+    return items;
   }
 
   @override
@@ -261,44 +349,21 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _status,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Estado del libro',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.bookmark_outline),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.bookmark_outline),
+                  suffixText: _hasActiveLoans ? '🔒 Bloqueado' : null,
+                  helperText: _hasActiveLoans 
+                    ? 'El libro tiene préstamos activos y no se puede modificar el estado'
+                    : null,
+                  helperStyle: TextStyle(
+                    color: _hasActiveLoans ? Colors.red : null,
+                    fontSize: 12,
+                  ),
                 ),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'available',
-                    child: Row(
-                      children: [
-                        Icon(Icons.check_circle_outline, color: Colors.blue, size: 20),
-                        SizedBox(width: 8),
-                        Text('Disponible'),
-                      ],
-                    ),
-                  ),
-                  DropdownMenuItem(
-                    value: 'archived',
-                    child: Row(
-                      children: [
-                        Icon(Icons.archive_outlined, color: Colors.orange, size: 20),
-                        SizedBox(width: 8),
-                        Text('Archivado'),
-                      ],
-                    ),
-                  ),
-                  DropdownMenuItem(
-                    value: 'private',
-                    child: Row(
-                      children: [
-                        Icon(Icons.lock_outline, color: Colors.purple, size: 20),
-                        SizedBox(width: 8),
-                        Text('Privado'),
-                      ],
-                    ),
-                  ),
-                ],
-                onChanged: (value) {
+                items: _buildDropdownItems(),
+                onChanged: _hasActiveLoans ? null : (value) {
                   if (value != null) {
                     setState(() => _status = value);
                   }
@@ -605,85 +670,106 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     });
 
     try {
+      // Expand ISBN to include both ISBN-13 and ISBN-10 variants
+      final isbnCandidates = IsbnUtils.expandCandidates(barcode);
+      
+      if (isbnCandidates.isEmpty) {
+        setState(() {
+          _searchError = 'El código escaneado no es un ISBN válido.';
+        });
+        return;
+      }
+
       final apiKeyState = ref.read(googleBooksApiKeyControllerProvider);
       final apiKey = apiKeyState.valueOrNull;
+      final openLibrary = ref.read(openLibraryClientProvider);
+      final coverService = ref.read(coverImageServiceProvider);
+      
+      final candidates = <BookCandidate>[];
       bool googleBooksFailed = false;
-      List<GoogleBook> googleResults = [];
 
-      // Try Google Books API first if API key is available
+      // Search Google Books for all ISBN variants
       if (apiKey != null && apiKey.isNotEmpty) {
-        try {
-          googleResults = await GoogleBooksApiController.searchBooks(
-            query: barcode, // Use barcode as ISBN query
-            apiKey: apiKey,
-            maxResults: 3, // Limit to 3 results for faster response
-          );
-        } catch (err) {
-          googleBooksFailed = true;
-          debugPrint('Google Books API failed: $err');
+        for (final isbn in isbnCandidates) {
+          try {
+            final googleResults = await GoogleBooksApiController.searchBooks(
+              query: isbn,
+              apiKey: apiKey,
+              maxResults: 5,
+            );
+            candidates.addAll(googleResults.map((book) => BookCandidate(
+              title: book.title,
+              author: book.authors.isNotEmpty ? book.authors.join(', ') : null,
+              isbn: book.isbn13 ?? book.isbn,
+              description: book.description,
+              coverUrl: book.thumbnailUrl,
+              source: BookSource.googleBooks,
+            )));
+          } catch (err) {
+            googleBooksFailed = true;
+            debugPrint('Google Books API failed for ISBN $isbn: $err');
+          }
         }
       } else {
         googleBooksFailed = true;
       }
 
-      // If Google Books failed or no API key, try OpenLibrary as fallback
-      if (googleResults.isEmpty && googleBooksFailed) {
+      // Search OpenLibrary for all ISBN variants as fallback or supplement
+      for (final isbn in isbnCandidates) {
         try {
-          final openLibrary = ref.read(openLibraryClientProvider);
           final openResults = await openLibrary.search(
-            query: barcode, // Use barcode as ISBN query
-            isbn: barcode,
-            limit: 3,
+            query: null,
+            isbn: isbn,
+            limit: 5,
           );
-
-          if (openResults.isNotEmpty) {
-            final firstResult = openResults.first;
-            final coverService = ref.read(coverImageServiceProvider);
-            
-            // Apply OpenLibrary result
-            await _applyOpenLibraryCandidate(firstResult, coverService);
-            
-            // Show success with warning about fallback
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('⚠️ Google Books no disponible. Datos cargados desde Open Library.'),
-                  backgroundColor: Colors.orange,
-                  duration: Duration(seconds: 4),
-                ),
-              );
-            }
-            return;
-          }
+          candidates.addAll(openResults.map(BookCandidate.fromOpenLibrary));
         } catch (err) {
-          debugPrint('OpenLibrary fallback failed: $err');
+          debugPrint('OpenLibrary search failed for ISBN $isbn: $err');
         }
       }
 
-      // If Google Books succeeded
-      if (googleResults.isNotEmpty) {
-        final firstResult = googleResults.first;
-        final coverService = ref.read(coverImageServiceProvider);
-        
-        // Apply the result directly
-        await _applyGoogleBook(firstResult, coverService);
-        
-        // Show success feedback
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ Libro encontrado y datos cargados automáticamente'),
-              backgroundColor: Colors.green,
-            ),
-          );
+      // Deduplicate candidates
+      final uniqueCandidates = <String, BookCandidate>{};
+      for (final candidate in candidates) {
+        final key = candidate.isbn ?? '${candidate.title}|${candidate.author}';
+        if (!uniqueCandidates.containsKey(key)) {
+          uniqueCandidates[key] = candidate;
         }
+      }
+      final finalCandidates = uniqueCandidates.values.toList();
+
+      if (finalCandidates.isEmpty) {
+        setState(() {
+          if (googleBooksFailed && apiKey == null) {
+            _searchError = 'No se encontraron resultados. Configura una API key de Google Books en Configuración para mejores resultados.';
+          } else {
+            _searchError = 'No se encontró el libro con ninguno de los ISBNs: ${isbnCandidates.join(", ")}';
+          }
+        });
         return;
       }
 
-      // No results from any source
-      setState(() {
-        _searchError = 'No se encontró el libro en Google Books ni Open Library.';
-      });
+      // Show picker dialog for user to select the correct book
+      if (!mounted || !context.mounted) return;
+      
+      final selectedCandidate = await _pickCandidate(context, finalCandidates);
+      if (selectedCandidate == null) {
+        // User cancelled selection
+        return;
+      }
+
+      // Apply the selected candidate
+      await _applyCandidate(selectedCandidate, coverService);
+      
+      // Show success feedback
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Libro encontrado y datos cargados'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (err) {
       setState(() {
         _searchError = 'Error al buscar el libro: $err';
@@ -693,73 +779,6 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         setState(() {
           _isSearching = false;
         });
-      }
-    }
-  }
-
-  Future<void> _applyOpenLibraryCandidate(OpenLibraryBookResult candidate, CoverImageService coverService) async {
-    String? newCoverPath = _coverPath;
-
-    if (candidate.coverUrl != null && candidate.coverUrl!.isNotEmpty) {
-      final downloaded = await coverService.saveRemoteCover(candidate.coverUrl!);
-      if (downloaded != null) {
-        if (newCoverPath != null && newCoverPath != _initialCoverPath) {
-          _temporaryCoverPaths.remove(newCoverPath);
-          unawaited(coverService.deleteCover(newCoverPath));
-        }
-        if (newCoverPath == _initialCoverPath) {
-          _shouldDeleteInitialOnSave = true;
-        }
-
-        newCoverPath = downloaded;
-        if (downloaded != _initialCoverPath) {
-          _temporaryCoverPaths.add(downloaded);
-        }
-      }
-    }
-
-    setState(() {
-      _titleController.text = candidate.title;
-      if (candidate.author != null) {
-        _authorController.text = candidate.author!;
-      }
-      if (candidate.isbn != null) {
-        _isbnController.text = candidate.isbn!;
-      }
-      _coverPath = newCoverPath;
-      _searchError = null;
-    });
-  }
-
-  Future<void> _applyGoogleBook(GoogleBook googleBook, CoverImageService coverService) async {
-    // Fill form fields with Google Books data
-    setState(() {
-      _titleController.text = googleBook.title;
-      if (googleBook.authors.isNotEmpty) {
-        _authorController.text = googleBook.authors.join(', ');
-      }
-      if (googleBook.isbn13?.isNotEmpty == true) {
-        _isbnController.text = googleBook.isbn13!;
-      } else if (googleBook.isbn?.isNotEmpty == true) {
-        _isbnController.text = googleBook.isbn!;
-      }
-      if (googleBook.description?.isNotEmpty == true) {
-        _notesController.text = googleBook.description!;
-      }
-    });
-
-    // Download cover if available
-    if (googleBook.thumbnailUrl?.isNotEmpty == true) {
-      try {
-        final downloaded = await coverService.saveRemoteCover(googleBook.thumbnailUrl!);
-        if (downloaded != null) {
-          setState(() {
-            _coverPath = downloaded;
-            _temporaryCoverPaths.add(downloaded);
-          });
-        }
-      } catch (err) {
-        debugPrint('Failed to download cover: $err');
       }
     }
   }
@@ -792,6 +811,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     try {
       final candidates = <BookCandidate>[];
 
+      // OpenLibrary handles ISBN expansion internally, so we only need one call
       try {
         final olResults = await openLibrary.search(
           query: query.isEmpty ? null : query,
@@ -804,13 +824,33 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         debugPrint('OpenLibrary search failed: $err');
       }
 
+      // Google Books doesn't handle expansion, so we search for each variant
       try {
-        final gbResults = await googleBooks.search(
-          query: query.isEmpty ? null : query,
-          isbn: isbn,
-          maxResults: 10,
-        );
-        candidates.addAll(gbResults.map(BookCandidate.fromGoogleBooks));
+        final isbnCandidates = IsbnUtils.expandCandidates(isbn);
+        
+        if (isbnCandidates.isNotEmpty) {
+          // If we have ISBNs, search for each variant
+          for (final candidateIsbn in isbnCandidates) {
+            try {
+              final gbResults = await googleBooks.search(
+                query: query.isEmpty ? null : query,
+                isbn: candidateIsbn,
+                maxResults: 10,
+              );
+              candidates.addAll(gbResults.map(BookCandidate.fromGoogleBooks));
+            } catch (e) {
+              debugPrint('GoogleBooks search failed for ISBN $candidateIsbn: $e');
+            }
+          }
+        } else {
+          // If no ISBN, just search by query
+          final gbResults = await googleBooks.search(
+            query: query.isEmpty ? null : query,
+            isbn: null,
+            maxResults: 10,
+          );
+          candidates.addAll(gbResults.map(BookCandidate.fromGoogleBooks));
+        }
       } on GoogleBooksMissingApiKeyException {
         setState(() {
           _searchError =
@@ -821,7 +861,18 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         debugPrint('GoogleBooks search failed: $err');
       }
 
-      if (candidates.isEmpty) {
+      // Deduplicate candidates
+      final uniqueCandidates = <String, BookCandidate>{};
+      for (final candidate in candidates) {
+        // Use ISBN as primary key, fallback to Title+Author
+        final key = candidate.isbn ?? '${candidate.title}|${candidate.author}';
+        if (!uniqueCandidates.containsKey(key)) {
+          uniqueCandidates[key] = candidate;
+        }
+      }
+      final finalCandidates = uniqueCandidates.values.toList();
+
+      if (finalCandidates.isEmpty) {
         if (!mounted) return;
         setState(() {
           _searchError = 'Sin resultados en los catálogos consultados.';
@@ -830,7 +881,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       }
 
       if (!mounted || !pickerContext.mounted) return;
-      final candidate = await _pickCandidate(pickerContext, candidates);
+      final candidate = await _pickCandidate(pickerContext, finalCandidates);
       if (candidate == null) {
         return;
       }

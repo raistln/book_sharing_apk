@@ -16,6 +16,26 @@ class SupabaseBookSyncRepository {
   final BookDao _bookDao;
   final SupabaseBookService _bookService;
 
+  /// Mapea visibility y isAvailable de Supabase al status local
+  String _mapVisibilityToStatus(String? visibility, bool? isAvailable) {
+    // Si es privado, el status es 'private'
+    if (visibility == 'private') {
+      return 'private';
+    }
+    
+    // Si está archivado, el status es 'archived'
+    if (visibility == 'archived') {
+      return 'archived';
+    }
+    
+    // Para libros públicos/ grupales, usar isAvailable
+    if (isAvailable == true) {
+      return 'available';
+    } else {
+      return 'loaned';
+    }
+  }
+
   Future<void> syncFromRemote({
     required LocalUser owner,
     String? accessToken,
@@ -80,8 +100,9 @@ class SupabaseBookSyncRepository {
               author: Value(remote.author),
               isbn: Value(remote.isbn),
               coverPath: Value(remote.coverUrl),
-              status: Value(remote.isAvailable == true ? 'available' : 'loaned'),
+              status: Value(_mapVisibilityToStatus(remote.visibility, remote.isAvailable)),
               notes: const Value(null), // Notes not stored in shared_books
+              isRead: Value(remote.isRead),
               isDeleted: Value(remote.isDeleted),
               isDirty: const Value(false),
               syncedAt: Value(now),
@@ -103,8 +124,9 @@ class SupabaseBookSyncRepository {
               author: Value(remote.author),
               isbn: Value(remote.isbn),
               coverPath: Value(remote.coverUrl),
-              status: Value(remote.isAvailable == true ? 'available' : 'loaned'),
+              status: Value(_mapVisibilityToStatus(remote.visibility, remote.isAvailable)),
               notes: const Value(null), // Notes not stored in shared_books
+              isRead: Value(remote.isRead),
               isDeleted: Value(remote.isDeleted),
               isDirty: const Value(false),
               createdAt: Value(remote.createdAt),

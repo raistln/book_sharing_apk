@@ -73,6 +73,20 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     await onboardingService.markCompleted();
     ref.invalidate(onboardingProgressProvider);
     if (!mounted) return;
+
+    // Create default manual loans group even when skipping
+    final activeUser = ref.read(activeUserProvider).value;
+    if (activeUser != null) {
+      try {
+        final bookRepository = ref.read(bookRepositoryProvider);
+        await bookRepository.getOrCreatePersonalGroup(activeUser);
+      } catch (e) {
+        // Log error but don't block onboarding completion
+        material.debugPrint('[OnboardingWizard] Failed to create personal group during skip: $e');
+      }
+    }
+
+    if (!mounted) return;
     final syncController = ref.read(groupSyncControllerProvider.notifier);
     await syncController.syncGroups();
     if (!mounted) return;
@@ -85,6 +99,20 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     await onboardingService.markDiscoverCoachPending(resetSeen: true);
     await onboardingService.markDetailCoachPending(resetSeen: true);
     ref.invalidate(onboardingProgressProvider);
+    if (!mounted) return;
+    
+    // Create default manual loans group
+    final activeUser = ref.read(activeUserProvider).value;
+    if (activeUser != null) {
+      try {
+        final bookRepository = ref.read(bookRepositoryProvider);
+        await bookRepository.getOrCreatePersonalGroup(activeUser);
+      } catch (e) {
+        // Log error but don't block onboarding completion
+        material.debugPrint('[OnboardingWizard] Failed to create personal group: $e');
+      }
+    }
+    
     if (!mounted) return;
     final syncController = ref.read(groupSyncControllerProvider.notifier);
     await syncController.syncGroups();

@@ -301,6 +301,21 @@ class BookRepository {
     return status == 'available' || status == 'loaned';
   }
 
+  /// Mapea el status local a visibility e isAvailable para SharedBooks
+  (String visibility, bool isAvailable) _mapStatusToSharedBookValues(String status) {
+    switch (status) {
+      case 'private':
+        return ('private', false);
+      case 'archived':
+        return ('archived', false);
+      case 'loaned':
+        return ('group', false);
+      case 'available':
+      default:
+        return ('group', true);
+    }
+  }
+
   Future<void> _autoShareBook({
     required int bookId,
     required String bookUuid,
@@ -343,20 +358,22 @@ class BookRepository {
           bookId: bookId,
         );
         if (existing != null) {
+          final (visibility, isAvailable) = _mapStatusToSharedBookValues(status);
           await _groupDao.updateSharedBookFields(
             sharedBookId: existing.id,
             entry: SharedBooksCompanion(
-              isDeleted: const Value(false),
+              visibility: Value(visibility),
+              isAvailable: Value(isAvailable),
               isDirty: const Value(true),
               syncedAt: const Value(null),
               updatedAt: Value(timestamp),
-              isAvailable: Value(status != 'loaned'),
             ),
           );
           changed = true;
           continue;
         }
 
+        final (visibility, isAvailable) = _mapStatusToSharedBookValues(status);
         await _groupDao.insertSharedBook(
           SharedBooksCompanion.insert(
             uuid: _uuid.v4(),
@@ -368,8 +385,8 @@ class BookRepository {
             ownerRemoteId: ownerRemoteId != null
                 ? Value(ownerRemoteId)
                 : const Value.absent(),
-            isAvailable: Value(status != 'loaned'),
-            visibility: const Value('group'),
+            isAvailable: Value(isAvailable),
+            visibility: Value(visibility),
             isDirty: const Value(true),
             isDeleted: const Value(false),
             syncedAt: const Value(null),
@@ -452,6 +469,7 @@ class BookRepository {
     }
 
     final now = DateTime.now();
+    final (visibility, isAvailable) = _mapStatusToSharedBookValues(book.status);
     final sharedBookId = await _groupDao.insertSharedBook(
       SharedBooksCompanion.insert(
         uuid: _uuid.v4(),
@@ -461,8 +479,8 @@ class BookRepository {
         bookUuid: book.uuid,
         ownerUserId: owner.id,
         ownerRemoteId: owner.remoteId != null ? Value(owner.remoteId!) : const Value.absent(),
-        isAvailable: Value(book.status != 'loaned'),
-        visibility: const Value('private'), // Private visibility for personal loans
+        isAvailable: Value(isAvailable),
+        visibility: const Value('private'), // Private visibility for personal loans group
         isDirty: const Value(true),
         isDeleted: const Value(false),
         syncedAt: const Value(null),

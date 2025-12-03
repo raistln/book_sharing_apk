@@ -2,12 +2,43 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:book_sharing_app/utils/isbn_utils.dart';
+
 /// Controller for Google Books API operations
 class GoogleBooksApiController {
   static const String _baseUrl = 'https://www.googleapis.com/books/v1/volumes';
   
   /// Search for books by title, author, or ISBN
   static Future<List<GoogleBook>> searchBooks({
+    required String query,
+    String? apiKey,
+    int maxResults = 20,
+  }) async {
+    final trimmedQuery = query.trim();
+    final isbnCandidates = IsbnUtils.expandCandidates(trimmedQuery);
+    if (isbnCandidates.isEmpty) {
+      return _searchInternal(
+        query: trimmedQuery,
+        apiKey: apiKey,
+        maxResults: maxResults,
+      );
+    }
+
+    for (final candidate in isbnCandidates) {
+      final books = await _searchInternal(
+        query: candidate,
+        apiKey: apiKey,
+        maxResults: maxResults,
+      );
+      if (books.isNotEmpty) {
+        return books;
+      }
+    }
+
+    return const [];
+  }
+
+  static Future<List<GoogleBook>> _searchInternal({
     required String query,
     String? apiKey,
     int maxResults = 20,

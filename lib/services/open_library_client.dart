@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'package:book_sharing_app/utils/isbn_utils.dart';
+
 class OpenLibraryClient {
   OpenLibraryClient({http.Client? httpClient})
       : _http = httpClient ?? http.Client();
@@ -15,6 +17,43 @@ class OpenLibraryClient {
     String? isbn,
     int limit = 10,
     int offset = 0,
+  }) async {
+    final trimmedQuery = query?.trim();
+    final isbnCandidates = IsbnUtils.expandCandidates(isbn);
+
+    if ((trimmedQuery == null || trimmedQuery.isEmpty) && isbnCandidates.isEmpty) {
+      return [];
+    }
+
+    if (isbnCandidates.isEmpty) {
+      return _searchInternal(
+        query: trimmedQuery,
+        isbn: null,
+        limit: limit,
+        offset: offset,
+      );
+    }
+
+    for (final candidate in isbnCandidates) {
+      final results = await _searchInternal(
+        query: trimmedQuery,
+        isbn: candidate,
+        limit: limit,
+        offset: offset,
+      );
+      if (results.isNotEmpty) {
+        return results;
+      }
+    }
+
+    return const [];
+  }
+
+  Future<List<OpenLibraryBookResult>> _searchInternal({
+    required String? query,
+    required String? isbn,
+    required int limit,
+    required int offset,
   }) async {
     final params = <String, String>{
       'limit': limit.toString(),

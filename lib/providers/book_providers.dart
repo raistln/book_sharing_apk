@@ -29,6 +29,7 @@ import '../services/group_push_controller.dart';
 import '../services/discover_group_controller.dart';
 import '../services/onboarding_service.dart';
 import 'notification_providers.dart';
+import 'sync_providers.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -431,14 +432,14 @@ final groupSyncControllerProvider =
 final loanControllerProvider =
     StateNotifierProvider<LoanController, LoanActionState>((ref) {
   final repository = ref.watch(loanRepositoryProvider);
-  final syncController = ref.watch(groupSyncControllerProvider.notifier);
   final notificationClient = ref.watch(notificationServiceProvider);
   final notificationRepository = ref.watch(notificationRepositoryProvider);
+  final syncCoordinator = ref.watch(unifiedSyncCoordinatorProvider);
   return LoanController(
     loanRepository: repository,
-    groupSyncController: syncController,
     notificationClient: notificationClient,
     notificationRepository: notificationRepository,
+    syncCoordinator: syncCoordinator,
   );
 });
 
@@ -449,11 +450,13 @@ final groupPushControllerProvider =
   final notificationClient = ref.watch(notificationServiceProvider);
   final bookRepository = ref.watch(bookRepositoryProvider);
   final groupDao = ref.watch(groupDaoProvider);
+  final syncCoordinator = ref.watch(unifiedSyncCoordinatorProvider);
   return GroupPushController(
     groupPushRepository: repository,
     groupSyncController: syncController,
     notificationClient: notificationClient,
     bookRepository: bookRepository,
     groupDao: groupDao,
+    syncCoordinator: syncCoordinator,
   );
 });

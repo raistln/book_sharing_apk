@@ -5,9 +5,10 @@ import 'package:book_sharing_app/data/local/user_dao.dart';
 import 'package:book_sharing_app/data/local/notification_dao.dart';
 import 'package:book_sharing_app/data/repositories/loan_repository.dart';
 import 'package:book_sharing_app/data/repositories/notification_repository.dart';
+import 'package:book_sharing_app/models/global_sync_state.dart';
 import 'package:book_sharing_app/services/loan_controller.dart';
-import 'package:book_sharing_app/services/group_sync_controller.dart';
 import 'package:book_sharing_app/services/notification_service.dart';
+import 'package:book_sharing_app/services/unified_sync_coordinator.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,8 +16,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:uuid/uuid.dart';
 
 // Mock classes for external dependencies
-class MockGroupSyncController extends Mock implements GroupSyncController {}
 class MockNotificationClient extends Mock implements NotificationClient {}
+class MockUnifiedSyncCoordinator extends Mock implements UnifiedSyncCoordinator {}
 
 void main() {
   group('LoanController', () {
@@ -28,8 +29,8 @@ void main() {
     late LoanRepository loanRepository;
     late NotificationRepository notificationRepository;
     late LoanController loanController;
-    late MockGroupSyncController mockGroupSyncController;
     late MockNotificationClient mockNotificationClient;
+    late MockUnifiedSyncCoordinator mockSyncCoordinator;
 
     late LocalUser owner;
     late LocalUser borrower;
@@ -39,6 +40,7 @@ void main() {
     
     setUpAll(() {
       registerFallbackValue(NotificationType.loanDueSoon);
+      registerFallbackValue(SyncEvent.loanCreated);
     });
 
     setUp(() async {
@@ -58,12 +60,14 @@ void main() {
       );
 
       // Create mocks
-      mockGroupSyncController = MockGroupSyncController();
       mockNotificationClient = MockNotificationClient();
+      mockSyncCoordinator = MockUnifiedSyncCoordinator();
 
-      // Stub sync methods
-      when(() => mockGroupSyncController.markPendingChanges()).thenAnswer((_) async {});
-      when(() => mockGroupSyncController.syncGroups()).thenAnswer((_) async {});
+      // Stub sync coordinator methods
+      when(() => mockSyncCoordinator.syncOnCriticalEvent(any()))
+          .thenAnswer((_) async {});
+      when(() => mockSyncCoordinator.markPendingChanges(any(), priority: any(named: 'priority')))
+          .thenReturn(null);
 
       // Stub notification client methods
       when(() => mockNotificationClient.cancelMany(any())).thenAnswer((_) async {});
@@ -87,9 +91,9 @@ void main() {
       // Create controller
       loanController = LoanController(
         loanRepository: loanRepository,
-        groupSyncController: mockGroupSyncController,
         notificationClient: mockNotificationClient,
         notificationRepository: notificationRepository,
+        syncCoordinator: mockSyncCoordinator,
       );
 
       // Setup test data using same pattern as loan_repository_test
@@ -121,8 +125,8 @@ void main() {
       expect(loanController.state.isLoading, false);
       expect(loanController.state.lastSuccess, isNotNull);
 
-      verify(() => mockGroupSyncController.markPendingChanges()).called(1);
-      verify(() => mockGroupSyncController.syncGroups()).called(1);
+      // Verify critical event was triggered
+      verify(() => mockSyncCoordinator.syncOnCriticalEvent(SyncEvent.loanCreated)).called(1);
     });
 
     test('acceptLoan changes status to active', () async {

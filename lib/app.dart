@@ -4,8 +4,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/auth_providers.dart';
-import 'providers/book_providers.dart';
 import 'providers/notification_providers.dart';
+import 'providers/sync_providers.dart';
 import 'providers/theme_providers.dart';
 import 'ui/screens/auth/lock_screen.dart';
 import 'ui/screens/auth/pin_setup_screen.dart';
@@ -50,16 +50,18 @@ class _BookSharingAppState extends ConsumerState<BookSharingApp> with WidgetsBin
       // Sync when app comes back to foreground
       final authState = ref.read(authControllerProvider);
       if (authState.status == AuthStatus.unlocked) {
-        if (kDebugMode) debugPrint('[AppLifecycle] App resumed & unlocked -> Syncing & Starting AutoSync');
-        ref.read(groupSyncControllerProvider.notifier).syncGroups();
-        ref.read(groupSyncControllerProvider.notifier).startAutoSync();
+        if (kDebugMode) debugPrint('[AppLifecycle] App resumed & unlocked -> Syncing & Resuming AutoSync');
+        final coordinator = ref.read(unifiedSyncCoordinatorProvider);
+        coordinator.syncNow(); // Sync inmediata al volver
+        if (coordinator.isTimerSuspended) {
+          coordinator.resumeAutoSync();
+        }
       } else {
         if (kDebugMode) debugPrint('[AppLifecycle] App resumed but auth status is ${authState.status} -> No action');
       }
     } else if (state == AppLifecycleState.paused) {
-      // Stop auto-sync when app goes to background to save battery
-      if (kDebugMode) debugPrint('[AppLifecycle] App paused -> Stopping AutoSync');
-      ref.read(groupSyncControllerProvider.notifier).stopAutoSync();
+      // No necesitamos detener el auto-sync, el coordinador lo maneja inteligentemente
+      if (kDebugMode) debugPrint('[AppLifecycle] App paused -> Coordinator will adapt intervals');
     }
   }
 
@@ -76,10 +78,10 @@ class _BookSharingAppState extends ConsumerState<BookSharingApp> with WidgetsBin
       
       if (next.status == AuthStatus.unlocked && previous?.status != AuthStatus.unlocked) {
         if (kDebugMode) debugPrint('[AuthListener] Auth unlocked -> Starting AutoSync');
-        ref.read(groupSyncControllerProvider.notifier).startAutoSync();
+        ref.read(unifiedSyncCoordinatorProvider).startAutoSync();
       } else if (next.status != AuthStatus.unlocked && previous?.status == AuthStatus.unlocked) {
         if (kDebugMode) debugPrint('[AuthListener] Auth locked/other -> Stopping AutoSync');
-        ref.read(groupSyncControllerProvider.notifier).stopAutoSync();
+        ref.read(unifiedSyncCoordinatorProvider).stopAutoSync();
       }
     });
 

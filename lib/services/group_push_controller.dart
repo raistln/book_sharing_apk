@@ -6,8 +6,10 @@ import '../data/local/database.dart';
 import '../data/local/group_dao.dart';
 import '../data/repositories/book_repository.dart';
 import '../data/repositories/group_push_repository.dart';
+import '../models/global_sync_state.dart';
 import 'group_sync_controller.dart';
 import 'notification_service.dart';
+import 'unified_sync_coordinator.dart';
 
 class GroupActionState {
   const GroupActionState({
@@ -40,11 +42,13 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required NotificationClient notificationClient,
     required BookRepository bookRepository,
     required GroupDao groupDao,
+    required UnifiedSyncCoordinator syncCoordinator,
   })  : _groupPushRepository = groupPushRepository,
         _groupSyncController = groupSyncController,
         _notificationClient = notificationClient,
         _bookRepository = bookRepository,
         _groupDao = groupDao,
+        _syncCoordinator = syncCoordinator,
         super(const GroupActionState());
 
   final GroupPushRepository _groupPushRepository;
@@ -52,6 +56,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
   final NotificationClient _notificationClient;
   final BookRepository _bookRepository;
   final GroupDao _groupDao;
+  final UnifiedSyncCoordinator _syncCoordinator;
 
   void dismissError() {
     state = state.copyWith(lastError: () => null);
@@ -240,7 +245,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         member: member,
         accessToken: accessToken,
       );
-      _groupSyncController.markPendingChanges();
+      // Evento crítico: usuario salió del grupo → sync inmediata
+      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.userLeftGroup);
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Miembro eliminado.',
@@ -331,7 +337,6 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         newStatus: newStatus,
         accessToken: accessToken,
       );
-      _groupSyncController.markPendingChanges();
       
       // If invitation was accepted, share existing books with the group
       if (newStatus == 'accepted') {
@@ -339,6 +344,14 @@ class GroupPushController extends StateNotifier<GroupActionState> {
           group: group,
           owner: user,
         );
+        // Evento crítico: invitación aceptada → sync inmediata
+        await _syncCoordinator.syncOnCriticalEvent(SyncEvent.groupInvitationAccepted);
+      } else if (newStatus == 'rejected') {
+        // Evento crítico: invitación rechazada → sync inmediata
+        await _syncCoordinator.syncOnCriticalEvent(SyncEvent.groupInvitationRejected);
+      } else {
+        // Otros estados usan debouncing normal
+        _syncCoordinator.markPendingChanges(SyncEntity.groups, priority: SyncPriority.medium);
       }
       
       state = state.copyWith(
@@ -369,7 +382,6 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         user: user,
         accessToken: accessToken,
       );
-      _groupSyncController.markPendingChanges();
       
       // Share existing books with the newly joined group
       final group = await _groupDao.findGroupById(invitation.groupId);
@@ -379,6 +391,9 @@ class GroupPushController extends StateNotifier<GroupActionState> {
           owner: user,
         );
       }
+      
+      // Evento crítico: usuario se unió al grupo → sync inmediata
+      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.userJoinedGroup);
       
       state = state.copyWith(
         isLoading: false,

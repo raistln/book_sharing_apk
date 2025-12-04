@@ -8,8 +8,9 @@ import '../data/models/in_app_notification_status.dart';
 import '../data/models/in_app_notification_type.dart';
 import '../data/repositories/loan_repository.dart';
 import '../data/repositories/notification_repository.dart';
-import 'group_sync_controller.dart';
+import '../models/global_sync_state.dart';
 import 'notification_service.dart';
+import 'unified_sync_coordinator.dart';
 
 class LoanActionState {
   const LoanActionState({
@@ -38,19 +39,19 @@ class LoanActionState {
 class LoanController extends StateNotifier<LoanActionState> {
   LoanController({
     required LoanRepository loanRepository,
-    required GroupSyncController groupSyncController,
     required NotificationClient notificationClient,
     required NotificationRepository notificationRepository,
+    required UnifiedSyncCoordinator syncCoordinator,
   })  : _loanRepository = loanRepository,
-        _groupSyncController = groupSyncController,
         _notificationClient = notificationClient,
         _notificationRepository = notificationRepository,
+        _syncCoordinator = syncCoordinator,
         super(const LoanActionState());
 
   final LoanRepository _loanRepository;
-  final GroupSyncController _groupSyncController;
   final NotificationClient _notificationClient;
   final NotificationRepository _notificationRepository;
+  final UnifiedSyncCoordinator _syncCoordinator;
 
   static const Duration _dueSoonLeadTime = Duration(hours: 24);
 
@@ -78,7 +79,8 @@ class LoanController extends StateNotifier<LoanActionState> {
         dueDate: dueDate,
         borrowerContact: borrowerContact,
       );
-      _groupSyncController.markPendingChanges();
+      // Evento crítico: sincronizar inmediatamente
+      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.loanCreated);
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Préstamo manual registrado.',
@@ -106,12 +108,9 @@ class LoanController extends StateNotifier<LoanActionState> {
         dueDate: dueDate,
       );
       
-      // Mark group sync as pending (includes loans)
-      _groupSyncController.markPendingChanges();
-      
-      // Wait for loan to sync to Supabase before creating notification
-      // This prevents FK constraint violations
-      await _groupSyncController.syncGroups();
+      // Evento crítico: sincronizar inmediatamente antes de crear notificación
+      // Esto previene violaciones de FK constraints
+      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.loanCreated);
       
       // Now create the notification (it will reference the synced loan)
       await _notifyLoanRequest(
@@ -144,7 +143,8 @@ class LoanController extends StateNotifier<LoanActionState> {
         loan: loan,
         borrower: borrower,
       );
-      _groupSyncController.markPendingChanges();
+      // Evento crítico: sincronizar inmediatamente
+      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.loanCancelled);
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Solicitud cancelada.',
@@ -174,7 +174,8 @@ class LoanController extends StateNotifier<LoanActionState> {
         loan: loan,
         owner: owner,
       );
-      _groupSyncController.markPendingChanges();
+      // Marcar cambios (no crítico, usa debouncing normal)
+      _syncCoordinator.markPendingChanges(SyncEntity.loans, priority: SyncPriority.medium);
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Solicitud rechazada.',
@@ -204,7 +205,8 @@ class LoanController extends StateNotifier<LoanActionState> {
         loan: loan,
         owner: owner,
       );
-      _groupSyncController.markPendingChanges();
+      // Marcar cambios (no crítico, usa debouncing normal)
+      _syncCoordinator.markPendingChanges(SyncEntity.loans, priority: SyncPriority.medium);
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Préstamo aceptado.',
@@ -234,7 +236,8 @@ class LoanController extends StateNotifier<LoanActionState> {
         loan: loan,
         actor: actor,
       );
-      _groupSyncController.markPendingChanges();
+      // Evento crítico: sincronizar inmediatamente
+      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.loanReturned);
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Préstamo marcado como devuelto.',
@@ -260,7 +263,8 @@ class LoanController extends StateNotifier<LoanActionState> {
     state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final result = await _loanRepository.expireLoan(loan: loan);
-      _groupSyncController.markPendingChanges();
+      // Marcar cambios (no crítico, usa debouncing normal)
+      _syncCoordinator.markPendingChanges(SyncEntity.loans, priority: SyncPriority.medium);
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Préstamo marcado como expirado.',

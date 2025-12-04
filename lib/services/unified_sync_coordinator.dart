@@ -219,6 +219,29 @@ class UnifiedSyncCoordinator {
 
     // Sincronizar inmediatamente
     await syncNow(entities: entities);
+    
+    // Trigger actual sync controllers for immediate sync
+    for (final entity in entities) {
+      switch (entity) {
+        case SyncEntity.groups:
+        case SyncEntity.loans:
+          final groupController = _groupSyncController;
+          if (groupController.mounted) {
+            unawaited(groupController.syncGroups());
+          }
+          break;
+        case SyncEntity.books:
+          final bookController = _bookSyncController;
+          if (bookController.mounted) {
+            unawaited(bookController.sync());
+          }
+          break;
+        case SyncEntity.users:
+        case SyncEntity.notifications:
+          // These are handled by syncNow() above
+          break;
+      }
+    }
   }
 
   List<SyncEntity> _getEntitiesForEvent(SyncEvent event) {

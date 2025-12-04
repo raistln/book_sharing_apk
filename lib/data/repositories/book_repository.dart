@@ -404,7 +404,7 @@ class BookRepository {
   }
 
   Future<Group> getOrCreatePersonalGroup(LocalUser owner) async {
-    const personalGroupName = 'Prestamos personales';
+    const personalGroupName = 'Préstamos Personales';
     // Try to find existing personal group
     final groups = await _groupDao.getGroupsForUser(owner.id);
     final existing = groups.where((g) => g.name == personalGroupName).firstOrNull;

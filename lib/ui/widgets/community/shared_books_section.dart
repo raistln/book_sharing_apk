@@ -13,8 +13,7 @@ class SharedBooksSection extends StatelessWidget {
     return sharedBooksAsync.when(
       data: (books) {
         if (books.isEmpty) {
-          return Text('No hay libros compartidos todavía.',
-              style: theme.textTheme.bodyMedium);
+          return const SizedBox.shrink(); // No mostrar nada si está vacío
         }
         
         final totalBooks = books.length;

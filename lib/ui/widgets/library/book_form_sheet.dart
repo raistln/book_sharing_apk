@@ -680,6 +680,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         return;
       }
 
+      // Debug: Show which ISBN candidates we're trying
+      debugPrint('Barcode scanner candidates: ${isbnCandidates.join(", ")}');
+
       final apiKeyState = ref.read(googleBooksApiKeyControllerProvider);
       final apiKey = apiKeyState.valueOrNull;
       final openLibrary = ref.read(openLibraryClientProvider);
@@ -688,7 +691,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       final candidates = <BookCandidate>[];
       bool googleBooksFailed = false;
 
-      // Search Google Books for all ISBN variants
+      // Search Google Books for all ISBN variants (priority source)
       if (apiKey != null && apiKey.isNotEmpty) {
         for (final isbn in isbnCandidates) {
           try {
@@ -714,7 +717,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         googleBooksFailed = true;
       }
 
-      // Search OpenLibrary for all ISBN variants as fallback or supplement
+      // Always search OpenLibrary for additional results (even if Google Books succeeded)
+      // This provides backup data and potentially different editions/formats
       for (final isbn in isbnCandidates) {
         try {
           final openResults = await openLibrary.search(
@@ -743,7 +747,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           if (googleBooksFailed && apiKey == null) {
             _searchError = 'No se encontraron resultados. Configura una API key de Google Books en Configuración para mejores resultados.';
           } else {
-            _searchError = 'No se encontró el libro con ninguno de los ISBNs: ${isbnCandidates.join(", ")}';
+            _searchError = 'No se encontró el libro con ninguno de los ISBNs: ${isbnCandidates.join(", ")}\n\nPrueba buscando manualmente por título si conoces el nombre del libro.';
           }
         });
         return;
@@ -811,20 +815,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     try {
       final candidates = <BookCandidate>[];
 
-      // OpenLibrary handles ISBN expansion internally, so we only need one call
-      try {
-        final olResults = await openLibrary.search(
-          query: query.isEmpty ? null : query,
-          isbn: isbn,
-          limit: 10,
-        );
-        candidates.addAll(olResults.map(BookCandidate.fromOpenLibrary));
-      } catch (err) {
-        // Guardamos el error pero no rompemos el flujo.
-        debugPrint('OpenLibrary search failed: $err');
-      }
-
-      // Google Books doesn't handle expansion, so we search for each variant
+      // Google Books first (priority source)
       try {
         final isbnCandidates = IsbnUtils.expandCandidates(isbn);
         
@@ -859,6 +850,18 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         debugPrint('GoogleBooks search omitido por falta de API key');
       } catch (err) {
         debugPrint('GoogleBooks search failed: $err');
+      }
+
+      // OpenLibrary always runs for additional results and backup data
+      try {
+        final olResults = await openLibrary.search(
+          query: query.isEmpty ? null : query,
+          isbn: isbn,
+          limit: 10,
+        );
+        candidates.addAll(olResults.map(BookCandidate.fromOpenLibrary));
+      } catch (err) {
+        debugPrint('OpenLibrary search failed: $err');
       }
 
       // Deduplicate candidates

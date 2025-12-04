@@ -82,6 +82,7 @@ final groupListProvider = StreamProvider.autoDispose<List<Group>>((ref) {
     return const Stream.empty();
   }
 
+  // watchGroupsForUser already has correct ordering (Préstamos Personales first)
   return dao.watchGroupsForUser(activeUser.id);
 });
 

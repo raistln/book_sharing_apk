@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../data/local/database.dart';
 import '../../../../data/local/group_dao.dart';
@@ -95,8 +96,12 @@ class _GroupCardState extends ConsumerState<GroupCard> {
 
     final bool highlightManageInvitations = activeUser != null && isAdmin;
 
+    // Ocultar menú para el grupo de préstamos personales (case-insensitive, sin acentos)
+    final normalizedName = group.name.toLowerCase().replaceAll('á', 'a').replaceAll('é', 'e').replaceAll('í', 'i').replaceAll('ó', 'o').replaceAll('ú', 'u');
+    final isPersonalLoansGroup = normalizedName.contains('prestamos') && normalizedName.contains('personales');
+
     Widget? menuButton;
-    if (activeUser != null && (isOwner || isAdmin || currentMembership != null)) {
+    if (activeUser != null && (isOwner || isAdmin || currentMembership != null) && !isPersonalLoansGroup) {
       final popup = GroupMenu(
         group: group,
         activeUser: activeUser,
@@ -123,6 +128,8 @@ class _GroupCardState extends ConsumerState<GroupCard> {
           : popup;
     }
 
+    debugPrint('🔍 DEBUG Group: "${group.name}" | isPL: $isPersonalLoansGroup | hasMenu: ${menuButton != null}');
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -137,10 +144,23 @@ class _GroupCardState extends ConsumerState<GroupCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(group.name, style: theme.textTheme.titleMedium),
-                      if (group.ownerRemoteId != null) ...[
+                      // Mostrar propietario para todos excepto Préstamos Personales
+                      if (!isPersonalLoansGroup && members.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text('Propietario remoto: ${group.ownerRemoteId}',
-                            style: theme.textTheme.bodySmall),
+                        // Buscar el propietario en los miembros
+                        Builder(
+                          builder: (context) {
+                            final ownerMember = members.cast<GroupMemberDetail?>().firstWhere(
+                              (m) => m?.membership.memberUserId == group.ownerUserId,
+                              orElse: () => null,
+                            );
+                            final ownerName = ownerMember?.user?.username ?? 'Desconocido';
+                            return Text(
+                              'Lector@ Maest@: $ownerName (Dueño)',
+                              style: theme.textTheme.bodySmall,
+                            );
+                          },
+                        ),
                       ],
                       const SizedBox(height: 4),
                       Text('Última actualización: ${DateFormat.yMd().add_Hm().format(group.updatedAt)}',
@@ -163,7 +183,7 @@ class _GroupCardState extends ConsumerState<GroupCard> {
             ),
             const SizedBox(height: 12),
             // Hide stats and shared books for personal loans group
-            if (group.name != 'Prestamos personales') ...[
+            if (!isPersonalLoansGroup) ...[
               GroupStatsChips(
                 groupId: group.id,
                 membersAsync: membersAsync,
@@ -249,13 +269,43 @@ void _showFeedbackSnackBar({
   );
 }
 
-// Placeholder implementations - these will be moved to separate files
+// Group action implementations
 Future<void> _handleEditGroup(
   BuildContext context,
   WidgetRef ref,
   Group group,
 ) async {
-  // Implementation will be moved from CommunityTab
+  final result = await showDialog<({String name, String? description})>(
+    context: context,
+    builder: (context) => _GroupFormDialog(
+      initialName: group.name,
+      initialDescription: group.description,
+    ),
+  );
+
+  if (result == null || !context.mounted) return;
+
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  try {
+    await controller.updateGroup(
+      group: group,
+      name: result.name,
+      description: result.description,
+    );
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'Grupo actualizado correctamente',
+      isError: false,
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'Error al actualizar grupo: $error',
+      isError: true,
+    );
+  }
 }
 
 Future<void> _handleTransferOwnership(
@@ -263,7 +313,70 @@ Future<void> _handleTransferOwnership(
   WidgetRef ref,
   Group group,
 ) async {
-  // Implementation will be moved from CommunityTab
+  final membersAsync = ref.read(groupMemberDetailsProvider(group.id));
+  final members = membersAsync.asData?.value ?? [];
+  
+  if (members.isEmpty) {
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'No hay miembros a quienes transferir',
+      isError: true,
+    );
+    return;
+  }
+
+  final selectedMember = await showDialog<GroupMemberDetail>(
+    context: context,
+    builder: (context) => _SelectMemberDialog(members: members),
+  );
+
+  if (selectedMember == null || !context.mounted) return;
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Transferir propiedad'),
+      content: Text(
+        '¿Estás seguro de transferir la propiedad del grupo a ${selectedMember.user?.username ?? "este usuario"}? Esta acción no se puede deshacer.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Transferir'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  final newOwner = selectedMember.user;
+  if (newOwner == null) return;
+  
+  try {
+    await controller.transferOwnership(
+      group: group,
+      newOwner: newOwner,
+    );
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'Propiedad transferida correctamente',
+      isError: false,
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'Error al transferir propiedad: $error',
+      isError: true,
+    );
+  }
 }
 
 Future<void> _handleDeleteGroup(
@@ -271,11 +384,99 @@ Future<void> _handleDeleteGroup(
   WidgetRef ref,
   Group group,
 ) async {
-  // Implementation will be moved from CommunityTab
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Eliminar grupo'),
+      content: Text(
+        '¿Estás seguro de eliminar el grupo "${group.name}"? Esta acción no se puede deshacer y se eliminarán todos los libros compartidos y préstamos asociados.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+          child: const Text('Eliminar'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  try {
+    await controller.deleteGroup(group: group);
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'Grupo eliminado correctamente',
+      isError: false,
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'Error al eliminar grupo: $error',
+      isError: true,
+    );
+  }
 }
 
 Future<void> _handleLeaveGroup(BuildContext context, WidgetRef ref, Group group) async {
-  // Implementation will be moved from CommunityTab
+  final activeUser = ref.read(activeUserProvider).value;
+  if (activeUser == null) return;
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Salir del grupo'),
+      content: Text(
+        '¿Estás seguro de salir del grupo "${group.name}"? Perderás acceso a los libros compartidos.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Salir'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  final controller = ref.read(groupPushControllerProvider.notifier);
+  final groupDao = ref.read(groupDaoProvider);
+  final membership = await groupDao.findMember(groupId: group.id, userId: activeUser.id);
+  if (membership == null) return;
+  
+  try {
+    await controller.removeMember(
+      member: membership,
+    );
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'Has salido del grupo correctamente',
+      isError: false,
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showFeedbackSnackBar(
+      context: context,
+      message: 'Error al salir del grupo: $error',
+      isError: true,
+    );
+  }
 }
 
 Future<void> _showManageMembersSheet(
@@ -283,7 +484,11 @@ Future<void> _showManageMembersSheet(
   WidgetRef ref, {
   required Group group,
 }) async {
-  // Implementation will be moved from CommunityTab
+  await showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => _ManageMembersSheet(group: group),
+  );
 }
 
 Future<void> _showInvitationsSheet(
@@ -291,5 +496,467 @@ Future<void> _showInvitationsSheet(
   WidgetRef ref, {
   required Group group,
 }) async {
-  // Implementation will be moved from CommunityTab
+  await showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => _ManageInvitationsSheet(group: group),
+  );
+}
+
+// Dialogs and Sheets
+class _GroupFormDialog extends StatefulWidget {
+  const _GroupFormDialog({
+    this.initialName,
+    this.initialDescription,
+  });
+
+  final String? initialName;
+  final String? initialDescription;
+
+  @override
+  State<_GroupFormDialog> createState() => _GroupFormDialogState();
+}
+
+class _GroupFormDialogState extends State<_GroupFormDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+    _descriptionController = TextEditingController(text: widget.initialDescription);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Editar grupo'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: 'Nombre del grupo'),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'El nombre es obligatorio';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
+              maxLines: 3,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              Navigator.of(context).pop((
+                name: _nameController.text.trim(),
+                description: _descriptionController.text.trim().isEmpty
+                    ? null
+                    : _descriptionController.text.trim(),
+              ));
+            }
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+}
+
+class _SelectMemberDialog extends StatelessWidget {
+  const _SelectMemberDialog({required this.members});
+
+  final List<GroupMemberDetail> members;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Seleccionar nuevo propietario'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: members.length,
+          itemBuilder: (context, index) {
+            final member = members[index];
+            final user = member.user;
+            return ListTile(
+              title: Text(user?.username ?? 'Usuario desconocido'),
+              subtitle: Text('Rol: ${member.membership.role}'),
+              onTap: () => Navigator.of(context).pop(member),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ManageMembersSheet extends ConsumerWidget {
+  const _ManageMembersSheet({required this.group});
+
+  final Group group;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
+    final activeUser = ref.watch(activeUserProvider).value;
+    final isOwner = activeUser != null && group.ownerUserId == activeUser.id;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Text('Gestionar miembros', style: theme.textTheme.titleLarge),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: membersAsync.when(
+                data: (members) {
+                  if (members.isEmpty) {
+                    return const Center(child: Text('No hay miembros'));
+                  }
+                  return ListView.builder(
+                    controller: scrollController,
+                    itemCount: members.length,
+                    itemBuilder: (context, index) {
+                      final member = members[index];
+                      final user = member.user;
+                      final isCurrentOwner = group.ownerUserId == member.membership.memberUserId;
+                      
+                      return ListTile(
+                        leading: CircleAvatar(
+                          child: Text((user?.username ?? '?')[0].toUpperCase()),
+                        ),
+                        title: Text(user?.username ?? 'Usuario desconocido'),
+                        subtitle: Text(_getRoleLabel(member.membership.role, isCurrentOwner)),
+                        trailing: isOwner && !isCurrentOwner
+                            ? PopupMenuButton<String>(
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'admin',
+                                    child: Text('Hacer admin'),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'member',
+                                    child: Text('Hacer miembro'),
+                                  ),
+                                  const PopupMenuDivider(),
+                                  const PopupMenuItem(
+                                    value: 'remove',
+                                    child: Text('Eliminar'),
+                                  ),
+                                ],
+                                onSelected: (value) => _handleMemberAction(
+                                  context,
+                                  ref,
+                                  member,
+                                  value,
+                                ),
+                              )
+                            : null,
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(child: Text('Error: $error')),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _getRoleLabel(String role, bool isOwner) {
+    if (isOwner) return 'Propietario';
+    switch (role) {
+      case 'admin':
+        return 'Administrador';
+      case 'member':
+        return 'Miembro';
+      default:
+        return role;
+    }
+  }
+
+  Future<void> _handleMemberAction(
+    BuildContext context,
+    WidgetRef ref,
+    GroupMemberDetail member,
+    String action,
+  ) async {
+    final controller = ref.read(groupPushControllerProvider.notifier);
+    
+    try {
+      if (action == 'remove') {
+        await controller.removeMember(
+          member: member.membership,
+        );
+        if (!context.mounted) return;
+        _showFeedbackSnackBar(
+          context: context,
+          message: 'Miembro eliminado',
+          isError: false,
+        );
+      } else {
+        await controller.updateMemberRole(
+          member: member.membership,
+          role: action,
+        );
+        if (!context.mounted) return;
+        _showFeedbackSnackBar(
+          context: context,
+          message: 'Rol actualizado',
+          isError: false,
+        );
+      }
+    } catch (error) {
+      if (!context.mounted) return;
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Error: $error',
+        isError: true,
+      );
+    }
+  }
+}
+
+class _ManageInvitationsSheet extends ConsumerStatefulWidget {
+  const _ManageInvitationsSheet({required this.group});
+
+  final Group group;
+
+  @override
+  ConsumerState<_ManageInvitationsSheet> createState() => _ManageInvitationsSheetState();
+}
+
+class _ManageInvitationsSheetState extends ConsumerState<_ManageInvitationsSheet> {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final invitationsAsync = ref.watch(groupInvitationDetailsProvider(widget.group.id));
+    final activeUser = ref.watch(activeUserProvider).value;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Text('Gestionar invitaciones', style: theme.textTheme.titleLarge),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: FilledButton.icon(
+                onPressed: activeUser != null ? () => _createInvitation(activeUser) : null,
+                icon: const Icon(Icons.add),
+                label: const Text('Crear invitación'),
+              ),
+            ),
+            Expanded(
+              child: invitationsAsync.when(
+                data: (invitations) {
+                  if (invitations.isEmpty) {
+                    return const Center(child: Text('No hay invitaciones pendientes'));
+                  }
+                  return ListView.builder(
+                    controller: scrollController,
+                    itemCount: invitations.length,
+                    itemBuilder: (context, index) {
+                      final invitation = invitations[index].invitation;
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Código: ${invitation.code}',
+                                      style: theme.textTheme.titleSmall,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.share),
+                                    onPressed: () => _shareInvitation(invitation.code),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () => _cancelInvitation(invitation.id),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Expira: ${DateFormat.yMd().add_Hm().format(invitation.expiresAt)}',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(child: Text('Error: $error')),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _createInvitation(LocalUser inviter) async {
+    final controller = ref.read(groupPushControllerProvider.notifier);
+    try {
+      await controller.createInvitation(
+        group: widget.group,
+        inviter: inviter,
+      );
+      if (!mounted) return;
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Invitación creada correctamente',
+        isError: false,
+      );
+      // No auto-share - user will click share button manually
+    } catch (error) {
+      if (!mounted) return;
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Error al crear invitación: $error',
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _shareInvitation(String code) async {
+    final message = 'Te envío esta invitación para unirte a mi grupo de lectores: $code';
+    
+    try {
+      await Share.share(
+        message,
+        subject: 'Invitación a grupo de lectores',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Error al compartir: $error',
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _cancelInvitation(int invitationId) async {
+    // Add confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar invitación'),
+        content: const Text('¿Estás seguro de cancelar esta invitación?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sí, cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final controller = ref.read(groupPushControllerProvider.notifier);
+    final groupDao = ref.read(groupDaoProvider);
+    final invitation = await groupDao.findInvitationById(invitationId);
+    if (invitation == null) return;
+    
+    try {
+      await controller.cancelInvitation(invitation: invitation);
+      if (!mounted) return;
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Invitación cancelada',
+        isError: false,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Error al cancelar invitación: $error',
+        isError: true,
+      );
+    }
+  }
 }

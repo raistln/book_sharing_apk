@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/local/database.dart';
@@ -87,7 +86,9 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         owner: owner,
       );
 
-      _groupSyncController.markPendingChanges();
+      // Trigger critical sync event for group creation
+      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.userJoinedGroup);
+      
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Grupo creado.',
@@ -140,7 +141,10 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         group: group,
         accessToken: accessToken,
       );
-      _groupSyncController.markPendingChanges();
+      
+      // Trigger critical sync event for group deletion
+      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.userLeftGroup);
+      
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Grupo eliminado.',
@@ -276,16 +280,16 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         expiresAt: expiresAt,
         accessToken: accessToken,
       );
-      _groupSyncController.markPendingChanges();
+      
+      // Trigger critical sync event for invitation creation
+      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.groupInvitationAccepted);
+      
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Invitación creada.',
       );
-      await _showGroupInvitationNotification(
-        invitation: invitation,
-        group: group,
-        inviter: inviter,
-      );
+      
+      // Removed self-notification - user will share via share button
       return invitation;
     } catch (error) {
       state = state.copyWith(
@@ -407,56 +411,6 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         lastError: () => error.toString(),
       );
       rethrow;
-    }
-  }
-
-  Future<void> _showGroupInvitationNotification({
-    required GroupInvitation invitation,
-    required Group group,
-    required LocalUser inviter,
-  }) async {
-    final invitationUuid = invitation.uuid;
-    if (invitationUuid.isEmpty) {
-      return;
-    }
-
-    try {
-      final notificationId = NotificationIds.groupInvitation(invitationUuid);
-      final inviterName = inviter.username.trim();
-      const title = 'Invitación al grupo';
-      final body = inviterName.isNotEmpty
-          ? '$inviterName te ha invitado a unirte a "${group.name}".'
-          : 'Tienes una invitación para unirte a "${group.name}".';
-
-      await _notificationClient.cancel(notificationId);
-      await _notificationClient.showImmediate(
-        id: notificationId,
-        type: NotificationType.groupInvitation,
-        title: title,
-        body: body,
-        payload: {
-          NotificationPayloadKeys.groupId: group.uuid,
-          NotificationPayloadKeys.invitationId: invitationUuid,
-          NotificationPayloadKeys.action: NotificationActionType.open.name,
-        },
-        androidActions: [
-          AndroidNotificationAction(
-            NotificationActionType.invitationAccept.name,
-            'Aceptar',
-            showsUserInterface: true,
-            cancelNotification: true,
-          ),
-          AndroidNotificationAction(
-            NotificationActionType.invitationReject.name,
-            'Rechazar',
-            showsUserInterface: true,
-            cancelNotification: true,
-          ),
-        ],
-      );
-    } catch (error, stackTrace) {
-      debugPrint('Error showing group invitation notification: $error');
-      debugPrintStack(stackTrace: stackTrace);
     }
   }
 

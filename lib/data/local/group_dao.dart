@@ -61,7 +61,16 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
   // Groups ---------------------------------------------------------------
   Stream<List<Group>> watchActiveGroups() {
     return (select(groups)
-          ..where((tbl) => tbl.isDeleted.equals(false) | tbl.isDeleted.isNull()))
+          ..where((tbl) => tbl.isDeleted.equals(false) | tbl.isDeleted.isNull())
+          ..orderBy([
+            // "Préstamos Personales" primero (usando CASE para ordenamiento custom)
+            (tbl) => OrderingTerm(
+                  expression: tbl.name.equals('Préstamos Personales'),
+                  mode: OrderingMode.desc,
+                ),
+            // Luego por nombre alfabéticamente
+            (tbl) => OrderingTerm(expression: tbl.name.lower()),
+          ]))
         .watch();
   }
 
@@ -79,7 +88,16 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
       ..where(
         (groups.isDeleted.equals(false) | groups.isDeleted.isNull()) &
             (groups.ownerUserId.equals(userId) | membershipsForUser.id.isNotNull()),
-      );
+      )
+      ..orderBy([
+        // "Préstamos Personales" primero
+        OrderingTerm(
+          expression: groups.name.equals('Préstamos Personales'),
+          mode: OrderingMode.desc,
+        ),
+        // Luego por nombre alfabéticamente
+        OrderingTerm(expression: groups.name.lower()),
+      ]);
 
     return query.watch().map(
       (rows) => rows.map((row) => row.readTable(groups)).toList(growable: false),

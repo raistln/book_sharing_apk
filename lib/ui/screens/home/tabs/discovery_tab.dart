@@ -57,7 +57,7 @@ class DiscoverTab extends ConsumerWidget {
                 data: (groups) {
                   // Filter out personal loans group from discovery
                   final discoverableGroups = groups
-                      .where((group) => group.name != 'Prestamos personales')
+                      .where((group) => group.name != 'Préstamos Personales')
                       .toList();
                   
                   if (discoverableGroups.isEmpty) {

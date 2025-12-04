@@ -213,10 +213,6 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   }
 
   Future<bool> _createGroup(material.BuildContext context, {required material.ScaffoldMessengerState messenger}) async {
-    if (_groupCreated) {
-      return true;
-    }
-
     final activeUser = ref.read(activeUserProvider).value;
     if (activeUser == null || !_isSynced) {
       messenger.showSnackBar(
@@ -231,6 +227,20 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
 
     final name = _groupNameController.text.trim();
     final description = _groupDescriptionController.text.trim();
+
+    // Verificar si ya existe un grupo con este nombre para evitar duplicados
+    if (_groupCreated) {
+      final groupDao = ref.read(groupDaoProvider);
+      final existingGroups = await groupDao.getGroupsForUser(activeUser.id);
+      final alreadyExists = existingGroups.any((g) => g.name.trim().toLowerCase() == name.toLowerCase());
+      
+      if (alreadyExists) {
+        messenger.showSnackBar(
+          material.SnackBar(content: material.Text('Ya tienes un grupo llamado "$name".')),
+        );
+        return true; // Consideramos que ya está "creado"
+      }
+    }
 
     setState(() => _isProcessing = true);
     final controller = ref.read(groupPushControllerProvider.notifier);

@@ -10,6 +10,9 @@ class _CoverImageServiceStub implements CoverImageService {
   Future<String?> pickCover() async => null;
 
   @override
+  Future<String?> pickCoverFromCamera() async => null;
+
+  @override
   Future<void> deleteCover(String path) async {}
 
   @override

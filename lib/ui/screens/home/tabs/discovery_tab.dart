@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../providers/book_providers.dart';
+import '../../../../utils/group_utils.dart';
 import '../../../widgets/empty_state.dart';
 import 'discover_group_page.dart';
 
@@ -57,7 +58,7 @@ class DiscoverTab extends ConsumerWidget {
                 data: (groups) {
                   // Filter out personal loans group from discovery
                   final discoverableGroups = groups
-                      .where((group) => group.name != 'Préstamos Personales')
+                      .where((group) => !isPersonalLoansGroup(group.name))
                       .toList();
                   
                   if (discoverableGroups.isEmpty) {

@@ -403,6 +403,46 @@ class BookRepository {
     }
   }
 
+  Future<SharedBook> shareBookToPersonalGroup({
+    required Book book,
+    required LocalUser owner,
+  }) async {
+    final group = await getOrCreatePersonalGroup(owner);
+    
+    final existing = await _groupDao.findSharedBookByGroupAndBook(
+      groupId: group.id,
+      bookId: book.id,
+    );
+
+    if (existing != null) {
+      return existing;
+    }
+
+    final now = DateTime.now();
+    final (visibility, isAvailable) = _mapStatusToSharedBookValues(book.status);
+    final sharedBookId = await _groupDao.insertSharedBook(
+      SharedBooksCompanion.insert(
+        uuid: _uuid.v4(),
+        groupId: group.id,
+        groupUuid: group.uuid,
+        bookId: book.id,
+        bookUuid: book.uuid,
+        ownerUserId: owner.id,
+        ownerRemoteId: owner.remoteId != null ? Value(owner.remoteId!) : const Value.absent(),
+        isAvailable: Value(isAvailable),
+        visibility: const Value('private'),
+        isDirty: const Value(true),
+        isDeleted: const Value(false),
+        syncedAt: const Value(null),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+      ),
+    );
+
+    _markGroupSyncPending();
+    return (await _groupDao.findSharedBookById(sharedBookId))!;
+  }
+
   Future<Group> getOrCreatePersonalGroup(LocalUser owner) async {
     const personalGroupName = 'Préstamos Personales';
     // Try to find existing personal group

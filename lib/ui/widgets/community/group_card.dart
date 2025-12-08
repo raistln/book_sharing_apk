@@ -11,6 +11,7 @@ import '../../../../providers/book_providers.dart';
 import '../../../../services/coach_marks/coach_mark_controller.dart';
 import '../../../../services/coach_marks/coach_mark_models.dart';
 import '../../../../ui/widgets/coach_mark_target.dart';
+import '../../../../utils/group_utils.dart';
 import 'group_stats_chips.dart';
 import 'shared_books_section.dart';
 import 'loans_section.dart';
@@ -96,12 +97,11 @@ class _GroupCardState extends ConsumerState<GroupCard> {
 
     final bool highlightManageInvitations = activeUser != null && isAdmin;
 
-    // Ocultar menú para el grupo de préstamos personales (case-insensitive, sin acentos)
-    final normalizedName = group.name.toLowerCase().replaceAll('á', 'a').replaceAll('é', 'e').replaceAll('í', 'i').replaceAll('ó', 'o').replaceAll('ú', 'u');
-    final isPersonalLoansGroup = normalizedName.contains('prestamos') && normalizedName.contains('personales');
+    // Ocultar menú para el grupo de préstamos personales
+    final isPersonalGroup = isPersonalLoansGroup(group.name);
 
     Widget? menuButton;
-    if (activeUser != null && (isOwner || isAdmin || currentMembership != null) && !isPersonalLoansGroup) {
+    if (activeUser != null && (isOwner || isAdmin || currentMembership != null) && !isPersonalGroup) {
       final popup = GroupMenu(
         group: group,
         activeUser: activeUser,
@@ -128,7 +128,7 @@ class _GroupCardState extends ConsumerState<GroupCard> {
           : popup;
     }
 
-    debugPrint('🔍 DEBUG Group: "${group.name}" | isPL: $isPersonalLoansGroup | hasMenu: ${menuButton != null}');
+    debugPrint('🔍 DEBUG Group: "${group.name}" | isPL: $isPersonalGroup | hasMenu: ${menuButton != null}');
 
     return Card(
       child: Padding(
@@ -145,7 +145,7 @@ class _GroupCardState extends ConsumerState<GroupCard> {
                     children: [
                       Text(group.name, style: theme.textTheme.titleMedium),
                       // Mostrar propietario para todos excepto Préstamos Personales
-                      if (!isPersonalLoansGroup && members.isNotEmpty) ...[
+                      if (!isPersonalGroup && members.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         // Buscar el propietario en los miembros
                         Builder(
@@ -183,7 +183,7 @@ class _GroupCardState extends ConsumerState<GroupCard> {
             ),
             const SizedBox(height: 12),
             // Hide stats and shared books for personal loans group
-            if (!isPersonalLoansGroup) ...[
+            if (!isPersonalGroup) ...[
               GroupStatsChips(
                 groupId: group.id,
                 membersAsync: membersAsync,
@@ -314,12 +314,17 @@ Future<void> _handleTransferOwnership(
   Group group,
 ) async {
   final membersAsync = ref.read(groupMemberDetailsProvider(group.id));
-  final members = membersAsync.asData?.value ?? [];
+  final allMembers = membersAsync.asData?.value ?? [];
+  
+  // Filter out the current owner from the list
+  final members = allMembers
+      .where((m) => m.membership.memberUserId != group.ownerUserId)
+      .toList();
   
   if (members.isEmpty) {
     _showFeedbackSnackBar(
       context: context,
-      message: 'No hay miembros a quienes transferir',
+      message: 'No hay otros miembros a quienes transferir',
       isError: true,
     );
     return;

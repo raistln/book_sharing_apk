@@ -3,6 +3,8 @@ abstract class CoverImageService {
 
   Future<String?> pickCover();
 
+  Future<String?> pickCoverFromCamera();
+
   Future<void> deleteCover(String path);
 
   Future<String?> saveRemoteCover(String url);

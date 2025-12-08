@@ -17,9 +17,18 @@ class _CoverImageServiceIo implements CoverImageService {
 
   @override
   Future<String?> pickCover() async {
+    return _pickCoverFromSource(ImageSource.gallery);
+  }
+
+  @override
+  Future<String?> pickCoverFromCamera() async {
+    return _pickCoverFromSource(ImageSource.camera);
+  }
+
+  Future<String?> _pickCoverFromSource(ImageSource source) async {
     try {
       final result = await _picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         maxWidth: 1200,
         maxHeight: 1200,
         imageQuality: 85,

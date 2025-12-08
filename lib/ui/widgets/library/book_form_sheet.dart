@@ -343,6 +343,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
               CoverField(
                 coverPath: _coverPath,
                 onPick: coverService.supportsPicking ? _handlePickCover : null,
+                onPickFromCamera: coverService.supportsPicking ? _handlePickCoverFromCamera : null,
                 onRemove: _coverPath != null ? _handleRemoveCover : null,
                 pickingSupported: coverService.supportsPicking,
               ),
@@ -617,7 +618,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       if (!mounted) return;
       showFeedbackSnackBar(
         context: context,
-        message: 'Necesitas habilitar la cámara para seleccionar una portada.',
+        message: 'Necesitas habilitar permisos para seleccionar una portada.',
         isError: true,
       );
       return;
@@ -627,11 +628,35 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     final newPath = await coverService.pickCover();
     if (newPath == null) return;
 
+    _updateCoverPath(newPath);
+  }
+
+  Future<void> _handlePickCoverFromCamera() async {
+    final permissionService = ref.read(permissionServiceProvider);
+    final granted = await permissionService.ensureCameraPermission();
+    if (!granted) {
+      if (!mounted) return;
+      showFeedbackSnackBar(
+        context: context,
+        message: 'Necesitas habilitar la cámara para tomar una foto.',
+        isError: true,
+      );
+      return;
+    }
+
+    final coverService = ref.read(coverImageServiceProvider);
+    final newPath = await coverService.pickCoverFromCamera();
+    if (newPath == null) return;
+
+    _updateCoverPath(newPath);
+  }
+
+  void _updateCoverPath(String newPath) {
     final previousPath = _coverPath;
 
     if (previousPath != null && previousPath != _initialCoverPath) {
       _temporaryCoverPaths.remove(previousPath);
-      unawaited(coverService.deleteCover(previousPath));
+      unawaited(_coverImageService.deleteCover(previousPath));
     }
 
     if (previousPath == _initialCoverPath) {
@@ -1020,12 +1045,14 @@ class CoverField extends StatelessWidget {
     required this.coverPath,
     required this.pickingSupported,
     this.onPick,
+    this.onPickFromCamera,
     this.onRemove,
   });
 
   final String? coverPath;
   final bool pickingSupported;
   final Future<void> Function()? onPick;
+  final Future<void> Function()? onPickFromCamera;
   final Future<void> Function()? onRemove;
 
   @override
@@ -1058,12 +1085,18 @@ class CoverField extends StatelessWidget {
               Wrap(
                 spacing: 8,
                 children: [
-                  if (pickingSupported)
-                    FilledButton.icon(
+                  if (pickingSupported) ...[
+                    FilledButton.tonalIcon(
                       onPressed: onPick,
-                      icon: const Icon(Icons.photo_library_outlined),
-                      label: Text(coverPath == null ? 'Seleccionar' : 'Cambiar'),
+                      icon: const Icon(Icons.photo_library_outlined, size: 20),
+                      label: const Text('Galería'),
                     ),
+                    FilledButton.tonalIcon(
+                      onPressed: onPickFromCamera,
+                      icon: const Icon(Icons.camera_alt_outlined, size: 20),
+                      label: const Text('Cámara'),
+                    ),
+                  ],
                   if (!pickingSupported)
                     const Chip(
                       avatar: Icon(Icons.info_outline, size: 18),

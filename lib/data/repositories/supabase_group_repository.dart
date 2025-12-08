@@ -195,9 +195,27 @@ class SupabaseGroupSyncRepository {
               final ownerUserIdValue = bookOwner?.id ?? sharedOwnerUser?.id;
               final ownerRemoteIdValue = bookOwner?.remoteId ?? remoteShared.ownerId;
 
-              // Double-check one more time before inserting to prevent race conditions
-              final doubleCheck = await _bookDao.findByUuid(remoteBook.id);
-              if (doubleCheck == null) {
+              // Triple-check for duplicates before inserting:
+              // 1. By UUID (already checked above)
+              // 2. By remoteId (already checked above)
+              // 3. By title + author + ISBN combination to catch any edge cases
+              var existingByContent = await _bookDao.findByTitleAndAuthor(
+                remoteBook.title,
+                remoteBook.author ?? '',
+                ownerUserId: ownerUserIdValue,
+              );
+              
+              // If found by title+author, also verify ISBN matches if both have ISBN
+              if (existingByContent != null && remoteBook.isbn != null && existingByContent.isbn != null) {
+                if (existingByContent.isbn != remoteBook.isbn) {
+                  // Different ISBN, might be different edition - allow as separate book
+                  existingByContent = null;
+                }
+              }
+              
+              // Final check: ensure we're not about to create a duplicate
+              final finalCheck = await _bookDao.findByUuid(remoteBook.id);
+              if (finalCheck == null && existingByContent == null) {
                 await _bookDao.insertBook(
                   BooksCompanion.insert(
                     uuid: remoteBook.id,
@@ -219,9 +237,33 @@ class SupabaseGroupSyncRepository {
                     syncedAt: Value(now),
                   ),
                 );
+                if (kDebugMode) {
+                  debugPrint('[GroupSync] Inserted new book ${remoteBook.id} (${remoteBook.title})');
+                }
+              } else if (finalCheck != null) {
+                if (kDebugMode) {
+                  debugPrint('[GroupSync] Book ${remoteBook.id} already exists (found in final check), skipping insert');
+                }
+                localBook = finalCheck;
+              } else if (existingByContent != null) {
+                if (kDebugMode) {
+                  debugPrint('[GroupSync] Book "${remoteBook.title}" by "${remoteBook.author}" already exists locally as ID ${existingByContent.id}, reusing');
+                }
+                localBook = existingByContent;
+                // Update the existing book's remoteId if it doesn't have one
+                if (existingByContent.remoteId == null || existingByContent.remoteId!.isEmpty) {
+                  await _bookDao.updateBookFields(
+                    bookId: existingByContent.id,
+                    entry: BooksCompanion(
+                      remoteId: Value(remoteBook.id),
+                      syncedAt: Value(now),
+                    ),
+                  );
+                }
               }
 
-              localBook = await _bookDao.findByUuid(remoteShared.bookUuid!);
+              // Fetch the book one more time to ensure we have the correct reference
+              localBook ??= await _bookDao.findByUuid(remoteShared.bookUuid!);
             } else if (kDebugMode) {
               debugPrint('[GroupSync] Remote book ${remoteShared.bookUuid} not found on Supabase');
             }

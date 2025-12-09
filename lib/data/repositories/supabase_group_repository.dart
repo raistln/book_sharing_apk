@@ -5,7 +5,6 @@ import '../local/book_dao.dart';
 import '../local/database.dart';
 import '../local/group_dao.dart';
 import '../local/user_dao.dart';
-import '../../services/supabase_book_service.dart';
 import '../../services/supabase_group_service.dart';
 
 class SupabaseGroupSyncRepository {
@@ -14,18 +13,15 @@ class SupabaseGroupSyncRepository {
     required UserDao userDao,
     required BookDao bookDao,
     SupabaseGroupService? groupService,
-    SupabaseBookService? bookService,
   })  : _groupDao = groupDao,
         _bookDao = bookDao,
         _userDao = userDao,
-        _groupService = groupService ?? SupabaseGroupService(),
-        _bookService = bookService ?? SupabaseBookService();
+        _groupService = groupService ?? SupabaseGroupService();
 
   final GroupDao _groupDao;
   final BookDao _bookDao;
   final UserDao _userDao;
   final SupabaseGroupService _groupService;
-  final SupabaseBookService _bookService;
 
   Future<void> syncFromRemote({String? accessToken}) async {
     final remoteGroups = await _groupService.fetchGroups(accessToken: accessToken);
@@ -168,94 +164,77 @@ class SupabaseGroupSyncRepository {
           localBook ??= await _bookDao.findByRemoteId(remoteShared.bookUuid!);
           
           if (localBook == null) {
-            SupabaseBookRecord? remoteBook;
-            try {
-              remoteBook = await _bookService.fetchBookById(
-                id: remoteShared.bookUuid!,
-                accessToken: accessToken,
-              );
-            } catch (error) {
-              if (kDebugMode) {
-                debugPrint(
-                  '[GroupSync] Failed to fetch remote book ${remoteShared.bookUuid}: $error',
-                );
-              }
-              remoteBook = null;
+            // Create book from shared_books data directly
+            if (kDebugMode) {
+              debugPrint('[GroupSync] Creating local book from shared_books data: ${remoteShared.title}');
             }
-
-            if (remoteBook != null) {
-              final bookOwner = await _ensureLocalUser(
-                remoteId: remoteBook.ownerId,
-                createdAtFallback: remoteBook.createdAt,
-              );
-              final sharedOwnerUser = await _ensureLocalUser(
-                remoteId: remoteShared.ownerId,
-                createdAtFallback: remoteShared.createdAt,
-              );
-              final ownerUserIdValue = bookOwner?.id ?? sharedOwnerUser?.id;
-              final ownerRemoteIdValue = bookOwner?.remoteId ?? remoteShared.ownerId;
-
+            
+            final sharedOwnerUser = await _ensureLocalUser(
+              remoteId: remoteShared.ownerId,
+              createdAtFallback: remoteShared.createdAt,
+            );
+            
+            if (sharedOwnerUser != null) {
               // Triple-check for duplicates before inserting:
               // 1. By UUID (already checked above)
               // 2. By remoteId (already checked above)
               // 3. By title + author + ISBN combination to catch any edge cases
               var existingByContent = await _bookDao.findByTitleAndAuthor(
-                remoteBook.title,
-                remoteBook.author ?? '',
-                ownerUserId: ownerUserIdValue,
+                remoteShared.title,
+                remoteShared.author ?? '',
+                ownerUserId: sharedOwnerUser.id,
               );
               
               // If found by title+author, also verify ISBN matches if both have ISBN
-              if (existingByContent != null && remoteBook.isbn != null && existingByContent.isbn != null) {
-                if (existingByContent.isbn != remoteBook.isbn) {
+              if (existingByContent != null && remoteShared.isbn != null && existingByContent.isbn != null) {
+                if (existingByContent.isbn != remoteShared.isbn) {
                   // Different ISBN, might be different edition - allow as separate book
                   existingByContent = null;
                 }
               }
               
-              // Final check: ensure we're not about to create a duplicate
-              final finalCheck = await _bookDao.findByUuid(remoteBook.id);
+              // Final check by UUID
+              final finalCheck = await _bookDao.findByUuid(remoteShared.bookUuid!);
+              
               if (finalCheck == null && existingByContent == null) {
                 await _bookDao.insertBook(
                   BooksCompanion.insert(
-                    uuid: remoteBook.id,
-                    remoteId: Value(remoteBook.id),
-                    ownerUserId: ownerUserIdValue != null
-                        ? Value(ownerUserIdValue)
-                        : const Value<int?>.absent(),
-                    ownerRemoteId: Value(ownerRemoteIdValue),
-                    title: remoteBook.title,
-                    author: Value(remoteBook.author),
-                    isbn: Value(remoteBook.isbn),
-                    coverPath: Value(remoteBook.coverUrl),
-                    status: Value(remoteBook.isAvailable == true ? 'available' : 'loaned'),
-                    notes: const Value(null), // Notes not stored in shared_books
-                    isDeleted: Value(remoteBook.isDeleted),
+                    uuid: remoteShared.bookUuid!,
+                    remoteId: Value(remoteShared.bookUuid!),
+                    ownerUserId: Value(sharedOwnerUser.id),
+                    ownerRemoteId: Value(remoteShared.ownerId),
+                    title: remoteShared.title,
+                    author: Value(remoteShared.author),
+                    isbn: Value(remoteShared.isbn),
+                    coverPath: Value(remoteShared.coverUrl),
+                    status: Value(remoteShared.isAvailable ? 'available' : 'loaned'),
+                    notes: const Value(null),
+                    isDeleted: const Value(false),
                     isDirty: const Value(false),
-                    createdAt: Value(remoteBook.createdAt),
-                    updatedAt: Value(remoteBook.updatedAt ?? remoteBook.createdAt),
+                    createdAt: Value(remoteShared.createdAt),
+                    updatedAt: Value(remoteShared.updatedAt ?? remoteShared.createdAt),
                     syncedAt: Value(now),
                   ),
                 );
                 if (kDebugMode) {
-                  debugPrint('[GroupSync] Inserted new book ${remoteBook.id} (${remoteBook.title})');
+                  debugPrint('[GroupSync] Created book ${remoteShared.bookUuid} from shared_books data (${remoteShared.title})');
                 }
               } else if (finalCheck != null) {
                 if (kDebugMode) {
-                  debugPrint('[GroupSync] Book ${remoteBook.id} already exists (found in final check), skipping insert');
+                  debugPrint('[GroupSync] Book ${remoteShared.bookUuid} already exists, reusing');
                 }
                 localBook = finalCheck;
               } else if (existingByContent != null) {
                 if (kDebugMode) {
-                  debugPrint('[GroupSync] Book "${remoteBook.title}" by "${remoteBook.author}" already exists locally as ID ${existingByContent.id}, reusing');
+                  debugPrint('[GroupSync] Book "${remoteShared.title}" already exists locally as ID ${existingByContent.id}, reusing');
                 }
                 localBook = existingByContent;
-                // Update the existing book's remoteId if it doesn't have one
+                // Update remoteId if missing
                 if (existingByContent.remoteId == null || existingByContent.remoteId!.isEmpty) {
                   await _bookDao.updateBookFields(
                     bookId: existingByContent.id,
                     entry: BooksCompanion(
-                      remoteId: Value(remoteBook.id),
+                      remoteId: Value(remoteShared.bookUuid!),
                       syncedAt: Value(now),
                     ),
                   );
@@ -264,13 +243,11 @@ class SupabaseGroupSyncRepository {
 
               // Fetch the book one more time to ensure we have the correct reference
               localBook ??= await _bookDao.findByUuid(remoteShared.bookUuid!);
-            } else if (kDebugMode) {
-              debugPrint('[GroupSync] Remote book ${remoteShared.bookUuid} not found on Supabase');
             }
 
             if (localBook == null) {
               if (kDebugMode) {
-                debugPrint('[GroupSync] Skipping shared book ${remoteShared.id} — missing local book ${remoteShared.bookUuid}');
+                debugPrint('[GroupSync] Skipping shared book ${remoteShared.id} — could not create local book ${remoteShared.bookUuid}');
               }
               continue;
             }

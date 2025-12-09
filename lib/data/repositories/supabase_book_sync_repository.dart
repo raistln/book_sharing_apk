@@ -114,30 +114,72 @@ class SupabaseBookSyncRepository {
             name: 'SupabaseBookSyncRepository',
           );
         } else {
-          await _bookDao.insertBook(
-            BooksCompanion.insert(
-              uuid: remote.id,
-              remoteId: Value(remote.id),
-              ownerUserId: Value(owner.id),
-              ownerRemoteId: Value(ownerRemoteId),
-              title: remote.title,
-              author: Value(remote.author),
-              isbn: Value(remote.isbn),
-              coverPath: Value(remote.coverUrl),
-              status: Value(_mapVisibilityToStatus(remote.visibility, remote.isAvailable)),
-              notes: const Value(null), // Notes not stored in shared_books
-              isRead: Value(remote.isRead),
-              isDeleted: Value(remote.isDeleted),
-              isDirty: const Value(false),
-              createdAt: Value(remote.createdAt),
-              updatedAt: Value(remote.updatedAt ?? remote.createdAt),
-              syncedAt: Value(now),
-            ),
+          // Triple-check for duplicates before inserting:
+          // 1. By UUID (already checked above)
+          // 2. By remoteId (already checked above)
+          // 3. By title + author + ISBN combination to catch any edge cases
+          var existingByContent = await _bookDao.findByTitleAndAuthor(
+            remote.title,
+            remote.author ?? '',
+            ownerUserId: owner.id,
           );
-          developer.log(
-            'Libro remoto ${remote.title} insertado localmente.',
-            name: 'SupabaseBookSyncRepository',
-          );
+          
+          // If found by title+author, also verify ISBN matches if both have ISBN
+          if (existingByContent != null && remote.isbn != null && existingByContent.isbn != null) {
+            if (existingByContent.isbn != remote.isbn) {
+              // Different ISBN, might be different edition - allow as separate book
+              existingByContent = null;
+            }
+          }
+          
+          // Final check: ensure we're not about to create a duplicate
+          final finalCheck = await _bookDao.findByUuid(remote.id);
+          if (finalCheck == null && existingByContent == null) {
+            await _bookDao.insertBook(
+              BooksCompanion.insert(
+                uuid: remote.id,
+                remoteId: Value(remote.id),
+                ownerUserId: Value(owner.id),
+                ownerRemoteId: Value(ownerRemoteId),
+                title: remote.title,
+                author: Value(remote.author),
+                isbn: Value(remote.isbn),
+                coverPath: Value(remote.coverUrl),
+                status: Value(_mapVisibilityToStatus(remote.visibility, remote.isAvailable)),
+                notes: const Value(null), // Notes not stored in shared_books
+                isRead: Value(remote.isRead),
+                isDeleted: Value(remote.isDeleted),
+                isDirty: const Value(false),
+                createdAt: Value(remote.createdAt),
+                updatedAt: Value(remote.updatedAt ?? remote.createdAt),
+                syncedAt: Value(now),
+              ),
+            );
+            developer.log(
+              'Libro remoto ${remote.title} insertado localmente.',
+              name: 'SupabaseBookSyncRepository',
+            );
+          } else if (finalCheck != null) {
+            developer.log(
+              'Libro ${remote.id} ya existe (encontrado en verificación final), omitiendo inserción.',
+              name: 'SupabaseBookSyncRepository',
+            );
+          } else if (existingByContent != null) {
+            developer.log(
+              'Libro "${remote.title}" por "${remote.author}" ya existe localmente como ID ${existingByContent.id}, reutilizando.',
+              name: 'SupabaseBookSyncRepository',
+            );
+            // Update the existing book's remoteId if it doesn't have one
+            if (existingByContent.remoteId == null || existingByContent.remoteId!.isEmpty) {
+              await _bookDao.updateBookFields(
+                bookId: existingByContent.id,
+                entry: BooksCompanion(
+                  remoteId: Value(remote.id),
+                  syncedAt: Value(now),
+                ),
+              );
+            }
+          }
         }
       }
 

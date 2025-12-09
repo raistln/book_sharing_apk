@@ -47,11 +47,25 @@
         "build_runner",
         "drift_dev",
         "fake_async",
+        "flutter_launcher_icons",
         "flutter_lints",
         "flutter_test",
         "integration_test",
         "json_serializable",
         "mocktail"
+      ]
+    },
+    {
+      "name": "flutter_launcher_icons",
+      "version": "0.14.4",
+      "dependencies": [
+        "args",
+        "checked_yaml",
+        "cli_util",
+        "image",
+        "json_annotation",
+        "path",
+        "yaml"
       ]
     },
     {
@@ -566,6 +580,46 @@
       ]
     },
     {
+      "name": "yaml",
+      "version": "3.1.3",
+      "dependencies": [
+        "collection",
+        "source_span",
+        "string_scanner"
+      ]
+    },
+    {
+      "name": "image",
+      "version": "4.5.4",
+      "dependencies": [
+        "archive",
+        "meta",
+        "xml"
+      ]
+    },
+    {
+      "name": "cli_util",
+      "version": "0.4.2",
+      "dependencies": [
+        "meta",
+        "path"
+      ]
+    },
+    {
+      "name": "checked_yaml",
+      "version": "2.0.4",
+      "dependencies": [
+        "json_annotation",
+        "source_span",
+        "yaml"
+      ]
+    },
+    {
+      "name": "args",
+      "version": "2.7.0",
+      "dependencies": []
+    },
+    {
       "name": "clock",
       "version": "1.1.2",
       "dependencies": []
@@ -727,30 +781,8 @@
       ]
     },
     {
-      "name": "yaml",
-      "version": "3.1.3",
-      "dependencies": [
-        "collection",
-        "source_span",
-        "string_scanner"
-      ]
-    },
-    {
-      "name": "cli_util",
-      "version": "0.4.2",
-      "dependencies": [
-        "meta",
-        "path"
-      ]
-    },
-    {
       "name": "logging",
       "version": "1.3.0",
-      "dependencies": []
-    },
-    {
-      "name": "args",
-      "version": "2.7.0",
       "dependencies": []
     },
     {
@@ -1330,15 +1362,6 @@
       ]
     },
     {
-      "name": "image",
-      "version": "4.5.4",
-      "dependencies": [
-        "archive",
-        "meta",
-        "xml"
-      ]
-    },
-    {
       "name": "bidi",
       "version": "2.0.13",
       "dependencies": []
@@ -1681,15 +1704,6 @@
       "dependencies": [
         "source_span",
         "string_scanner"
-      ]
-    },
-    {
-      "name": "checked_yaml",
-      "version": "2.0.4",
-      "dependencies": [
-        "json_annotation",
-        "source_span",
-        "yaml"
       ]
     },
     {

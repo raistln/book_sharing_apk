@@ -128,8 +128,6 @@ class _GroupCardState extends ConsumerState<GroupCard> {
           : popup;
     }
 
-    debugPrint('🔍 DEBUG Group: "${group.name}" | isPL: $isPersonalGroup | hasMenu: ${menuButton != null}');
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),

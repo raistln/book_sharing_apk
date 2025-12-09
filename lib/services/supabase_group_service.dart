@@ -88,6 +88,11 @@ class SupabaseSharedBookRecord {
     required this.groupId,
     required this.bookUuid,
     required this.ownerId,
+    required this.title,
+    this.author,
+    this.isbn,
+    this.coverUrl,
+    this.isRead,
     required this.visibility,
     required this.isAvailable,
     required this.createdAt,
@@ -99,6 +104,11 @@ class SupabaseSharedBookRecord {
   final String groupId;
   final String? bookUuid;
   final String ownerId;
+  final String title;
+  final String? author;
+  final String? isbn;
+  final String? coverUrl;
+  final bool? isRead;
   final String visibility;
   final bool isAvailable;
   final DateTime createdAt;
@@ -115,6 +125,11 @@ class SupabaseSharedBookRecord {
       groupId: json['group_id'] as String,
       bookUuid: json['book_uuid'] as String?,
       ownerId: json['owner_id'] as String,
+      title: (json['title'] as String?) ?? 'Unknown Title',
+      author: json['author'] as String?,
+      isbn: json['isbn'] as String?,
+      coverUrl: json['cover_url'] as String?,
+      isRead: json['is_read'] as bool?,
       visibility: (json['visibility'] as String?) ?? 'group',
       isAvailable: json['is_available'] is bool
           ? json['is_available'] as bool
@@ -275,7 +290,7 @@ class SupabaseGroupService {
         'select':
             'id,name,description,owner_id,created_at,'
             'group_members(id,user_id,role,created_at),'
-            'shared_books(id,group_id,book_uuid,owner_id,visibility,is_available,created_at,updated_at,'
+            'shared_books(id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,created_at,updated_at,'
             'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at)),'
             'group_invitations(id,group_id,inviter_id,accepted_user_id,role,code,status,expires_at,responded_at,created_at,updated_at)',
       },
@@ -315,7 +330,7 @@ class SupabaseGroupService {
     final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
       queryParameters: {
         'select':
-            'id,group_id,book_uuid,owner_id,visibility,is_available,created_at,updated_at,'
+            'id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,created_at,updated_at,'
             'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at)',
         'group_id': 'eq.$groupId',
         'order': 'created_at.desc',

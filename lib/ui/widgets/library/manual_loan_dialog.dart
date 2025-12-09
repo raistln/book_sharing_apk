@@ -13,8 +13,8 @@ Future<void> showManualLoanDialog(
   Book book,
 ) async {
   final loanRepository = ref.read(loanRepositoryProvider);
-  final groupDao = ref.read(groupDaoProvider);
   final theme = Theme.of(context);
+
   
   final nameController = TextEditingController();
   final contactController = TextEditingController();
@@ -148,26 +148,21 @@ Future<void> showManualLoanDialog(
       return;
     }
 
-    // Find a shared book for this book (or create one if needed)
-    final sharedBooks = await groupDao.findSharedBooksByBookId(book.id);
-    SharedBook? sharedBook;
-    
-    if (sharedBooks.isNotEmpty) {
-      sharedBook = sharedBooks.first;
-    } else {
-      // Use BookRepository to ensure book is shared (creating personal group if needed)
-      final bookRepository = ref.read(bookRepositoryProvider);
-      try {
-        sharedBook = await bookRepository.ensureBookIsShared(book, activeUser);
-      } catch (e) {
-        if (!context.mounted) return;
-        showFeedbackSnackBar(
-          context: context,
-          message: 'Error preparando el libro: $e',
-          isError: true,
-        );
-        return;
-      }
+
+    // Always ensure the book is shared in the "Préstamos Personales" group
+    // This guarantees manual loans appear in the correct group
+    final bookRepository = ref.read(bookRepositoryProvider);
+    SharedBook sharedBook;
+    try {
+      sharedBook = await bookRepository.ensureBookIsShared(book, activeUser);
+    } catch (e) {
+      if (!context.mounted) return;
+      showFeedbackSnackBar(
+        context: context,
+        message: 'Error preparando el libro: $e',
+        isError: true,
+      );
+      return;
     }
 
     // Create the manual loan

@@ -332,6 +332,12 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "flutter_launcher_icons",
+      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_launcher_icons-0.14.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "flutter_lints",
       "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_lints-4.0.0",
       "packageUri": "lib/",

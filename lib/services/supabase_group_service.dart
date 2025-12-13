@@ -95,6 +95,7 @@ class SupabaseSharedBookRecord {
     this.isRead,
     required this.visibility,
     required this.isAvailable,
+    required this.isDeleted,
     required this.createdAt,
     required this.updatedAt,
     required this.loans,
@@ -111,6 +112,7 @@ class SupabaseSharedBookRecord {
   final bool? isRead;
   final String visibility;
   final bool isAvailable;
+  final bool isDeleted;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final List<SupabaseLoanRecord> loans;
@@ -134,6 +136,9 @@ class SupabaseSharedBookRecord {
       isAvailable: json['is_available'] is bool
           ? json['is_available'] as bool
           : (json['is_available'] as num?)?.toInt() == 1,
+      isDeleted: json['is_deleted'] is bool
+          ? json['is_deleted'] as bool
+          : (json['is_deleted'] as num?)?.toInt() == 1,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: tryParse(json['updated_at'] as String?),
       loans: loansJson == null
@@ -496,18 +501,12 @@ class SupabaseGroupService {
       },
     );
 
-    final payload = <String, dynamic>{
-      'is_deleted': true,
-      'updated_at': updatedAt.toUtc().toIso8601String(),
-    };
-
-    final response = await _client.patch(
+    final response = await _client.delete(
       uri,
       headers: _buildHeaders(
         config,
         accessToken: accessToken,
       ),
-      body: jsonEncode(payload),
     );
 
     if (response.statusCode == 404) {

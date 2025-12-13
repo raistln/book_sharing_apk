@@ -105,7 +105,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       _isbnController.text = book.isbn ?? '';
       _barcodeController.text = book.barcode ?? '';
       _notesController.text = book.notes ?? '';
-      _status = book.status;
+      _status = book.status == 'archived' ? 'private' : book.status;
       _isRead = book.isRead;
       
       // Verificar si el libro tiene préstamos activos
@@ -148,13 +148,13 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       setState(() {
         _hasActiveLoans = false;
         // Si no hay préstamos activos, mantener el estado original del libro
-        _status = book.status;
+        _status = book.status == 'archived' ? 'private' : book.status;
       });
     } catch (e) {
       // Si hay error, asumimos que no hay préstamos activos para no bloquear innecesariamente
       setState(() {
         _hasActiveLoans = false;
-        _status = book.status;
+        _status = book.status == 'archived' ? 'private' : book.status;
       });
     }
   }
@@ -172,16 +172,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           ],
         ),
       ),
-      const DropdownMenuItem(
-        value: 'archived',
-        child: Row(
-          children: [
-            Icon(Icons.archive_outlined, color: Colors.orange, size: 20),
-            SizedBox(width: 8),
-            Text('Archivado'),
-          ],
-        ),
-      ),
+// Archived option removed as per simplification request
+
       const DropdownMenuItem(
         value: 'private',
         child: Row(
@@ -422,11 +414,64 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                   ),
                 ],
               ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (!_isEditing) ...[
+                    TextButton.icon(
+                      onPressed: _submitting ? null : () => _clearForm(),
+                      icon: const Icon(Icons.clear_all_outlined),
+                      label: const Text('Limpiar formulario'),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  OutlinedButton.icon(
+                    onPressed: _isSearching ? null : () => _handleSearch(context),
+                    icon: _isSearching
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.search),
+                    label: Text(_isSearching ? 'Buscando…' : 'Buscar datos del libro'),
+                  ),
+                  if (_searchError != null)
+                    Text(
+                      _searchError!,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: Theme.of(context).colorScheme.error),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Clears all form fields to their default values
+  void _clearForm() {
+    setState(() {
+      _titleController.clear();
+      _authorController.clear();
+      _isbnController.clear();
+      _barcodeController.clear();
+      _notesController.clear();
+      _status = 'available';
+      _isRead = false;
+      _searchError = null;
+      
+      // Clear cover image if it's not the initial cover (shouldn't happen for new books)
+      if (_coverPath != null && _coverPath != _initialCoverPath) {
+        _temporaryCoverPaths.remove(_coverPath);
+        unawaited(_coverImageService.deleteCover(_coverPath!));
+      }
+      _coverPath = null;
+    });
   }
 
   Future<void> _submit(BuildContext context) async {

@@ -15,6 +15,9 @@ import '../../../../providers/settings_providers.dart';
 import '../../../../providers/theme_providers.dart';
 import '../../../../services/backup_scheduler_service.dart';
 import '../../../../utils/database_reset.dart';
+import '../../../../providers/loan_providers.dart' as loan;
+import '../../../../utils/file_export_helper.dart';
+import '../../../widgets/library/export_handler.dart';
 import '../../../widgets/import_books_dialog.dart';
 import '../../auth/pin_setup_screen.dart';
 
@@ -62,16 +65,34 @@ class SettingsTab extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Card(
-                child: ListTile(
-                  leading: const Icon(Icons.import_export),
-                  title: const Text('Importar libros'),
-                  subtitle: const Text('Importa libros desde un archivo CSV o JSON'),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => const ImportBooksDialog(),
-                    );
-                  },
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.upload_file_outlined),
+                      title: const Text('Exportar biblioteca'),
+                      subtitle: const Text('Guarda tu lista de libros en CSV, JSON o PDF'),
+                      onTap: () => ExportHandler.handle(context, ref),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.history_edu_outlined),
+                      title: const Text('Exportar historial de préstamos'),
+                      subtitle: const Text('Genera un informe de tus préstamos (CSV)'),
+                      onTap: () => _handleExportLoans(context, ref),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.import_export),
+                      title: const Text('Importar libros'),
+                      subtitle: const Text('Importa libros desde un archivo CSV o JSON'),
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => const ImportBooksDialog(),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 32),
@@ -691,6 +712,62 @@ class SettingsTab extends ConsumerWidget {
           );
         }
       }
+    }
+  }
+
+  Future<void> _handleExportLoans(BuildContext context, WidgetRef ref) async {
+    try {
+      final activeUser = ref.read(activeUserProvider).value;
+      if (activeUser == null) {
+        _showFeedbackSnackBar(
+          context: context,
+          message: 'Debes tener una sesión activa.',
+          isError: true,
+        );
+        return;
+      }
+
+      final repository = ref.read(loanRepositoryProvider);
+      final exportService = ref.read(loan.loanExportServiceProvider);
+      
+      // Fetch all loans to analyze
+      final loans = await repository.getAllLoanDetails();
+      
+      if (!context.mounted) return;
+
+      // Ask for action (Share/Download)
+      final action = await FileExportHelper.showExportActionSheet(context);
+      if (action == null) return;
+
+      final result = await exportService.exportLoans(
+        loanDetails: loans,
+        activeUser: activeUser,
+      );
+
+      if (!context.mounted) return;
+
+      await FileExportHelper.handleFileExport(
+        context: context,
+        bytes: result.bytes,
+        fileName: result.fileName,
+        mimeType: result.mimeType,
+        action: action,
+        onFeedback: (message, isError) {
+           _showFeedbackSnackBar(
+            context: context,
+            message: message,
+            isError: isError,
+          );
+        },
+      );
+
+    } catch (e) {
+      if (!context.mounted) return;
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Error al exportar préstamos: $e',
+        isError: true,
+      );
     }
   }
 }

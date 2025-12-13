@@ -151,6 +151,18 @@ class SupabaseGroupSyncRepository {
         }
 
         for (final remoteShared in sharedRecords) {
+          // CHECK FOR DELETION (Hard Delete Strategy)
+          if (remoteShared.isDeleted) {
+            final existingShared = await _groupDao.findSharedBookByRemoteId(remoteShared.id);
+            if (existingShared != null) {
+              if (kDebugMode) {
+                debugPrint('[GroupSync] HARD DELETING shared book ${remoteShared.id} (remote isDeleted=true)');
+              }
+              await _groupDao.deleteSharedBook(existingShared.id);
+            }
+            continue;
+          }
+
           if (remoteShared.bookUuid == null) {
             if (kDebugMode) {
               debugPrint('[GroupSync] Shared book ${remoteShared.id} has null bookUuid, skipping');
@@ -288,7 +300,7 @@ class SupabaseGroupSyncRepository {
                 ownerRemoteId: sharedOwnerRemoteValue,
                 visibility: sharedVisibilityValue,
                 isAvailable: sharedAvailableValue,
-                isDeleted: const Value(false),
+                isDeleted: Value(remoteShared.isDeleted),
                 isDirty: const Value(false),
                 syncedAt: Value(now),
                 updatedAt: sharedUpdatedValue,
@@ -310,7 +322,7 @@ class SupabaseGroupSyncRepository {
               ownerRemoteId: sharedOwnerRemoteValue,
               visibility: sharedVisibilityValue,
               isAvailable: sharedAvailableValue,
-              isDeleted: const Value(false),
+              isDeleted: Value(remoteShared.isDeleted),
               isDirty: const Value(false),
               syncedAt: Value(now),
               createdAt: Value(remoteShared.createdAt),
@@ -399,6 +411,25 @@ class SupabaseGroupSyncRepository {
                 ),
               );
             }
+          }
+        }
+      
+        // RECONCILIATION: Pruning orphans (Must be inside group loop)
+        // Only deletes items that are synced (remoteId!=null) but missing from current remote list
+        final remoteSharedIds = sharedRecords.map((r) => r.id).toSet();
+        final localSharedBooks = await _groupDao.findSharedBooksByGroupId(localGroupId);
+
+        for (final local in localSharedBooks) {
+          if (local.remoteId != null &&
+              local.remoteId!.isNotEmpty &&
+              !remoteSharedIds.contains(local.remoteId) &&
+              !local.isDirty) {
+             if (kDebugMode) {
+              debugPrint(
+                '[GroupSync] RECONCILIATION: Pruning orphan shared book ${local.id} (remoteId ${local.remoteId} missing from server)',
+              );
+            }
+            await _groupDao.deleteSharedBook(local.id);
           }
         }
       }

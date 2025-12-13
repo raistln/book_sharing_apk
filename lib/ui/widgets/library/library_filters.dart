@@ -16,8 +16,6 @@ class LibraryFilters extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         RefreshCoversButton(onRefresh: onRefreshCovers),
-        const SizedBox(width: 12),
-        ExportButton(onExport: onExport),
       ],
     );
   }

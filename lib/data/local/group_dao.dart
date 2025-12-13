@@ -284,6 +284,10 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
     return (select(sharedBooks)..where((tbl) => tbl.bookId.equals(bookId))).get();
   }
 
+  Future<List<SharedBook>> findSharedBooksByGroupId(int groupId) {
+    return (select(sharedBooks)..where((tbl) => tbl.groupId.equals(groupId))).get();
+  }
+
   Future<List<SharedBook>> getDirtySharedBooks() {
     return (select(sharedBooks)..where((tbl) => tbl.isDirty.equals(true))).get();
   }
@@ -353,6 +357,10 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
         updatedAt: Value(timestamp),
       ),
     );
+  }
+
+  Future<void> deleteSharedBook(int sharedBookId) {
+    return (delete(sharedBooks)..where((tbl) => tbl.id.equals(sharedBookId))).go();
   }
 
   // Invitations ---------------------------------------------------------

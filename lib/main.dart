@@ -12,10 +12,18 @@ import 'services/backup_scheduler_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load();
+  try {
+    await dotenv.load();
+  } catch (e) {
+    debugPrint('Failed to load .env: $e');
+  }
 
   final notificationService = NotificationService.instance;
-  await notificationService.init();
+  try {
+    await notificationService.init();
+  } catch (e) {
+    debugPrint('Failed to init notification service: $e');
+  }
 
   // Initialize background backup scheduler
   try {
@@ -25,8 +33,17 @@ Future<void> main() async {
   }
 
   final permissionService = PermissionService();
-  await permissionService.ensureNotificationPermission();
-  await notificationService.requestPermissions();
+  try {
+    await permissionService.ensureNotificationPermission();
+  } catch (e) {
+    debugPrint('Failed to ensure notification permissions: $e');
+  }
+  
+  try {
+    await notificationService.requestPermissions();
+  } catch (e) {
+    debugPrint('Failed to request notification permissions: $e');
+  }
 
   runApp(
     ProviderScope(

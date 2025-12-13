@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/local/group_dao.dart';
 import 'book_providers.dart';
+import '../services/loan_export_service.dart';
+
+final loanExportServiceProvider = Provider((ref) => const LoanExportService());
 
 class LoanBuckets {
   const LoanBuckets({

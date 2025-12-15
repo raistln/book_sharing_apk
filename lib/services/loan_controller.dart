@@ -70,6 +70,11 @@ class LoanController extends StateNotifier<LoanActionState> {
     required DateTime dueDate,
     String? borrowerContact,
   }) async {
+    if (kDebugMode) {
+      debugPrint('[LOAN CONTROLLER] Creating manual loan for book ${sharedBook.bookUuid}');
+      debugPrint('[LOAN CONTROLLER] Borrower: $borrowerName, Owner ID: ${owner.id}');
+    }
+
     state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final result = await _loanRepository.createManualLoan(

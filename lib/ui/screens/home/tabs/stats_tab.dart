@@ -62,6 +62,11 @@ class _StatsContent extends ConsumerWidget {
                 value: summary.totalBooks,
               ),
               _StatHighlight(
+                icon: Icons.check_circle_outline,
+                label: 'Disponibles',
+                value: summary.availableBooks,
+              ),
+              _StatHighlight(
                 icon: Icons.swap_horiz,
                 label: 'Préstamos totales',
                 value: summary.totalLoans,

@@ -8,6 +8,7 @@ import '../data/repositories/loan_repository.dart';
 class StatsSummary {
   const StatsSummary({
     required this.totalBooks,
+    required this.availableBooks,
     required this.totalLoans,
     required this.activeLoans,
     required this.returnedLoans,
@@ -17,6 +18,7 @@ class StatsSummary {
   });
 
   final int totalBooks;
+  final int availableBooks;
   final int totalLoans;
   final int activeLoans;
   final int returnedLoans;
@@ -133,6 +135,7 @@ class StatsService {
 
     return StatsSummary(
       totalBooks: books.length,
+      availableBooks: books.where((b) => b.status == 'available').length,
       totalLoans: totalLoans,
       activeLoans: activeLoans,
       returnedLoans: returnedLoans,

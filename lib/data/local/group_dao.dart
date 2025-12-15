@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 
 import 'database.dart';
 
@@ -455,24 +456,44 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
     final query = select(loans).join([
       leftOuterJoin(sharedBooks, sharedBooks.id.equalsExp(loans.sharedBookId)),
       leftOuterJoin(books, books.id.equalsExp(sharedBooks.bookId)),
-      leftOuterJoin(borrowers, borrowers.id.equalsExp(loans.borrowerUserId)),
+      leftOuterJoin(borrowers, borrowers.id.equalsExp(loans.borrowerUserId) | loans.borrowerUserId.isNull()),
       leftOuterJoin(owners, owners.id.equalsExp(loans.lenderUserId)),
     ])
       ..where(sharedBooks.groupId.equals(groupId) &
           (loans.isDeleted.equals(false) | loans.isDeleted.isNull()));
 
     return query.watch().map(
-      (rows) => rows
-          .map(
-            (row) => LoanDetail(
-              loan: row.readTable(loans),
+      (rows) {
+        // Use a Set to deduplicate loans by UUID
+        final uniqueLoans = <String, LoanDetail>{};
+        
+        for (final row in rows) {
+          final loan = row.readTable(loans);
+          final loanUuid = loan.uuid;
+          
+          // Only add if not already present
+          if (!uniqueLoans.containsKey(loanUuid)) {
+            uniqueLoans[loanUuid] = LoanDetail(
+              loan: loan,
               sharedBook: row.readTableOrNull(sharedBooks),
               book: row.readTableOrNull(books),
               borrower: row.readTableOrNull(borrowers),
               owner: row.readTableOrNull(owners),
-            ),
-          )
-          .toList(),
+            );
+          }
+        }
+        
+        final loanDetails = uniqueLoans.values.toList();
+        
+        if (kDebugMode) {
+          debugPrint('[DAO DEBUG] watchLoanDetailsForGroup($groupId) found ${loanDetails.length} unique loans');
+          for (final detail in loanDetails) {
+            debugPrint('[DAO DEBUG] Loan: ${detail.loan.uuid}, status: ${detail.loan.status}, borrowerUserId: ${detail.loan.borrowerUserId}, externalName: ${detail.loan.externalBorrowerName}');
+          }
+        }
+        
+        return loanDetails;
+      },
     );
   }
 

@@ -117,7 +117,7 @@ class NotificationService implements NotificationClient {
       return;
     }
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
     const initializationSettings = InitializationSettings(android: androidSettings);
 
     await _plugin.initialize(

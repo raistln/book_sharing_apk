@@ -309,6 +309,12 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    if (!_isEditing)
+                      TextButton.icon(
+                        onPressed: _submitting ? null : () => _clearForm(),
+                        icon: const Icon(Icons.clear_all_outlined),
+                        label: const Text('Limpiar formulario'),
+                      ),
                     OutlinedButton.icon(
                       onPressed: _isSearching ? null : () => _handleSearch(context),
                       icon: _isSearching
@@ -412,38 +418,6 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                           )
                         : const Text('Guardar'),
                   ),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (!_isEditing) ...[
-                    TextButton.icon(
-                      onPressed: _submitting ? null : () => _clearForm(),
-                      icon: const Icon(Icons.clear_all_outlined),
-                      label: const Text('Limpiar formulario'),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  OutlinedButton.icon(
-                    onPressed: _isSearching ? null : () => _handleSearch(context),
-                    icon: _isSearching
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.search),
-                    label: Text(_isSearching ? 'Buscando…' : 'Buscar datos del libro'),
-                  ),
-                  if (_searchError != null)
-                    Text(
-                      _searchError!,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: Theme.of(context).colorScheme.error),
-                    ),
                 ],
               ),
             ],

@@ -82,7 +82,7 @@ _DiscoverStatusDisplay _resolveStatusDisplay({
         foreground: colors.onSecondaryContainer,
         caption: 'Solicitud pendiente de aprobación',
       );
-    } else if (status == 'accepted') {
+    } else if (status == 'active') { // FIXED: accepted -> active
       return _DiscoverStatusDisplay(
         label: 'En préstamo',
         icon: Icons.handshake_outlined,
@@ -373,7 +373,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
         continue;
       }
       final status = detail.loan.status;
-      if (status != 'pending' && status != 'accepted') {
+      if (status != 'pending' && status != 'active') { // FIXED: accepted -> active
         continue;
       }
       final entry = activeLoansBySharedBookId[shared.id];
@@ -649,7 +649,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
 
   int _loanStatusPriority(String status) {
     switch (status) {
-      case 'accepted':
+      case 'active': // FIXED: accepted -> active
         return 2;
       case 'pending':
         return 1;

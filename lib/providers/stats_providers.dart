@@ -23,6 +23,7 @@ final statsSummaryProvider = StreamProvider.autoDispose<StatsSummary>((ref) {
           controller.add(
             const StatsSummary(
               totalBooks: 0,
+              availableBooks: 0,
               totalLoans: 0,
               activeLoans: 0,
               returnedLoans: 0,

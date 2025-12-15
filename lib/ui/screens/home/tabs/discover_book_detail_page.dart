@@ -45,7 +45,8 @@ _DiscoverStatusDisplay _resolveStatusDisplay({
         foreground: colors.onSecondaryContainer,
         caption: 'Solicitud pendiente de aprobación',
       );
-    } else if (status == 'accepted') {
+
+    } else if (status == 'active') { // FIXED: accepted -> active
       return _DiscoverStatusDisplay(
         label: 'En préstamo',
         icon: Icons.handshake_outlined,
@@ -240,7 +241,7 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
                 continue;
               }
               final status = loanDetail.loan.status;
-              if (status != 'pending' && status != 'accepted') {
+              if (status != 'pending' && status != 'active') { // FIXED: accepted -> active
                 continue;
               }
 

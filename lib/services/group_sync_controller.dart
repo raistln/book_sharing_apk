@@ -57,12 +57,11 @@ class GroupSyncController extends StateNotifier<SyncState> {
         throw const SyncException('Configura Supabase antes de sincronizar.');
       }
 
-      if (state.hasPendingChanges) {
-        if (kDebugMode) {
-          debugPrint('[GroupSync] Pushing local changes to Supabase...');
-        }
-        await _groupRepository.pushLocalChanges(accessToken: accessToken);
+      // Always push local changes - the method internally checks for dirty records
+      if (kDebugMode) {
+        debugPrint('[GroupSync] Pushing local changes to Supabase...');
       }
+      await _groupRepository.pushLocalChanges(accessToken: accessToken);
 
       if (kDebugMode) {
         debugPrint('[GroupSync] Pulling remote changes from Supabase...');

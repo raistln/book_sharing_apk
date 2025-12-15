@@ -130,7 +130,7 @@ class ActiveLoansList extends ConsumerWidget {
     switch (status) {
       case 'pending':
         return 'Pendiente';
-      case 'accepted':
+      case 'active': // FIXED: accepted -> active
         return 'En curso';
       case 'returned':
         return 'Devuelto';
@@ -146,7 +146,7 @@ class ActiveLoansList extends ConsumerWidget {
     switch (status) {
       case 'pending':
         return colors.secondary;
-      case 'accepted':
+      case 'active': // FIXED: accepted -> active
         return colors.primary;
       case 'returned':
         return colors.tertiary;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -12,7 +13,7 @@ Future<void> showManualLoanDialog(
   WidgetRef ref,
   Book book,
 ) async {
-  final loanRepository = ref.read(loanRepositoryProvider);
+  final loanController = ref.read(loanControllerProvider.notifier);
   final theme = Theme.of(context);
 
   
@@ -166,7 +167,11 @@ Future<void> showManualLoanDialog(
     }
 
     // Create the manual loan
-    await loanRepository.createManualLoan(
+    if (kDebugMode) {
+      debugPrint('[MANUAL LOAN DIALOG] About to create manual loan');
+    }
+    
+    await loanController.createManualLoan(
       sharedBook: sharedBook,
       owner: activeUser,
       borrowerName: result['name'] as String,
@@ -176,8 +181,10 @@ Future<void> showManualLoanDialog(
       dueDate: result['dueDate'] as DateTime? ?? DateTime.now().add(const Duration(days: 14)),
     );
 
-    // Sync to update book status in groups
-    await ref.read(groupSyncControllerProvider.notifier).syncGroups();
+    // Invalidate book list to refresh UI chip state
+    ref.invalidate(bookListProvider);
+
+    // Changes saved locally - background sync will handle upload when ready
 
     if (!context.mounted) return;
     showFeedbackSnackBar(

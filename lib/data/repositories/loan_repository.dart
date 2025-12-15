@@ -108,9 +108,9 @@ class LoanRepository {
     final now = DateTime.now();
 
     return _db.transaction(() async {
-      final loanId = await _groupDao.insertLoan(
+      final inserted = await _groupDao.insertLoan(
         LoansCompanion.insert(
-          uuid: _uuid.v4(),
+          uuid: const Uuid().v4(),
           sharedBookId: sharedBook.id,
           borrowerUserId: const Value<int?>(null), // No user for manual loans
           lenderUserId: owner.id,
@@ -118,25 +118,26 @@ class LoanRepository {
           externalBorrowerContact: borrowerContact != null
               ? Value(borrowerContact.trim())
               : const Value.absent(),
-          status: const Value('active'), // Goes directly to active
-          dueDate: Value(dueDate),
+          status: const Value('active'), // Manual loans start as active
           requestedAt: Value(now),
-          approvedAt: Value(now),
-          isDirty: const Value(true),
+          approvedAt: const Value.absent(), // No approval needed for manual loans
+          dueDate: Value(dueDate),
           isDeleted: const Value(false),
-          syncedAt: const Value<DateTime?>(null),
+          isDirty: const Value(true), // Mark for sync
+          syncedAt: const Value<DateTime?>(null), // Not yet synced
           createdAt: Value(now),
           updatedAt: Value(now),
         ),
       );
 
-      await _groupDao.updateSharedBookFields(
-        sharedBookId: sharedBook.id,
-        entry: SharedBooksCompanion(
-          isAvailable: const Value(false),
-          isDirty: const Value(true),
-          syncedAt: const Value<DateTime?>(null),
+      await _updateAllSharedBooksAvailability(book.id, false, now);
+
+      // Update group timestamp
+      await _groupDao.updateGroupFields(
+        groupId: sharedBook.groupId,
+        entry: GroupsCompanion(
           updatedAt: Value(now),
+          isDirty: const Value(true),
         ),
       );
 
@@ -150,11 +151,12 @@ class LoanRepository {
         ),
       );
 
-      final inserted = await _groupDao.findLoanById(loanId);
-      if (inserted == null) {
+      // Return the created loan
+      final createdLoan = await _groupDao.findLoanById(inserted);
+      if (createdLoan == null) {
         throw const LoanException('No se pudo crear el préstamo manual.');
       }
-      return inserted;
+      return createdLoan;
     });
   }
 
@@ -252,15 +254,7 @@ class LoanRepository {
         ),
       );
 
-      await _groupDao.updateSharedBookFields(
-        sharedBookId: sharedBook.id,
-        entry: SharedBooksCompanion(
-          isAvailable: const Value(false),
-          isDirty: const Value(true),
-          syncedAt: const Value<DateTime?>(null),
-          updatedAt: Value(now),
-        ),
-      );
+      await _updateAllSharedBooksAvailability(sharedBook.bookId, false, now);
 
       // Note: Book status is NOT set to 'loaned' here
       // It will be set when markAsLoaned is called after physical handoff
@@ -309,13 +303,13 @@ class LoanRepository {
         final sharedBook = await _requireSharedBook(current.sharedBookId);
         final book = await _requireBook(sharedBook.bookId);
 
-        await _groupDao.updateSharedBookFields(
-          sharedBookId: sharedBook.id,
-          entry: SharedBooksCompanion(
-            isAvailable: const Value(true),
-            isDirty: const Value(true),
-            syncedAt: const Value<DateTime?>(null),
+        await _updateAllSharedBooksAvailability(book.id, true, now);
+
+        await _groupDao.updateGroupFields(
+          groupId: sharedBook.groupId,
+          entry: GroupsCompanion(
             updatedAt: Value(now),
+            isDirty: const Value(true),
           ),
         );
 
@@ -367,15 +361,7 @@ class LoanRepository {
         final sharedBook = await _requireSharedBook(current.sharedBookId);
         final book = await _requireBook(sharedBook.bookId);
 
-        await _groupDao.updateSharedBookFields(
-          sharedBookId: sharedBook.id,
-          entry: SharedBooksCompanion(
-            isAvailable: const Value(true),
-            isDirty: const Value(true),
-            syncedAt: const Value<DateTime?>(null),
-            updatedAt: Value(now),
-          ),
-        );
+        await _updateAllSharedBooksAvailability(book.id, true, now);
 
         await _bookDao.updateBookFields(
           bookId: book.id,
@@ -415,13 +401,13 @@ class LoanRepository {
         ),
       );
 
-      await _groupDao.updateSharedBookFields(
-        sharedBookId: sharedBook.id,
-        entry: SharedBooksCompanion(
-          isAvailable: const Value(true),
-          isDirty: const Value(true),
-          syncedAt: const Value<DateTime?>(null),
+      await _updateAllSharedBooksAvailability(book.id, true, now);
+
+      await _groupDao.updateGroupFields(
+        groupId: sharedBook.groupId,
+        entry: GroupsCompanion(
           updatedAt: Value(now),
+          isDirty: const Value(true),
         ),
       );
 
@@ -500,5 +486,24 @@ class LoanRepository {
       throw const LoanException('Usuario local no encontrado.');
     }
     return user;
+  }
+
+  Future<void> _updateAllSharedBooksAvailability(
+      int bookId, bool isAvailable, DateTime now) async {
+    final sharedBooks = await _groupDao.findSharedBooksByBookId(bookId);
+    
+    for (final shared in sharedBooks) {
+      if (shared.isAvailable != isAvailable) {
+        await _groupDao.updateSharedBookFields(
+          sharedBookId: shared.id,
+          entry: SharedBooksCompanion(
+            isAvailable: Value(isAvailable),
+            isDirty: const Value(true),
+            syncedAt: const Value<DateTime?>(null),
+            updatedAt: Value(now),
+          ),
+        );
+      }
+    }
   }
 }

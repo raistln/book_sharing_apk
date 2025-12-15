@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/local/book_dao.dart';
@@ -116,15 +117,29 @@ final userRelevantLoansProvider = StreamProvider.autoDispose
         return Stream.value(const <LoanDetail>[]);
       }
       return dao.watchLoanDetailsForGroup(groupId).map((loans) {
-        // Filter to show only loans where user is lender or borrower
-        // and exclude returned/expired loans
-        return loans.where((detail) {
+        if (kDebugMode) {
+          debugPrint('[PROVIDER DEBUG] userRelevantLoansProvider received ${loans.length} loans');
+          for (final detail in loans) {
+            debugPrint('[PROVIDER DEBUG] Input loan: ${detail.loan.uuid}, status: ${detail.loan.status}, borrowerUserId: ${detail.loan.borrowerUserId}');
+          }
+        }
+        
+        // Filter to show ALL active loans in the group (including manual loans)
+        // This ensures manual loans (borrowerUserId = null) are visible to other users
+        final filteredLoans = loans.where((detail) {
           final loan = detail.loan;
-          final isLender = loan.lenderUserId == user.id;
-          final isBorrower = loan.borrowerUserId == user.id;
           final isActive = loan.status == 'active' || loan.status == 'requested';
-          return (isLender || isBorrower) && isActive;
+          return isActive;
         }).toList();
+        
+        if (kDebugMode) {
+          debugPrint('[PROVIDER DEBUG] Filtered to ${filteredLoans.length} active loans');
+          for (final detail in filteredLoans) {
+            debugPrint('[PROVIDER DEBUG] Output loan: ${detail.loan.uuid}, status: ${detail.loan.status}');
+          }
+        }
+        
+        return filteredLoans;
       });
     },
     loading: () => Stream.value(const <LoanDetail>[]),

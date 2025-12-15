@@ -289,27 +289,35 @@ class SupabaseGroupSyncRepository {
           int localSharedId;
 
           if (existingShared != null) {
-            await _groupDao.updateSharedBookFields(
-              sharedBookId: existingShared.id,
-              entry: SharedBooksCompanion(
-                groupId: Value(localGroupId),
-                groupUuid: Value(localGroupUuid),
-                bookId: Value(localBook.id),
-                bookUuid: Value(localBook.uuid),
-                ownerUserId: Value(sharedOwnerValue),
-                ownerRemoteId: sharedOwnerRemoteValue,
-                visibility: sharedVisibilityValue,
-                isAvailable: sharedAvailableValue,
-                isDeleted: Value(remoteShared.isDeleted),
-                isDirty: const Value(false),
-                syncedAt: Value(now),
-                updatedAt: sharedUpdatedValue,
-              ),
-            );
-            localSharedId = existingShared.id;
-            if (kDebugMode) {
-              debugPrint('[GroupSync] Updated shared book ${remoteShared.id} for group $localGroupUuid');
+            // CRITICAL FIX: If local version is dirty, DO NOT overwrite with remote
+            if (existingShared.isDirty) {
+              if (kDebugMode) {
+                debugPrint('[GroupSync] Skipping update for shared book ${existingShared.id} (local isDirty=true)');
+              }
+              // Skip update to preserve local availability changes
+            } else {
+              await _groupDao.updateSharedBookFields(
+                sharedBookId: existingShared.id,
+                entry: SharedBooksCompanion(
+                  groupId: Value(localGroupId),
+                  groupUuid: Value(localGroupUuid),
+                  bookId: Value(localBook.id),
+                  bookUuid: Value(localBook.uuid),
+                  ownerUserId: Value(sharedOwnerValue),
+                  ownerRemoteId: sharedOwnerRemoteValue,
+                  visibility: sharedVisibilityValue,
+                  isAvailable: sharedAvailableValue,
+                  isDeleted: Value(remoteShared.isDeleted),
+                  isDirty: const Value(false),
+                  syncedAt: Value(now),
+                  updatedAt: sharedUpdatedValue,
+                ),
+              );
+              if (kDebugMode) {
+                debugPrint('[GroupSync] Updated shared book ${remoteShared.id} for group $localGroupUuid');
+              }
             }
+            localSharedId = existingShared.id;
           } else {
             final insertShared = SharedBooksCompanion.insert(
               uuid: remoteShared.id,
@@ -335,14 +343,27 @@ class SupabaseGroupSyncRepository {
           }
 
           for (final remoteLoan in remoteShared.loans) {
-            final borrower = await _userDao.findByRemoteId(remoteLoan.borrowerUserId);
+            // Handle manual loans (external borrowers without accounts)
+            final isManualLoan = remoteLoan.borrowerUserId.isEmpty;
+            
             final lender = await _userDao.findByRemoteId(remoteLoan.lenderUserId);
-
-            if (borrower == null || lender == null) {
+            if (lender == null) {
               if (kDebugMode) {
-                debugPrint('[GroupSync] Skipping loan ${remoteLoan.id} — borrower=${remoteLoan.borrowerUserId} lender=${remoteLoan.lenderUserId} missing locally');
+                debugPrint('[GroupSync] Skipping loan ${remoteLoan.id} — lender=${remoteLoan.lenderUserId} missing locally');
               }
               continue;
+            }
+
+            // For non-manual loans, find the borrower
+            LocalUser? borrower;
+            if (!isManualLoan) {
+              borrower = await _userDao.findByRemoteId(remoteLoan.borrowerUserId);
+              if (borrower == null) {
+                if (kDebugMode) {
+                  debugPrint('[GroupSync] Skipping loan ${remoteLoan.id} — borrower=${remoteLoan.borrowerUserId} missing locally');
+                }
+                continue;
+              }
             }
 
             final existingLoan =
@@ -363,12 +384,16 @@ class SupabaseGroupSyncRepository {
             final lenderReturnedAtValue = remoteLoan.lenderReturnedAt != null
                 ? Value(remoteLoan.lenderReturnedAt)
                 : const Value<DateTime?>.absent();
+
             final loanUpdatedValue =
                 Value(remoteLoan.updatedAt ?? remoteLoan.createdAt);
 
+            // For manual loans, borrowerUserId is null
+            final borrowerIdValue = isManualLoan ? const Value<int?>(null) : Value(borrower!.id);
+            
             final baseLoan = LoansCompanion(
               sharedBookId: Value(localSharedId),
-              borrowerUserId: Value(borrower.id),
+              borrowerUserId: borrowerIdValue,
               lenderUserId: Value(lender.id),
               status: Value(remoteLoan.status),
               requestedAt: Value(remoteLoan.requestedAt),
@@ -377,6 +402,8 @@ class SupabaseGroupSyncRepository {
               borrowerReturnedAt: borrowerReturnedAtValue,
               lenderReturnedAt: lenderReturnedAtValue,
               returnedAt: returnedAtValue,
+              // Note: externalBorrowerName/Contact not available in SupabaseLoanRecord
+              // These fields will be set when the loan is created locally
               isDeleted: const Value(false),
               isDirty: const Value(false),
               syncedAt: Value(now),
@@ -394,7 +421,7 @@ class SupabaseGroupSyncRepository {
                   uuid: remoteLoan.id,
                   remoteId: Value(remoteLoan.id),
                   sharedBookId: localSharedId,
-                  borrowerUserId: Value(borrower.id),
+                  borrowerUserId: borrowerIdValue,
                   lenderUserId: lender.id,
                   status: Value(remoteLoan.status),
                   requestedAt: Value(remoteLoan.requestedAt),
@@ -445,6 +472,9 @@ class SupabaseGroupSyncRepository {
       final syncTime = DateTime.now();
       if (kDebugMode) {
         debugPrint('[GroupSync] Uploading ${dirtySharedBooks.length} shared book(s) to Supabase');
+        for (final s in dirtySharedBooks) {
+          debugPrint('[GroupSync] -> Dirty SharedBook: ${s.uuid}, isAvailable: ${s.isAvailable}, isDirty: ${s.isDirty}');
+        }
       }
 
       for (final shared in dirtySharedBooks) {
@@ -535,7 +565,7 @@ class SupabaseGroupSyncRepository {
               accessToken: accessToken,
             );
             if (kDebugMode) {
-              debugPrint('[GroupSync] Created remote shared book ${shared.uuid} -> $ensuredRemoteId');
+              debugPrint('[GroupSync] Created remote shared book ${shared.uuid} -> $ensuredRemoteId (isAvailable: ${shared.isAvailable})');
             }
           } else {
             final updated = await _groupService.updateSharedBook(

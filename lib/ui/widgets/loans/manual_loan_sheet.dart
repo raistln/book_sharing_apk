@@ -21,6 +21,7 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
   
   Book? _selectedBook;
   DateTime _dueDate = DateTime.now().add(const Duration(days: 14)); // Default 2 weeks
+  bool _isIndefinite = false;
 
   @override
   void initState() {
@@ -42,10 +43,11 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
     final loanState = ref.watch(loanControllerProvider);
     final availableBooksAsync = ref.watch(bookListProvider); // Should filter by available later
     final currentUser = ref.watch(activeUserProvider).value;
+    final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+        bottom: keyboardInset > 0 ? keyboardInset : 16, // Add padding if keyboard visible
         left: 16,
         right: 16,
         top: 16,
@@ -55,7 +57,7 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
+        maxHeight: MediaQuery.of(context).size.height * 0.9, // Slightly taller
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -77,6 +79,7 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
           const Divider(),
           Flexible(
             child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 24), // Ensure scrolling space
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -171,28 +174,49 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                     ),
 
                     const SizedBox(height: 24),
-                    Text('Fecha de devolución', style: theme.textTheme.labelLarge),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Fecha de devolución', style: theme.textTheme.labelLarge),
+                        Row(
+                          children: [
+                             Text('Indefinido', style: theme.textTheme.bodySmall),
+                             Switch(
+                              value: _isIndefinite, 
+                              onChanged: (val) => setState(() => _isIndefinite = val),
+                            ),
+                          ],
+                        )
+                      ],
+                    ),
                     const SizedBox(height: 8),
-                    InkWell(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _dueDate,
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
-                        );
-                        if (picked != null) {
-                          setState(() => _dueDate = picked);
-                        }
-                      },
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.calendar_today),
-                        ),
-                        child: Text(
-                          DateFormat.yMMMd().format(_dueDate),
-                          style: theme.textTheme.bodyLarge,
+                    
+                    Opacity(
+                      opacity: _isIndefinite ? 0.5 : 1.0,
+                      child: IgnorePointer(
+                        ignoring: _isIndefinite,
+                        child: InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _dueDate,
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (picked != null) {
+                              setState(() => _dueDate = picked);
+                            }
+                          },
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.calendar_today),
+                            ),
+                            child: Text(
+                              _isIndefinite ? 'Sin fecha límite' : DateFormat.yMMMd().format(_dueDate),
+                              style: theme.textTheme.bodyLarge,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -243,7 +267,7 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedBook == null) return; // Should be caught by validator but double check
+    if (_selectedBook == null) return; 
 
     final currentUser = ref.read(activeUserProvider).value;
     if (currentUser == null) return;
@@ -253,7 +277,7 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
         book: _selectedBook!,
         owner: currentUser,
         borrowerName: _nameController.text,
-        dueDate: _dueDate,
+        dueDate: _isIndefinite ? DateTime.now().add(const Duration(days: 365 * 10)) : _dueDate,
         borrowerContact: _contactController.text.isNotEmpty 
             ? _contactController.text 
             : null,
@@ -261,12 +285,49 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Préstamo registrado correctamente')),
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            icon: const Icon(Icons.check_circle_outline, color: Colors.green, size: 48),
+            title: const Text('Préstamo registrado'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDetailRow(context, 'Libro:', _selectedBook!.title),
+                const SizedBox(height: 8),
+                _buildDetailRow(context, 'Prestatario:', _nameController.text),
+                const SizedBox(height: 8),
+                _buildDetailRow(
+                  context, 
+                  'Vence:', 
+                  _isIndefinite ? 'Indefinido' : DateFormat.yMMMd().format(_dueDate)
+                ),
+              ],
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
         );
       }
     } catch (e) {
       // Error is handled in controller state, shown in UI
     }
+  }
+
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
+    return RichText(
+      text: TextSpan(
+        style: Theme.of(context).textTheme.bodyMedium,
+        children: [
+          TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: value),
+        ],
+      ),
+    );
   }
 }

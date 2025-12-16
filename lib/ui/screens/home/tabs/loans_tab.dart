@@ -44,7 +44,7 @@ class LoansTab extends ConsumerWidget {
               IconButton(
                 icon: const Icon(Icons.history),
                 onPressed: () {
-                  // TODO: Navigate to full history screen if needed
+                  // TODO: Implement full history screen with filtering
                 },
                 tooltip: 'Historial completo',
               ),
@@ -188,12 +188,7 @@ class LoansTab extends ConsumerWidget {
         subtitle: Text(isIncoming ? 'Solicitado por $otherName' : 'Solicitado a $otherName'),
         trailing: const Chip(label: Text('Pendiente')),
         onTap: () {
-          // TODO: Open detailed view or reuse LoansSection logic?
-          // For now just show "Manage in Groups" or similar?
-          // Actually user wants centralized management here.
-          // Since we fixed LoansSection, maybe we can refactor RequestCard too? 
-          // Leaving as TODO to keep scope managed. The requests show up in Groups too.
-          // Or at least show a snackbar "Ve al grupo para gestionar".
+          // TODO: Add detailed loan request view
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Gestiona la solicitud en la pestaña de Grupos.')),
           );

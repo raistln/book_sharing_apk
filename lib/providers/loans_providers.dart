@@ -80,7 +80,15 @@ final loanHistoryProvider = Provider.autoDispose<List<LoanDetail>>((ref) {
   // Define history statuses
   const historyStatuses = {'returned', 'rejected', 'cancelled', 'expired'};
 
-  return allLoans.where((detail) {
+  final history = allLoans.where((detail) {
     return historyStatuses.contains(detail.loan.status);
-  }).toList(); // Optionally sort by date descending
+  }).toList();
+  
+  history.sort((a, b) {
+    final aDate = a.loan.updatedAt;
+    final bDate = b.loan.updatedAt;
+    return bDate.compareTo(aDate); // Descending
+  });
+  
+  return history;
 });

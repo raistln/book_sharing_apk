@@ -40,12 +40,19 @@ class LoanConfirmationCard extends ConsumerWidget {
     // Manual Loan Case: Simple return
     if (isManual) {
       if (!isOwner) return const SizedBox.shrink(); // Should not happen
+      final bookTitle = detail.book?.title ?? 'Libro desconocido';
+      final dueDateStr = loan.dueDate != null 
+          ? DateFormat.yMMMd().format(loan.dueDate!) 
+          : 'Indefinido';
+      
+      final sub = 'Prestado a: $otherName\nVence: $dueDateStr';
+
       return _buildActionCard(
         context,
         theme,
-        icon: Icons.assignment_return_outlined,
-        title: 'Préstamo Manual',
-        subtitle: 'Marca el libro cuando te lo devuelvan.',
+        icon: Icons.book_outlined, // Better icon
+        title: bookTitle, // Show book title
+        subtitle: sub,
         actions: [
           FilledButton.icon(
             onPressed: loanState.isLoading 

@@ -12,10 +12,10 @@ import '../../../../services/coach_marks/coach_mark_controller.dart';
 import '../../../../services/coach_marks/coach_mark_models.dart';
 import '../../../../ui/widgets/coach_mark_target.dart';
 import '../../../../utils/group_utils.dart';
-import 'group_stats_chips.dart';
-import 'shared_books_section.dart';
+import 'group_stats_table.dart';
 import 'loans_section.dart';
 import 'group_menu.dart';
+import '../../screens/home/tabs/discover_group_page.dart';
 
 class GroupCard extends ConsumerStatefulWidget {
   const GroupCard({
@@ -80,7 +80,6 @@ class _GroupCardState extends ConsumerState<GroupCard> {
     final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
     final sharedBooksAsync = ref.watch(sharedBookDetailsProvider(group.id));
     final loansAsync = ref.watch(userRelevantLoansProvider(group.id));
-    final invitationsAsync = ref.watch(groupInvitationDetailsProvider(group.id));
     final activeUserAsync = ref.watch(activeUserProvider);
     final activeUser = activeUserAsync.value;
     final groupActionState = ref.watch(groupPushControllerProvider);
@@ -182,15 +181,31 @@ class _GroupCardState extends ConsumerState<GroupCard> {
             const SizedBox(height: 12),
             // Hide stats and shared books for personal loans group
             if (!isPersonalGroup) ...[
-              GroupStatsChips(
-                groupId: group.id,
-                membersAsync: membersAsync,
-                sharedBooksAsync: sharedBooksAsync,
+              GroupStatsTable(
+                members: members,
+                sharedBooks: sharedBooksAsync.asData?.value ?? [],
                 loansAsync: loansAsync,
-                invitationsAsync: invitationsAsync,
+                currentUserId: activeUser?.id,
               ),
               const SizedBox(height: 16),
-              SharedBooksSection(sharedBooksAsync: sharedBooksAsync),
+              // Prominent Discovery Button
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  onPressed: () {
+                     Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DiscoverGroupPage(group: group),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.auto_stories), // Library icon
+                  label: const Text('La Gran Biblioteca'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
               const SizedBox(height: 12),
             ],
             LoansSection(

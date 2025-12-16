@@ -60,7 +60,7 @@ class LoanRepository {
       final loanId = await _groupDao.insertLoan(
         LoansCompanion.insert(
           uuid: _uuid.v4(),
-          sharedBookId: sharedBook.id,
+          sharedBookId: Value(sharedBook.id),
           borrowerUserId: Value(borrower.id),
           lenderUserId: owner.id,
           status: const Value('requested'),
@@ -111,7 +111,7 @@ class LoanRepository {
       final inserted = await _groupDao.insertLoan(
         LoansCompanion.insert(
           uuid: const Uuid().v4(),
-          sharedBookId: sharedBook.id,
+          sharedBookId: Value(sharedBook.id),
           borrowerUserId: const Value<int?>(null), // No user for manual loans
           lenderUserId: owner.id,
           externalBorrowerName: Value(borrowerName.trim()),
@@ -238,7 +238,7 @@ class LoanRepository {
       throw const LoanException('Solo el propietario puede aceptar la solicitud.');
     }
 
-    final sharedBook = await _requireSharedBook(current.sharedBookId);
+    final sharedBook = await _requireSharedBook(current.sharedBookId!);
     final now = DateTime.now();
 
     await _db.transaction(() async {
@@ -589,7 +589,7 @@ class LoanRepository {
         entry: LoansCompanion(
           status: const Value('returned'),
           lenderReturnedAt: Value(now), // Mark as confirmed by lender
-          borrowerReturnedAt: current.borrowerReturnedAt ?? Value(now), // Auto-confirm for borrower if missing
+          borrowerReturnedAt: current.borrowerReturnedAt == null ? Value(now) : const Value.absent(), // Auto-confirm for borrower if missing
           returnedAt: Value(now),
           isDirty: const Value(true),
           syncedAt: const Value<DateTime?>(null),

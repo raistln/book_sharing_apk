@@ -246,8 +246,11 @@ CREATE TABLE public.shared_books (
 -- LOANS
 CREATE TABLE public.loans (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  shared_book_id UUID NOT NULL REFERENCES public.shared_books(id) ON DELETE CASCADE,
+  shared_book_id UUID REFERENCES public.shared_books(id) ON DELETE CASCADE,
   
+  -- Reference to book for manual loans (when shared_book_id is null)
+  book_uuid TEXT,
+
   -- Users
   borrower_user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   lender_user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -273,11 +276,13 @@ CREATE TABLE public.loans (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   
-  -- Constraint: must be either normal loan OR manual loan, not both
+  -- Constraint: must be either normal loan (via shared_book) OR manual loan (via book_uuid), not both
   CONSTRAINT loan_type_check CHECK (
-    (borrower_user_id IS NOT NULL AND external_borrower_name IS NULL)
+    -- Normal Loan: Has shared_book and real borrower
+    (shared_book_id IS NOT NULL AND borrower_user_id IS NOT NULL AND external_borrower_name IS NULL)
     OR
-    (borrower_user_id IS NULL AND external_borrower_name IS NOT NULL)
+    -- Manual Loan: Has book_uuid and external borrower name
+    (shared_book_id IS NULL AND book_uuid IS NOT NULL AND borrower_user_id IS NULL AND external_borrower_name IS NOT NULL)
   )
 );
 

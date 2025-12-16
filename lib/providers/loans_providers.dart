@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/local/group_dao.dart';
-import '../../data/repositories/loan_repository.dart';
 import 'book_providers.dart';
-import 'user_providers.dart';
 
 /// Provides a stream of all loan details for the active user
 final allLoansProvider = StreamProvider.autoDispose<List<LoanDetail>>((ref) {

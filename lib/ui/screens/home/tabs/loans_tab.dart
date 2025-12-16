@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../data/local/database.dart';
-import '../../../data/local/group_dao.dart';
-import '../../../providers/loans_providers.dart';
-import '../../../providers/user_providers.dart';
-import '../../widgets/loans/loan_confirmation_card.dart';
-import '../../widgets/loans/manual_loan_sheet.dart';
+import '../../../../data/local/database.dart';
+import '../../../../data/local/group_dao.dart';
+import '../../../../providers/loans_providers.dart';
+import '../../../../providers/book_providers.dart';
+import '../../../widgets/loans/loan_confirmation_card.dart';
+import '../../../widgets/loans/manual_loan_sheet.dart';
 
 class LoansTab extends ConsumerWidget {
   const LoansTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final activeUser = ref.watch(activeUserProvider).value;
 
     if (activeUser == null) {
@@ -58,18 +57,18 @@ class LoansTab extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.import_contacts, size: 64, color: theme.colorScheme.outline),
+                    Icon(Icons.import_contacts, size: 64, color: Theme.of(context).colorScheme.outline),
                     const SizedBox(height: 16),
                     Text(
                       'No tienes préstamos activos',
-                      style: theme.textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Usa el botón + para registrar uno manual\no únete a grupos para compartir.',
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -175,7 +174,6 @@ class LoansTab extends ConsumerWidget {
   // Using a simplified view for now as LoansSection handles the complex logic
   // Update: We can reuse logic or build simple. Let's build simple for Tab.
   Widget _buildRequestCard(BuildContext context, LoanDetail detail, bool isIncoming) {
-    final theme = Theme.of(context);
     final bookTitle = detail.book?.title ?? 'Libro';
     final otherName = isIncoming 
         ? (detail.borrower?.username ?? 'Alguien') 

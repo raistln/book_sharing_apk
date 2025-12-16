@@ -19,6 +19,7 @@ void main() {
   late MockSyncController mockBookSync;
   late MockGroupSyncController mockGroupSync;
   late MockSyncController mockNotificationSync;
+  late MockSyncController mockLoanSync;
   late UnifiedSyncCoordinator coordinator;
 
   setUp(() {
@@ -26,18 +27,28 @@ void main() {
     mockBookSync = MockSyncController();
     mockGroupSync = MockGroupSyncController();
     mockNotificationSync = MockSyncController();
+    mockLoanSync = MockSyncController();
 
     // Setup default successful sync responses
     when(() => mockUserSync.sync()).thenAnswer((_) async {});
     when(() => mockBookSync.sync()).thenAnswer((_) async {});
     when(() => mockGroupSync.syncGroups()).thenAnswer((_) async {});
     when(() => mockNotificationSync.sync()).thenAnswer((_) async {});
+    when(() => mockLoanSync.sync()).thenAnswer((_) async {});
+
+    // Stub state getters to avoid crashes when coordinator reads them
+    when(() => mockUserSync.state).thenReturn(const SyncState());
+    when(() => mockBookSync.state).thenReturn(const SyncState());
+    when(() => mockGroupSync.state).thenReturn(const SyncState()); // GroupSync might need separate handling if it doesn't use SyncState but GroupSyncState?
+    when(() => mockNotificationSync.state).thenReturn(const SyncState());
+    when(() => mockLoanSync.state).thenReturn(const SyncState());
 
     coordinator = UnifiedSyncCoordinator(
       userSyncController: mockUserSync,
       bookSyncController: mockBookSync,
       groupSyncController: mockGroupSync,
       notificationSyncController: mockNotificationSync,
+      loanSyncController: mockLoanSync,
       enableConnectivityMonitoring: false, // Disable for tests
       enableBatteryMonitoring: false, // Disable for tests
     );
@@ -74,6 +85,7 @@ void main() {
       verify(() => mockGroupSync.syncGroups()).called(1);
       verify(() => mockBookSync.sync()).called(1);
       verify(() => mockNotificationSync.sync()).called(1);
+      verify(() => mockLoanSync.sync()).called(1);
     });
 
     test('syncNow sincroniza solo entidades especificadas', () async {
@@ -83,6 +95,7 @@ void main() {
       verify(() => mockBookSync.sync()).called(1);
       verifyNever(() => mockGroupSync.syncGroups());
       verifyNever(() => mockNotificationSync.sync());
+      verifyNever(() => mockLoanSync.sync());
     });
   });
 

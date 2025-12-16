@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/google_books_api_service.dart';
 import '../services/google_books_client.dart';
@@ -74,3 +75,7 @@ class GoogleBooksApiKeyController extends AutoDisposeAsyncNotifier<String?> {
     }
   }
 }
+
+final supabaseClientProvider = Provider<SupabaseClient>((ref) {
+  return Supabase.instance.client;
+});

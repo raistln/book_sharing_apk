@@ -420,7 +420,7 @@ class SupabaseGroupSyncRepository {
                 LoansCompanion.insert(
                   uuid: remoteLoan.id,
                   remoteId: Value(remoteLoan.id),
-                  sharedBookId: localSharedId,
+                  sharedBookId: Value(localSharedId),
                   borrowerUserId: borrowerIdValue,
                   lenderUserId: lender.id,
                   status: Value(remoteLoan.status),
@@ -633,7 +633,7 @@ class SupabaseGroupSyncRepository {
 
       for (final loan in dirtyLoans) {
         try {
-          final sharedBook = await _groupDao.findSharedBookById(loan.sharedBookId);
+          final sharedBook = await _groupDao.findSharedBookById(loan.sharedBookId!);
           if (sharedBook == null || sharedBook.remoteId == null) {
             if (kDebugMode) {
               debugPrint('[GroupSync] Skipping loan ${loan.uuid}: shared book ${loan.sharedBookId} missing remoteId (book found: ${sharedBook != null})');

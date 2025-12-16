@@ -4,8 +4,6 @@ import 'package:intl/intl.dart';
 
 import '../../../data/local/database.dart';
 import '../../../providers/book_providers.dart';
-import '../../../providers/user_providers.dart';
-import '../../../services/loan_controller.dart';
 
 class ManualLoanSheet extends ConsumerStatefulWidget {
   const ManualLoanSheet({super.key, this.initialBook});
@@ -42,7 +40,7 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final loanState = ref.watch(loanControllerProvider);
-    final availableBooksAsync = ref.watch(userBooksProvider); // Should filter by available later
+    final availableBooksAsync = ref.watch(bookListProvider); // Should filter by available later
     final currentUser = ref.watch(activeUserProvider).value;
 
     return Container(
@@ -115,12 +113,12 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                         }
 
                         return DropdownButtonFormField<Book>(
-                          value: _selectedBook,
+                          initialValue: _selectedBook,
                           decoration: InputDecoration(
                             border: const OutlineInputBorder(),
                             hintText: 'Selecciona un libro',
                             filled: true,
-                            fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                            fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                           ),
                           items: available.map((book) {
                             return DropdownMenuItem(

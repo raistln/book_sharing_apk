@@ -110,7 +110,7 @@ void main() {
     final loanId = await groupDao.insertLoan(
       LoansCompanion.insert(
         uuid: uuid,
-        sharedBookId: sharedBookId,
+        sharedBookId: Value(sharedBookId),
         borrowerUserId: Value(borrowerUser.id),
         lenderUserId: owner.id,
         status: Value(status),
@@ -178,7 +178,7 @@ void main() {
     await groupDao.insertLoan(
       LoansCompanion.insert(
         uuid: 'loan-returned',
-        sharedBookId: sharedBookId,
+        sharedBookId: Value(sharedBookId),
         borrowerUserId: Value(borrower.id),
         lenderUserId: owner.id,
         status: const Value('returned'),
@@ -194,7 +194,7 @@ void main() {
     await groupDao.insertLoan(
       LoansCompanion.insert(
         uuid: 'loan-expired',
-        sharedBookId: otherSharedBookId,
+        sharedBookId: Value(otherSharedBookId),
         borrowerUserId: Value(secondBorrower.id),
         lenderUserId: owner.id,
         status: const Value('expired'),
@@ -244,7 +244,7 @@ void main() {
     await groupDao.insertLoan(
       LoansCompanion.insert(
         uuid: 'loan-without-book',
-        sharedBookId: sharedBookId,
+        sharedBookId: Value(sharedBookId),
         borrowerUserId: Value(borrower.id),
         lenderUserId: owner.id,
         status: const Value('active'),

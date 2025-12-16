@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'providers/notification_providers.dart';
@@ -16,6 +17,20 @@ Future<void> main() async {
     await dotenv.load();
   } catch (e) {
     debugPrint('Failed to load .env: $e');
+  }
+
+  try {
+    final url = dotenv.get('SUPABASE_URL', fallback: '');
+    final key = dotenv.get('SUPABASE_ANON_KEY', fallback: '');
+    if (url.isNotEmpty && key.isNotEmpty) {
+      await Supabase.initialize(url: url, anonKey: key);
+    } else {
+       debugPrint('[Main] Supabase URL or Key missing in .env');
+       // Fallback or skip? Supabase.initialize is required for Supabase.instance usage.
+       // We might use defaults if available, but for now just log warning.
+    }
+  } catch (e) {
+    debugPrint('Failed to initialize Supabase: $e');
   }
 
   final notificationService = NotificationService.instance;

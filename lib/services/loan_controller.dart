@@ -301,7 +301,7 @@ class LoanController extends StateNotifier<LoanActionState> {
       return;
     }
 
-    final sharedBook = await _loanRepository.findSharedBookById(loan.sharedBookId);
+    final sharedBook = await _loanRepository.findSharedBookById(loan.sharedBookId!);
 
     final payload = <String, String>{
       NotificationPayloadKeys.loanId: loan.uuid,

@@ -17,6 +17,7 @@ class UnifiedSyncCoordinator {
     required SyncController bookSyncController,
     required GroupSyncController groupSyncController,
     required SyncController notificationSyncController,
+    required SyncController loanSyncController,
     VoidCallback? onUserActivity,
     bool enableConnectivityMonitoring = true,
     bool enableBatteryMonitoring = true,
@@ -24,6 +25,7 @@ class UnifiedSyncCoordinator {
         _bookSyncController = bookSyncController,
         _groupSyncController = groupSyncController,
         _notificationSyncController = notificationSyncController,
+        _loanSyncController = loanSyncController,
         _onUserActivity = onUserActivity,
         _enableConnectivityMonitoring = enableConnectivityMonitoring,
         _enableBatteryMonitoring = enableBatteryMonitoring {
@@ -34,6 +36,7 @@ class UnifiedSyncCoordinator {
   final SyncController _bookSyncController;
   final GroupSyncController _groupSyncController;
   final SyncController _notificationSyncController;
+  final SyncController _loanSyncController;
   final VoidCallback? _onUserActivity;
   final bool _enableConnectivityMonitoring;
   final bool _enableBatteryMonitoring;
@@ -174,9 +177,12 @@ class UnifiedSyncCoordinator {
       // Sincronizar en orden de prioridad
       await _syncEntity(SyncEntity.users);
 
-      if (entitiesToSync.contains(SyncEntity.groups) ||
-          entitiesToSync.contains(SyncEntity.loans)) {
+      if (entitiesToSync.contains(SyncEntity.groups)) {
         await _syncEntity(SyncEntity.groups);
+      }
+      
+      if (entitiesToSync.contains(SyncEntity.loans)) {
+        await _syncEntity(SyncEntity.loans);
       }
 
       if (entitiesToSync.contains(SyncEntity.books)) {
@@ -224,11 +230,14 @@ class UnifiedSyncCoordinator {
     for (final entity in entities) {
       switch (entity) {
         case SyncEntity.groups:
-        case SyncEntity.loans:
           final groupController = _groupSyncController;
           if (groupController.mounted) {
             unawaited(groupController.syncGroups());
           }
+          break;
+        case SyncEntity.loans:
+          // Now handled by loanSyncController
+           await _loanSyncController.sync();
           break;
         case SyncEntity.books:
           final bookController = _bookSyncController;
@@ -281,8 +290,9 @@ class UnifiedSyncCoordinator {
         case SyncEntity.books:
           await _bookSyncController.sync();
         case SyncEntity.groups:
-        case SyncEntity.loans:
           await _groupSyncController.syncGroups();
+        case SyncEntity.loans:
+          await _loanSyncController.sync(); // Now uses dedicated controller
         case SyncEntity.notifications:
           await _notificationSyncController.sync();
       }

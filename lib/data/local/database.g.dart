@@ -5098,11 +5098,19 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
       const VerificationMeta('sharedBookId');
   @override
   late final GeneratedColumn<int> sharedBookId = GeneratedColumn<int>(
-      'shared_book_id', aliasedName, false,
+      'shared_book_id', aliasedName, true,
       type: DriftSqlType.int,
-      requiredDuringInsert: true,
+      requiredDuringInsert: false,
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'REFERENCES shared_books (id) ON DELETE CASCADE'));
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<int> bookId = GeneratedColumn<int>(
+      'book_id', aliasedName, true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES books (id) ON DELETE CASCADE'));
   static const VerificationMeta _borrowerUserIdMeta =
       const VerificationMeta('borrowerUserId');
   @override
@@ -5228,6 +5236,7 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
         uuid,
         remoteId,
         sharedBookId,
+        bookId,
         borrowerUserId,
         lenderUserId,
         externalBorrowerName,
@@ -5273,8 +5282,10 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
           _sharedBookIdMeta,
           sharedBookId.isAcceptableOrUnknown(
               data['shared_book_id']!, _sharedBookIdMeta));
-    } else if (isInserting) {
-      context.missing(_sharedBookIdMeta);
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(_bookIdMeta,
+          bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta));
     }
     if (data.containsKey('borrower_user_id')) {
       context.handle(
@@ -5377,7 +5388,9 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
       remoteId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}remote_id']),
       sharedBookId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}shared_book_id'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}shared_book_id']),
+      bookId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}book_id']),
       borrowerUserId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}borrower_user_id']),
       lenderUserId: attachedDatabase.typeMapping
@@ -5426,7 +5439,8 @@ class Loan extends DataClass implements Insertable<Loan> {
   final int id;
   final String uuid;
   final String? remoteId;
-  final int sharedBookId;
+  final int? sharedBookId;
+  final int? bookId;
   final int? borrowerUserId;
   final int lenderUserId;
   final String? externalBorrowerName;
@@ -5447,7 +5461,8 @@ class Loan extends DataClass implements Insertable<Loan> {
       {required this.id,
       required this.uuid,
       this.remoteId,
-      required this.sharedBookId,
+      this.sharedBookId,
+      this.bookId,
       this.borrowerUserId,
       required this.lenderUserId,
       this.externalBorrowerName,
@@ -5472,7 +5487,12 @@ class Loan extends DataClass implements Insertable<Loan> {
     if (!nullToAbsent || remoteId != null) {
       map['remote_id'] = Variable<String>(remoteId);
     }
-    map['shared_book_id'] = Variable<int>(sharedBookId);
+    if (!nullToAbsent || sharedBookId != null) {
+      map['shared_book_id'] = Variable<int>(sharedBookId);
+    }
+    if (!nullToAbsent || bookId != null) {
+      map['book_id'] = Variable<int>(bookId);
+    }
     if (!nullToAbsent || borrowerUserId != null) {
       map['borrower_user_id'] = Variable<int>(borrowerUserId);
     }
@@ -5518,7 +5538,11 @@ class Loan extends DataClass implements Insertable<Loan> {
       remoteId: remoteId == null && nullToAbsent
           ? const Value.absent()
           : Value(remoteId),
-      sharedBookId: Value(sharedBookId),
+      sharedBookId: sharedBookId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sharedBookId),
+      bookId:
+          bookId == null && nullToAbsent ? const Value.absent() : Value(bookId),
       borrowerUserId: borrowerUserId == null && nullToAbsent
           ? const Value.absent()
           : Value(borrowerUserId),
@@ -5563,7 +5587,8 @@ class Loan extends DataClass implements Insertable<Loan> {
       id: serializer.fromJson<int>(json['id']),
       uuid: serializer.fromJson<String>(json['uuid']),
       remoteId: serializer.fromJson<String?>(json['remoteId']),
-      sharedBookId: serializer.fromJson<int>(json['sharedBookId']),
+      sharedBookId: serializer.fromJson<int?>(json['sharedBookId']),
+      bookId: serializer.fromJson<int?>(json['bookId']),
       borrowerUserId: serializer.fromJson<int?>(json['borrowerUserId']),
       lenderUserId: serializer.fromJson<int>(json['lenderUserId']),
       externalBorrowerName:
@@ -5593,7 +5618,8 @@ class Loan extends DataClass implements Insertable<Loan> {
       'id': serializer.toJson<int>(id),
       'uuid': serializer.toJson<String>(uuid),
       'remoteId': serializer.toJson<String?>(remoteId),
-      'sharedBookId': serializer.toJson<int>(sharedBookId),
+      'sharedBookId': serializer.toJson<int?>(sharedBookId),
+      'bookId': serializer.toJson<int?>(bookId),
       'borrowerUserId': serializer.toJson<int?>(borrowerUserId),
       'lenderUserId': serializer.toJson<int>(lenderUserId),
       'externalBorrowerName': serializer.toJson<String?>(externalBorrowerName),
@@ -5618,7 +5644,8 @@ class Loan extends DataClass implements Insertable<Loan> {
           {int? id,
           String? uuid,
           Value<String?> remoteId = const Value.absent(),
-          int? sharedBookId,
+          Value<int?> sharedBookId = const Value.absent(),
+          Value<int?> bookId = const Value.absent(),
           Value<int?> borrowerUserId = const Value.absent(),
           int? lenderUserId,
           Value<String?> externalBorrowerName = const Value.absent(),
@@ -5639,7 +5666,9 @@ class Loan extends DataClass implements Insertable<Loan> {
         id: id ?? this.id,
         uuid: uuid ?? this.uuid,
         remoteId: remoteId.present ? remoteId.value : this.remoteId,
-        sharedBookId: sharedBookId ?? this.sharedBookId,
+        sharedBookId:
+            sharedBookId.present ? sharedBookId.value : this.sharedBookId,
+        bookId: bookId.present ? bookId.value : this.bookId,
         borrowerUserId:
             borrowerUserId.present ? borrowerUserId.value : this.borrowerUserId,
         lenderUserId: lenderUserId ?? this.lenderUserId,
@@ -5674,6 +5703,7 @@ class Loan extends DataClass implements Insertable<Loan> {
       sharedBookId: data.sharedBookId.present
           ? data.sharedBookId.value
           : this.sharedBookId,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
       borrowerUserId: data.borrowerUserId.present
           ? data.borrowerUserId.value
           : this.borrowerUserId,
@@ -5715,6 +5745,7 @@ class Loan extends DataClass implements Insertable<Loan> {
           ..write('uuid: $uuid, ')
           ..write('remoteId: $remoteId, ')
           ..write('sharedBookId: $sharedBookId, ')
+          ..write('bookId: $bookId, ')
           ..write('borrowerUserId: $borrowerUserId, ')
           ..write('lenderUserId: $lenderUserId, ')
           ..write('externalBorrowerName: $externalBorrowerName, ')
@@ -5736,27 +5767,29 @@ class Loan extends DataClass implements Insertable<Loan> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      uuid,
-      remoteId,
-      sharedBookId,
-      borrowerUserId,
-      lenderUserId,
-      externalBorrowerName,
-      externalBorrowerContact,
-      status,
-      requestedAt,
-      approvedAt,
-      dueDate,
-      borrowerReturnedAt,
-      lenderReturnedAt,
-      returnedAt,
-      isDirty,
-      isDeleted,
-      syncedAt,
-      createdAt,
-      updatedAt);
+  int get hashCode => Object.hashAll([
+        id,
+        uuid,
+        remoteId,
+        sharedBookId,
+        bookId,
+        borrowerUserId,
+        lenderUserId,
+        externalBorrowerName,
+        externalBorrowerContact,
+        status,
+        requestedAt,
+        approvedAt,
+        dueDate,
+        borrowerReturnedAt,
+        lenderReturnedAt,
+        returnedAt,
+        isDirty,
+        isDeleted,
+        syncedAt,
+        createdAt,
+        updatedAt
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5765,6 +5798,7 @@ class Loan extends DataClass implements Insertable<Loan> {
           other.uuid == this.uuid &&
           other.remoteId == this.remoteId &&
           other.sharedBookId == this.sharedBookId &&
+          other.bookId == this.bookId &&
           other.borrowerUserId == this.borrowerUserId &&
           other.lenderUserId == this.lenderUserId &&
           other.externalBorrowerName == this.externalBorrowerName &&
@@ -5787,7 +5821,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
   final Value<int> id;
   final Value<String> uuid;
   final Value<String?> remoteId;
-  final Value<int> sharedBookId;
+  final Value<int?> sharedBookId;
+  final Value<int?> bookId;
   final Value<int?> borrowerUserId;
   final Value<int> lenderUserId;
   final Value<String?> externalBorrowerName;
@@ -5809,6 +5844,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     this.uuid = const Value.absent(),
     this.remoteId = const Value.absent(),
     this.sharedBookId = const Value.absent(),
+    this.bookId = const Value.absent(),
     this.borrowerUserId = const Value.absent(),
     this.lenderUserId = const Value.absent(),
     this.externalBorrowerName = const Value.absent(),
@@ -5830,7 +5866,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     this.id = const Value.absent(),
     required String uuid,
     this.remoteId = const Value.absent(),
-    required int sharedBookId,
+    this.sharedBookId = const Value.absent(),
+    this.bookId = const Value.absent(),
     this.borrowerUserId = const Value.absent(),
     required int lenderUserId,
     this.externalBorrowerName = const Value.absent(),
@@ -5848,13 +5885,13 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   })  : uuid = Value(uuid),
-        sharedBookId = Value(sharedBookId),
         lenderUserId = Value(lenderUserId);
   static Insertable<Loan> custom({
     Expression<int>? id,
     Expression<String>? uuid,
     Expression<String>? remoteId,
     Expression<int>? sharedBookId,
+    Expression<int>? bookId,
     Expression<int>? borrowerUserId,
     Expression<int>? lenderUserId,
     Expression<String>? externalBorrowerName,
@@ -5877,6 +5914,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       if (uuid != null) 'uuid': uuid,
       if (remoteId != null) 'remote_id': remoteId,
       if (sharedBookId != null) 'shared_book_id': sharedBookId,
+      if (bookId != null) 'book_id': bookId,
       if (borrowerUserId != null) 'borrower_user_id': borrowerUserId,
       if (lenderUserId != null) 'lender_user_id': lenderUserId,
       if (externalBorrowerName != null)
@@ -5903,7 +5941,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       {Value<int>? id,
       Value<String>? uuid,
       Value<String?>? remoteId,
-      Value<int>? sharedBookId,
+      Value<int?>? sharedBookId,
+      Value<int?>? bookId,
       Value<int?>? borrowerUserId,
       Value<int>? lenderUserId,
       Value<String?>? externalBorrowerName,
@@ -5925,6 +5964,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       uuid: uuid ?? this.uuid,
       remoteId: remoteId ?? this.remoteId,
       sharedBookId: sharedBookId ?? this.sharedBookId,
+      bookId: bookId ?? this.bookId,
       borrowerUserId: borrowerUserId ?? this.borrowerUserId,
       lenderUserId: lenderUserId ?? this.lenderUserId,
       externalBorrowerName: externalBorrowerName ?? this.externalBorrowerName,
@@ -5959,6 +5999,9 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     }
     if (sharedBookId.present) {
       map['shared_book_id'] = Variable<int>(sharedBookId.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<int>(bookId.value);
     }
     if (borrowerUserId.present) {
       map['borrower_user_id'] = Variable<int>(borrowerUserId.value);
@@ -6021,6 +6064,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
           ..write('uuid: $uuid, ')
           ..write('remoteId: $remoteId, ')
           ..write('sharedBookId: $sharedBookId, ')
+          ..write('bookId: $bookId, ')
           ..write('borrowerUserId: $borrowerUserId, ')
           ..write('lenderUserId: $lenderUserId, ')
           ..write('externalBorrowerName: $externalBorrowerName, ')
@@ -7553,6 +7597,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
             ],
           ),
           WritePropagation(
+            on: TableUpdateQuery.onTableName('books',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('loans', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
             on: TableUpdateQuery.onTableName('loans',
                 limitUpdateKind: UpdateKind.delete),
             result: [
@@ -8842,6 +8893,20 @@ final class $$BooksTableReferences
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
+
+  static MultiTypedResultKey<$LoansTable, List<Loan>> _loansRefsTable(
+          _$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.loans,
+          aliasName: $_aliasNameGenerator(db.books.id, db.loans.bookId));
+
+  $$LoansTableProcessedTableManager get loansRefs {
+    final manager = $$LoansTableTableManager($_db, $_db.loans)
+        .filter((f) => f.bookId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_loansRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
 }
 
 class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
@@ -8957,6 +9022,27 @@ class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
             $$SharedBooksTableFilterComposer(
               $db: $db,
               $table: $db.sharedBooks,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> loansRefs(
+      Expression<bool> Function($$LoansTableFilterComposer f) f) {
+    final $$LoansTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.loans,
+        getReferencedColumn: (t) => t.bookId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LoansTableFilterComposer(
+              $db: $db,
+              $table: $db.loans,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -9169,6 +9255,27 @@ class $$BooksTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> loansRefs<T extends Object>(
+      Expression<T> Function($$LoansTableAnnotationComposer a) f) {
+    final $$LoansTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.loans,
+        getReferencedColumn: (t) => t.bookId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LoansTableAnnotationComposer(
+              $db: $db,
+              $table: $db.loans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$BooksTableTableManager extends RootTableManager<
@@ -9183,7 +9290,10 @@ class $$BooksTableTableManager extends RootTableManager<
     (Book, $$BooksTableReferences),
     Book,
     PrefetchHooks Function(
-        {bool ownerUserId, bool bookReviewsRefs, bool sharedBooksRefs})> {
+        {bool ownerUserId,
+        bool bookReviewsRefs,
+        bool sharedBooksRefs,
+        bool loansRefs})> {
   $$BooksTableTableManager(_$AppDatabase db, $BooksTable table)
       : super(TableManagerState(
           db: db,
@@ -9281,12 +9391,14 @@ class $$BooksTableTableManager extends RootTableManager<
           prefetchHooksCallback: (
               {ownerUserId = false,
               bookReviewsRefs = false,
-              sharedBooksRefs = false}) {
+              sharedBooksRefs = false,
+              loansRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
                 if (bookReviewsRefs) db.bookReviews,
-                if (sharedBooksRefs) db.sharedBooks
+                if (sharedBooksRefs) db.sharedBooks,
+                if (loansRefs) db.loans
               ],
               addJoins: <
                   T extends TableManagerState<
@@ -9339,6 +9451,17 @@ class $$BooksTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem: (item,
                                 referencedItems) =>
                             referencedItems.where((e) => e.bookId == item.id),
+                        typedResults: items),
+                  if (loansRefs)
+                    await $_getPrefetchedData<Book, $BooksTable, Loan>(
+                        currentTable: table,
+                        referencedTable:
+                            $$BooksTableReferences._loansRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$BooksTableReferences(db, table, p0).loansRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.bookId == item.id),
                         typedResults: items)
                 ];
               },
@@ -9359,7 +9482,10 @@ typedef $$BooksTableProcessedTableManager = ProcessedTableManager<
     (Book, $$BooksTableReferences),
     Book,
     PrefetchHooks Function(
-        {bool ownerUserId, bool bookReviewsRefs, bool sharedBooksRefs})>;
+        {bool ownerUserId,
+        bool bookReviewsRefs,
+        bool sharedBooksRefs,
+        bool loansRefs})>;
 typedef $$BookReviewsTableCreateCompanionBuilder = BookReviewsCompanion
     Function({
   Value<int> id,
@@ -12299,7 +12425,8 @@ typedef $$LoansTableCreateCompanionBuilder = LoansCompanion Function({
   Value<int> id,
   required String uuid,
   Value<String?> remoteId,
-  required int sharedBookId,
+  Value<int?> sharedBookId,
+  Value<int?> bookId,
   Value<int?> borrowerUserId,
   required int lenderUserId,
   Value<String?> externalBorrowerName,
@@ -12321,7 +12448,8 @@ typedef $$LoansTableUpdateCompanionBuilder = LoansCompanion Function({
   Value<int> id,
   Value<String> uuid,
   Value<String?> remoteId,
-  Value<int> sharedBookId,
+  Value<int?> sharedBookId,
+  Value<int?> bookId,
   Value<int?> borrowerUserId,
   Value<int> lenderUserId,
   Value<String?> externalBorrowerName,
@@ -12348,12 +12476,26 @@ final class $$LoansTableReferences
       db.sharedBooks.createAlias(
           $_aliasNameGenerator(db.loans.sharedBookId, db.sharedBooks.id));
 
-  $$SharedBooksTableProcessedTableManager get sharedBookId {
-    final $_column = $_itemColumn<int>('shared_book_id')!;
-
+  $$SharedBooksTableProcessedTableManager? get sharedBookId {
+    final $_column = $_itemColumn<int>('shared_book_id');
+    if ($_column == null) return null;
     final manager = $$SharedBooksTableTableManager($_db, $_db.sharedBooks)
         .filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_sharedBookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $BooksTable _bookIdTable(_$AppDatabase db) =>
+      db.books.createAlias($_aliasNameGenerator(db.loans.bookId, db.books.id));
+
+  $$BooksTableProcessedTableManager? get bookId {
+    final $_column = $_itemColumn<int>('book_id');
+    if ($_column == null) return null;
+    final manager = $$BooksTableTableManager($_db, $_db.books)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: [item]));
@@ -12498,6 +12640,26 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
             $$SharedBooksTableFilterComposer(
               $db: $db,
               $table: $db.sharedBooks,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$BooksTableFilterComposer get bookId {
+    final $$BooksTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.bookId,
+        referencedTable: $db.books,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BooksTableFilterComposer(
+              $db: $db,
+              $table: $db.books,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -12673,6 +12835,26 @@ class $$LoansTableOrderingComposer
     return composer;
   }
 
+  $$BooksTableOrderingComposer get bookId {
+    final $$BooksTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.bookId,
+        referencedTable: $db.books,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BooksTableOrderingComposer(
+              $db: $db,
+              $table: $db.books,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
   $$LocalUsersTableOrderingComposer get borrowerUserId {
     final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -12794,6 +12976,26 @@ class $$LoansTableAnnotationComposer
     return composer;
   }
 
+  $$BooksTableAnnotationComposer get bookId {
+    final $$BooksTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.bookId,
+        referencedTable: $db.books,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BooksTableAnnotationComposer(
+              $db: $db,
+              $table: $db.books,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
   $$LocalUsersTableAnnotationComposer get borrowerUserId {
     final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
         composer: this,
@@ -12892,6 +13094,7 @@ class $$LoansTableTableManager extends RootTableManager<
     Loan,
     PrefetchHooks Function(
         {bool sharedBookId,
+        bool bookId,
         bool borrowerUserId,
         bool lenderUserId,
         bool notificationLoans,
@@ -12910,7 +13113,8 @@ class $$LoansTableTableManager extends RootTableManager<
             Value<int> id = const Value.absent(),
             Value<String> uuid = const Value.absent(),
             Value<String?> remoteId = const Value.absent(),
-            Value<int> sharedBookId = const Value.absent(),
+            Value<int?> sharedBookId = const Value.absent(),
+            Value<int?> bookId = const Value.absent(),
             Value<int?> borrowerUserId = const Value.absent(),
             Value<int> lenderUserId = const Value.absent(),
             Value<String?> externalBorrowerName = const Value.absent(),
@@ -12933,6 +13137,7 @@ class $$LoansTableTableManager extends RootTableManager<
             uuid: uuid,
             remoteId: remoteId,
             sharedBookId: sharedBookId,
+            bookId: bookId,
             borrowerUserId: borrowerUserId,
             lenderUserId: lenderUserId,
             externalBorrowerName: externalBorrowerName,
@@ -12954,7 +13159,8 @@ class $$LoansTableTableManager extends RootTableManager<
             Value<int> id = const Value.absent(),
             required String uuid,
             Value<String?> remoteId = const Value.absent(),
-            required int sharedBookId,
+            Value<int?> sharedBookId = const Value.absent(),
+            Value<int?> bookId = const Value.absent(),
             Value<int?> borrowerUserId = const Value.absent(),
             required int lenderUserId,
             Value<String?> externalBorrowerName = const Value.absent(),
@@ -12977,6 +13183,7 @@ class $$LoansTableTableManager extends RootTableManager<
             uuid: uuid,
             remoteId: remoteId,
             sharedBookId: sharedBookId,
+            bookId: bookId,
             borrowerUserId: borrowerUserId,
             lenderUserId: lenderUserId,
             externalBorrowerName: externalBorrowerName,
@@ -13000,6 +13207,7 @@ class $$LoansTableTableManager extends RootTableManager<
               .toList(),
           prefetchHooksCallback: (
               {sharedBookId = false,
+              bookId = false,
               borrowerUserId = false,
               lenderUserId = false,
               notificationLoans = false,
@@ -13031,6 +13239,15 @@ class $$LoansTableTableManager extends RootTableManager<
                         $$LoansTableReferences._sharedBookIdTable(db),
                     referencedColumn:
                         $$LoansTableReferences._sharedBookIdTable(db).id,
+                  ) as T;
+                }
+                if (bookId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.bookId,
+                    referencedTable: $$LoansTableReferences._bookIdTable(db),
+                    referencedColumn:
+                        $$LoansTableReferences._bookIdTable(db).id,
                   ) as T;
                 }
                 if (borrowerUserId) {
@@ -13104,6 +13321,7 @@ typedef $$LoansTableProcessedTableManager = ProcessedTableManager<
     Loan,
     PrefetchHooks Function(
         {bool sharedBookId,
+        bool bookId,
         bool borrowerUserId,
         bool lenderUserId,
         bool notificationLoans,

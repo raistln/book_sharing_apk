@@ -5,8 +5,6 @@ import 'package:intl/intl.dart';
 import '../../../data/local/database.dart'; // For LocalUser, Loan classes if distinct
 import '../../../data/local/group_dao.dart';
 import '../../../providers/book_providers.dart';
-import '../../../services/loan_controller.dart';
-import '../../utils/app_colors.dart'; // Adjust import if needed
 
 class LoanConfirmationCard extends ConsumerWidget {
   const LoanConfirmationCard({
@@ -26,7 +24,6 @@ class LoanConfirmationCard extends ConsumerWidget {
     final loanState = ref.watch(loanControllerProvider);
 
     final isOwner = loan.lenderUserId == activeUser.id;
-    final isBorrower = loan.borrowerUserId == activeUser.id;
     final isManual = loan.borrowerUserId == null; // Manual loans have no borrowerUser
 
     // Determine state
@@ -90,16 +87,16 @@ class LoanConfirmationCard extends ConsumerWidget {
     if (iHaveConfirmed && !otherHasConfirmed) {
       // I confirmed, waiting for other
       // Check for force confirm eligibility (7 days)
-      final daysSinceMyConfirm = DateTime.now().difference(myConfirmation!).inDays;
+      final daysSinceMyConfirm = DateTime.now().difference(myConfirmation).inDays;
       final canForce = isOwner && daysSinceMyConfirm >= 7;
 
       return _buildActionCard(
         context,
         theme,
-        color: theme.colorScheme.surfaceVariant,
+        color: theme.colorScheme.surfaceContainerHighest,
         icon: Icons.hourglass_top,
         title: 'Esperando a $otherName',
-        subtitle: 'Ya has confirmado la devolución el ${DateFormat.MMMd().format(myConfirmation!)}.',
+        subtitle: 'Ya has confirmado la devolución el ${DateFormat.MMMd().format(myConfirmation)}.',
         actions: [
           if (canForce)
              FilledButton.icon(

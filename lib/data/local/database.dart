@@ -243,7 +243,11 @@ class Loans extends Table {
   TextColumn get remoteId => text().nullable()();
 
   IntColumn get sharedBookId => integer()
+      .nullable()
       .references(SharedBooks, #id, onDelete: KeyAction.cascade)();
+  
+  // Reference to Book for manual loans (when sharedBookId is null)
+  IntColumn get bookId => integer().nullable().references(Books, #id, onDelete: KeyAction.cascade)();
 
   @ReferenceName('loansBorrower')
   IntColumn get borrowerUserId => integer().nullable().references(LocalUsers, #id)();
@@ -318,7 +322,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -402,6 +406,20 @@ class AppDatabase extends _$AppDatabase {
               // Column might already exist, ignore error
               developer.log('Column borrowerUserId already exists or could not be added: $e');
             }
+          }
+
+          if (from < 13) {
+            // Migration to v13: Allow manual loans without sharedBookId
+            // 1. Add bookId column to Loans
+            // 2. Make sharedBookId nullable (Requires table recreation in SQLite)
+            
+            // Drop dependent tables first to avoid FK violations during recreation
+            // (We will recreate them empty or we accept data loss as per user instruction for reset)
+            await customStatement('DROP TABLE IF EXISTS loan_notifications');
+            await customStatement('DROP TABLE IF EXISTS loans');
+            
+            await m.createTable(loans);
+            await m.createTable(loanNotifications); // Recreate dependent table
           }
         },
       );

@@ -4,7 +4,9 @@ enum InAppNotificationType {
   loanRejected('loan_rejected'),
   loanCancelled('loan_cancelled'),
   loanReturned('borrower_returned'),
-  loanExpired('loan_expired');
+  loanExpired('loan_expired'),
+  returnReminderSent('return_reminder'),
+  returnPendingConfirmation('return_pending');
 
   const InAppNotificationType(this.value);
 

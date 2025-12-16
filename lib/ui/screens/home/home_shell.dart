@@ -6,16 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/local/database.dart';
+import '../../../providers/book_providers.dart';
 import '../../../providers/auth_providers.dart';
 import '../../../services/notification_service.dart';
 import '../../../providers/notification_providers.dart';
 import '../../widgets/sync_banner.dart';
 import '../auth/pin_setup_screen.dart';
 import 'tabs/community_tab.dart';
-import 'tabs/discovery_tab.dart';
 import 'tabs/settings_tab.dart';
-import 'tabs/stats_tab.dart';
 import 'tabs/library_tab.dart';
+import 'tabs/loans_tab.dart';
 import '../../widgets/notifications/notification_bell.dart';
 import '../../widgets/notifications/notifications_sheet.dart';
 import '../../widgets/library/book_form_sheet.dart';
@@ -31,13 +31,26 @@ final _currentTabProvider = StateProvider<int>((ref) => 0);
 
 
 
-class HomeShell extends ConsumerWidget {
+class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
   static const routeName = '/home';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends ConsumerState<HomeShell> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(loanRepositoryProvider).deleteOldRejectedCancelledLoans();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     ref.listen<NotificationIntent?>(notificationIntentProvider, (previous, next) {
       if (next == null) {
         return;
@@ -65,9 +78,8 @@ class HomeShell extends ConsumerWidget {
               index: currentIndex,
               children: [
                 LibraryTab(onOpenForm: ({Book? book}) => _showBookFormSheet(context, ref, book: book)),
+                const LoansTab(),
                 const CommunityTab(),
-                const DiscoverTab(),
-                const StatsTab(),
                 const SettingsTab(),
               ],
             ),
@@ -83,19 +95,14 @@ class HomeShell extends ConsumerWidget {
             label: 'Biblioteca',
           ),
           NavigationDestination(
+            icon: Icon(Icons.swap_horiz_outlined),
+            selectedIcon: Icon(Icons.swap_horiz),
+            label: 'Préstamos',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.groups_outlined),
             selectedIcon: Icon(Icons.groups),
-            label: 'Comunidad',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.explore_outlined),
-            selectedIcon: Icon(Icons.explore),
-            label: 'Descubrir',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.insights_outlined),
-            selectedIcon: Icon(Icons.insights),
-            label: 'Estadísticas',
+            label: 'Grupos',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
@@ -119,6 +126,9 @@ class HomeShell extends ConsumerWidget {
         label: const Text('Añadir libro'),
       );
     }
+    
+    // Loans tab (index 1) has its own FAB in LoansTab scaffold
+    if (currentIndex == 1) return null;
 
     if (kDebugMode) {
       return FloatingActionButton.extended(

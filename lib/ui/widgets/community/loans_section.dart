@@ -249,7 +249,7 @@ class LoanCard extends StatelessWidget {
   List<Widget> _buildActionButtons(bool isBorrower, bool isOwner, bool isManualLoan, String status) {
     final buttons = <Widget>[];
 
-    if (isBorrower && status == 'pending') {
+    if (isBorrower && status == 'requested') {
       buttons.add(
         OutlinedButton.icon(
           onPressed: loanState.isLoading ? null : () => onAction(LoanAction.cancel),
@@ -259,7 +259,7 @@ class LoanCard extends StatelessWidget {
       );
     }
 
-    if (isOwner && status == 'pending') {
+    if (isOwner && status == 'requested') {
       buttons.addAll([
         FilledButton.icon(
           onPressed: loanState.isLoading ? null : () => onAction(LoanAction.accept),

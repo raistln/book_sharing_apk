@@ -549,6 +549,108 @@ class LoanController extends StateNotifier<LoanActionState> {
     });
   }
 
+  Future<Loan> createManualLoanDirect({
+    required Book book,
+    required LocalUser owner,
+    required String borrowerName,
+    required DateTime dueDate,
+    String? borrowerContact,
+  }) async {
+    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    try {
+      final result = await _loanRepository.createManualLoanDirect(
+        book: book,
+        owner: owner,
+        borrowerName: borrowerName,
+        dueDate: dueDate,
+        borrowerContact: borrowerContact,
+      );
+      // Evento crítico: sincronizar inmediatamente
+      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.loanCreated);
+      state = state.copyWith(
+        isLoading: false,
+        lastSuccess: () => 'Préstamo manual registrado.',
+      );
+      return result;
+    } catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        lastError: () => error.toString(),
+      );
+      rethrow;
+    }
+  }
+
+  Future<Loan> ownerForceConfirmReturn({
+    required Loan loan,
+    required LocalUser owner,
+  }) async {
+    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    try {
+      final result = await _loanRepository.ownerForceConfirmReturn(
+        loan: loan,
+        owner: owner,
+      );
+      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.loanReturned);
+      state = state.copyWith(
+        isLoading: false,
+        lastSuccess: () => 'Devolución confirmada.',
+      );
+      await _cancelLoanNotifications(result);
+      // No need to notify borrower as this is likely for manual loans or unresponsive borrowers
+      return result;
+    } catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        lastError: () => error.toString(),
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> sendReturnReminder({
+    required Loan loan,
+    required LocalUser actor,
+  }) async {
+    // Only for non-manual loans where I'm waiting for the other person
+    if (loan.borrowerUserId == null) return;
+    
+    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    try {
+      final targetUserId = actor.id == loan.lenderUserId 
+          ? loan.borrowerUserId! 
+          : loan.lenderUserId;
+
+      await _runNotificationTask(() async {
+        final message = await _messageWithBook(
+          loan: loan,
+          fallback: 'Recordatorio para confirmar devolución.',
+          withTitle: (title) => 'Recordatorio: Por favor confirma la devolución de "$title".',
+        );
+
+        await _notificationRepository.createLoanNotification(
+          type: InAppNotificationType.returnReminderSent,
+          loan: loan,
+          targetUserId: targetUserId,
+          actorUserId: actor.id,
+          title: 'Confirmación pendiente',
+          message: message,
+        );
+      });
+
+      state = state.copyWith(
+        isLoading: false,
+        lastSuccess: () => 'Recordatorio enviado.',
+      );
+    } catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        lastError: () => error.toString(),
+      );
+      rethrow;
+    }
+  }
+
   Future<String> _messageWithBook({
     required Loan loan,
     SharedBook? sharedBook,
@@ -556,7 +658,7 @@ class LoanController extends StateNotifier<LoanActionState> {
     required String Function(String title) withTitle,
   }) async {
     final bookTitle = await _resolveBookTitle(
-      sharedBookId: loan.sharedBookId,
+      loan: loan,
       sharedBook: sharedBook,
     );
 
@@ -567,16 +669,22 @@ class LoanController extends StateNotifier<LoanActionState> {
   }
 
   Future<String?> _resolveBookTitle({
-    required int sharedBookId,
+    required Loan loan,
     SharedBook? sharedBook,
   }) async {
-    final localShared = sharedBook ?? await _loanRepository.findSharedBookById(sharedBookId);
-    if (localShared == null) {
-      return null;
+    if (loan.bookId != null) {
+      final book = await _loanRepository.findBookById(loan.bookId!);
+      return book?.title;
     }
-
-    final book = await _loanRepository.findBookById(localShared.bookId);
-    return book?.title;
+    
+    if (loan.sharedBookId != null) {
+      final localShared = sharedBook ?? await _loanRepository.findSharedBookById(loan.sharedBookId!);
+      if (localShared != null) {
+        final book = await _loanRepository.findBookById(localShared.bookId);
+        return book?.title;
+      }
+    }
+    return null;
   }
 
   Future<void> _runNotificationTask(Future<void> Function() task) async {

@@ -9,7 +9,7 @@ import '../../../../ui/widgets/library/cover_refresh_handler.dart';
 import '../../../../ui/widgets/library/export_handler.dart';
 import '../../../../ui/widgets/library/library_filters.dart';
 import '../../../../ui/widgets/library/library_search_bar.dart';
-import '../../../../ui/widgets/library/manual_loan_dialog.dart';
+import '../../../../ui/widgets/loans/manual_loan_sheet.dart';
 import '../../../../ui/widgets/library/read_status_filter.dart';
 import '../../../../ui/widgets/library/review_dialog.dart';
 
@@ -131,7 +131,12 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                           onBookTap: (book) => widget.onOpenForm(book: book),
                           onAddReview: (book) => showAddReviewDialog(context, ref, book),
                           onViewReviews: (book) => showReviewsListDialog(context, ref, book),
-                          onCreateManualLoan: (book) => showManualLoanDialog(context, ref, book),
+                          onCreateManualLoan: (book) => showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            useSafeArea: true,
+                            builder: (context) => ManualLoanSheet(initialBook: book),
+                          ),
                         ),
                 ),
               ],

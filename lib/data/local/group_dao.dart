@@ -502,7 +502,11 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
     final owners = alias(localUsers, 'allOwners');
     final query = select(loans).join([
       leftOuterJoin(sharedBooks, sharedBooks.id.equalsExp(loans.sharedBookId)),
-      leftOuterJoin(books, books.id.equalsExp(sharedBooks.bookId)),
+      // Join book either via sharedBook or directly via loans.bookId
+      leftOuterJoin(books, 
+        (sharedBooks.id.isNotNull() & books.id.equalsExp(sharedBooks.bookId)) |
+        (sharedBooks.id.isNull() & books.id.equalsExp(loans.bookId))
+      ),
       leftOuterJoin(borrowers, borrowers.id.equalsExp(loans.borrowerUserId)),
       leftOuterJoin(owners, owners.id.equalsExp(loans.lenderUserId)),
     ])
@@ -524,7 +528,10 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
     final owners = alias(localUsers, 'allOwners');
     final query = select(loans).join([
       leftOuterJoin(sharedBooks, sharedBooks.id.equalsExp(loans.sharedBookId)),
-      leftOuterJoin(books, books.id.equalsExp(sharedBooks.bookId)),
+      leftOuterJoin(books, 
+        (sharedBooks.id.isNotNull() & books.id.equalsExp(sharedBooks.bookId)) |
+        (sharedBooks.id.isNull() & books.id.equalsExp(loans.bookId))
+      ),
       leftOuterJoin(borrowers, borrowers.id.equalsExp(loans.borrowerUserId)),
       leftOuterJoin(owners, owners.id.equalsExp(loans.lenderUserId)),
     ])
@@ -540,6 +547,34 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
         owner: row.readTableOrNull(owners),
       ),
     ).get();
+  }
+
+  Stream<List<LoanDetail>> watchAllLoanDetailsForUser(int userId) {
+    final borrowers = alias(localUsers, 'allBorrowersStream');
+    final owners = alias(localUsers, 'allOwnersStream');
+    final query = select(loans).join([
+      leftOuterJoin(sharedBooks, sharedBooks.id.equalsExp(loans.sharedBookId)),
+     leftOuterJoin(books, 
+        (sharedBooks.id.isNotNull() & books.id.equalsExp(sharedBooks.bookId)) |
+        (sharedBooks.id.isNull() & books.id.equalsExp(loans.bookId))
+      ),
+      leftOuterJoin(borrowers, borrowers.id.equalsExp(loans.borrowerUserId)),
+      leftOuterJoin(owners, owners.id.equalsExp(loans.lenderUserId)),
+    ])
+      ..where((loans.isDeleted.equals(false) | loans.isDeleted.isNull()) &
+          (loans.lenderUserId.equals(userId) | loans.borrowerUserId.equals(userId)));
+
+    return query.watch().map(
+      (rows) => rows.map(
+        (row) => LoanDetail(
+          loan: row.readTable(loans),
+          sharedBook: row.readTableOrNull(sharedBooks),
+          book: row.readTableOrNull(books),
+          borrower: row.readTableOrNull(borrowers),
+          owner: row.readTableOrNull(owners),
+        ),
+      ).toList(),
+    );
   }
 
   Future<int> insertLoan(LoansCompanion entry) => into(loans).insert(entry);
@@ -589,5 +624,13 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
 
   Future<List<Loan>> getDirtyLoans() {
     return (select(loans)..where((tbl) => tbl.isDirty.equals(true))).get();
+  }
+
+  Future<int> deleteOldLoans(DateTime cutoffDate) {
+    return (delete(loans)
+      ..where((tbl) => 
+        (tbl.status.equals('rejected') | tbl.status.equals('cancelled')) &
+        tbl.updatedAt.isSmallerThanValue(cutoffDate)
+      )).go();
   }
 }

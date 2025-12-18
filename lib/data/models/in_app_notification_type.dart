@@ -5,12 +5,18 @@ enum InAppNotificationType {
   loanCancelled('loan_cancelled'),
   loanReturned('borrower_returned'),
   loanExpired('loan_expired'),
+  loanDueSoon('loan_due_soon'),
+  groupMemberJoined('group_member_joined'),
+  groupMemberLeft('group_member_left'),
+  groupUpdated('group_updated'),
+  groupDeleted('group_deleted'),
   returnReminderSent('return_reminder'),
   returnPendingConfirmation('return_pending');
 
   const InAppNotificationType(this.value);
 
   final String value;
+// ... (rest of the class)
 
   static InAppNotificationType? fromValue(String value) {
     final normalized = _normalize(value);

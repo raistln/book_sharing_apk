@@ -76,6 +76,46 @@ class NotificationVisuals {
         icon = Icons.schedule_outlined;
         defaultTitle = 'Préstamo vencido';
         break;
+      case InAppNotificationType.loanDueSoon:
+        background = scheme.tertiaryContainer;
+        iconColor = scheme.onTertiaryContainer;
+        textColor = scheme.onTertiaryContainer;
+        secondaryTextColor = scheme.onTertiaryContainer.withValues(alpha: 0.8);
+        icon = Icons.notification_important_outlined;
+        defaultTitle = 'Préstamo por vencer';
+        break;
+      case InAppNotificationType.groupMemberJoined:
+        background = scheme.primaryContainer;
+        iconColor = scheme.onPrimaryContainer;
+        textColor = scheme.onPrimaryContainer;
+        secondaryTextColor = scheme.onPrimaryContainer.withValues(alpha: 0.8);
+        icon = Icons.person_add_outlined;
+        defaultTitle = 'Nuevo miembro en el grupo';
+        break;
+      case InAppNotificationType.groupMemberLeft:
+        background = scheme.surfaceContainerHigh;
+        iconColor = scheme.onSurface;
+        textColor = scheme.onSurface;
+        secondaryTextColor = scheme.onSurfaceVariant;
+        icon = Icons.person_remove_outlined;
+        defaultTitle = 'Miembro dejó el grupo';
+        break;
+      case InAppNotificationType.groupUpdated:
+        background = scheme.secondaryContainer;
+        iconColor = scheme.onSecondaryContainer;
+        textColor = scheme.onSecondaryContainer;
+        secondaryTextColor = scheme.onSecondaryContainer.withValues(alpha: 0.8);
+        icon = Icons.info_outline;
+        defaultTitle = 'Grupo actualizado';
+        break;
+      case InAppNotificationType.groupDeleted:
+        background = scheme.errorContainer;
+        iconColor = scheme.onErrorContainer;
+        textColor = scheme.onErrorContainer;
+        secondaryTextColor = scheme.onErrorContainer.withValues(alpha: 0.8);
+        icon = Icons.delete_forever_outlined;
+        defaultTitle = 'Grupo eliminado';
+        break;
       case InAppNotificationType.loanRequested:
       default:
         background = scheme.surfaceContainerHighest;

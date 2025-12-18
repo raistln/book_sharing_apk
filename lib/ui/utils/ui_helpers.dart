@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/info_pop.dart';
 
 /// Helper functions for UI improvements
 class UIHelpers {
@@ -84,14 +85,7 @@ class UIHelpers {
   }) {
     if (!context.mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(getFriendlyErrorMessage(error)),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        duration: duration,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    InfoPop.error(context, getFriendlyErrorMessage(error));
   }
 
   /// Shows a success snackbar
@@ -102,13 +96,6 @@ class UIHelpers {
   }) {
     if (!context.mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        duration: duration,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    InfoPop.success(context, message);
   }
 }

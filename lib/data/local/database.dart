@@ -281,26 +281,6 @@ class Loans extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
-class LoanNotifications extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
-  TextColumn get remoteId => text().nullable()();
-
-  IntColumn get loanId => integer().references(Loans, #id, onDelete: KeyAction.cascade)();
-  IntColumn get userId => integer().references(LocalUsers, #id, onDelete: KeyAction.cascade)();
-
-  TextColumn get type => text().withLength(min: 1, max: 50)(); // loan_requested, loan_approved, etc.
-  TextColumn get title => text()();
-  TextColumn get message => text()();
-  TextColumn get status => text().withDefault(const Constant('unread'))(); // unread, read, dismissed
-  
-  DateTimeColumn get readAt => dateTime().nullable()();
-  
-  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
-  DateTimeColumn get syncedAt => dateTime().nullable()();
-  
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
-}
 
 @DriftDatabase(
   tables: [
@@ -313,7 +293,6 @@ class LoanNotifications extends Table {
     GroupInvitations,
     Loans,
     InAppNotifications,
-    LoanNotifications,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -389,7 +368,7 @@ class AppDatabase extends _$AppDatabase {
           }
 
           if (from < 10) {
-            await m.createTable(loanNotifications);
+            // Already handled or no longer needed as LoanNotifications is dropped
           }
 
           if (from < 11) {
@@ -414,12 +393,9 @@ class AppDatabase extends _$AppDatabase {
             // 2. Make sharedBookId nullable (Requires table recreation in SQLite)
             
             // Drop dependent tables first to avoid FK violations during recreation
-            // (We will recreate them empty or we accept data loss as per user instruction for reset)
-            await customStatement('DROP TABLE IF EXISTS loan_notifications');
             await customStatement('DROP TABLE IF EXISTS loans');
             
             await m.createTable(loans);
-            await m.createTable(loanNotifications); // Recreate dependent table
           }
         },
       );

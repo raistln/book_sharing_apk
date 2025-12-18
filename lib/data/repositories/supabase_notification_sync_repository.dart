@@ -91,7 +91,7 @@ class SupabaseNotificationSyncRepository {
           title: Value(remote.title),
           message: Value(remote.message),
           status: Value(remote.status),
-          isDeleted: const Value(false), // loan_notifications doesn't have is_deleted
+          isDeleted: Value(remote.isDeleted),
           isDirty: const Value(false),
           syncedAt: Value(syncTime),
           createdAt: Value(remote.createdAt),
@@ -117,6 +117,7 @@ class SupabaseNotificationSyncRepository {
             title: Value(remote.title),
             message: Value(remote.message),
             status: Value(remote.status),
+            isDeleted: Value(remote.isDeleted),
             isDirty: const Value(false),
             syncedAt: Value(syncTime),
             createdAt: Value(remote.createdAt),
@@ -169,12 +170,13 @@ class SupabaseNotificationSyncRepository {
 
         final input = SupabaseNotificationUpsert(
           id: local.uuid,
-          loanId: loanRemoteId ?? '',
+          loanId: loanRemoteId,
           userId: targetUserRemoteId,
           type: convertedType,
           title: local.title ?? '',
           message: local.message ?? '',
           status: local.status,
+          isDeleted: local.isDeleted,
           createdAt: local.createdAt,
         );
 
@@ -197,7 +199,7 @@ class SupabaseNotificationSyncRepository {
                 ? Value(resolvedLoan.id)
                 : const Value<int?>.absent(),
             status: Value(remote.status),
-            isDeleted: const Value(false), // loan_notifications doesn't have is_deleted
+            isDeleted: Value(remote.isDeleted),
             isDirty: const Value(false),
             syncedAt: Value(syncTime),
           ),

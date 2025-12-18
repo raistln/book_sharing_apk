@@ -63,6 +63,58 @@ class LoanController extends StateNotifier<LoanActionState> {
     state = state.copyWith(lastSuccess: () => null);
   }
 
+  /// Checks for active loans that are upcoming or expired and creates in-app notifications.
+  Future<void> checkUpcomingLoans() async {
+    try {
+      final loans = await _loanRepository.getAllLoanDetails();
+      final now = DateTime.now();
+      final sevenDaysFromNow = now.add(const Duration(days: 7));
+
+      for (final detail in loans) {
+        final loan = detail.loan;
+        if (loan.status != 'active' || loan.dueDate == null) continue;
+
+        final dueDate = loan.dueDate!;
+        
+        // Check for expiration
+        if (dueDate.isBefore(now)) {
+          // If not already marked as expired in DB, we could trigger expireLoan
+          // but for notification purposes, we just ensure it's notified.
+          await _notifyLoanExpired(loan);
+          continue;
+        }
+
+        // Check for "Due Soon" (7 days)
+        // We trigger this if the due date is within the next 7 days 
+        // and we haven't notified for this specific loan yet.
+        // For simplicity, we can check if a notification of type loan_due_soon exists for this loan.
+        if (dueDate.isBefore(sevenDaysFromNow)) {
+          await _notifyLoanDueSoon(loan);
+        }
+      }
+    } catch (e, stack) {
+      developer.log('Error checking upcoming loans: $e', name: 'LoanController', error: e, stackTrace: stack);
+    }
+  }
+
+  Future<void> _notifyLoanDueSoon(Loan loan) async {
+    await _runNotificationTask(() async {
+      final message = await _messageWithBook(
+        loan: loan,
+        fallback: 'Tu préstamo vence en menos de una semana.',
+        withTitle: (title) => 'El préstamo de "$title" vence pronto.',
+      );
+
+      await _notificationRepository.createLoanNotification(
+        type: InAppNotificationType.loanDueSoon,
+        loan: loan,
+        targetUserId: loan.borrowerUserId ?? loan.lenderUserId,
+        title: 'Préstamo por vencer',
+        message: message,
+      );
+    });
+  }
+
   Future<Loan> createManualLoan({
     required SharedBook sharedBook,
     required LocalUser owner,

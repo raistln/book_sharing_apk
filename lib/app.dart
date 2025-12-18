@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/auth_providers.dart';
+import 'providers/book_providers.dart';
 import 'providers/notification_providers.dart';
 import 'providers/sync_providers.dart';
 import 'providers/theme_providers.dart';
@@ -52,7 +53,11 @@ class _BookSharingAppState extends ConsumerState<BookSharingApp> with WidgetsBin
       if (authState.status == AuthStatus.unlocked) {
         if (kDebugMode) debugPrint('[AppLifecycle] App resumed & unlocked -> Syncing & Resuming AutoSync');
         final coordinator = ref.read(unifiedSyncCoordinatorProvider);
-        coordinator.syncNow(); // Sync inmediata al volver
+        coordinator.syncNow(); 
+        
+        // Check for upcoming or expired loans and notify
+        ref.read(loanControllerProvider.notifier).checkUpcomingLoans();
+
         if (coordinator.isTimerSuspended) {
           coordinator.resumeAutoSync();
         }

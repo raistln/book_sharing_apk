@@ -6,10 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/local/database.dart';
 import '../../../../providers/book_providers.dart';
+import '../../../../services/group_push_controller.dart';
+import '../../../../services/loan_controller.dart';
 import '../../../widgets/empty_state.dart';
-import '../../../widgets/loan_feedback_banner.dart';
 import '../../../widgets/community/group_card.dart';
 import '../../../dialogs/group_form_dialog.dart';
+import '../../../widgets/info_pop.dart';
 
 class CommunityTab extends ConsumerWidget {
   const CommunityTab({super.key});
@@ -17,7 +19,7 @@ class CommunityTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groupsAsync = ref.watch(groupListProvider);
-    final loanActionState = ref.watch(loanControllerProvider);
+    // final loanActionState = ref.watch(loanControllerProvider); // No utilizado actualmente
     final groupActionState = ref.watch(groupPushControllerProvider);
     final activeUser = ref.watch(activeUserProvider).value;
     final isGroupBusy = groupActionState.isLoading;
@@ -25,18 +27,24 @@ class CommunityTab extends ConsumerWidget {
     return SafeArea(
       child: Column(
         children: [
-          if (groupActionState.lastError != null)
-            LoanFeedbackBanner(
-              message: groupActionState.lastError!,
-              isError: true,
-              onDismiss: () => ref.read(groupPushControllerProvider.notifier).dismissError(),
-            )
-          else if (groupActionState.lastSuccess != null)
-            LoanFeedbackBanner(
-              message: groupActionState.lastSuccess!,
-              isError: false,
-              onDismiss: () => ref.read(groupPushControllerProvider.notifier).dismissSuccess(),
-            ),
+          // Listen for group action feedback
+          Consumer(builder: (context, ref, child) {
+            ref.listen<GroupActionState>(groupPushControllerProvider, (previous, next) {
+              if (next.lastError != null && next.lastError != previous?.lastError) {
+                InfoPop.error(context, next.lastError!);
+              } else if (next.lastSuccess != null && next.lastSuccess != previous?.lastSuccess) {
+                InfoPop.success(context, next.lastSuccess!);
+              }
+            });
+            ref.listen<LoanActionState>(loanControllerProvider, (previous, next) {
+              if (next.lastError != null && next.lastError != previous?.lastError) {
+                InfoPop.error(context, next.lastError!);
+              } else if (next.lastSuccess != null && next.lastSuccess != previous?.lastSuccess) {
+                InfoPop.success(context, next.lastSuccess!);
+              }
+            });
+            return const SizedBox.shrink();
+          }),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
             child: Wrap(
@@ -67,19 +75,8 @@ class CommunityTab extends ConsumerWidget {
               ],
             ),
           ),
-          if (loanActionState.lastError != null)
-            LoanFeedbackBanner(
-              message: loanActionState.lastError!,
-              isError: true,
-              onDismiss: () => ref.read(loanControllerProvider.notifier).dismissError(),
-            )
-          else if (loanActionState.lastSuccess != null)
-            LoanFeedbackBanner(
-              message: loanActionState.lastSuccess!,
-              isError: false,
-              onDismiss: () =>
-                  ref.read(loanControllerProvider.notifier).dismissSuccess(),
-            ),
+          if (isGroupBusy)
+            const LinearProgressIndicator(),
           Expanded(
             child: groupsAsync.when(
               data: (groups) {
@@ -255,13 +252,11 @@ void _showFeedbackSnackBar({
   required String message,
   required bool isError,
 }) {
-  final theme = Theme.of(context);
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      backgroundColor: isError ? theme.colorScheme.error : theme.colorScheme.primary,
-    ),
-  );
+  if (isError) {
+    InfoPop.error(context, message);
+  } else {
+    InfoPop.success(context, message);
+  }
 }
 
 Future<GroupFormResult?> _showGroupFormDialog(BuildContext context) {
@@ -378,9 +373,7 @@ class _JoinGroupByCodeDialogState extends State<_JoinGroupByCodeDialog> {
       await widget.onJoin(code);
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(content: Text('¡Te has unido al grupo exitosamente!')),
-        );
+        InfoPop.success(context, '¡Te has unido al grupo exitosamente!');
       }
     } catch (e) {
       if (mounted) {

@@ -87,8 +87,6 @@ Future<void> _pumpHarness(
 }
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
   group('Coach mark sequences', () {
     late FakeCoachMarksService service;
     late ProviderContainer container;

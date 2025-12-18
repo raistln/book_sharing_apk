@@ -4,7 +4,7 @@ import 'database.dart';
 
 part 'book_dao.g.dart';
 
-@DriftAccessor(tables: [Books, BookReviews])
+@DriftAccessor(tables: [LocalUsers, Books, BookReviews])
 class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
   BookDao(super.db);
 

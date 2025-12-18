@@ -2,6 +2,7 @@ import 'package:book_sharing_app/data/local/database.dart';
 import 'package:book_sharing_app/data/local/group_dao.dart';
 import 'package:book_sharing_app/data/repositories/group_push_repository.dart';
 import 'package:book_sharing_app/data/repositories/book_repository.dart';
+import 'package:book_sharing_app/data/repositories/notification_repository.dart';
 import 'package:book_sharing_app/models/global_sync_state.dart';
 import 'package:book_sharing_app/services/group_push_controller.dart';
 import 'package:book_sharing_app/services/group_sync_controller.dart';
@@ -18,6 +19,7 @@ class MockGroupSyncController extends Mock implements GroupSyncController {}
 class MockNotificationClient extends Mock implements NotificationClient {}
 class MockBookRepository extends Mock implements BookRepository {}
 class MockUnifiedSyncCoordinator extends Mock implements UnifiedSyncCoordinator {}
+class MockNotificationRepository extends Mock implements NotificationRepository {}
 
 class FakeGroup extends Fake implements Group {}
 
@@ -31,6 +33,7 @@ void main() {
     late MockNotificationClient mockNotificationClient;
     late MockBookRepository mockBookRepository;
     late MockUnifiedSyncCoordinator mockSyncCoordinator;
+    late MockNotificationRepository mockNotificationRepository;
 
     setUpAll(() {
       registerFallbackValue(ImageSource.gallery);
@@ -51,6 +54,7 @@ void main() {
       mockNotificationClient = MockNotificationClient();
       mockBookRepository = MockBookRepository();
       mockSyncCoordinator = MockUnifiedSyncCoordinator();
+      mockNotificationRepository = MockNotificationRepository();
 
       // Stub sync methods
       when(() => mockGroupSyncController.markPendingChanges()).thenAnswer((_) async {});
@@ -81,6 +85,7 @@ void main() {
         bookRepository: mockBookRepository,
         groupDao: groupDao,
         syncCoordinator: mockSyncCoordinator,
+        notificationRepository: mockNotificationRepository,
       );
     });
 

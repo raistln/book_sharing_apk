@@ -6902,623 +6902,6 @@ class InAppNotificationsCompanion extends UpdateCompanion<InAppNotification> {
   }
 }
 
-class $LoanNotificationsTable extends LoanNotifications
-    with TableInfo<$LoanNotificationsTable, LoanNotification> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $LoanNotificationsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-      'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
-  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
-  @override
-  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
-      'uuid', aliasedName, false,
-      additionalChecks:
-          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
-  static const VerificationMeta _remoteIdMeta =
-      const VerificationMeta('remoteId');
-  @override
-  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
-      'remote_id', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _loanIdMeta = const VerificationMeta('loanId');
-  @override
-  late final GeneratedColumn<int> loanId = GeneratedColumn<int>(
-      'loan_id', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES loans (id) ON DELETE CASCADE'));
-  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
-  @override
-  late final GeneratedColumn<int> userId = GeneratedColumn<int>(
-      'user_id', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES local_users (id) ON DELETE CASCADE'));
-  static const VerificationMeta _typeMeta = const VerificationMeta('type');
-  @override
-  late final GeneratedColumn<String> type = GeneratedColumn<String>(
-      'type', aliasedName, false,
-      additionalChecks:
-          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 50),
-      type: DriftSqlType.string,
-      requiredDuringInsert: true);
-  static const VerificationMeta _titleMeta = const VerificationMeta('title');
-  @override
-  late final GeneratedColumn<String> title = GeneratedColumn<String>(
-      'title', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _messageMeta =
-      const VerificationMeta('message');
-  @override
-  late final GeneratedColumn<String> message = GeneratedColumn<String>(
-      'message', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _statusMeta = const VerificationMeta('status');
-  @override
-  late final GeneratedColumn<String> status = GeneratedColumn<String>(
-      'status', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('unread'));
-  static const VerificationMeta _readAtMeta = const VerificationMeta('readAt');
-  @override
-  late final GeneratedColumn<DateTime> readAt = GeneratedColumn<DateTime>(
-      'read_at', aliasedName, true,
-      type: DriftSqlType.dateTime, requiredDuringInsert: false);
-  static const VerificationMeta _isDirtyMeta =
-      const VerificationMeta('isDirty');
-  @override
-  late final GeneratedColumn<bool> isDirty = GeneratedColumn<bool>(
-      'is_dirty', aliasedName, false,
-      type: DriftSqlType.bool,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("is_dirty" IN (0, 1))'),
-      defaultValue: const Constant(true));
-  static const VerificationMeta _syncedAtMeta =
-      const VerificationMeta('syncedAt');
-  @override
-  late final GeneratedColumn<DateTime> syncedAt = GeneratedColumn<DateTime>(
-      'synced_at', aliasedName, true,
-      type: DriftSqlType.dateTime, requiredDuringInsert: false);
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
-  @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-      'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime,
-      requiredDuringInsert: false,
-      defaultValue: currentDateAndTime);
-  @override
-  List<GeneratedColumn> get $columns => [
-        id,
-        uuid,
-        remoteId,
-        loanId,
-        userId,
-        type,
-        title,
-        message,
-        status,
-        readAt,
-        isDirty,
-        syncedAt,
-        createdAt
-      ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'loan_notifications';
-  @override
-  VerificationContext validateIntegrity(Insertable<LoanNotification> instance,
-      {bool isInserting = false}) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('uuid')) {
-      context.handle(
-          _uuidMeta, uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta));
-    } else if (isInserting) {
-      context.missing(_uuidMeta);
-    }
-    if (data.containsKey('remote_id')) {
-      context.handle(_remoteIdMeta,
-          remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta));
-    }
-    if (data.containsKey('loan_id')) {
-      context.handle(_loanIdMeta,
-          loanId.isAcceptableOrUnknown(data['loan_id']!, _loanIdMeta));
-    } else if (isInserting) {
-      context.missing(_loanIdMeta);
-    }
-    if (data.containsKey('user_id')) {
-      context.handle(_userIdMeta,
-          userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta));
-    } else if (isInserting) {
-      context.missing(_userIdMeta);
-    }
-    if (data.containsKey('type')) {
-      context.handle(
-          _typeMeta, type.isAcceptableOrUnknown(data['type']!, _typeMeta));
-    } else if (isInserting) {
-      context.missing(_typeMeta);
-    }
-    if (data.containsKey('title')) {
-      context.handle(
-          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
-    } else if (isInserting) {
-      context.missing(_titleMeta);
-    }
-    if (data.containsKey('message')) {
-      context.handle(_messageMeta,
-          message.isAcceptableOrUnknown(data['message']!, _messageMeta));
-    } else if (isInserting) {
-      context.missing(_messageMeta);
-    }
-    if (data.containsKey('status')) {
-      context.handle(_statusMeta,
-          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
-    }
-    if (data.containsKey('read_at')) {
-      context.handle(_readAtMeta,
-          readAt.isAcceptableOrUnknown(data['read_at']!, _readAtMeta));
-    }
-    if (data.containsKey('is_dirty')) {
-      context.handle(_isDirtyMeta,
-          isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
-    }
-    if (data.containsKey('synced_at')) {
-      context.handle(_syncedAtMeta,
-          syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta));
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  LoanNotification map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return LoanNotification(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      uuid: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
-      remoteId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}remote_id']),
-      loanId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}loan_id'])!,
-      userId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}user_id'])!,
-      type: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
-      title: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
-      message: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}message'])!,
-      status: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
-      readAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}read_at']),
-      isDirty: attachedDatabase.typeMapping
-          .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
-      syncedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}synced_at']),
-      createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
-    );
-  }
-
-  @override
-  $LoanNotificationsTable createAlias(String alias) {
-    return $LoanNotificationsTable(attachedDatabase, alias);
-  }
-}
-
-class LoanNotification extends DataClass
-    implements Insertable<LoanNotification> {
-  final int id;
-  final String uuid;
-  final String? remoteId;
-  final int loanId;
-  final int userId;
-  final String type;
-  final String title;
-  final String message;
-  final String status;
-  final DateTime? readAt;
-  final bool isDirty;
-  final DateTime? syncedAt;
-  final DateTime createdAt;
-  const LoanNotification(
-      {required this.id,
-      required this.uuid,
-      this.remoteId,
-      required this.loanId,
-      required this.userId,
-      required this.type,
-      required this.title,
-      required this.message,
-      required this.status,
-      this.readAt,
-      required this.isDirty,
-      this.syncedAt,
-      required this.createdAt});
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['uuid'] = Variable<String>(uuid);
-    if (!nullToAbsent || remoteId != null) {
-      map['remote_id'] = Variable<String>(remoteId);
-    }
-    map['loan_id'] = Variable<int>(loanId);
-    map['user_id'] = Variable<int>(userId);
-    map['type'] = Variable<String>(type);
-    map['title'] = Variable<String>(title);
-    map['message'] = Variable<String>(message);
-    map['status'] = Variable<String>(status);
-    if (!nullToAbsent || readAt != null) {
-      map['read_at'] = Variable<DateTime>(readAt);
-    }
-    map['is_dirty'] = Variable<bool>(isDirty);
-    if (!nullToAbsent || syncedAt != null) {
-      map['synced_at'] = Variable<DateTime>(syncedAt);
-    }
-    map['created_at'] = Variable<DateTime>(createdAt);
-    return map;
-  }
-
-  LoanNotificationsCompanion toCompanion(bool nullToAbsent) {
-    return LoanNotificationsCompanion(
-      id: Value(id),
-      uuid: Value(uuid),
-      remoteId: remoteId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(remoteId),
-      loanId: Value(loanId),
-      userId: Value(userId),
-      type: Value(type),
-      title: Value(title),
-      message: Value(message),
-      status: Value(status),
-      readAt:
-          readAt == null && nullToAbsent ? const Value.absent() : Value(readAt),
-      isDirty: Value(isDirty),
-      syncedAt: syncedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(syncedAt),
-      createdAt: Value(createdAt),
-    );
-  }
-
-  factory LoanNotification.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return LoanNotification(
-      id: serializer.fromJson<int>(json['id']),
-      uuid: serializer.fromJson<String>(json['uuid']),
-      remoteId: serializer.fromJson<String?>(json['remoteId']),
-      loanId: serializer.fromJson<int>(json['loanId']),
-      userId: serializer.fromJson<int>(json['userId']),
-      type: serializer.fromJson<String>(json['type']),
-      title: serializer.fromJson<String>(json['title']),
-      message: serializer.fromJson<String>(json['message']),
-      status: serializer.fromJson<String>(json['status']),
-      readAt: serializer.fromJson<DateTime?>(json['readAt']),
-      isDirty: serializer.fromJson<bool>(json['isDirty']),
-      syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'uuid': serializer.toJson<String>(uuid),
-      'remoteId': serializer.toJson<String?>(remoteId),
-      'loanId': serializer.toJson<int>(loanId),
-      'userId': serializer.toJson<int>(userId),
-      'type': serializer.toJson<String>(type),
-      'title': serializer.toJson<String>(title),
-      'message': serializer.toJson<String>(message),
-      'status': serializer.toJson<String>(status),
-      'readAt': serializer.toJson<DateTime?>(readAt),
-      'isDirty': serializer.toJson<bool>(isDirty),
-      'syncedAt': serializer.toJson<DateTime?>(syncedAt),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-    };
-  }
-
-  LoanNotification copyWith(
-          {int? id,
-          String? uuid,
-          Value<String?> remoteId = const Value.absent(),
-          int? loanId,
-          int? userId,
-          String? type,
-          String? title,
-          String? message,
-          String? status,
-          Value<DateTime?> readAt = const Value.absent(),
-          bool? isDirty,
-          Value<DateTime?> syncedAt = const Value.absent(),
-          DateTime? createdAt}) =>
-      LoanNotification(
-        id: id ?? this.id,
-        uuid: uuid ?? this.uuid,
-        remoteId: remoteId.present ? remoteId.value : this.remoteId,
-        loanId: loanId ?? this.loanId,
-        userId: userId ?? this.userId,
-        type: type ?? this.type,
-        title: title ?? this.title,
-        message: message ?? this.message,
-        status: status ?? this.status,
-        readAt: readAt.present ? readAt.value : this.readAt,
-        isDirty: isDirty ?? this.isDirty,
-        syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
-        createdAt: createdAt ?? this.createdAt,
-      );
-  LoanNotification copyWithCompanion(LoanNotificationsCompanion data) {
-    return LoanNotification(
-      id: data.id.present ? data.id.value : this.id,
-      uuid: data.uuid.present ? data.uuid.value : this.uuid,
-      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
-      loanId: data.loanId.present ? data.loanId.value : this.loanId,
-      userId: data.userId.present ? data.userId.value : this.userId,
-      type: data.type.present ? data.type.value : this.type,
-      title: data.title.present ? data.title.value : this.title,
-      message: data.message.present ? data.message.value : this.message,
-      status: data.status.present ? data.status.value : this.status,
-      readAt: data.readAt.present ? data.readAt.value : this.readAt,
-      isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
-      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('LoanNotification(')
-          ..write('id: $id, ')
-          ..write('uuid: $uuid, ')
-          ..write('remoteId: $remoteId, ')
-          ..write('loanId: $loanId, ')
-          ..write('userId: $userId, ')
-          ..write('type: $type, ')
-          ..write('title: $title, ')
-          ..write('message: $message, ')
-          ..write('status: $status, ')
-          ..write('readAt: $readAt, ')
-          ..write('isDirty: $isDirty, ')
-          ..write('syncedAt: $syncedAt, ')
-          ..write('createdAt: $createdAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(id, uuid, remoteId, loanId, userId, type,
-      title, message, status, readAt, isDirty, syncedAt, createdAt);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is LoanNotification &&
-          other.id == this.id &&
-          other.uuid == this.uuid &&
-          other.remoteId == this.remoteId &&
-          other.loanId == this.loanId &&
-          other.userId == this.userId &&
-          other.type == this.type &&
-          other.title == this.title &&
-          other.message == this.message &&
-          other.status == this.status &&
-          other.readAt == this.readAt &&
-          other.isDirty == this.isDirty &&
-          other.syncedAt == this.syncedAt &&
-          other.createdAt == this.createdAt);
-}
-
-class LoanNotificationsCompanion extends UpdateCompanion<LoanNotification> {
-  final Value<int> id;
-  final Value<String> uuid;
-  final Value<String?> remoteId;
-  final Value<int> loanId;
-  final Value<int> userId;
-  final Value<String> type;
-  final Value<String> title;
-  final Value<String> message;
-  final Value<String> status;
-  final Value<DateTime?> readAt;
-  final Value<bool> isDirty;
-  final Value<DateTime?> syncedAt;
-  final Value<DateTime> createdAt;
-  const LoanNotificationsCompanion({
-    this.id = const Value.absent(),
-    this.uuid = const Value.absent(),
-    this.remoteId = const Value.absent(),
-    this.loanId = const Value.absent(),
-    this.userId = const Value.absent(),
-    this.type = const Value.absent(),
-    this.title = const Value.absent(),
-    this.message = const Value.absent(),
-    this.status = const Value.absent(),
-    this.readAt = const Value.absent(),
-    this.isDirty = const Value.absent(),
-    this.syncedAt = const Value.absent(),
-    this.createdAt = const Value.absent(),
-  });
-  LoanNotificationsCompanion.insert({
-    this.id = const Value.absent(),
-    required String uuid,
-    this.remoteId = const Value.absent(),
-    required int loanId,
-    required int userId,
-    required String type,
-    required String title,
-    required String message,
-    this.status = const Value.absent(),
-    this.readAt = const Value.absent(),
-    this.isDirty = const Value.absent(),
-    this.syncedAt = const Value.absent(),
-    this.createdAt = const Value.absent(),
-  })  : uuid = Value(uuid),
-        loanId = Value(loanId),
-        userId = Value(userId),
-        type = Value(type),
-        title = Value(title),
-        message = Value(message);
-  static Insertable<LoanNotification> custom({
-    Expression<int>? id,
-    Expression<String>? uuid,
-    Expression<String>? remoteId,
-    Expression<int>? loanId,
-    Expression<int>? userId,
-    Expression<String>? type,
-    Expression<String>? title,
-    Expression<String>? message,
-    Expression<String>? status,
-    Expression<DateTime>? readAt,
-    Expression<bool>? isDirty,
-    Expression<DateTime>? syncedAt,
-    Expression<DateTime>? createdAt,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (uuid != null) 'uuid': uuid,
-      if (remoteId != null) 'remote_id': remoteId,
-      if (loanId != null) 'loan_id': loanId,
-      if (userId != null) 'user_id': userId,
-      if (type != null) 'type': type,
-      if (title != null) 'title': title,
-      if (message != null) 'message': message,
-      if (status != null) 'status': status,
-      if (readAt != null) 'read_at': readAt,
-      if (isDirty != null) 'is_dirty': isDirty,
-      if (syncedAt != null) 'synced_at': syncedAt,
-      if (createdAt != null) 'created_at': createdAt,
-    });
-  }
-
-  LoanNotificationsCompanion copyWith(
-      {Value<int>? id,
-      Value<String>? uuid,
-      Value<String?>? remoteId,
-      Value<int>? loanId,
-      Value<int>? userId,
-      Value<String>? type,
-      Value<String>? title,
-      Value<String>? message,
-      Value<String>? status,
-      Value<DateTime?>? readAt,
-      Value<bool>? isDirty,
-      Value<DateTime?>? syncedAt,
-      Value<DateTime>? createdAt}) {
-    return LoanNotificationsCompanion(
-      id: id ?? this.id,
-      uuid: uuid ?? this.uuid,
-      remoteId: remoteId ?? this.remoteId,
-      loanId: loanId ?? this.loanId,
-      userId: userId ?? this.userId,
-      type: type ?? this.type,
-      title: title ?? this.title,
-      message: message ?? this.message,
-      status: status ?? this.status,
-      readAt: readAt ?? this.readAt,
-      isDirty: isDirty ?? this.isDirty,
-      syncedAt: syncedAt ?? this.syncedAt,
-      createdAt: createdAt ?? this.createdAt,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (uuid.present) {
-      map['uuid'] = Variable<String>(uuid.value);
-    }
-    if (remoteId.present) {
-      map['remote_id'] = Variable<String>(remoteId.value);
-    }
-    if (loanId.present) {
-      map['loan_id'] = Variable<int>(loanId.value);
-    }
-    if (userId.present) {
-      map['user_id'] = Variable<int>(userId.value);
-    }
-    if (type.present) {
-      map['type'] = Variable<String>(type.value);
-    }
-    if (title.present) {
-      map['title'] = Variable<String>(title.value);
-    }
-    if (message.present) {
-      map['message'] = Variable<String>(message.value);
-    }
-    if (status.present) {
-      map['status'] = Variable<String>(status.value);
-    }
-    if (readAt.present) {
-      map['read_at'] = Variable<DateTime>(readAt.value);
-    }
-    if (isDirty.present) {
-      map['is_dirty'] = Variable<bool>(isDirty.value);
-    }
-    if (syncedAt.present) {
-      map['synced_at'] = Variable<DateTime>(syncedAt.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('LoanNotificationsCompanion(')
-          ..write('id: $id, ')
-          ..write('uuid: $uuid, ')
-          ..write('remoteId: $remoteId, ')
-          ..write('loanId: $loanId, ')
-          ..write('userId: $userId, ')
-          ..write('type: $type, ')
-          ..write('title: $title, ')
-          ..write('message: $message, ')
-          ..write('status: $status, ')
-          ..write('readAt: $readAt, ')
-          ..write('isDirty: $isDirty, ')
-          ..write('syncedAt: $syncedAt, ')
-          ..write('createdAt: $createdAt')
-          ..write(')'))
-        .toString();
-  }
-}
-
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7533,8 +6916,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LoansTable loans = $LoansTable(this);
   late final $InAppNotificationsTable inAppNotifications =
       $InAppNotificationsTable(this);
-  late final $LoanNotificationsTable loanNotifications =
-      $LoanNotificationsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7548,8 +6929,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         sharedBooks,
         groupInvitations,
         loans,
-        inAppNotifications,
-        loanNotifications
+        inAppNotifications
       ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
@@ -7601,20 +6981,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
                 limitUpdateKind: UpdateKind.delete),
             result: [
               TableUpdate('loans', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('loans',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('loan_notifications', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('local_users',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('loan_notifications', kind: UpdateKind.delete),
             ],
           ),
         ],
@@ -7823,23 +7189,6 @@ final class $$LocalUsersTableReferences
 
     final cache =
         $_typedResult.readTableOrNull(_notificationsReceivedTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
-  }
-
-  static MultiTypedResultKey<$LoanNotificationsTable, List<LoanNotification>>
-      _loanNotificationsRefsTable(_$AppDatabase db) =>
-          MultiTypedResultKey.fromTable(db.loanNotifications,
-              aliasName: $_aliasNameGenerator(
-                  db.localUsers.id, db.loanNotifications.userId));
-
-  $$LoanNotificationsTableProcessedTableManager get loanNotificationsRefs {
-    final manager =
-        $$LoanNotificationsTableTableManager($_db, $_db.loanNotifications)
-            .filter((f) => f.userId.id.sqlEquals($_itemColumn<int>('id')!));
-
-    final cache =
-        $_typedResult.readTableOrNull(_loanNotificationsRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -8113,27 +7462,6 @@ class $$LocalUsersTableFilterComposer
             $$InAppNotificationsTableFilterComposer(
               $db: $db,
               $table: $db.inAppNotifications,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
-
-  Expression<bool> loanNotificationsRefs(
-      Expression<bool> Function($$LoanNotificationsTableFilterComposer f) f) {
-    final $$LoanNotificationsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.loanNotifications,
-        getReferencedColumn: (t) => t.userId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LoanNotificationsTableFilterComposer(
-              $db: $db,
-              $table: $db.loanNotifications,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -8467,28 +7795,6 @@ class $$LocalUsersTableAnnotationComposer
                 ));
     return f(composer);
   }
-
-  Expression<T> loanNotificationsRefs<T extends Object>(
-      Expression<T> Function($$LoanNotificationsTableAnnotationComposer a) f) {
-    final $$LoanNotificationsTableAnnotationComposer composer =
-        $composerBuilder(
-            composer: this,
-            getCurrentColumn: (t) => t.id,
-            referencedTable: $db.loanNotifications,
-            getReferencedColumn: (t) => t.userId,
-            builder: (joinBuilder,
-                    {$addJoinBuilderToRootComposer,
-                    $removeJoinBuilderFromRootComposer}) =>
-                $$LoanNotificationsTableAnnotationComposer(
-                  $db: $db,
-                  $table: $db.loanNotifications,
-                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                  joinBuilder: joinBuilder,
-                  $removeJoinBuilderFromRootComposer:
-                      $removeJoinBuilderFromRootComposer,
-                ));
-    return f(composer);
-  }
 }
 
 class $$LocalUsersTableTableManager extends RootTableManager<
@@ -8513,8 +7819,7 @@ class $$LocalUsersTableTableManager extends RootTableManager<
         bool loansBorrower,
         bool loansLender,
         bool notificationsAuthored,
-        bool notificationsReceived,
-        bool loanNotificationsRefs})> {
+        bool notificationsReceived})> {
   $$LocalUsersTableTableManager(_$AppDatabase db, $LocalUsersTable table)
       : super(TableManagerState(
           db: db,
@@ -8598,8 +7903,7 @@ class $$LocalUsersTableTableManager extends RootTableManager<
               loansBorrower = false,
               loansLender = false,
               notificationsAuthored = false,
-              notificationsReceived = false,
-              loanNotificationsRefs = false}) {
+              notificationsReceived = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
@@ -8613,8 +7917,7 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                 if (loansBorrower) db.loans,
                 if (loansLender) db.loans,
                 if (notificationsAuthored) db.inAppNotifications,
-                if (notificationsReceived) db.inAppNotifications,
-                if (loanNotificationsRefs) db.loanNotifications
+                if (notificationsReceived) db.inAppNotifications
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -8761,19 +8064,6 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.targetUserId == item.id),
-                        typedResults: items),
-                  if (loanNotificationsRefs)
-                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
-                            LoanNotification>(
-                        currentTable: table,
-                        referencedTable: $$LocalUsersTableReferences
-                            ._loanNotificationsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $$LocalUsersTableReferences(db, table, p0)
-                                .loanNotificationsRefs,
-                        referencedItemsForCurrentItem: (item,
-                                referencedItems) =>
-                            referencedItems.where((e) => e.userId == item.id),
                         typedResults: items)
                 ];
               },
@@ -8804,8 +8094,7 @@ typedef $$LocalUsersTableProcessedTableManager = ProcessedTableManager<
         bool loansBorrower,
         bool loansLender,
         bool notificationsAuthored,
-        bool notificationsReceived,
-        bool loanNotificationsRefs})>;
+        bool notificationsReceived})>;
 typedef $$BooksTableCreateCompanionBuilder = BooksCompanion Function({
   Value<int> id,
   required String uuid,
@@ -12546,23 +11835,6 @@ final class $$LoansTableReferences
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
-
-  static MultiTypedResultKey<$LoanNotificationsTable, List<LoanNotification>>
-      _loanNotificationsRefsTable(_$AppDatabase db) =>
-          MultiTypedResultKey.fromTable(db.loanNotifications,
-              aliasName: $_aliasNameGenerator(
-                  db.loans.id, db.loanNotifications.loanId));
-
-  $$LoanNotificationsTableProcessedTableManager get loanNotificationsRefs {
-    final manager =
-        $$LoanNotificationsTableTableManager($_db, $_db.loanNotifications)
-            .filter((f) => f.loanId.id.sqlEquals($_itemColumn<int>('id')!));
-
-    final cache =
-        $_typedResult.readTableOrNull(_loanNotificationsRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
-  }
 }
 
 class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
@@ -12721,27 +11993,6 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
             $$InAppNotificationsTableFilterComposer(
               $db: $db,
               $table: $db.inAppNotifications,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
-
-  Expression<bool> loanNotificationsRefs(
-      Expression<bool> Function($$LoanNotificationsTableFilterComposer f) f) {
-    final $$LoanNotificationsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.loanNotifications,
-        getReferencedColumn: (t) => t.loanId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LoanNotificationsTableFilterComposer(
-              $db: $db,
-              $table: $db.loanNotifications,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -13057,28 +12308,6 @@ class $$LoansTableAnnotationComposer
                 ));
     return f(composer);
   }
-
-  Expression<T> loanNotificationsRefs<T extends Object>(
-      Expression<T> Function($$LoanNotificationsTableAnnotationComposer a) f) {
-    final $$LoanNotificationsTableAnnotationComposer composer =
-        $composerBuilder(
-            composer: this,
-            getCurrentColumn: (t) => t.id,
-            referencedTable: $db.loanNotifications,
-            getReferencedColumn: (t) => t.loanId,
-            builder: (joinBuilder,
-                    {$addJoinBuilderToRootComposer,
-                    $removeJoinBuilderFromRootComposer}) =>
-                $$LoanNotificationsTableAnnotationComposer(
-                  $db: $db,
-                  $table: $db.loanNotifications,
-                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                  joinBuilder: joinBuilder,
-                  $removeJoinBuilderFromRootComposer:
-                      $removeJoinBuilderFromRootComposer,
-                ));
-    return f(composer);
-  }
 }
 
 class $$LoansTableTableManager extends RootTableManager<
@@ -13097,8 +12326,7 @@ class $$LoansTableTableManager extends RootTableManager<
         bool bookId,
         bool borrowerUserId,
         bool lenderUserId,
-        bool notificationLoans,
-        bool loanNotificationsRefs})> {
+        bool notificationLoans})> {
   $$LoansTableTableManager(_$AppDatabase db, $LoansTable table)
       : super(TableManagerState(
           db: db,
@@ -13210,13 +12438,11 @@ class $$LoansTableTableManager extends RootTableManager<
               bookId = false,
               borrowerUserId = false,
               lenderUserId = false,
-              notificationLoans = false,
-              loanNotificationsRefs = false}) {
+              notificationLoans = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
-                if (notificationLoans) db.inAppNotifications,
-                if (loanNotificationsRefs) db.loanNotifications
+                if (notificationLoans) db.inAppNotifications
               ],
               addJoins: <
                   T extends TableManagerState<
@@ -13287,19 +12513,6 @@ class $$LoansTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem: (item,
                                 referencedItems) =>
                             referencedItems.where((e) => e.loanId == item.id),
-                        typedResults: items),
-                  if (loanNotificationsRefs)
-                    await $_getPrefetchedData<Loan, $LoansTable,
-                            LoanNotification>(
-                        currentTable: table,
-                        referencedTable: $$LoansTableReferences
-                            ._loanNotificationsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $$LoansTableReferences(db, table, p0)
-                                .loanNotificationsRefs,
-                        referencedItemsForCurrentItem: (item,
-                                referencedItems) =>
-                            referencedItems.where((e) => e.loanId == item.id),
                         typedResults: items)
                 ];
               },
@@ -13324,8 +12537,7 @@ typedef $$LoansTableProcessedTableManager = ProcessedTableManager<
         bool bookId,
         bool borrowerUserId,
         bool lenderUserId,
-        bool notificationLoans,
-        bool loanNotificationsRefs})>;
+        bool notificationLoans})>;
 typedef $$InAppNotificationsTableCreateCompanionBuilder
     = InAppNotificationsCompanion Function({
   Value<int> id,
@@ -14019,473 +13231,6 @@ typedef $$InAppNotificationsTableProcessedTableManager = ProcessedTableManager<
     InAppNotification,
     PrefetchHooks Function(
         {bool loanId, bool sharedBookId, bool actorUserId, bool targetUserId})>;
-typedef $$LoanNotificationsTableCreateCompanionBuilder
-    = LoanNotificationsCompanion Function({
-  Value<int> id,
-  required String uuid,
-  Value<String?> remoteId,
-  required int loanId,
-  required int userId,
-  required String type,
-  required String title,
-  required String message,
-  Value<String> status,
-  Value<DateTime?> readAt,
-  Value<bool> isDirty,
-  Value<DateTime?> syncedAt,
-  Value<DateTime> createdAt,
-});
-typedef $$LoanNotificationsTableUpdateCompanionBuilder
-    = LoanNotificationsCompanion Function({
-  Value<int> id,
-  Value<String> uuid,
-  Value<String?> remoteId,
-  Value<int> loanId,
-  Value<int> userId,
-  Value<String> type,
-  Value<String> title,
-  Value<String> message,
-  Value<String> status,
-  Value<DateTime?> readAt,
-  Value<bool> isDirty,
-  Value<DateTime?> syncedAt,
-  Value<DateTime> createdAt,
-});
-
-final class $$LoanNotificationsTableReferences extends BaseReferences<
-    _$AppDatabase, $LoanNotificationsTable, LoanNotification> {
-  $$LoanNotificationsTableReferences(
-      super.$_db, super.$_table, super.$_typedResult);
-
-  static $LoansTable _loanIdTable(_$AppDatabase db) => db.loans.createAlias(
-      $_aliasNameGenerator(db.loanNotifications.loanId, db.loans.id));
-
-  $$LoansTableProcessedTableManager get loanId {
-    final $_column = $_itemColumn<int>('loan_id')!;
-
-    final manager = $$LoansTableTableManager($_db, $_db.loans)
-        .filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_loanIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
-  }
-
-  static $LocalUsersTable _userIdTable(_$AppDatabase db) =>
-      db.localUsers.createAlias(
-          $_aliasNameGenerator(db.loanNotifications.userId, db.localUsers.id));
-
-  $$LocalUsersTableProcessedTableManager get userId {
-    final $_column = $_itemColumn<int>('user_id')!;
-
-    final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
-        .filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_userIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
-  }
-}
-
-class $$LoanNotificationsTableFilterComposer
-    extends Composer<_$AppDatabase, $LoanNotificationsTable> {
-  $$LoanNotificationsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get uuid => $composableBuilder(
-      column: $table.uuid, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get remoteId => $composableBuilder(
-      column: $table.remoteId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get type => $composableBuilder(
-      column: $table.type, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get title => $composableBuilder(
-      column: $table.title, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get message => $composableBuilder(
-      column: $table.message, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get status => $composableBuilder(
-      column: $table.status, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get readAt => $composableBuilder(
-      column: $table.readAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<bool> get isDirty => $composableBuilder(
-      column: $table.isDirty, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get syncedAt => $composableBuilder(
-      column: $table.syncedAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-
-  $$LoansTableFilterComposer get loanId {
-    final $$LoansTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.loanId,
-        referencedTable: $db.loans,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LoansTableFilterComposer(
-              $db: $db,
-              $table: $db.loans,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-
-  $$LocalUsersTableFilterComposer get userId {
-    final $$LocalUsersTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.userId,
-        referencedTable: $db.localUsers,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LocalUsersTableFilterComposer(
-              $db: $db,
-              $table: $db.localUsers,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$LoanNotificationsTableOrderingComposer
-    extends Composer<_$AppDatabase, $LoanNotificationsTable> {
-  $$LoanNotificationsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get uuid => $composableBuilder(
-      column: $table.uuid, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get remoteId => $composableBuilder(
-      column: $table.remoteId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get type => $composableBuilder(
-      column: $table.type, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get title => $composableBuilder(
-      column: $table.title, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get message => $composableBuilder(
-      column: $table.message, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get status => $composableBuilder(
-      column: $table.status, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get readAt => $composableBuilder(
-      column: $table.readAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<bool> get isDirty => $composableBuilder(
-      column: $table.isDirty, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get syncedAt => $composableBuilder(
-      column: $table.syncedAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-
-  $$LoansTableOrderingComposer get loanId {
-    final $$LoansTableOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.loanId,
-        referencedTable: $db.loans,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LoansTableOrderingComposer(
-              $db: $db,
-              $table: $db.loans,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-
-  $$LocalUsersTableOrderingComposer get userId {
-    final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.userId,
-        referencedTable: $db.localUsers,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LocalUsersTableOrderingComposer(
-              $db: $db,
-              $table: $db.localUsers,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$LoanNotificationsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $LoanNotificationsTable> {
-  $$LoanNotificationsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get uuid =>
-      $composableBuilder(column: $table.uuid, builder: (column) => column);
-
-  GeneratedColumn<String> get remoteId =>
-      $composableBuilder(column: $table.remoteId, builder: (column) => column);
-
-  GeneratedColumn<String> get type =>
-      $composableBuilder(column: $table.type, builder: (column) => column);
-
-  GeneratedColumn<String> get title =>
-      $composableBuilder(column: $table.title, builder: (column) => column);
-
-  GeneratedColumn<String> get message =>
-      $composableBuilder(column: $table.message, builder: (column) => column);
-
-  GeneratedColumn<String> get status =>
-      $composableBuilder(column: $table.status, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get readAt =>
-      $composableBuilder(column: $table.readAt, builder: (column) => column);
-
-  GeneratedColumn<bool> get isDirty =>
-      $composableBuilder(column: $table.isDirty, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get syncedAt =>
-      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  $$LoansTableAnnotationComposer get loanId {
-    final $$LoansTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.loanId,
-        referencedTable: $db.loans,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LoansTableAnnotationComposer(
-              $db: $db,
-              $table: $db.loans,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-
-  $$LocalUsersTableAnnotationComposer get userId {
-    final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.userId,
-        referencedTable: $db.localUsers,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LocalUsersTableAnnotationComposer(
-              $db: $db,
-              $table: $db.localUsers,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$LoanNotificationsTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $LoanNotificationsTable,
-    LoanNotification,
-    $$LoanNotificationsTableFilterComposer,
-    $$LoanNotificationsTableOrderingComposer,
-    $$LoanNotificationsTableAnnotationComposer,
-    $$LoanNotificationsTableCreateCompanionBuilder,
-    $$LoanNotificationsTableUpdateCompanionBuilder,
-    (LoanNotification, $$LoanNotificationsTableReferences),
-    LoanNotification,
-    PrefetchHooks Function({bool loanId, bool userId})> {
-  $$LoanNotificationsTableTableManager(
-      _$AppDatabase db, $LoanNotificationsTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$LoanNotificationsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$LoanNotificationsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$LoanNotificationsTableAnnotationComposer(
-                  $db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<String> uuid = const Value.absent(),
-            Value<String?> remoteId = const Value.absent(),
-            Value<int> loanId = const Value.absent(),
-            Value<int> userId = const Value.absent(),
-            Value<String> type = const Value.absent(),
-            Value<String> title = const Value.absent(),
-            Value<String> message = const Value.absent(),
-            Value<String> status = const Value.absent(),
-            Value<DateTime?> readAt = const Value.absent(),
-            Value<bool> isDirty = const Value.absent(),
-            Value<DateTime?> syncedAt = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-          }) =>
-              LoanNotificationsCompanion(
-            id: id,
-            uuid: uuid,
-            remoteId: remoteId,
-            loanId: loanId,
-            userId: userId,
-            type: type,
-            title: title,
-            message: message,
-            status: status,
-            readAt: readAt,
-            isDirty: isDirty,
-            syncedAt: syncedAt,
-            createdAt: createdAt,
-          ),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required String uuid,
-            Value<String?> remoteId = const Value.absent(),
-            required int loanId,
-            required int userId,
-            required String type,
-            required String title,
-            required String message,
-            Value<String> status = const Value.absent(),
-            Value<DateTime?> readAt = const Value.absent(),
-            Value<bool> isDirty = const Value.absent(),
-            Value<DateTime?> syncedAt = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-          }) =>
-              LoanNotificationsCompanion.insert(
-            id: id,
-            uuid: uuid,
-            remoteId: remoteId,
-            loanId: loanId,
-            userId: userId,
-            type: type,
-            title: title,
-            message: message,
-            status: status,
-            readAt: readAt,
-            isDirty: isDirty,
-            syncedAt: syncedAt,
-            createdAt: createdAt,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable(table),
-                    $$LoanNotificationsTableReferences(db, table, e)
-                  ))
-              .toList(),
-          prefetchHooksCallback: ({loanId = false, userId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
-                if (loanId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.loanId,
-                    referencedTable:
-                        $$LoanNotificationsTableReferences._loanIdTable(db),
-                    referencedColumn:
-                        $$LoanNotificationsTableReferences._loanIdTable(db).id,
-                  ) as T;
-                }
-                if (userId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.userId,
-                    referencedTable:
-                        $$LoanNotificationsTableReferences._userIdTable(db),
-                    referencedColumn:
-                        $$LoanNotificationsTableReferences._userIdTable(db).id,
-                  ) as T;
-                }
-
-                return state;
-              },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ));
-}
-
-typedef $$LoanNotificationsTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $LoanNotificationsTable,
-    LoanNotification,
-    $$LoanNotificationsTableFilterComposer,
-    $$LoanNotificationsTableOrderingComposer,
-    $$LoanNotificationsTableAnnotationComposer,
-    $$LoanNotificationsTableCreateCompanionBuilder,
-    $$LoanNotificationsTableUpdateCompanionBuilder,
-    (LoanNotification, $$LoanNotificationsTableReferences),
-    LoanNotification,
-    PrefetchHooks Function({bool loanId, bool userId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -14508,6 +13253,4 @@ class $AppDatabaseManager {
       $$LoansTableTableManager(_db, _db.loans);
   $$InAppNotificationsTableTableManager get inAppNotifications =>
       $$InAppNotificationsTableTableManager(_db, _db.inAppNotifications);
-  $$LoanNotificationsTableTableManager get loanNotifications =>
-      $$LoanNotificationsTableTableManager(_db, _db.loanNotifications);
 }

@@ -41,6 +41,8 @@ void main() {
     setUpAll(() {
       registerFallbackValue(NotificationType.loanDueSoon);
       registerFallbackValue(SyncEvent.loanCreated);
+      registerFallbackValue(SyncEntity.books);
+      registerFallbackValue(SyncPriority.high);
     });
 
     setUp(() async {
@@ -64,7 +66,7 @@ void main() {
       mockSyncCoordinator = MockUnifiedSyncCoordinator();
 
       // Stub sync coordinator methods
-      when(() => mockSyncCoordinator.syncOnCriticalEvent(any()))
+      when(() => mockSyncCoordinator.syncOnCriticalEvent(any<SyncEvent>()))
           .thenAnswer((_) async {});
       when(() => mockSyncCoordinator.markPendingChanges(any(), priority: any(named: 'priority')))
           .thenReturn(null);

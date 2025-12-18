@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../widgets/info_pop.dart';
 
 import '../../../../config/supabase_defaults.dart';
 import '../../../../providers/auth_providers.dart';
@@ -28,12 +29,11 @@ void _showFeedbackSnackBar({
   required bool isError,
 }) {
   if (!context.mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
-    ),
-  );
+  if (isError) {
+    InfoPop.error(context, message);
+  } else {
+    InfoPop.success(context, message);
+  }
 }
 
 /// Settings tab - manages app configuration, security, and integrations

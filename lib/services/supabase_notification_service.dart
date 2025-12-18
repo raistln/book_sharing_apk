@@ -6,26 +6,28 @@ import 'package:http/http.dart' as http;
 import 'supabase_config_service.dart';
 
 class SupabaseNotificationRecord {
-  const SupabaseNotificationRecord({
+  SupabaseNotificationRecord({
     required this.id,
-    required this.loanId,
+    this.loanId,
     required this.userId,
     required this.type,
     required this.title,
     required this.message,
     required this.status,
     this.readAt,
+    this.isDeleted = false,
     required this.createdAt,
   });
 
   final String id;
-  final String loanId;
+  final String? loanId;
   final String userId;
   final String type;
   final String title;
   final String message;
   final String status;
   final DateTime? readAt;
+  final bool isDeleted;
   final DateTime createdAt;
 
   static DateTime? _tryParseDate(dynamic value) {
@@ -40,39 +42,42 @@ class SupabaseNotificationRecord {
     final readAt = _tryParseDate(json['read_at']);
     return SupabaseNotificationRecord(
       id: json['id'] as String,
-      loanId: json['loan_id'] as String,
+      loanId: json['loan_id'] as String?,
       userId: json['user_id'] as String,
       type: json['type'] as String,
       title: json['title'] as String,
       message: json['message'] as String,
       status: json['status'] as String? ?? 'unread',
       readAt: readAt,
+      isDeleted: json['is_deleted'] as bool? ?? false,
       createdAt: created ?? DateTime.now(),
     );
   }
 }
 
 class SupabaseNotificationUpsert {
-  const SupabaseNotificationUpsert({
+  SupabaseNotificationUpsert({
     required this.id,
-    required this.loanId,
+    this.loanId,
     required this.userId,
     required this.type,
     required this.title,
     required this.message,
     required this.status,
     this.readAt,
+    this.isDeleted = false,
     required this.createdAt,
   });
 
   final String id;
-  final String loanId;
+  final String? loanId;
   final String userId;
   final String type;
   final String title;
   final String message;
   final String status;
   final DateTime? readAt;
+  final bool isDeleted;
   final DateTime createdAt;
 
   Map<String, dynamic> toJson() {
@@ -85,6 +90,7 @@ class SupabaseNotificationUpsert {
       'message': message,
       'status': status,
       'read_at': readAt?.toUtc().toIso8601String(),
+      'is_deleted': isDeleted,
       'created_at': createdAt.toUtc().toIso8601String(),
     };
   }
@@ -150,7 +156,7 @@ class SupabaseNotificationService {
     final config = await _loadConfig();
     final query = <String, String>{
       'select':
-          'id,loan_id,user_id,type,title,message,status,read_at,created_at',
+          'id,loan_id,user_id,type,title,message,status,read_at,is_deleted,created_at',
       'user_id': 'eq.$targetUserId',
       'order': 'created_at.desc',
     };
@@ -230,6 +236,7 @@ class SupabaseNotificationService {
         message: input.message,
         status: input.status,
         readAt: input.readAt,
+        isDeleted: input.isDeleted,
         createdAt: input.createdAt,
       );
     }

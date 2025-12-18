@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../info_pop.dart';
 
 import '../../../providers/book_providers.dart';
 // ignore: unused_import
@@ -81,9 +82,7 @@ class ActiveLoansList extends ConsumerWidget {
                   // Navigate to book detail page
                   // This requires importing the book detail page widget and navigation logic
                   // For now, show a message to the user
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Navegación a detalle de préstamo')),
-                  );
+                  InfoPop.show(context, message: 'Navegación a detalle de préstamo');
                 },
               ),
               if (loan.status == 'active')
@@ -115,14 +114,12 @@ class ActiveLoansList extends ConsumerWidget {
       await controller.markReturned(loan: loan.loan, actor: activeUser);
       
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Préstamo marcado como devuelto')),
-      );
+      if (!context.mounted) return;
+      InfoPop.success(context, 'Préstamo marcado como devuelto');
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
+      if (!context.mounted) return;
+      InfoPop.error(context, 'Error: $e');
     }
   }
  

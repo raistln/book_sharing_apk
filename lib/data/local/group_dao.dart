@@ -134,6 +134,10 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
     return (select(groups)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
   }
 
+  Future<LocalUser?> findUserById(int id) {
+    return (select(localUsers)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+  }
+
   Future<Group?> findGroupByRemoteId(String remoteId) {
     return (select(groups)..where((tbl) => tbl.remoteId.equals(remoteId))).getSingleOrNull();
   }
@@ -163,6 +167,14 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
               tbl.groupId.equals(groupId) &
               (tbl.isDeleted.equals(false) | tbl.isDeleted.isNull())))
         .watch();
+  }
+
+  Future<List<GroupMember>> getMembersByGroupId(int groupId) {
+    return (select(groupMembers)
+          ..where((tbl) =>
+              tbl.groupId.equals(groupId) &
+              (tbl.isDeleted.equals(false) | tbl.isDeleted.isNull())))
+        .get();
   }
 
   Stream<List<GroupMemberDetail>> watchMemberDetails(int groupId) {

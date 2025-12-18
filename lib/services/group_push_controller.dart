@@ -9,6 +9,8 @@ import '../models/global_sync_state.dart';
 import 'group_sync_controller.dart';
 import 'notification_service.dart';
 import 'unified_sync_coordinator.dart';
+import '../data/repositories/notification_repository.dart';
+import '../data/models/in_app_notification_type.dart';
 
 class GroupActionState {
   const GroupActionState({
@@ -42,12 +44,14 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required BookRepository bookRepository,
     required GroupDao groupDao,
     required UnifiedSyncCoordinator syncCoordinator,
+    required NotificationRepository notificationRepository,
   })  : _groupPushRepository = groupPushRepository,
         _groupSyncController = groupSyncController,
         _notificationClient = notificationClient,
         _bookRepository = bookRepository,
         _groupDao = groupDao,
         _syncCoordinator = syncCoordinator,
+        _notificationRepository = notificationRepository,
         super(const GroupActionState());
 
   final GroupPushRepository _groupPushRepository;
@@ -56,6 +60,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
   final BookRepository _bookRepository;
   final GroupDao _groupDao;
   final UnifiedSyncCoordinator _syncCoordinator;
+  final NotificationRepository _notificationRepository;
 
   void dismissError() {
     state = state.copyWith(lastError: () => null);
@@ -63,6 +68,16 @@ class GroupPushController extends StateNotifier<GroupActionState> {
 
   void dismissSuccess() {
     state = state.copyWith(lastSuccess: () => null);
+  }
+
+  Future<void> _runNotificationTask(Future<void> Function() task) async {
+    try {
+      await task();
+    } catch (error, stackTrace) {
+      debugPrint('Error in notification task: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      // We don't rethrow as notifications are secondary to the main action
+    }
   }
 
   Future<Group> createGroup({
@@ -122,6 +137,22 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         isLoading: false,
         lastSuccess: () => 'Grupo actualizado.',
       );
+
+      // Notify members about group update
+      await _runNotificationTask(() async {
+        final members = await _groupDao.getMembersByGroupId(group.id);
+        for (final member in members) {
+          // Don't notify the person who made the change (actor)
+          // Actually, we don't easily know who the actor is here if it's not the owner
+          // Use a placeholder or check against owner/admin
+          await _notificationRepository.createNotification(
+            type: InAppNotificationType.groupUpdated,
+            targetUserId: member.memberUserId,
+            title: 'Grupo "$name" actualizado',
+            message: 'Se han realizado cambios en los detalles del grupo.',
+          );
+        }
+      });
     } catch (error) {
       state = state.copyWith(
         isLoading: false,
@@ -149,6 +180,23 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         isLoading: false,
         lastSuccess: () => 'Grupo eliminado.',
       );
+
+      // Notify members about group deletion
+      // Note: We used to fetch members here, but it's better to fetch them BEFORE remote deletion
+      // However, for simplicity and since we are in a controller, we'll try to notify 
+      // based on the ID we have, assuming the local DB still has them cached or repository handles it.
+      await _runNotificationTask(() async {
+        final members = await _groupDao.getMembersByGroupId(group.id);
+        for (final member in members) {
+          if (member.memberUserId == group.ownerUserId) continue; // Don't notify owner of their own deletion
+          await _notificationRepository.createNotification(
+            type: InAppNotificationType.groupDeleted,
+            targetUserId: member.memberUserId,
+            title: 'Grupo eliminado',
+            message: 'El grupo "${group.name}" ha sido disuelto.',
+          );
+        }
+      });
     } catch (error) {
       state = state.copyWith(
         isLoading: false,
@@ -203,6 +251,18 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         isLoading: false,
         lastSuccess: () => 'Miembro añadido.',
       );
+      
+      // Notify owner about new member
+      await _runNotificationTask(() async {
+        await _notificationRepository.createNotification(
+          type: InAppNotificationType.groupMemberJoined,
+          targetUserId: group.ownerUserId!,
+          actorUserId: user.id,
+          title: 'Nuevo miembro en "${group.name}"',
+          message: '${user.username} se unió al grupo.',
+        );
+      });
+
       return member;
     } catch (error) {
       state = state.copyWith(
@@ -255,6 +315,23 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         isLoading: false,
         lastSuccess: () => 'Miembro eliminado.',
       );
+
+      // Notify owner about member leaving
+      final group = await _groupDao.findGroupById(member.groupId);
+      if (group != null) {
+        final user = await _groupDao.findUserById(member.memberUserId);
+        if (user != null) {
+          await _runNotificationTask(() async {
+            await _notificationRepository.createNotification(
+              type: InAppNotificationType.groupMemberLeft,
+              targetUserId: group.ownerUserId!,
+              actorUserId: user.id,
+              title: 'Miembro salió de "${group.name}"',
+              message: '${user.username} dejó el grupo.',
+            );
+          });
+        }
+      }
     } catch (error) {
       state = state.copyWith(
         isLoading: false,
@@ -403,6 +480,20 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         isLoading: false,
         lastSuccess: () => 'Te uniste al grupo.',
       );
+
+      // Notify owner about new member joining by code
+      if (group != null) {
+        await _runNotificationTask(() async {
+          await _notificationRepository.createNotification(
+            type: InAppNotificationType.groupMemberJoined,
+            targetUserId: group.ownerUserId!,
+            actorUserId: user.id,
+            title: 'Nuevo miembro en "${group.name}"',
+            message: '${user.username} se unió por código.',
+          );
+        });
+      }
+
       await _cancelGroupInvitationNotification(invitation);
       return invitation;
     } catch (error) {

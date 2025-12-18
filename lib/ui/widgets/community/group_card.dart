@@ -13,7 +13,6 @@ import '../../../../services/coach_marks/coach_mark_models.dart';
 import '../../../../ui/widgets/coach_mark_target.dart';
 import '../../../../utils/group_utils.dart';
 import 'group_stats_table.dart';
-import 'loans_section.dart';
 import 'group_menu.dart';
 import '../../screens/home/tabs/discover_group_page.dart';
 
@@ -84,8 +83,6 @@ class _GroupCardState extends ConsumerState<GroupCard> {
     final activeUser = activeUserAsync.value;
     final groupActionState = ref.watch(groupPushControllerProvider);
     final isGroupBusy = groupActionState.isLoading;
-    final loanController = ref.watch(loanControllerProvider.notifier);
-    final loanState = ref.watch(loanControllerProvider);
 
     final members = membersAsync.asData?.value ?? const <GroupMemberDetail>[];
     final isOwner = activeUser != null && group.ownerUserId != null && group.ownerUserId == activeUser.id;
@@ -208,19 +205,6 @@ class _GroupCardState extends ConsumerState<GroupCard> {
               ),
               const SizedBox(height: 12),
             ],
-            LoansSection(
-              loansAsync: loansAsync,
-              activeUser: activeUser,
-              loanController: loanController,
-              loanState: loanState,
-              onFeedback: (message, isError) {
-                _showFeedbackSnackBar(
-                  context: context,
-                  message: message,
-                  isError: isError,
-                );
-              },
-            ),
           ],
         ),
       ),

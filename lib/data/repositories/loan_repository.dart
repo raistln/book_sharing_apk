@@ -227,6 +227,7 @@ class LoanRepository {
   Future<Loan> acceptLoan({
     required Loan loan,
     required LocalUser owner,
+    DateTime? dueDate,
   }) async {
     final current = await _requireLoan(loan.id);
 
@@ -247,6 +248,7 @@ class LoanRepository {
         entry: LoansCompanion(
           status: const Value('active'),
           approvedAt: Value(now),
+          dueDate: dueDate != null ? Value(dueDate) : const Value.absent(),
           returnedAt: const Value<DateTime?>(null),
           isDirty: const Value(true),
           syncedAt: const Value<DateTime?>(null),

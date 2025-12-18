@@ -33,19 +33,25 @@ class LoanConfirmationCard extends ConsumerWidget {
     final iHaveConfirmed = myConfirmation != null;
     final otherHasConfirmed = otherConfirmation != null;
 
-    final otherName = isManual
-        ? (loan.externalBorrowerName ?? 'Pretatario')
-        : (isOwner ? detail.borrower?.username : detail.owner?.username) ?? 'Usuario';
+    final borrowerName = isManual
+        ? (loan.externalBorrowerName ?? 'Prestatario')
+        : (detail.borrower?.username ?? 'Usuario');
+    final ownerName = detail.owner?.username ?? 'Propietario';
+
+    final dueDateStr = loan.dueDate != null 
+        ? DateFormat.yMMMd().format(loan.dueDate!) 
+        : 'Indefinido';
+
+    final loanInfo = 'Prestado a: $borrowerName\nPrestado de: $ownerName\nVence: $dueDateStr';
+
+    final otherName = isOwner ? borrowerName : ownerName;
 
     // Manual Loan Case: Simple return
     if (isManual) {
       if (!isOwner) return const SizedBox.shrink(); // Should not happen
       final bookTitle = detail.book?.title ?? 'Libro desconocido';
-      final dueDateStr = loan.dueDate != null 
-          ? DateFormat.yMMMd().format(loan.dueDate!) 
-          : 'Indefinido';
       
-      final sub = 'Prestado a: $otherName\nVence: $dueDateStr';
+      final sub = '$loanInfo\n\n(Préstamo manual)';
 
       return _buildActionCard(
         context,
@@ -77,8 +83,8 @@ class LoanConfirmationCard extends ConsumerWidget {
         context,
         theme,
         icon: Icons.swap_horiz,
-        title: 'Devolución',
-        subtitle: 'Cuando se complete la devolución, ambos debéis confirmarlo.',
+        title: detail.book?.title ?? 'Devolución',
+        subtitle: '$loanInfo\n\nCuando se complete la devolución, ambos debéis confirmarlo.',
         actions: [
           OutlinedButton.icon(
             onPressed: loanState.isLoading 
@@ -102,8 +108,8 @@ class LoanConfirmationCard extends ConsumerWidget {
         theme,
         color: theme.colorScheme.surfaceContainerHighest,
         icon: Icons.hourglass_top,
-        title: 'Esperando a $otherName',
-        subtitle: 'Ya has confirmado la devolución el ${DateFormat.MMMd().format(myConfirmation)}.',
+        title: '${detail.book?.title ?? 'Préstamo'}: Esperando a $otherName',
+        subtitle: '$loanInfo\n\nYa has confirmado la devolución el ${DateFormat.MMMd().format(myConfirmation)}.',
         actions: [
           if (canForce)
              FilledButton.icon(
@@ -136,8 +142,8 @@ class LoanConfirmationCard extends ConsumerWidget {
         theme,
         color: theme.colorScheme.primaryContainer,
         icon: Icons.priority_high,
-        title: '¡$otherName confirmó la devolución!',
-        subtitle: 'Confirma que has recibido/entregado el libro para finalizar.',
+        title: '${detail.book?.title ?? 'Préstamo'}: ¡$otherName confirmó!',
+        subtitle: '$loanInfo\n\nConfirma que has recibido/entregado el libro para finalizar.',
         actions: [
           FilledButton.icon(
             onPressed: loanState.isLoading 

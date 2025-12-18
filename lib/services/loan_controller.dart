@@ -203,12 +203,14 @@ class LoanController extends StateNotifier<LoanActionState> {
   Future<Loan> acceptLoan({
     required Loan loan,
     required LocalUser owner,
+    DateTime? dueDate,
   }) async {
     state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final result = await _loanRepository.acceptLoan(
         loan: loan,
         owner: owner,
+        dueDate: dueDate,
       );
       // Marcar cambios (no crítico, usa debouncing normal)
       _syncCoordinator.markPendingChanges(SyncEntity.loans, priority: SyncPriority.medium);

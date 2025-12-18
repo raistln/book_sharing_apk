@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../data/local/database.dart';
 import '../../../../data/local/group_dao.dart';
@@ -7,6 +8,7 @@ import '../../../../providers/loans_providers.dart';
 import '../../../../providers/book_providers.dart';
 import '../../../widgets/loans/loan_confirmation_card.dart';
 import '../../../widgets/loans/manual_loan_sheet.dart';
+import '../../../widgets/loan_feedback_banner.dart';
 
 class LoansTab extends ConsumerWidget {
   const LoansTab({super.key});
@@ -25,6 +27,7 @@ class LoansTab extends ConsumerWidget {
     final activeLender = ref.watch(activeLoansAsLenderProvider);
     final activeBorrower = ref.watch(activeLoansAsBorrowerProvider);
     final history = ref.watch(loanHistoryProvider);
+    final loanState = ref.watch(loanControllerProvider);
 
     final hasIncoming = incomingRequests.isNotEmpty;
     final hasOutgoing = outgoingRequests.isNotEmpty;
@@ -51,6 +54,24 @@ class LoansTab extends ConsumerWidget {
             ],
           ),
           
+          if (loanState.lastError != null)
+            SliverToBoxAdapter(
+              child: LoanFeedbackBanner(
+                message: loanState.lastError!,
+                isError: true,
+                onDismiss: () => ref.read(loanControllerProvider.notifier).dismissError(),
+              ),
+            )
+          else if (loanState.lastSuccess != null)
+             SliverToBoxAdapter(
+              child: LoanFeedbackBanner(
+                message: loanState.lastSuccess!,
+                isError: false,
+                onDismiss: () =>
+                    ref.read(loanControllerProvider.notifier).dismissSuccess(),
+              ),
+            ),
+            
           if (isEmpty)
              SliverFillRemaining(
               child: Center(
@@ -84,7 +105,7 @@ class LoansTab extends ConsumerWidget {
             if (hasIncoming)
               SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildRequestCard(context, incomingRequests[index], true),
+                  (context, index) => _buildRequestCard(context, ref, incomingRequests[index], true),
                   childCount: incomingRequests.length,
                 ),
               ),
@@ -94,7 +115,7 @@ class LoansTab extends ConsumerWidget {
             if (hasOutgoing)
               SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildRequestCard(context, outgoingRequests[index], false),
+                  (context, index) => _buildRequestCard(context, ref, outgoingRequests[index], false),
                   childCount: outgoingRequests.length,
                 ),
               ),
@@ -169,32 +190,172 @@ class LoansTab extends ConsumerWidget {
     );
   }
 
-  // Basic request card, detailed actions are in LoansSection but reused logic briefly here
-  // Ideally this should use a Notification-like card or simple action card.
-  // Using a simplified view for now as LoansSection handles the complex logic
-  // Update: We can reuse logic or build simple. Let's build simple for Tab.
-  Widget _buildRequestCard(BuildContext context, LoanDetail detail, bool isIncoming) {
+  Widget _buildRequestCard(BuildContext context, WidgetRef ref, LoanDetail detail, bool isIncoming) {
+    final theme = Theme.of(context);
     final bookTitle = detail.book?.title ?? 'Libro';
     final otherName = isIncoming 
         ? (detail.borrower?.username ?? 'Alguien') 
         : (detail.owner?.username ?? 'Propietario');
+    final loan = detail.loan;
+    final loanController = ref.read(loanControllerProvider.notifier);
     
+    // Actions
+    final List<Widget> actions = [];
+    
+    if (isIncoming) {
+      // I am the owner, I can Accept or Reject
+      actions.add(
+        OutlinedButton.icon(
+          onPressed: () => loanController.rejectLoan(loan: loan, owner: detail.owner!),
+          icon: const Icon(Icons.close),
+          label: const Text('Rechazar'),
+          style: OutlinedButton.styleFrom(foregroundColor: theme.colorScheme.error),
+        ),
+      );
+      actions.add(
+        FilledButton.icon(
+          onPressed: () => _handleAcceptLoan(context, ref, detail),
+          icon: const Icon(Icons.check),
+          label: const Text('Aceptar'),
+        ),
+      );
+    } else {
+      // I am the borrower, I can Cancel
+      actions.add(
+         TextButton.icon(
+          onPressed: () => loanController.cancelLoan(loan: loan, borrower: detail.borrower!),
+          icon: const Icon(Icons.cancel_outlined),
+          label: const Text('Cancelar solicitud'),
+          style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+        ),
+      );
+    }
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: Icon(isIncoming ? Icons.arrow_downward : Icons.arrow_upward, 
-            color: isIncoming ? Colors.orange : Colors.blue),
-        title: Text(bookTitle),
-        subtitle: Text(isIncoming ? 'Solicitado por $otherName' : 'Solicitado a $otherName'),
-        trailing: const Chip(label: Text('Pendiente')),
-        onTap: () {
-          // TODO: Add detailed loan request view
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gestiona la solicitud en la pestaña de Grupos.')),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isIncoming ? Icons.arrow_downward : Icons.arrow_upward, 
+                  color: isIncoming ? Colors.orange : Colors.blue,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(bookTitle, style: theme.textTheme.titleMedium),
+                      Text(
+                        isIncoming ? 'Solicitado por $otherName' : 'Solicitado a $otherName',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (actions.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                   Wrap(
+                    spacing: 8,
+                    children: actions,
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleAcceptLoan(BuildContext context, WidgetRef ref, LoanDetail detail) async {
+    DateTime dueDate = DateTime.now().add(const Duration(days: 14));
+    bool isIndefinite = false;
+
+    final result = await showDialog<DateTime?>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final theme = Theme.of(context);
+          return AlertDialog(
+            title: const Text('Aceptar Préstamo'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Selecciona una fecha de vencimiento:'),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Indefinido', style: theme.textTheme.bodyMedium),
+                    Switch(
+                      value: isIndefinite,
+                      onChanged: (val) => setState(() => isIndefinite = val),
+                    ),
+                  ],
+                ),
+                if (!isIndefinite)
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: dueDate,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        setState(() => dueDate = picked);
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.calendar_today),
+                      ),
+                      child: Text(
+                        DateFormat.yMMMd().format(dueDate),
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(
+                    context, 
+                    isIndefinite ? DateTime.now().add(const Duration(days: 365 * 10)) : dueDate
+                  );
+                },
+                child: const Text('Confirmar'),
+              ),
+            ],
           );
         },
       ),
     );
+
+    if (result != null) {
+      ref.read(loanControllerProvider.notifier).acceptLoan(
+        loan: detail.loan,
+        owner: detail.owner!,
+        dueDate: result,
+      );
+    }
   }
 
   Widget _buildHistoryItem(BuildContext context, LoanDetail detail, LocalUser activeUser) {

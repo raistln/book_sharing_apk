@@ -216,27 +216,16 @@ Future<void> _handleJoinGroupByCode(
   WidgetRef ref,
   LocalUser user,
 ) async {
-  final code = await _showJoinGroupByCodeDialog(context);
-  if (code == null) {
-    return;
-  }
-
-  final controller = ref.read(groupPushControllerProvider.notifier);
-  try {
-    await controller.acceptInvitationByCode(
-      code: code,
-      user: user,
-    );
-  } catch (error) {
-    if (!context.mounted) {
-      return;
-    }
-    _showFeedbackSnackBar(
-      context: context,
-      message: error.toString(),
-      isError: true,
-    );
-  }
+  await _showJoinGroupByCodeDialog(
+    context,
+    (code) async {
+       final controller = ref.read(groupPushControllerProvider.notifier);
+       await controller.acceptInvitationByCode(
+          code: code,
+          user: user,
+       );
+    },
+  );
 }
 
 Future<void> _performSync(BuildContext context, WidgetRef ref) async {
@@ -283,16 +272,21 @@ Future<GroupFormResult?> _showGroupFormDialog(BuildContext context) {
   );
 }
 
-Future<String?> _showJoinGroupByCodeDialog(BuildContext context) {
-  return showDialog<String>(
+Future<void> _showJoinGroupByCodeDialog(
+  BuildContext context,
+  Future<void> Function(String code) onJoin,
+) {
+  return showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const _JoinGroupByCodeDialog(),
+    builder: (_) => _JoinGroupByCodeDialog(onJoin: onJoin),
   );
 }
 
 class _JoinGroupByCodeDialog extends StatefulWidget {
-  const _JoinGroupByCodeDialog();
+  const _JoinGroupByCodeDialog({required this.onJoin});
+
+  final Future<void> Function(String code) onJoin;
 
   @override
   State<_JoinGroupByCodeDialog> createState() => _JoinGroupByCodeDialogState();
@@ -302,6 +296,7 @@ class _JoinGroupByCodeDialogState extends State<_JoinGroupByCodeDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _codeController;
   bool _isSubmitting = false;
+  String? _errorText;
 
   @override
   void initState() {
@@ -326,9 +321,10 @@ class _JoinGroupByCodeDialogState extends State<_JoinGroupByCodeDialog> {
           children: [
             TextFormField(
               controller: _codeController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Código de grupo',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                errorText: _errorText,
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
@@ -339,6 +335,11 @@ class _JoinGroupByCodeDialogState extends State<_JoinGroupByCodeDialog> {
               autofocus: true,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: _isSubmitting ? null : (_) => _handleSubmit(),
+              onChanged: (_) {
+                if (_errorText != null) {
+                  setState(() => _errorText = null);
+                }
+              },
             ),
           ],
         ),
@@ -362,14 +363,32 @@ class _JoinGroupByCodeDialogState extends State<_JoinGroupByCodeDialog> {
     );
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
 
-    setState(() => _isSubmitting = true);
-    final code = _codeController.text.trim();
-    
-    Navigator.of(context).pop(code);
+    setState(() {
+      _isSubmitting = true;
+      _errorText = null;
+    });
+
+    try {
+      final code = _codeController.text.trim();
+      await widget.onJoin(code);
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text('¡Te has unido al grupo exitosamente!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _errorText = 'El código no es válido o ya expiró. Verifícalo e intenta de nuevo.';
+        });
+      }
+    }
   }
 }

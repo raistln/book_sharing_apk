@@ -65,18 +65,22 @@ class SupabaseGroupMemberRecord {
     required this.userId,
     required this.role,
     required this.createdAt,
+    this.username,
   });
 
   final String id;
   final String userId;
   final String role;
+  final String? username;
   final DateTime createdAt;
 
   factory SupabaseGroupMemberRecord.fromJson(Map<String, dynamic> json) {
+    final profile = json['profiles'] as Map<String, dynamic>?;
     return SupabaseGroupMemberRecord(
       id: json['id'] as String,
       userId: json['user_id'] as String,
       role: json['role'] as String? ?? 'member',
+      username: profile?['username'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -167,12 +171,16 @@ class SupabaseLoanRecord {
     required this.isDeleted,
     required this.createdAt,
     required this.updatedAt,
+    this.borrowerUsername,
+    this.lenderUsername,
   });
 
   final String id;
   final String sharedBookId;
   final String borrowerUserId;
   final String lenderUserId;
+  final String? borrowerUsername;
+  final String? lenderUsername;
   final String status;
   final DateTime requestedAt;
   final DateTime? approvedAt;
@@ -188,11 +196,16 @@ class SupabaseLoanRecord {
     DateTime? tryParse(String? value) =>
         value != null ? DateTime.tryParse(value) : null;
 
+    final borrowerProfile = json['borrower'] as Map<String, dynamic>?;
+    final lenderProfile = json['lender'] as Map<String, dynamic>?;
+
     return SupabaseLoanRecord(
       id: json['id'] as String,
       sharedBookId: json['shared_book_id'] as String,
       borrowerUserId: json['borrower_user_id'] as String? ?? '', // Handle manual loans (null borrower)
       lenderUserId: json['lender_user_id'] as String,
+      borrowerUsername: borrowerProfile?['username'] as String?,
+      lenderUsername: lenderProfile?['username'] as String?,
       status: (json['status'] as String?) ?? 'requested',
       requestedAt: DateTime.parse(json['requested_at'] as String),
       approvedAt: tryParse(json['approved_at'] as String?),
@@ -294,9 +307,10 @@ class SupabaseGroupService {
       queryParameters: {
         'select':
             'id,name,description,owner_id,created_at,'
-            'group_members(id,user_id,role,created_at),'
+            'group_members(id,user_id,role,created_at,profiles(username)),'
             'shared_books(id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,created_at,updated_at,'
-            'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at)),'
+            'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at,'
+            'borrower:profiles!borrower_user_id(username),lender:profiles!lender_user_id(username))),'
             'group_invitations(id,group_id,inviter_id,accepted_user_id,role,code,status,expires_at,responded_at,created_at,updated_at)',
       },
     );
@@ -336,7 +350,8 @@ class SupabaseGroupService {
       queryParameters: {
         'select':
             'id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,created_at,updated_at,'
-            'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at)',
+            'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at,'
+            'borrower:profiles!borrower_user_id(username),lender:profiles!lender_user_id(username))',
         'group_id': 'eq.$groupId',
         'order': 'created_at.desc',
       },

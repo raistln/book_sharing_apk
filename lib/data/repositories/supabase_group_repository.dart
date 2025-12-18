@@ -89,6 +89,7 @@ class SupabaseGroupSyncRepository {
         for (final remoteMember in remote.members) {
           final localUser = await _ensureLocalUser(
             remoteId: remoteMember.userId,
+            username: remoteMember.username,
             createdAtFallback: remoteMember.createdAt,
           );
           if (localUser == null) {
@@ -357,7 +358,11 @@ class SupabaseGroupSyncRepository {
             // For non-manual loans, find the borrower
             LocalUser? borrower;
             if (!isManualLoan) {
-              borrower = await _userDao.findByRemoteId(remoteLoan.borrowerUserId);
+              borrower = await _ensureLocalUser(
+                remoteId: remoteLoan.borrowerUserId,
+                username: remoteLoan.borrowerUsername,
+                createdAtFallback: remoteLoan.createdAt,
+              );
               if (borrower == null) {
                 if (kDebugMode) {
                   debugPrint('[GroupSync] Skipping loan ${remoteLoan.id} — borrower=${remoteLoan.borrowerUserId} missing locally');
@@ -365,6 +370,13 @@ class SupabaseGroupSyncRepository {
                 continue;
               }
             }
+
+            // Ensure lender exists locally (and update username if available)
+            await _ensureLocalUser(
+              remoteId: remoteLoan.lenderUserId,
+              username: remoteLoan.lenderUsername,
+              createdAtFallback: remoteLoan.createdAt,
+            );
 
             final existingLoan =
                 await _groupDao.findLoanByRemoteId(remoteLoan.id);
@@ -411,6 +423,12 @@ class SupabaseGroupSyncRepository {
             );
 
             if (existingLoan != null) {
+              if (existingLoan.isDirty) {
+                if (kDebugMode) {
+                  debugPrint('[GroupSync] Skipping update for DIRTY local loan ${existingLoan.uuid}');
+                }
+                continue; 
+              }
               await _groupDao.updateLoanFields(
                 loanId: existingLoan.id,
                 entry: baseLoan,
@@ -751,18 +769,35 @@ class SupabaseGroupSyncRepository {
 
   Future<LocalUser?> _ensureLocalUser({
     required String remoteId,
+    String? username,
     required DateTime createdAtFallback,
   }) async {
     var localUser = await _userDao.findByRemoteId(remoteId);
+    
+    // If user exists, optionally update username if it was a placeholder
     if (localUser != null) {
+      if (username != null && 
+          (localUser.username.startsWith('miembro_') || localUser.username.isEmpty)) {
+        await _userDao.updateUserFields(
+          userId: localUser.id,
+          entry: LocalUsersCompanion(
+            username: Value(username),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
+        return _userDao.getById(localUser.id);
+      }
       return localUser;
     }
 
-    final sanitizedId = remoteId.replaceAll(RegExp('[^a-zA-Z0-9]'), '');
-    final suffix = sanitizedId.isNotEmpty
-        ? (sanitizedId.length >= 8 ? sanitizedId.substring(0, 8) : sanitizedId.padRight(8, '0'))
-        : '00000000';
-    final placeholderUsername = 'miembro_$suffix';
+    final placeholderUsername = username ?? () {
+      final sanitizedId = remoteId.replaceAll(RegExp('[^a-zA-Z0-9]'), '');
+      final suffix = sanitizedId.isNotEmpty
+          ? (sanitizedId.length >= 8 ? sanitizedId.substring(0, 8) : sanitizedId.padRight(8, '0'))
+          : '00000000';
+      return 'miembro_$suffix';
+    }();
+    
     final now = DateTime.now();
 
     try {

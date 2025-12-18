@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:drift/drift.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
@@ -16,8 +17,12 @@ class GroupPushException implements Exception {
   final int? statusCode;
 
   @override
-  String toString() =>
-      'GroupPushException(${statusCode ?? 'local'}): $message';
+  String toString() {
+    if (kDebugMode) {
+      return 'GroupPushException(${statusCode ?? 'local'}): $message';
+    }
+    return message;
+  }
 }
 
 class GroupPushRepository {
@@ -422,7 +427,7 @@ class GroupPushRepository {
     await _groupDao.updateInvitation(
       invitationId: invitation.id,
       entry: GroupInvitationsCompanion(
-        status: const Value('cancelled'),
+        status: const Value('expired'), // Schema does not support 'cancelled'
         respondedAt: Value(now),
         isDirty: const Value(false),
         syncedAt: Value(now),
@@ -433,7 +438,7 @@ class GroupPushRepository {
     await _patch(
       path: '/rest/v1/group_invitations?id=eq.${invitation.remoteId ?? invitation.uuid}',
       body: {
-        'status': 'cancelled',
+        'status': 'expired', // Schema allows: pending, accepted, rejected, expired
         'responded_at': now.toIso8601String(),
         'updated_at': now.toIso8601String(),
       },

@@ -41,17 +41,42 @@ class LoanRepository {
     final owner = await _requireUser(sharedBook.ownerUserId);
 
     if (borrower.id == owner.id) {
-      throw const LoanException('No puedes solicitar un préstamo de tu propio libro.');
+      throw const LoanException(
+          'No puedes solicitar un préstamo de tu propio libro.');
     }
 
     if (!sharedBook.isAvailable) {
-      throw const LoanException('El libro compartido no está disponible para préstamo.');
+      throw const LoanException(
+          'El libro compartido no está disponible para préstamo.');
     }
 
-    // Check for existing active loans
-    final activeLoans = await _groupDao.getActiveLoansForSharedBook(sharedBook.id);
-    if (activeLoans.isNotEmpty) {
-      throw const LoanException('Este libro ya tiene un préstamo activo.');
+    // Check for existing ACTIVE or PENDING loans only (not rejected/cancelled)
+    final activeLoans =
+        await _groupDao.getActiveLoansForSharedBook(sharedBook.id);
+    final activePendingLoans = activeLoans
+        .where((loan) =>
+            loan.status == 'active' ||
+            loan.status == 'requested' ||
+            loan.status == 'pending')
+        .toList();
+
+    if (activePendingLoans.isNotEmpty) {
+      throw const LoanException(
+          'Este libro ya tiene un préstamo activo o pendiente.');
+    }
+
+    // Check if THIS borrower already has a pending/active request for this book
+    final borrowerExistingLoans = activeLoans
+        .where((loan) =>
+            loan.borrowerUserId == borrower.id &&
+            (loan.status == 'requested' ||
+                loan.status == 'pending' ||
+                loan.status == 'active'))
+        .toList();
+
+    if (borrowerExistingLoans.isNotEmpty) {
+      throw const LoanException(
+          'Ya tienes una solicitud pendiente o activa para este libro.');
     }
 
     final now = DateTime.now();
@@ -95,11 +120,13 @@ class LoanRepository {
     }
 
     if (!sharedBook.isAvailable) {
-      throw const LoanException('El libro compartido no está disponible para préstamo.');
+      throw const LoanException(
+          'El libro compartido no está disponible para préstamo.');
     }
 
     // Check for existing active loans
-    final activeLoans = await _groupDao.getActiveLoansForSharedBook(sharedBook.id);
+    final activeLoans =
+        await _groupDao.getActiveLoansForSharedBook(sharedBook.id);
     if (activeLoans.isNotEmpty) {
       throw const LoanException('Este libro ya tiene un préstamo activo.');
     }
@@ -120,7 +147,8 @@ class LoanRepository {
               : const Value.absent(),
           status: const Value('active'), // Manual loans start as active
           requestedAt: Value(now),
-          approvedAt: const Value.absent(), // No approval needed for manual loans
+          approvedAt:
+              const Value.absent(), // No approval needed for manual loans
           dueDate: Value(dueDate),
           isDeleted: const Value(false),
           isDirty: const Value(true), // Mark for sync
@@ -167,11 +195,13 @@ class LoanRepository {
     final current = await _requireLoan(loan.id);
 
     if (current.status != 'requested') {
-      throw const LoanException('Solo los préstamos solicitados se pueden cancelar.');
+      throw const LoanException(
+          'Solo los préstamos solicitados se pueden cancelar.');
     }
 
     if (current.borrowerUserId != borrower.id) {
-      throw const LoanException('Solo el solicitante puede cancelar el préstamo.');
+      throw const LoanException(
+          'Solo el solicitante puede cancelar el préstamo.');
     }
 
     final now = DateTime.now();
@@ -199,11 +229,13 @@ class LoanRepository {
     final current = await _requireLoan(loan.id);
 
     if (current.status != 'requested') {
-      throw const LoanException('Solo los préstamos solicitados se pueden rechazar.');
+      throw const LoanException(
+          'Solo los préstamos solicitados se pueden rechazar.');
     }
 
     if (current.lenderUserId != owner.id) {
-      throw const LoanException('Solo el propietario puede rechazar la solicitud.');
+      throw const LoanException(
+          'Solo el propietario puede rechazar la solicitud.');
     }
 
     final now = DateTime.now();
@@ -219,6 +251,25 @@ class LoanRepository {
           updatedAt: Value(now),
         ),
       );
+
+      // Restore book availability when rejecting the loan
+      if (current.sharedBookId != null) {
+        final sharedBook = await _requireSharedBook(current.sharedBookId!);
+        final bookId = sharedBook.bookId;
+
+        // Set book back to available
+        await _updateAllSharedBooksAvailability(bookId, true, now);
+
+        await _bookDao.updateBookFields(
+          bookId: bookId,
+          entry: BooksCompanion(
+            status: const Value('available'),
+            isDirty: const Value(true),
+            syncedAt: const Value<DateTime?>(null),
+            updatedAt: Value(now),
+          ),
+        );
+      }
     });
 
     return _requireLoan(current.id);
@@ -232,11 +283,13 @@ class LoanRepository {
     final current = await _requireLoan(loan.id);
 
     if (current.status != 'requested') {
-      throw const LoanException('Solo los préstamos solicitados se pueden aceptar.');
+      throw const LoanException(
+          'Solo los préstamos solicitados se pueden aceptar.');
     }
 
     if (current.lenderUserId != owner.id) {
-      throw const LoanException('Solo el propietario puede aceptar la solicitud.');
+      throw const LoanException(
+          'Solo el propietario puede aceptar la solicitud.');
     }
 
     final sharedBook = await _requireSharedBook(current.sharedBookId!);
@@ -272,28 +325,33 @@ class LoanRepository {
     final current = await _requireLoan(loan.id);
 
     if (current.status != 'active') {
-      throw const LoanException('Solo los préstamos activos se pueden marcar como devueltos.');
+      throw const LoanException(
+          'Solo los préstamos activos se pueden marcar como devueltos.');
     }
 
-    if (actor.id != current.lenderUserId && actor.id != current.borrowerUserId) {
-      throw const LoanException('Solo el propietario o el solicitante pueden marcar como devuelto.');
+    if (actor.id != current.lenderUserId &&
+        actor.id != current.borrowerUserId) {
+      throw const LoanException(
+          'Solo el propietario o el solicitante pueden marcar como devuelto.');
     }
 
     final now = DateTime.now();
     final isLender = actor.id == current.lenderUserId;
     final isManualLoan = current.externalBorrowerName != null;
-    
+
     // For manual loans, only the owner can mark as returned and it completes immediately
     if (isManualLoan) {
       if (!isLender) {
-        throw const LoanException('Solo el propietario puede marcar préstamos manuales como devueltos.');
+        throw const LoanException(
+            'Solo el propietario puede marcar préstamos manuales como devueltos.');
       }
 
       await _db.transaction(() async {
         await _groupDao.updateLoanStatus(
           loanId: current.id,
           entry: LoansCompanion(
-            status: const Value('returned'),
+            status: const Value(
+                'completed'), // Completed when owner confirms manual loan
             lenderReturnedAt: Value(now),
             returnedAt: Value(now),
             isDirty: const Value(true),
@@ -303,8 +361,9 @@ class LoanRepository {
         );
 
         // Logic to get bookId safely
-        final bookId = current.bookId ?? (await _requireSharedBook(current.sharedBookId!)).bookId;
-        
+        final bookId = current.bookId ??
+            (await _requireSharedBook(current.sharedBookId!)).bookId;
+
         await _updateAllSharedBooksAvailability(bookId, true, now);
 
         if (current.sharedBookId != null) {
@@ -334,28 +393,20 @@ class LoanRepository {
 
     // For normal loans, use double confirmation
     // Check if the other party has already confirmed
-    final otherConfirmed = isLender 
-        ? current.borrowerReturnedAt != null 
+    final otherConfirmed = isLender
+        ? current.borrowerReturnedAt != null
         : current.lenderReturnedAt != null;
 
     await _db.transaction(() async {
-      // Update the confirmation timestamp for the actor
-      await _groupDao.updateLoanFields(
-        loanId: current.id,
-        entry: LoansCompanion(
-          borrowerReturnedAt: !isLender ? Value(now) : const Value.absent(),
-          lenderReturnedAt: isLender ? Value(now) : const Value.absent(),
-          isDirty: const Value(true),
-          updatedAt: Value(now),
-        ),
-      );
-
-      // If both have confirmed, finalize the return
+      // If both have confirmed, finalize the return in one atomic operation
       if (otherConfirmed) {
         await _groupDao.updateLoanStatus(
           loanId: current.id,
           entry: LoansCompanion(
-            status: const Value('returned'),
+            status:
+                const Value('completed'), // Completed when both parties confirm
+            borrowerReturnedAt: !isLender ? Value(now) : const Value.absent(),
+            lenderReturnedAt: isLender ? Value(now) : const Value.absent(),
             returnedAt: Value(now),
             isDirty: const Value(true),
             syncedAt: const Value<DateTime?>(null),
@@ -364,16 +415,28 @@ class LoanRepository {
         );
 
         // Logic to get bookId safely (though normal loans usually have sharedBook)
-        final bookId = current.bookId ?? (await _requireSharedBook(current.sharedBookId!)).bookId;
+        final bookId = current.bookId ??
+            (await _requireSharedBook(current.sharedBookId!)).bookId;
 
         await _updateAllSharedBooksAvailability(bookId, true, now);
-        
+
         await _bookDao.updateBookFields(
           bookId: bookId,
           entry: BooksCompanion(
             status: const Value('available'),
             isDirty: const Value(true),
             syncedAt: const Value<DateTime?>(null),
+            updatedAt: Value(now),
+          ),
+        );
+      } else {
+        // Only update the confirmation timestamp for the actor
+        await _groupDao.updateLoanFields(
+          loanId: current.id,
+          entry: LoansCompanion(
+            borrowerReturnedAt: !isLender ? Value(now) : const Value.absent(),
+            lenderReturnedAt: isLender ? Value(now) : const Value.absent(),
+            isDirty: const Value(true),
             updatedAt: Value(now),
           ),
         );
@@ -387,7 +450,8 @@ class LoanRepository {
     final current = await _requireLoan(loan.id);
 
     if (current.status != 'active') {
-      throw const LoanException('Solo los préstamos activos se pueden marcar como expirados.');
+      throw const LoanException(
+          'Solo los préstamos activos se pueden marcar como expirados.');
     }
 
     final now = DateTime.now();
@@ -404,7 +468,8 @@ class LoanRepository {
         ),
       );
 
-      final bookId = current.bookId ?? (await _requireSharedBook(current.sharedBookId!)).bookId;
+      final bookId = current.bookId ??
+          (await _requireSharedBook(current.sharedBookId!)).bookId;
 
       await _updateAllSharedBooksAvailability(bookId, true, now);
 
@@ -523,7 +588,8 @@ class LoanRepository {
       final loanId = await _groupDao.insertLoan(
         LoansCompanion.insert(
           uuid: _uuid.v4(),
-          sharedBookId: const Value.absent(), // No shared book for direct manual loan
+          sharedBookId:
+              const Value.absent(), // No shared book for direct manual loan
           bookId: Value(freshBook.id),
           borrowerUserId: const Value.absent(),
           lenderUserId: owner.id,
@@ -571,27 +637,32 @@ class LoanRepository {
     final current = await _requireLoan(loan.id);
 
     if (current.lenderUserId != owner.id) {
-      throw const LoanException('Solo el propietario puede forzar la devolución.');
+      throw const LoanException(
+          'Solo el propietario puede forzar la devolución.');
     }
-    
+
     if (current.status != 'active') {
-      throw const LoanException('Solo préstamos activos pueden ser terminados.');
+      throw const LoanException(
+          'Solo préstamos activos pueden ser terminados.');
     }
 
     // Logic: If 7 days have passed since lender's confirmation or just force it?
     // User requirement: "Auto-confirmación... después de 7 días".
     // This method forces it immediately, assuming the check happened upper layer or this IS the action after 7 days.
     // For now, let's allow it if called.
-    
+
     final now = DateTime.now();
-    
+
     return _db.transaction(() async {
       await _groupDao.updateLoanStatus(
         loanId: current.id,
         entry: LoansCompanion(
-          status: const Value('returned'),
+          status: const Value(
+              'completed'), // Completed when owner forces confirmation
           lenderReturnedAt: Value(now), // Mark as confirmed by lender
-          borrowerReturnedAt: current.borrowerReturnedAt == null ? Value(now) : const Value.absent(), // Auto-confirm for borrower if missing
+          borrowerReturnedAt: current.borrowerReturnedAt == null
+              ? Value(now)
+              : const Value.absent(), // Auto-confirm for borrower if missing
           returnedAt: Value(now),
           isDirty: const Value(true),
           syncedAt: const Value<DateTime?>(null),
@@ -599,8 +670,9 @@ class LoanRepository {
         ),
       );
 
-      final bookId = current.bookId ?? (await _requireSharedBook(current.sharedBookId!)).bookId;
-      
+      final bookId = current.bookId ??
+          (await _requireSharedBook(current.sharedBookId!)).bookId;
+
       await _updateAllSharedBooksAvailability(bookId, true, now);
 
       // Update book status locally
@@ -613,7 +685,7 @@ class LoanRepository {
           updatedAt: Value(now),
         ),
       );
-      
+
       return (await _requireLoan(current.id));
     });
   }
@@ -621,7 +693,7 @@ class LoanRepository {
   Future<void> _updateAllSharedBooksAvailability(
       int bookId, bool isAvailable, DateTime now) async {
     final sharedBooks = await _groupDao.findSharedBooksByBookId(bookId);
-    
+
     for (final shared in sharedBooks) {
       if (shared.isAvailable != isAvailable) {
         await _groupDao.updateSharedBookFields(
@@ -636,6 +708,7 @@ class LoanRepository {
       }
     }
   }
+
   Future<int> deleteOldRejectedCancelledLoans() async {
     final now = DateTime.now();
     final cutoff = now.subtract(const Duration(days: 30));

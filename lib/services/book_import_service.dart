@@ -23,41 +23,22 @@ class BookImportService {
 
   final BookRepository _bookRepository;
 
-  static const _allowedStatuses = {
-    'available': 'available',
-    'disponible': 'available',
-    'loaned': 'loaned',
-    'prestado': 'loaned',
-    'loaned_out': 'loaned',
-    'archived': 'archived',
-    'archivado': 'archived',
-    'archive': 'archived',
-    'archived_out': 'archived',
-  };
-
+  /// Normalizes the status from import files.
+  /// Only allows 'available' or 'archived' - never 'loaned' since that requires an active loan.
   String _normalizeStatus(String? rawStatus) {
-    if (rawStatus == null) {
+    if (rawStatus == null || rawStatus.trim().isEmpty) {
       return 'available';
     }
 
     final key = rawStatus.trim().toLowerCase();
-    final mapped = _allowedStatuses[key];
-    if (mapped != null) {
-      return mapped;
-    }
 
-    if (key.isEmpty) {
-      return 'available';
-    }
-
-    if (key.startsWith('loan')) {
-      return 'loaned';
-    }
-
+    // Only allow archived status if explicitly specified
     if (key.startsWith('archiv')) {
       return 'archived';
     }
 
+    // Everything else (including 'loaned', 'prestado', etc.) becomes 'available'
+    // Books cannot be imported as loaned since they need an active loan record
     return 'available';
   }
 
@@ -95,7 +76,8 @@ class BookImportService {
         );
       }
 
-      final data = rawData.map<List<dynamic>>((row) => List<dynamic>.from(row)).toList();
+      final data =
+          rawData.map<List<dynamic>>((row) => List<dynamic>.from(row)).toList();
 
       final rawHeaders = List<dynamic>.from(data.first);
       final headerIndex = <String, int>{};
@@ -115,7 +97,11 @@ class BookImportService {
       const isbnAliases = ['isbn'];
       const statusAliases = ['estado', 'status'];
       const notesAliases = ['notas', 'notes'];
-      const barcodeAliases = ['barcode', 'código de barras', 'codigo de barras'];
+      const barcodeAliases = [
+        'barcode',
+        'código de barras',
+        'codigo de barras'
+      ];
 
       final hasTitleColumn = titleAliases.any(headerIndex.containsKey);
       if (!hasTitleColumn) {
@@ -127,8 +113,8 @@ class BookImportService {
       }
 
       final hasDataRows = data.length > 1 &&
-          data.skip(1).any((row) =>
-              row.any((value) => value != null && value.toString().trim().isNotEmpty));
+          data.skip(1).any((row) => row.any(
+              (value) => value != null && value.toString().trim().isNotEmpty));
 
       if (!hasDataRows) {
         return const BookImportResult(
@@ -162,15 +148,16 @@ class BookImportService {
           ownerUserId: owner?.id,
         );
       } catch (error, stackTrace) {
-        debugPrint('No se pudieron obtener libros existentes para evitar duplicados: $error');
+        debugPrint(
+            'No se pudieron obtener libros existentes para evitar duplicados: $error');
         debugPrint('$stackTrace');
       }
       final tracker = _BookDuplicateTracker(existingBooks);
 
       for (var rowIndex = 1; rowIndex < data.length; rowIndex++) {
         final row = data[rowIndex];
-        final hasValues =
-            row.any((value) => value != null && value.toString().trim().isNotEmpty);
+        final hasValues = row.any(
+            (value) => value != null && value.toString().trim().isNotEmpty);
         if (!hasValues) {
           continue;
         }
@@ -254,7 +241,7 @@ class BookImportService {
     try {
       final jsonString = utf8.decode(fileData);
       final List<dynamic> jsonData = jsonDecode(jsonString);
-      
+
       if (jsonData.isEmpty) {
         return const BookImportResult(
           successCount: 0,
@@ -273,7 +260,8 @@ class BookImportService {
           ownerUserId: owner?.id,
         );
       } catch (error, stackTrace) {
-        debugPrint('No se pudieron obtener libros existentes para evitar duplicados: $error');
+        debugPrint(
+            'No se pudieron obtener libros existentes para evitar duplicados: $error');
         debugPrint('$stackTrace');
       }
       final tracker = _BookDuplicateTracker(existingBooks);

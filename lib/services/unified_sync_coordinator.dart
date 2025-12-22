@@ -67,13 +67,13 @@ class UnifiedSyncCoordinator {
 
   void _initialize() {
     _log('Inicializando UnifiedSyncCoordinator...');
-    
+
     if (_enableConnectivityMonitoring) {
       _connectivity = Connectivity();
       _setupConnectivityListener();
       _checkInitialConnectivity();
     }
-    
+
     if (_enableBatteryMonitoring) {
       _battery = Battery();
       _setupBatteryListener();
@@ -82,7 +82,7 @@ class UnifiedSyncCoordinator {
 
   void _setupConnectivityListener() {
     if (_connectivity == null) return;
-    
+
     _connectivitySubscription = _connectivity!.onConnectivityChanged.listen(
       (List<ConnectivityResult> results) {
         final isConnected = results.isNotEmpty &&
@@ -110,7 +110,7 @@ class UnifiedSyncCoordinator {
 
   void _setupBatteryListener() {
     if (_battery == null) return;
-    
+
     _batterySubscription = _battery!.onBatteryStateChanged.listen(
       (BatteryState state) {
         final isBatterySaver = state == BatteryState.charging ? false : true;
@@ -132,7 +132,7 @@ class UnifiedSyncCoordinator {
 
   Future<void> _checkInitialConnectivity() async {
     if (_connectivity == null) return;
-    
+
     try {
       final results = await _connectivity!.checkConnectivity();
       final isConnected = results.isNotEmpty &&
@@ -180,7 +180,7 @@ class UnifiedSyncCoordinator {
       if (entitiesToSync.contains(SyncEntity.groups)) {
         await _syncEntity(SyncEntity.groups);
       }
-      
+
       if (entitiesToSync.contains(SyncEntity.loans)) {
         await _syncEntity(SyncEntity.loans);
       }
@@ -224,33 +224,9 @@ class UnifiedSyncCoordinator {
     }
 
     // Sincronizar inmediatamente
+    // syncNow() ya llama a los controladores individuales a través de _syncEntity()
+    // No es necesario llamarlos de nuevo aquí
     await syncNow(entities: entities);
-    
-    // Trigger actual sync controllers for immediate sync
-    for (final entity in entities) {
-      switch (entity) {
-        case SyncEntity.groups:
-          final groupController = _groupSyncController;
-          if (groupController.mounted) {
-            unawaited(groupController.syncGroups());
-          }
-          break;
-        case SyncEntity.loans:
-          // Now handled by loanSyncController
-           await _loanSyncController.sync();
-          break;
-        case SyncEntity.books:
-          final bookController = _bookSyncController;
-          if (bookController.mounted) {
-            unawaited(bookController.sync());
-          }
-          break;
-        case SyncEntity.users:
-        case SyncEntity.notifications:
-          // These are handled by syncNow() above
-          break;
-      }
-    }
   }
 
   List<SyncEntity> _getEntitiesForEvent(SyncEvent event) {
@@ -339,7 +315,8 @@ class UnifiedSyncCoordinator {
     _retryCount[entity] = retries + 1;
 
     final delay = _calculateRetryDelay(retries);
-    _log('Programando reintento ${retries + 1}/${SyncConfig.maxRetries} para $entity en ${delay.inSeconds}s');
+    _log(
+        'Programando reintento ${retries + 1}/${SyncConfig.maxRetries} para $entity en ${delay.inSeconds}s');
 
     _retryTimers[entity]?.cancel();
     _retryTimers[entity] = Timer(delay, () {
@@ -351,9 +328,7 @@ class UnifiedSyncCoordinator {
   Duration _calculateRetryDelay(int retryCount) {
     // Exponencial: 1s, 2s, 4s, 8s, 16s, max 30s
     final delay = SyncConfig.initialRetryDelay * (1 << retryCount);
-    return delay > SyncConfig.maxRetryDelay
-        ? SyncConfig.maxRetryDelay
-        : delay;
+    return delay > SyncConfig.maxRetryDelay ? SyncConfig.maxRetryDelay : delay;
   }
 
   void _scheduleDebouncedSync(SyncEntity entity, SyncPriority priority) {
@@ -504,8 +479,8 @@ class UnifiedSyncCoordinator {
   }
 
   void _registerActivity() {
-    final wasInactive =
-        DateTime.now().difference(_lastActivityTime) > const Duration(minutes: 1);
+    final wasInactive = DateTime.now().difference(_lastActivityTime) >
+        const Duration(minutes: 1);
 
     _lastActivityTime = DateTime.now();
 
@@ -522,7 +497,8 @@ class UnifiedSyncCoordinator {
   }
 
   void _updateEntityState(SyncEntity entity, EntitySyncState newState) {
-    final updatedStates = Map<SyncEntity, EntitySyncState>.from(_state.entityStates);
+    final updatedStates =
+        Map<SyncEntity, EntitySyncState>.from(_state.entityStates);
     updatedStates[entity] = newState;
     _updateState(_state.copyWith(entityStates: updatedStates));
   }

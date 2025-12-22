@@ -27,8 +27,6 @@ class BookRepository {
   final Uuid _uuid;
   final SyncController? bookSyncController;
 
-
-
   void _markGroupSyncPending() {
     final controller = _groupSyncController;
     if (controller != null && controller.mounted) {
@@ -139,7 +137,7 @@ class BookRepository {
   }) async {
     // Check for duplicates
     Book? existingBook;
-    
+
     // First check by ISBN if provided
     if (isbn != null && isbn.trim().isNotEmpty) {
       existingBook = await _bookDao.findByIsbn(
@@ -150,7 +148,7 @@ class BookRepository {
         throw Exception('¡Oye! Ya tienes ese libro en tu biblioteca 📚');
       }
     }
-    
+
     // Then check by title + author if both provided
     if (author != null && author.trim().isNotEmpty) {
       existingBook = await _bookDao.findByTitleAndAuthor(
@@ -162,7 +160,7 @@ class BookRepository {
         throw Exception('¡Oye! Ya tienes ese libro en tu biblioteca 📚');
       }
     }
-    
+
     final now = DateTime.now();
     final bookUuid = _uuid.v4();
     final bookId = await _bookDao.insertBook(
@@ -251,14 +249,14 @@ class BookRepository {
 
   Future<bool> updateBook(Book book) async {
     final now = DateTime.now();
-    
+
     // Don't use copyWith here - it would overwrite changes from the format null values are converted to Value(null)
     // instead of Value.absent(). This allows us to actually set fields to null.
     final companion = book.toCompanion(false).copyWith(
-      updatedAt: Value(now),
-      isDirty: const Value(true),
-    );
-    
+          updatedAt: Value(now),
+          isDirty: const Value(true),
+        );
+
     final result = await _bookDao.updateBook(companion);
     if (result) {
       await _autoShareBook(
@@ -275,6 +273,27 @@ class BookRepository {
   }
 
   Future<List<SharedBook>> deleteBook(Book book) async {
+    // Check if book has any active or pending loans
+    final sharedBooks = await _groupDao.findSharedBooksByBookId(book.id);
+
+    for (final sharedBook in sharedBooks) {
+      final activeLoans =
+          await _groupDao.getActiveLoansForSharedBook(sharedBook.id);
+      if (activeLoans.isNotEmpty) {
+        // Check if any loans are active or pending
+        final hasActivePendingLoans = activeLoans.any((loan) =>
+            loan.status == 'active' ||
+            loan.status == 'requested' ||
+            loan.status == 'pending');
+
+        if (hasActivePendingLoans) {
+          throw Exception(
+              'No puedes eliminar este libro porque tiene préstamos activos o pendientes. '
+              'Por favor, completa o cancela todos los préstamos antes de eliminarlo.');
+        }
+      }
+    }
+
     final now = DateTime.now();
     await _bookDao.softDeleteBook(
       bookId: book.id,
@@ -302,7 +321,8 @@ class BookRepository {
   }
 
   /// Mapea el status local a visibility e isAvailable para SharedBooks
-  (String visibility, bool isAvailable) _mapStatusToSharedBookValues(String status) {
+  (String visibility, bool isAvailable) _mapStatusToSharedBookValues(
+      String status) {
     switch (status) {
       case 'private':
         return ('private', false);
@@ -325,12 +345,15 @@ class BookRepository {
     String? ownerRemoteId,
   }) async {
     if (ownerUserId == null) {
-      developer.log('[_autoShareBook] ownerUserId is null, skipping.', name: 'BookRepository');
+      developer.log('[_autoShareBook] ownerUserId is null, skipping.',
+          name: 'BookRepository');
       return;
     }
 
     final shouldShare = _shouldShare(status);
-    developer.log('[_autoShareBook] Processing book $bookId (status: $status, shouldShare: $shouldShare)', name: 'BookRepository');
+    developer.log(
+        '[_autoShareBook] Processing book $bookId (status: $status, shouldShare: $shouldShare)',
+        name: 'BookRepository');
 
     if (!shouldShare) {
       final removedSharedBooks =
@@ -343,11 +366,15 @@ class BookRepository {
 
     final groups = await _groupDao.getGroupsForUser(ownerUserId);
     if (groups.isEmpty) {
-      developer.log('[_autoShareBook] User $ownerUserId has no groups to share with.', name: 'BookRepository');
+      developer.log(
+          '[_autoShareBook] User $ownerUserId has no groups to share with.',
+          name: 'BookRepository');
       return;
     }
-    
-    developer.log('[_autoShareBook] Sharing book $bookId with ${groups.length} groups.', name: 'BookRepository');
+
+    developer.log(
+        '[_autoShareBook] Sharing book $bookId with ${groups.length} groups.',
+        name: 'BookRepository');
 
     final db = _groupDao.attachedDatabase;
     var changed = false;
@@ -358,7 +385,8 @@ class BookRepository {
           bookId: bookId,
         );
         if (existing != null) {
-          final (visibility, isAvailable) = _mapStatusToSharedBookValues(status);
+          final (visibility, isAvailable) =
+              _mapStatusToSharedBookValues(status);
           await _groupDao.updateSharedBookFields(
             sharedBookId: existing.id,
             entry: SharedBooksCompanion(
@@ -402,8 +430,6 @@ class BookRepository {
       _markGroupSyncPending();
     }
   }
-
-
 
   Future<List<SharedBook>> _softDeleteSharedBooks({
     required int bookId,

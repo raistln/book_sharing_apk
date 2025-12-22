@@ -45,8 +45,8 @@ _DiscoverStatusDisplay _resolveStatusDisplay({
         foreground: colors.onSecondaryContainer,
         caption: 'Solicitud pendiente de aprobación',
       );
-
-    } else if (status == 'active') { // FIXED: accepted -> active
+    } else if (status == 'active') {
+      // FIXED: accepted -> active
       return _DiscoverStatusDisplay(
         label: 'En préstamo',
         icon: Icons.handshake_outlined,
@@ -116,10 +116,8 @@ class _DiscoverStatusChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             display.label,
-            style: Theme.of(context)
-                .textTheme
-                .labelSmall
-                ?.copyWith(color: display.foreground, fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: display.foreground, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -128,16 +126,19 @@ class _DiscoverStatusChip extends StatelessWidget {
 }
 
 class DiscoverBookDetailPage extends ConsumerStatefulWidget {
-  const DiscoverBookDetailPage({super.key, required this.group, required this.sharedBookId});
+  const DiscoverBookDetailPage(
+      {super.key, required this.group, required this.sharedBookId});
 
   final Group group;
   final int sharedBookId;
 
   @override
-  ConsumerState<DiscoverBookDetailPage> createState() => _DiscoverBookDetailPageState();
+  ConsumerState<DiscoverBookDetailPage> createState() =>
+      _DiscoverBookDetailPageState();
 }
 
-class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage> {
+class _DiscoverBookDetailPageState
+    extends ConsumerState<DiscoverBookDetailPage> {
   bool _pendingDetailCoach = false;
   bool _detailTargetsReady = false;
   bool _detailCoachTriggered = false;
@@ -191,7 +192,8 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final sharedBooksAsync = ref.watch(sharedBookDetailsProvider(widget.group.id));
+    final sharedBooksAsync =
+        ref.watch(sharedBookDetailsProvider(widget.group.id));
     final loansAsync = ref.watch(userRelevantLoansProvider(widget.group.id));
     final membersAsync = ref.watch(groupMemberDetailsProvider(widget.group.id));
     final activeUser = ref.watch(activeUserProvider).value;
@@ -223,7 +225,8 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
 
             final sharedBook = detail.sharedBook;
             final book = detail.book;
-            final members = membersAsync.asData?.value ?? const <GroupMemberDetail>[];
+            final members =
+                membersAsync.asData?.value ?? const <GroupMemberDetail>[];
             LocalUser? ownerUser;
             for (final member in members) {
               if (member.membership.memberUserId == sharedBook.ownerUserId) {
@@ -241,11 +244,13 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
                 continue;
               }
               final status = loanDetail.loan.status;
-              if (status != 'pending' && status != 'active') { // FIXED: accepted -> active
+              if (status != 'pending' && status != 'active') {
+                // FIXED: accepted -> active
                 continue;
               }
 
-              if (activeUser != null && loanDetail.loan.borrowerUserId == activeUser.id) {
+              if (activeUser != null &&
+                  loanDetail.loan.borrowerUserId == activeUser.id) {
                 borrowerLoan = loanDetail;
               } else {
                 otherActiveLoan = loanDetail;
@@ -266,7 +271,9 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
               orElse: () => const <InAppNotification>[],
             );
 
-            final canRequest = borrower != null && borrowerLoanDetail == null && !hasOtherActiveLoan;
+            final canRequest = borrower != null &&
+                borrowerLoanDetail == null &&
+                !hasOtherActiveLoan;
             final canCancel = borrower != null &&
                 borrowerLoanDetail != null &&
                 borrowerLoanDetail.loan.status == 'pending' &&
@@ -281,7 +288,8 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
                 ? borrowerLoanDetail
                 : null;
 
-            final ownerName = _resolveOwnerName(ownerUser, sharedBook.ownerUserId);
+            final ownerName =
+                _resolveOwnerName(ownerUser, sharedBook.ownerUserId);
             final author = (book?.author ?? '').trim();
             final isbn = book?.isbn?.trim();
             final description = book?.notes?.trim();
@@ -296,7 +304,8 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
               final hasOwnerTarget = pendingOwnerLoan != null && owner != null;
               if (hasRequestTarget || hasOwnerTarget) {
                 _detailTargetsReady = true;
-                WidgetsBinding.instance.addPostFrameCallback((_) => _maybeTriggerDetailCoach());
+                WidgetsBinding.instance
+                    .addPostFrameCallback((_) => _maybeTriggerDetailCoach());
               }
             }
 
@@ -310,15 +319,17 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
                         LoanFeedbackBanner(
                           message: loanState.lastError!,
                           isError: true,
-                          onDismiss: () =>
-                              ref.read(loanControllerProvider.notifier).dismissError(),
+                          onDismiss: () => ref
+                              .read(loanControllerProvider.notifier)
+                              .dismissError(),
                         )
                       else if (loanState.lastSuccess != null)
                         LoanFeedbackBanner(
                           message: loanState.lastSuccess!,
                           isError: false,
-                          onDismiss: () =>
-                              ref.read(loanControllerProvider.notifier).dismissSuccess(),
+                          onDismiss: () => ref
+                              .read(loanControllerProvider.notifier)
+                              .dismissSuccess(),
                         ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
@@ -382,7 +393,8 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
                                 runSpacing: 8,
                                 children: [
                                   Chip(
-                                    avatar: const Icon(Icons.qr_code_2_outlined, size: 18),
+                                    avatar: const Icon(Icons.qr_code_2_outlined,
+                                        size: 18),
                                     label: Text('ISBN $isbn'),
                                   ),
                                 ],
@@ -393,7 +405,8 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
                               width: double.infinity,
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.surfaceContainerHighest,
+                                color:
+                                    theme.colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -416,17 +429,20 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
                               ...unreadBookNotifications.map(
                                 (notification) => Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
-                                  child: InAppNotificationBanner(notification: notification),
+                                  child: InAppNotificationBanner(
+                                      notification: notification),
                                 ),
                               ),
                               const SizedBox(height: 8),
                             ],
-                            Text('Acciones', style: theme.textTheme.titleMedium),
+                            Text('Acciones',
+                                style: theme.textTheme.titleMedium),
                             const SizedBox(height: 12),
                             if (otherActiveLoan != null)
                               _buildInformationMessage(
                                 icon: Icons.lock_clock_outlined,
-                                title: 'Reservado por ${_resolveUserName(otherActiveLoan.borrower)}',
+                                title:
+                                    'Reservado por ${_resolveUserName(otherActiveLoan.borrower)}',
                                 subtitle:
                                     'El préstamo está ${otherActiveLoan.loan.status == 'pending' ? 'pendiente de aprobación' : 'en curso'}. '
                                     'Podrás solicitarlo cuando vuelva a estar disponible.',
@@ -440,59 +456,66 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
                               ),
                             if (pendingOwnerLoan != null && owner != null)
                               Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: Card(
-                                    color: theme.colorScheme.surfaceTint
-                                        .withValues(alpha: 0.08),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Solicitud pendiente',
-                                            style: theme.textTheme.titleSmall,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Tienes una solicitud de ${_resolveUserName(pendingOwnerLoan.borrower)} para este libro.',
-                                            style: theme.textTheme.bodyMedium,
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Wrap(
-                                            spacing: 12,
-                                            runSpacing: 8,
-                                            children: [
-                                              CoachMarkTarget(
-                                                id: CoachMarkId.groupManageInvitations,
-                                                child: FilledButton.icon(
-                                                  onPressed: loanState.isLoading
-                                                      ? null
-                                                      : () => _handleOwnerAccept(
-                                                            owner: owner,
-                                                            detail: pendingOwnerLoan,
-                                                          ),
-                                                  icon: const Icon(Icons.check_circle_outline),
-                                                  label: const Text('Aceptar solicitud'),
-                                                ),
-                                              ),
-                                              OutlinedButton.icon(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Card(
+                                  color: theme.colorScheme.surfaceTint
+                                      .withValues(alpha: 0.08),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Solicitud pendiente',
+                                          style: theme.textTheme.titleSmall,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Tienes una solicitud de ${_resolveUserName(pendingOwnerLoan.borrower)} para este libro.',
+                                          style: theme.textTheme.bodyMedium,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Wrap(
+                                          spacing: 12,
+                                          runSpacing: 8,
+                                          children: [
+                                            CoachMarkTarget(
+                                              id: CoachMarkId
+                                                  .groupManageInvitations,
+                                              child: FilledButton.icon(
                                                 onPressed: loanState.isLoading
                                                     ? null
-                                                    : () => _handleOwnerReject(
+                                                    : () => _handleOwnerAccept(
                                                           owner: owner,
-                                                          detail: pendingOwnerLoan,
+                                                          detail:
+                                                              pendingOwnerLoan,
                                                         ),
-                                                icon: const Icon(Icons.cancel_outlined),
-                                                label: const Text('Rechazar'),
+                                                icon: const Icon(
+                                                    Icons.check_circle_outline),
+                                                label: const Text(
+                                                    'Aceptar solicitud'),
                                               ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
+                                            ),
+                                            OutlinedButton.icon(
+                                              onPressed: loanState.isLoading
+                                                  ? null
+                                                  : () => _handleOwnerReject(
+                                                        owner: owner,
+                                                        detail:
+                                                            pendingOwnerLoan,
+                                                      ),
+                                              icon: const Icon(
+                                                  Icons.cancel_outlined),
+                                              label: const Text('Rechazar'),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
+                              ),
                             ..._buildLoanActionButtons(
                               canRequest: canRequest,
                               canCancel: canCancel,
@@ -501,7 +524,10 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
                               loanState: loanState,
                               sharedBook: sharedBook,
                             ),
-                            if (!canRequest && !canCancel && otherActiveLoan == null && activeUser != null)
+                            if (!canRequest &&
+                                !canCancel &&
+                                otherActiveLoan == null &&
+                                activeUser != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 8),
                                 child: Text(
@@ -531,101 +557,67 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
     );
   }
 
-  Future<void> _requestLoan({required SharedBook sharedBook, required LocalUser borrower}) async {
+  Future<void> _requestLoan(
+      {required SharedBook sharedBook, required LocalUser borrower}) async {
     final controller = ref.read(loanControllerProvider.notifier);
     try {
       await controller.requestLoan(sharedBook: sharedBook, borrower: borrower);
-      if (!mounted) return;
-      _showFeedbackSnackBar(
-        context: context,
-        message: 'Solicitud enviada.',
-        isError: false,
-      );
+      // Feedback is shown via LoanFeedbackBanner watching loanState
     } catch (error) {
-      if (!mounted) return;
-      _showFeedbackSnackBar(
-        context: context,
-        message: UIHelpers.getFriendlyErrorMessage(error),
-        isError: true,
-      );
+      // Error feedback is shown via LoanFeedbackBanner watching loanState
     }
   }
 
-  Future<void> _cancelLoan({required Loan loan, required LocalUser borrower}) async {
+  Future<void> _cancelLoan(
+      {required Loan loan, required LocalUser borrower}) async {
     // Confirm before canceling
     final confirmed = await UIHelpers.showConfirmDialog(
       context: context,
       title: '¿Cancelar solicitud?',
-      message: '¿Estás seguro de que quieres cancelar esta solicitud de préstamo?',
+      message:
+          '¿Estás seguro de que quieres cancelar esta solicitud de préstamo?',
       isDangerous: false,
     );
     if (!confirmed) return;
-    
+
     final controller = ref.read(loanControllerProvider.notifier);
     try {
       await controller.cancelLoan(loan: loan, borrower: borrower);
-      if (!mounted) return;
-      _showFeedbackSnackBar(
-        context: context,
-        message: 'Solicitud cancelada.',
-        isError: false,
-      );
+      // Feedback is shown via LoanFeedbackBanner watching loanState
     } catch (error) {
-      if (!mounted) return;
-      _showFeedbackSnackBar(
-        context: context,
-        message: UIHelpers.getFriendlyErrorMessage(error),
-        isError: true,
-      );
+      // Error feedback is shown via LoanFeedbackBanner watching loanState
     }
   }
 
-  Future<void> _handleOwnerAccept({required LocalUser owner, required LoanDetail detail}) async {
+  Future<void> _handleOwnerAccept(
+      {required LocalUser owner, required LoanDetail detail}) async {
     final controller = ref.read(loanControllerProvider.notifier);
     try {
       await controller.acceptLoan(loan: detail.loan, owner: owner);
-      if (!mounted) return;
-      _showFeedbackSnackBar(
-        context: context,
-        message: 'Solicitud aceptada.',
-        isError: false,
-      );
+      // Feedback is shown via LoanFeedbackBanner watching loanState
     } catch (error) {
-      if (!mounted) return;
-      _showFeedbackSnackBar(
-        context: context,
-        message: UIHelpers.getFriendlyErrorMessage(error),
-        isError: true,
-      );
+      // Error feedback is shown via LoanFeedbackBanner watching loanState
     }
   }
 
-  Future<void> _handleOwnerReject({required LocalUser owner, required LoanDetail detail}) async {
+  Future<void> _handleOwnerReject(
+      {required LocalUser owner, required LoanDetail detail}) async {
     // Confirm before rejecting
     final confirmed = await UIHelpers.showConfirmDialog(
       context: context,
       title: '¿Rechazar solicitud?',
-      message: '¿Estás seguro de que quieres rechazar esta solicitud de préstamo?',
+      message:
+          '¿Estás seguro de que quieres rechazar esta solicitud de préstamo?',
       isDangerous: false,
     );
     if (!confirmed) return;
-    
+
     final controller = ref.read(loanControllerProvider.notifier);
     try {
       await controller.rejectLoan(loan: detail.loan, owner: owner);
-      if (!mounted) return;
-      _showFeedbackSnackBar(
-        context: context,
-        message: 'Solicitud rechazada.',
-        isError: false,
-      );
+      // Feedback is shown via LoanFeedbackBanner watching loanState
     } catch (error) {
-      if (!mounted) return;
-      _showFeedbackSnackBar(
-        context: context,
-        message: UIHelpers.getFriendlyErrorMessage(error),
-        isError: true,
-      );
+      // Error feedback is shown via LoanFeedbackBanner watching loanState
     }
   }
 
@@ -718,20 +710,5 @@ class _DiscoverBookDetailPageState extends ConsumerState<DiscoverBookDetailPage>
 
   String _resolveUserName(LocalUser? user) {
     return user?.username ?? 'Usuario desconocido';
-  }
-
-  void _showFeedbackSnackBar({
-    required BuildContext context,
-    required String message,
-    required bool isError,
-  }) {
-    final theme = Theme.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor:
-            isError ? theme.colorScheme.error : theme.colorScheme.primary,
-      ),
-    );
   }
 }

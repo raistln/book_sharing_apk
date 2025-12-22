@@ -22,12 +22,12 @@ class SupabaseBookSyncRepository {
     if (visibility == 'private') {
       return 'private';
     }
-    
+
     // Si está archivado, el status es 'archived'
     if (visibility == 'archived') {
       return 'archived';
     }
-    
+
     // Para libros públicos/ grupales, usar isAvailable
     if (isAvailable == true) {
       return 'available';
@@ -70,7 +70,8 @@ class SupabaseBookSyncRepository {
     await db.transaction(() async {
       for (final remote in remoteBooks) {
         final existingByRemote = await _bookDao.findByRemoteId(remote.id);
-        final existing = existingByRemote ?? await _bookDao.findByUuid(remote.id);
+        final existing =
+            existingByRemote ?? await _bookDao.findByUuid(remote.id);
 
         if (existing != null) {
           if (existing.isDirty) {
@@ -100,7 +101,8 @@ class SupabaseBookSyncRepository {
               author: Value(remote.author),
               isbn: Value(remote.isbn),
               coverPath: Value(remote.coverUrl),
-              status: Value(_mapVisibilityToStatus(remote.visibility, remote.isAvailable)),
+              status: Value(_mapVisibilityToStatus(
+                  remote.visibility, remote.isAvailable)),
               notes: const Value(null), // Notes not stored in shared_books
               isRead: Value(remote.isRead),
               isDeleted: Value(remote.isDeleted),
@@ -123,15 +125,17 @@ class SupabaseBookSyncRepository {
             remote.author ?? '',
             ownerUserId: owner.id,
           );
-          
+
           // If found by title+author, also verify ISBN matches if both have ISBN
-          if (existingByContent != null && remote.isbn != null && existingByContent.isbn != null) {
+          if (existingByContent != null &&
+              remote.isbn != null &&
+              existingByContent.isbn != null) {
             if (existingByContent.isbn != remote.isbn) {
               // Different ISBN, might be different edition - allow as separate book
               existingByContent = null;
             }
           }
-          
+
           // Final check: ensure we're not about to create a duplicate
           final finalCheck = await _bookDao.findByUuid(remote.id);
           if (finalCheck == null && existingByContent == null) {
@@ -145,7 +149,8 @@ class SupabaseBookSyncRepository {
                 author: Value(remote.author),
                 isbn: Value(remote.isbn),
                 coverPath: Value(remote.coverUrl),
-                status: Value(_mapVisibilityToStatus(remote.visibility, remote.isAvailable)),
+                status: Value(_mapVisibilityToStatus(
+                    remote.visibility, remote.isAvailable)),
                 notes: const Value(null), // Notes not stored in shared_books
                 isRead: Value(remote.isRead),
                 isDeleted: Value(remote.isDeleted),
@@ -169,16 +174,17 @@ class SupabaseBookSyncRepository {
               'Libro "${remote.title}" por "${remote.author}" ya existe localmente como ID ${existingByContent.id}, reutilizando.',
               name: 'SupabaseBookSyncRepository',
             );
-            // Update the existing book's remoteId if it doesn't have one
-            if (existingByContent.remoteId == null || existingByContent.remoteId!.isEmpty) {
-              await _bookDao.updateBookFields(
-                bookId: existingByContent.id,
-                entry: BooksCompanion(
-                  remoteId: Value(remote.id),
-                  syncedAt: Value(now),
-                ),
-              );
-            }
+            // Update the existing book's UUID and remoteId to match remote
+            // This prevents future sync attempts from creating duplicates
+            await _bookDao.updateBookFields(
+              bookId: existingByContent.id,
+              entry: BooksCompanion(
+                uuid: Value(remote.id), // Update UUID to match remote
+                remoteId: Value(remote.id), // Update remoteId to match remote
+                syncedAt: Value(now),
+                isDirty: const Value(false),
+              ),
+            );
           }
         }
       }

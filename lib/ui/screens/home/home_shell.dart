@@ -19,6 +19,7 @@ import 'tabs/loans_tab.dart';
 import '../../widgets/notifications/notification_bell.dart';
 import '../../widgets/notifications/notifications_sheet.dart';
 import '../../widgets/library/book_form_sheet.dart';
+import '../../widgets/profile/user_profile_sheet.dart';
 
 enum _BookFormResult {
   saved,
@@ -64,13 +65,22 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       body: Column(
         children: [
           const SyncBanner(),
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: NotificationBell(
-                onPressed: () => _showNotificationsSheet(context, ref),
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                NotificationBell(
+                  onPressed: () => _showNotificationsSheet(context, ref),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => _showProfileSheet(context),
+                  icon: const Icon(Icons.account_circle_outlined),
+                  tooltip: 'Mi Perfil',
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -231,4 +241,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     );
   }
 
+  Future<void> _showProfileSheet(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (context) => const UserProfileSheet(),
+    );
+  }
 }

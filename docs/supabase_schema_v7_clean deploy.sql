@@ -349,6 +349,11 @@ CREATE INDEX idx_loans_status ON public.loans(status) WHERE is_deleted = false;
 
 CREATE INDEX IF NOT EXISTS idx_loan_notifications_user ON public.loan_notifications(user_id, status) WHERE is_deleted = false;
 CREATE INDEX IF NOT EXISTS idx_loan_notifications_loan ON public.loan_notifications(loan_id);
+CREATE INDEX idx_groups_owner ON public.groups(owner_id) WHERE is_deleted = false;
+CREATE INDEX idx_group_members_user ON public.group_members(user_id) WHERE is_deleted = false;
+CREATE INDEX idx_group_invitations_group ON public.group_invitations(group_id) WHERE is_deleted = false;
+CREATE INDEX idx_group_invitations_inviter ON public.group_invitations(inviter_id) WHERE is_deleted = false;
+CREATE INDEX idx_group_invitations_accepted_user ON public.group_invitations(accepted_user_id) WHERE is_deleted = false;
 CREATE INDEX IF NOT EXISTS idx_system_metrics_hour ON public.system_metrics(metric_hour);
 
 -- ============================================================================
@@ -364,12 +369,12 @@ CREATE POLICY "profiles_select_all" ON public.profiles FOR SELECT USING (true);
 -- Insert: allowed for anyone (to support creation without Supabase Auth)
 -- But we check that if they ARE logged in, they use their own ID.
 CREATE POLICY "profiles_insert" ON public.profiles FOR INSERT 
-WITH CHECK (auth.uid() IS NULL OR auth.uid() = id);
+WITH CHECK ((select auth.uid()) IS NULL OR (select auth.uid()) = id);
 
 -- Update: only owner (if logged in) or everyone (if using anon key)
 -- Note: This is less secure but matches how the app is built (local pin only)
 CREATE POLICY "profiles_update" ON public.profiles FOR UPDATE 
-USING (auth.uid() IS NULL OR auth.uid() = id);
+USING ((select auth.uid()) IS NULL OR (select auth.uid()) = id);
 
 -- GROUPS
 ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
@@ -398,18 +403,18 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 CREATE POLICY "groups_select"
   ON public.groups FOR SELECT
   USING (
-    auth.uid() IS NULL 
-    OR owner_id = auth.uid()
-    OR check_is_group_member(id, auth.uid())
+    (select auth.uid()) IS NULL 
+    OR owner_id = (select auth.uid())
+    OR check_is_group_member(id, (select auth.uid()))
   );
 
 CREATE POLICY "groups_update"
   ON public.groups FOR UPDATE
-  USING (auth.uid() IS NULL OR owner_id = auth.uid());
+  USING ((select auth.uid()) IS NULL OR owner_id = (select auth.uid()));
 
 CREATE POLICY "groups_insert"
   ON public.groups FOR INSERT
-  WITH CHECK (auth.uid() IS NULL OR auth.uid() = owner_id);
+  WITH CHECK ((select auth.uid()) IS NULL OR (select auth.uid()) = owner_id);
 
 -- GROUP MEMBERS
 ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
@@ -417,52 +422,43 @@ ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "group_members_select"
   ON public.group_members FOR SELECT
   USING (
-    auth.uid() IS NULL
-    OR user_id = auth.uid()
-    OR check_is_group_member(group_id, auth.uid())
-    OR check_is_group_owner(group_id, auth.uid())
+    (select auth.uid()) IS NULL
+    OR user_id = (select auth.uid())
+    OR check_is_group_member(group_id, (select auth.uid()))
+    OR check_is_group_owner(group_id, (select auth.uid()))
   );
 
 CREATE POLICY "group_members_insert"
   ON public.group_members FOR INSERT
-  WITH CHECK (auth.uid() IS NULL OR check_is_group_owner(group_id, auth.uid()));
+  WITH CHECK ((select auth.uid()) IS NULL OR check_is_group_owner(group_id, (select auth.uid())));
 
 CREATE POLICY "group_members_update"
   ON public.group_members FOR UPDATE
-  USING (auth.uid() IS NULL OR check_is_group_owner(group_id, auth.uid()));
+  USING ((select auth.uid()) IS NULL OR check_is_group_owner(group_id, (select auth.uid())));
 
 CREATE POLICY "group_members_delete"
   ON public.group_members FOR DELETE
-  USING (auth.uid() IS NULL OR check_is_group_owner(group_id, auth.uid()) OR user_id = auth.uid());
+  USING ((select auth.uid()) IS NULL OR check_is_group_owner(group_id, (select auth.uid())) OR user_id = (select auth.uid()));
 
 -- GROUP INVITATIONS
 ALTER TABLE public.group_invitations ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view invitations for their groups"
-  ON public.group_invitations FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.group_members
-      WHERE group_members.group_id = group_invitations.group_id
-        AND group_members.user_id = (SELECT auth.uid())
-        AND group_members.is_deleted = false
-    )
-  );
+
 
 CREATE POLICY "group_invitations_select"
   ON public.group_invitations FOR SELECT
   USING (
-    auth.uid() IS NULL
-    OR check_is_group_member(group_id, auth.uid())
-    OR check_is_group_owner(group_id, auth.uid())
+    (select auth.uid()) IS NULL
+    OR check_is_group_member(group_id, (select auth.uid()))
+    OR check_is_group_owner(group_id, (select auth.uid()))
   );
 
 CREATE POLICY "group_invitations_insert"
   ON public.group_invitations FOR INSERT
   WITH CHECK (
-    auth.uid() IS NULL
-    OR check_is_group_member(group_id, auth.uid())
-    OR check_is_group_owner(group_id, auth.uid())
+    (select auth.uid()) IS NULL
+    OR check_is_group_member(group_id, (select auth.uid()))
+    OR check_is_group_owner(group_id, (select auth.uid()))
   );
 
 -- SHARED BOOKS
@@ -472,22 +468,22 @@ ALTER TABLE public.shared_books ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "shared_books_select"
   ON public.shared_books FOR SELECT
   USING (
-    auth.uid() IS NULL
-    OR owner_id = auth.uid()
-    OR check_is_group_member(group_id, auth.uid())
+    (select auth.uid()) IS NULL
+    OR owner_id = (select auth.uid())
+    OR check_is_group_member(group_id, (select auth.uid()))
   );
 
 CREATE POLICY "shared_books_insert"
   ON public.shared_books FOR INSERT
-  WITH CHECK (auth.uid() IS NULL OR owner_id = auth.uid());
+  WITH CHECK ((select auth.uid()) IS NULL OR owner_id = (select auth.uid()));
 
 CREATE POLICY "shared_books_update"
   ON public.shared_books FOR UPDATE
-  USING (auth.uid() IS NULL OR owner_id = auth.uid());
+  USING ((select auth.uid()) IS NULL OR owner_id = (select auth.uid()));
 
 CREATE POLICY "shared_books_delete"
   ON public.shared_books FOR DELETE
-  USING (auth.uid() IS NULL OR owner_id = auth.uid());
+  USING ((select auth.uid()) IS NULL OR owner_id = (select auth.uid()));
 
 -- LOANS
 ALTER TABLE public.loans ENABLE ROW LEVEL SECURITY;
@@ -495,30 +491,30 @@ ALTER TABLE public.loans ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "loans_select"
   ON public.loans FOR SELECT
   USING (
-    auth.uid() IS NULL
-    OR borrower_user_id = auth.uid() 
-    OR lender_user_id = auth.uid()
+    (select auth.uid()) IS NULL
+    OR borrower_user_id = (select auth.uid()) 
+    OR lender_user_id = (select auth.uid())
     OR EXISTS (
       SELECT 1 FROM public.shared_books sb
       WHERE sb.id = loans.shared_book_id
-        AND (sb.owner_id = auth.uid() OR check_is_group_member(sb.group_id, auth.uid()))
+        AND (sb.owner_id = (select auth.uid()) OR check_is_group_member(sb.group_id, (select auth.uid())))
     )
   );
 
 CREATE POLICY "loans_insert"
   ON public.loans FOR INSERT
   WITH CHECK (
-    auth.uid() IS NULL
-    OR borrower_user_id = auth.uid()
-    OR lender_user_id = auth.uid()
+    (select auth.uid()) IS NULL
+    OR borrower_user_id = (select auth.uid())
+    OR lender_user_id = (select auth.uid())
   );
 
 CREATE POLICY "loans_update"
   ON public.loans FOR UPDATE
   USING (
-    auth.uid() IS NULL
-    OR borrower_user_id = auth.uid()
-    OR lender_user_id = auth.uid()
+    (select auth.uid()) IS NULL
+    OR borrower_user_id = (select auth.uid())
+    OR lender_user_id = (select auth.uid())
   );
 
 -- LOAN NOTIFICATIONS
@@ -526,11 +522,11 @@ ALTER TABLE public.loan_notifications ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "loan_notifications_select"
   ON public.loan_notifications FOR SELECT
-  USING (auth.uid() IS NULL OR user_id = auth.uid());
+  USING ((select auth.uid()) IS NULL OR user_id = (select auth.uid()));
 
 CREATE POLICY "loan_notifications_update"
   ON public.loan_notifications FOR UPDATE
-  USING (auth.uid() IS NULL OR user_id = auth.uid());
+  USING ((select auth.uid()) IS NULL OR user_id = (select auth.uid()));
 
 CREATE POLICY "System can create notifications"
   ON public.loan_notifications FOR INSERT
@@ -680,7 +676,7 @@ BEGIN
   WHERE (status IN ('read', 'dismissed') OR is_deleted = true)
     AND created_at < NOW() - INTERVAL '7 days';
 END;
-$$;
+$$ SET search_path = public;
 
 -- Function to cleanup deleted records
 CREATE OR REPLACE FUNCTION public.cleanup_deleted_records()
@@ -692,11 +688,11 @@ BEGIN
   DELETE FROM public.loans WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
   DELETE FROM public.shared_books WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
 END;
-$$;
+$$ SET search_path = public;
 
 -- Logging helpers
 CREATE OR REPLACE FUNCTION public.log_error(p_function_name TEXT, p_error_message TEXT) 
-RETURNS VOID SECURITY DEFINER LANGUAGE plpgsql AS $$
+RETURNS VOID SECURITY DEFINER LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN
   INSERT INTO public.system_logs (log_level, source, message, metadata)
   VALUES ('error', p_function_name, p_error_message, jsonb_build_object('timestamp', NOW()));
@@ -704,7 +700,7 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.update_system_metrics(p_metric_name TEXT, p_metric_value TEXT, p_source TEXT DEFAULT NULL) 
-RETURNS VOID SECURITY DEFINER LANGUAGE plpgsql AS $$
+RETURNS VOID SECURITY DEFINER LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN
   INSERT INTO public.system_metrics (metric_name, metric_value, source, recorded_at)
   VALUES (p_metric_name, p_metric_value, p_source, NOW())

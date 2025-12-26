@@ -38,18 +38,21 @@ class InAppNotifications extends Table {
   TextColumn get loanUuid => text().nullable()();
 
   @ReferenceName('notificationSharedBooks')
-  IntColumn get sharedBookId => integer().nullable().references(SharedBooks, #id)();
+  IntColumn get sharedBookId =>
+      integer().nullable().references(SharedBooks, #id)();
   TextColumn get sharedBookUuid => text().nullable()();
 
   @ReferenceName('notificationsAuthored')
-  IntColumn get actorUserId => integer().nullable().references(LocalUsers, #id)();
+  IntColumn get actorUserId =>
+      integer().nullable().references(LocalUsers, #id)();
   @ReferenceName('notificationsReceived')
   IntColumn get targetUserId => integer().references(LocalUsers, #id)();
 
   TextColumn get title => text().nullable()();
   TextColumn get message => text().nullable()();
-  TextColumn get status =>
-      text().withDefault(const Constant('unread')).withLength(min: 1, max: 32)();
+  TextColumn get status => text()
+      .withDefault(const Constant('unread'))
+      .withLength(min: 1, max: 32)();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
@@ -66,7 +69,8 @@ class Books extends Table {
   TextColumn get remoteId => text().nullable()();
 
   @ReferenceName('ownedBooks')
-  IntColumn get ownerUserId => integer().references(LocalUsers, #id).nullable()();
+  IntColumn get ownerUserId =>
+      integer().references(LocalUsers, #id).nullable()();
   TextColumn get ownerRemoteId => text().nullable()();
 
   TextColumn get title => text().withLength(min: 1, max: 255)();
@@ -78,9 +82,10 @@ class Books extends Table {
 
   TextColumn get status => text().withDefault(const Constant('available'))();
   TextColumn get notes => text().nullable()();
-  
+
   // Read status
   BoolColumn get isRead => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get readAt => dateTime().nullable()();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
@@ -127,9 +132,11 @@ class Groups extends Table {
   TextColumn get remoteId => text().nullable()();
 
   TextColumn get name => text().withLength(min: 1, max: 128)();
-  TextColumn get description => text().nullable().withLength(min: 0, max: 512)();
+  TextColumn get description =>
+      text().nullable().withLength(min: 0, max: 512)();
 
-  IntColumn get ownerUserId => integer().references(LocalUsers, #id).nullable()();
+  IntColumn get ownerUserId =>
+      integer().references(LocalUsers, #id).nullable()();
   TextColumn get ownerRemoteId => text().nullable()();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
@@ -189,8 +196,7 @@ class SharedBooks extends Table {
 
   TextColumn get visibility =>
       text().withDefault(const Constant('group')).withLength(min: 1, max: 32)();
-  BoolColumn get isAvailable =>
-      boolean().withDefault(const Constant(true))();
+  BoolColumn get isAvailable => boolean().withDefault(const Constant(true))();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
@@ -215,15 +221,18 @@ class GroupInvitations extends Table {
   TextColumn get inviterRemoteId => text().nullable()();
 
   @ReferenceName('groupInvitationsAccepted')
-  IntColumn get acceptedUserId => integer().references(LocalUsers, #id).nullable()();
+  IntColumn get acceptedUserId =>
+      integer().references(LocalUsers, #id).nullable()();
   TextColumn get acceptedUserRemoteId => text().nullable()();
 
-  TextColumn get role =>
-      text().withDefault(const Constant('member')).withLength(min: 1, max: 32)();
+  TextColumn get role => text()
+      .withDefault(const Constant('member'))
+      .withLength(min: 1, max: 32)();
 
   TextColumn get code => text().withLength(min: 1, max: 64).unique()();
-  TextColumn get status =>
-      text().withDefault(const Constant('pending')).withLength(min: 1, max: 32)();
+  TextColumn get status => text()
+      .withDefault(const Constant('pending'))
+      .withLength(min: 1, max: 32)();
 
   DateTimeColumn get expiresAt => dateTime()();
   DateTimeColumn get respondedAt => dateTime().nullable()();
@@ -245,12 +254,15 @@ class Loans extends Table {
   IntColumn get sharedBookId => integer()
       .nullable()
       .references(SharedBooks, #id, onDelete: KeyAction.cascade)();
-  
+
   // Reference to Book for manual loans (when sharedBookId is null)
-  IntColumn get bookId => integer().nullable().references(Books, #id, onDelete: KeyAction.cascade)();
+  IntColumn get bookId => integer()
+      .nullable()
+      .references(Books, #id, onDelete: KeyAction.cascade)();
 
   @ReferenceName('loansBorrower')
-  IntColumn get borrowerUserId => integer().nullable().references(LocalUsers, #id)();
+  IntColumn get borrowerUserId =>
+      integer().nullable().references(LocalUsers, #id)();
 
   @ReferenceName('loansLender')
   IntColumn get lenderUserId => integer().references(LocalUsers, #id)();
@@ -267,7 +279,7 @@ class Loans extends Table {
       dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get approvedAt => dateTime().nullable()();
   DateTimeColumn get dueDate => dateTime().nullable()();
-  
+
   // Double-confirmation for returns
   DateTimeColumn get borrowerReturnedAt => dateTime().nullable()();
   DateTimeColumn get lenderReturnedAt => dateTime().nullable()();
@@ -280,7 +292,6 @@ class Loans extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
-
 
 @DriftDatabase(
   tables: [
@@ -301,7 +312,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -383,7 +394,8 @@ class AppDatabase extends _$AppDatabase {
               await m.addColumn(loans, loans.borrowerUserId);
             } catch (e) {
               // Column might already exist, ignore error
-              developer.log('Column borrowerUserId already exists or could not be added: $e');
+              developer.log(
+                  'Column borrowerUserId already exists or could not be added: $e');
             }
           }
 
@@ -391,11 +403,16 @@ class AppDatabase extends _$AppDatabase {
             // Migration to v13: Allow manual loans without sharedBookId
             // 1. Add bookId column to Loans
             // 2. Make sharedBookId nullable (Requires table recreation in SQLite)
-            
+
             // Drop dependent tables first to avoid FK violations during recreation
             await customStatement('DROP TABLE IF EXISTS loans');
-            
+
             await m.createTable(loans);
+          }
+
+          if (from < 14) {
+            // Migration to v14: Add readAt column to Books
+            await m.addColumn(books, books.readAt);
           }
         },
       );
@@ -420,7 +437,7 @@ class AppDatabase extends _$AppDatabase {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dir = await getApplicationDocumentsDirectory();
-    final dbPath = p.join(dir.path, 'book_sharing.sqlite');
+    final dbPath = p.join(dir.path, 'book_sharing_v2.sqlite');
     assert(() {
       developer.log('Opening local database at $dbPath', name: 'AppDatabase');
       return true;

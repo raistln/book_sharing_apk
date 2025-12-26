@@ -706,6 +706,11 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("is_read" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _readAtMeta = const VerificationMeta('readAt');
+  @override
+  late final GeneratedColumn<DateTime> readAt = GeneratedColumn<DateTime>(
+      'read_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
   @override
@@ -763,6 +768,7 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
         status,
         notes,
         isRead,
+        readAt,
         isDirty,
         isDeleted,
         syncedAt,
@@ -838,6 +844,10 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
       context.handle(_isReadMeta,
           isRead.isAcceptableOrUnknown(data['is_read']!, _isReadMeta));
     }
+    if (data.containsKey('read_at')) {
+      context.handle(_readAtMeta,
+          readAt.isAcceptableOrUnknown(data['read_at']!, _readAtMeta));
+    }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
           isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
@@ -893,6 +903,8 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
           .read(DriftSqlType.string, data['${effectivePrefix}notes']),
       isRead: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_read'])!,
+      readAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}read_at']),
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -926,6 +938,7 @@ class Book extends DataClass implements Insertable<Book> {
   final String status;
   final String? notes;
   final bool isRead;
+  final DateTime? readAt;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -945,6 +958,7 @@ class Book extends DataClass implements Insertable<Book> {
       required this.status,
       this.notes,
       required this.isRead,
+      this.readAt,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -982,6 +996,9 @@ class Book extends DataClass implements Insertable<Book> {
       map['notes'] = Variable<String>(notes);
     }
     map['is_read'] = Variable<bool>(isRead);
+    if (!nullToAbsent || readAt != null) {
+      map['read_at'] = Variable<DateTime>(readAt);
+    }
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
     if (!nullToAbsent || syncedAt != null) {
@@ -1019,6 +1036,8 @@ class Book extends DataClass implements Insertable<Book> {
       notes:
           notes == null && nullToAbsent ? const Value.absent() : Value(notes),
       isRead: Value(isRead),
+      readAt:
+          readAt == null && nullToAbsent ? const Value.absent() : Value(readAt),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -1046,6 +1065,7 @@ class Book extends DataClass implements Insertable<Book> {
       status: serializer.fromJson<String>(json['status']),
       notes: serializer.fromJson<String?>(json['notes']),
       isRead: serializer.fromJson<bool>(json['isRead']),
+      readAt: serializer.fromJson<DateTime?>(json['readAt']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -1070,6 +1090,7 @@ class Book extends DataClass implements Insertable<Book> {
       'status': serializer.toJson<String>(status),
       'notes': serializer.toJson<String?>(notes),
       'isRead': serializer.toJson<bool>(isRead),
+      'readAt': serializer.toJson<DateTime?>(readAt),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -1092,6 +1113,7 @@ class Book extends DataClass implements Insertable<Book> {
           String? status,
           Value<String?> notes = const Value.absent(),
           bool? isRead,
+          Value<DateTime?> readAt = const Value.absent(),
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -1112,6 +1134,7 @@ class Book extends DataClass implements Insertable<Book> {
         status: status ?? this.status,
         notes: notes.present ? notes.value : this.notes,
         isRead: isRead ?? this.isRead,
+        readAt: readAt.present ? readAt.value : this.readAt,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -1136,6 +1159,7 @@ class Book extends DataClass implements Insertable<Book> {
       status: data.status.present ? data.status.value : this.status,
       notes: data.notes.present ? data.notes.value : this.notes,
       isRead: data.isRead.present ? data.isRead.value : this.isRead,
+      readAt: data.readAt.present ? data.readAt.value : this.readAt,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -1160,6 +1184,7 @@ class Book extends DataClass implements Insertable<Book> {
           ..write('status: $status, ')
           ..write('notes: $notes, ')
           ..write('isRead: $isRead, ')
+          ..write('readAt: $readAt, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -1184,6 +1209,7 @@ class Book extends DataClass implements Insertable<Book> {
       status,
       notes,
       isRead,
+      readAt,
       isDirty,
       isDeleted,
       syncedAt,
@@ -1206,6 +1232,7 @@ class Book extends DataClass implements Insertable<Book> {
           other.status == this.status &&
           other.notes == this.notes &&
           other.isRead == this.isRead &&
+          other.readAt == this.readAt &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -1227,6 +1254,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
   final Value<String> status;
   final Value<String?> notes;
   final Value<bool> isRead;
+  final Value<DateTime?> readAt;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -1246,6 +1274,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.status = const Value.absent(),
     this.notes = const Value.absent(),
     this.isRead = const Value.absent(),
+    this.readAt = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -1266,6 +1295,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.status = const Value.absent(),
     this.notes = const Value.absent(),
     this.isRead = const Value.absent(),
+    this.readAt = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -1287,6 +1317,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
     Expression<String>? status,
     Expression<String>? notes,
     Expression<bool>? isRead,
+    Expression<DateTime>? readAt,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -1307,6 +1338,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
       if (status != null) 'status': status,
       if (notes != null) 'notes': notes,
       if (isRead != null) 'is_read': isRead,
+      if (readAt != null) 'read_at': readAt,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -1329,6 +1361,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
       Value<String>? status,
       Value<String?>? notes,
       Value<bool>? isRead,
+      Value<DateTime?>? readAt,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -1348,6 +1381,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
       status: status ?? this.status,
       notes: notes ?? this.notes,
       isRead: isRead ?? this.isRead,
+      readAt: readAt ?? this.readAt,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -1398,6 +1432,9 @@ class BooksCompanion extends UpdateCompanion<Book> {
     if (isRead.present) {
       map['is_read'] = Variable<bool>(isRead.value);
     }
+    if (readAt.present) {
+      map['read_at'] = Variable<DateTime>(readAt.value);
+    }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
     }
@@ -1432,6 +1469,7 @@ class BooksCompanion extends UpdateCompanion<Book> {
           ..write('status: $status, ')
           ..write('notes: $notes, ')
           ..write('isRead: $isRead, ')
+          ..write('readAt: $readAt, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -8109,6 +8147,7 @@ typedef $$BooksTableCreateCompanionBuilder = BooksCompanion Function({
   Value<String> status,
   Value<String?> notes,
   Value<bool> isRead,
+  Value<DateTime?> readAt,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -8129,6 +8168,7 @@ typedef $$BooksTableUpdateCompanionBuilder = BooksCompanion Function({
   Value<String> status,
   Value<String?> notes,
   Value<bool> isRead,
+  Value<DateTime?> readAt,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -8241,6 +8281,9 @@ class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
 
   ColumnFilters<bool> get isRead => $composableBuilder(
       column: $table.isRead, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get readAt => $composableBuilder(
+      column: $table.readAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -8387,6 +8430,9 @@ class $$BooksTableOrderingComposer
   ColumnOrderings<bool> get isRead => $composableBuilder(
       column: $table.isRead, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<DateTime> get readAt => $composableBuilder(
+      column: $table.readAt, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
 
@@ -8467,6 +8513,9 @@ class $$BooksTableAnnotationComposer
 
   GeneratedColumn<bool> get isRead =>
       $composableBuilder(column: $table.isRead, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get readAt =>
+      $composableBuilder(column: $table.readAt, builder: (column) => column);
 
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
@@ -8607,6 +8656,7 @@ class $$BooksTableTableManager extends RootTableManager<
             Value<String> status = const Value.absent(),
             Value<String?> notes = const Value.absent(),
             Value<bool> isRead = const Value.absent(),
+            Value<DateTime?> readAt = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -8627,6 +8677,7 @@ class $$BooksTableTableManager extends RootTableManager<
             status: status,
             notes: notes,
             isRead: isRead,
+            readAt: readAt,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -8647,6 +8698,7 @@ class $$BooksTableTableManager extends RootTableManager<
             Value<String> status = const Value.absent(),
             Value<String?> notes = const Value.absent(),
             Value<bool> isRead = const Value.absent(),
+            Value<DateTime?> readAt = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -8667,6 +8719,7 @@ class $$BooksTableTableManager extends RootTableManager<
             status: status,
             notes: notes,
             isRead: isRead,
+            readAt: readAt,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,

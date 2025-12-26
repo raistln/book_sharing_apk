@@ -54,7 +54,7 @@ BEGIN
   -- All other transitions are allowed
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- Create trigger that runs before any update to loans table
 CREATE TRIGGER loan_state_validation

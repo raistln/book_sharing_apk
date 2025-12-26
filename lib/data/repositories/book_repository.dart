@@ -108,9 +108,8 @@ class BookRepository {
       name: 'BookRepository',
     );
 
-    if (sharedCount > 0) {
-      _markGroupSyncPending();
-    }
+    // Note: Sync is handled by the controller via syncOnCriticalEvent()
+    // No need to mark pending here to avoid duplicate syncs
   }
 
   Stream<List<Book>> watchAll({int? ownerUserId}) =>
@@ -174,6 +173,7 @@ class BookRepository {
         status: Value(status),
         notes: Value(notes),
         isRead: Value(isRead),
+        readAt: isRead ? Value(now) : const Value.absent(),
         ownerUserId: owner != null ? Value(owner.id) : const Value.absent(),
         ownerRemoteId: owner?.remoteId != null
             ? Value(owner!.remoteId)
@@ -252,10 +252,23 @@ class BookRepository {
 
     // Don't use copyWith here - it would overwrite changes from the format null values are converted to Value(null)
     // instead of Value.absent(). This allows us to actually set fields to null.
-    final companion = book.toCompanion(false).copyWith(
-          updatedAt: Value(now),
-          isDirty: const Value(true),
-        );
+    var companion = book.toCompanion(false);
+
+    // Enforce readAt logic
+    if (book.isRead) {
+      // If marked as read but no date set, set it to now
+      if (book.readAt == null) {
+        companion = companion.copyWith(readAt: Value(now));
+      }
+    } else {
+      // If marked as unread, clear the date
+      companion = companion.copyWith(readAt: const Value(null));
+    }
+
+    companion = companion.copyWith(
+      updatedAt: Value(now),
+      isDirty: const Value(true),
+    );
 
     final result = await _bookDao.updateBook(companion);
     if (result) {

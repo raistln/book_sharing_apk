@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' as material;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,10 +15,12 @@ class OnboardingWizardScreen extends ConsumerStatefulWidget {
   static const routeName = '/onboarding-wizard';
 
   @override
-  ConsumerState<OnboardingWizardScreen> createState() => _OnboardingWizardScreenState();
+  ConsumerState<OnboardingWizardScreen> createState() =>
+      _OnboardingWizardScreenState();
 }
 
-class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen> {
+class _OnboardingWizardScreenState
+    extends ConsumerState<OnboardingWizardScreen> {
   static const _groupStepIndex = 0;
   static const _joinStepIndex = 1;
   static const _summaryStepIndex = 2;
@@ -74,28 +77,38 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     ref.invalidate(onboardingProgressProvider);
     if (!mounted) return;
 
-
-
     if (!mounted) return;
     final syncController = ref.read(groupSyncControllerProvider.notifier);
-    await syncController.syncGroups();
+    try {
+      await syncController.syncGroups();
+    } catch (e) {
+      // Ignoramos error de sync para no bloquear la navegación
+      material.debugPrint('Error syncing on skip wizard: $e');
+    }
     if (!mounted) return;
     navigator.pushNamedAndRemoveUntil(HomeShell.routeName, (route) => false);
   }
 
-  Future<void> _completeWizard({required material.NavigatorState navigator, required material.ScaffoldMessengerState messenger}) async {
+  Future<void> _completeWizard(
+      {required material.NavigatorState navigator,
+      required material.ScaffoldMessengerState messenger}) async {
     final onboardingService = ref.read(onboardingServiceProvider);
     await onboardingService.markCompleted();
     await onboardingService.markDiscoverCoachPending(resetSeen: true);
     await onboardingService.markDetailCoachPending(resetSeen: true);
     ref.invalidate(onboardingProgressProvider);
     if (!mounted) return;
-    
 
-    
     if (!mounted) return;
     final syncController = ref.read(groupSyncControllerProvider.notifier);
-    await syncController.syncGroups();
+    try {
+      await syncController.syncGroups();
+    } catch (e) {
+      // Ignoramos error de sync para no bloquear la finalización
+      if (kDebugMode) {
+        print('Error syncing on complete wizard: $e');
+      }
+    }
     if (!mounted) return;
     messenger.clearSnackBars();
     final theme = material.Theme.of(context);
@@ -115,7 +128,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     final messenger = material.ScaffoldMessenger.of(context);
     final index = _currentStep;
     try {
-      final success = await _runStepAction(context, index, messenger: messenger);
+      final success =
+          await _runStepAction(context, index, messenger: messenger);
       if (!mounted || !success) {
         return;
       }
@@ -143,7 +157,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         await _completeWizard(navigator: navigator, messenger: messenger);
         return;
       }
-      await _markStepCompleted(index, advance: true, skipped: true, messenger: messenger);
+      await _markStepCompleted(index,
+          advance: true, skipped: true, messenger: messenger);
     } finally {
       if (mounted) {
         setState(() => _isProcessing = false);
@@ -151,7 +166,10 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     }
   }
 
-  Future<void> _markStepCompleted(int index, {required bool advance, bool skipped = false, required material.ScaffoldMessengerState messenger}) async {
+  Future<void> _markStepCompleted(int index,
+      {required bool advance,
+      bool skipped = false,
+      required material.ScaffoldMessengerState messenger}) async {
     setState(() {
       _completedSteps[index] = true;
     });
@@ -170,7 +188,9 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
 
     if (skipped) {
       messenger.showSnackBar(
-        const material.SnackBar(content: material.Text('Paso omitido. Puedes configurarlo más tarde desde la ayuda.')),
+        const material.SnackBar(
+            content: material.Text(
+                'Paso omitido. Puedes configurarlo más tarde desde la ayuda.')),
       );
     }
   }
@@ -192,11 +212,14 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     }
   }
 
-  Future<bool> _createGroup(material.BuildContext context, {required material.ScaffoldMessengerState messenger}) async {
+  Future<bool> _createGroup(material.BuildContext context,
+      {required material.ScaffoldMessengerState messenger}) async {
     final activeUser = ref.read(activeUserProvider).value;
     if (activeUser == null || !_isSynced) {
       messenger.showSnackBar(
-        const material.SnackBar(content: material.Text('Estamos terminando de sincronizar tu cuenta. Intenta en unos segundos.')),
+        const material.SnackBar(
+            content: material.Text(
+                'Estamos terminando de sincronizar tu cuenta. Intenta en unos segundos.')),
       );
       return false;
     }
@@ -212,11 +235,13 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     if (_groupCreated) {
       final groupDao = ref.read(groupDaoProvider);
       final existingGroups = await groupDao.getGroupsForUser(activeUser.id);
-      final alreadyExists = existingGroups.any((g) => g.name.trim().toLowerCase() == name.toLowerCase());
-      
+      final alreadyExists = existingGroups
+          .any((g) => g.name.trim().toLowerCase() == name.toLowerCase());
+
       if (alreadyExists) {
         messenger.showSnackBar(
-          material.SnackBar(content: material.Text('Ya tienes un grupo llamado "$name".')),
+          material.SnackBar(
+              content: material.Text('Ya tienes un grupo llamado "$name".')),
         );
         return true; // Consideramos que ya está "creado"
       }
@@ -233,13 +258,15 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
       if (!mounted) return false;
       _groupCreated = true;
       messenger.showSnackBar(
-        material.SnackBar(content: material.Text('Grupo "$name" creado correctamente.')),
+        material.SnackBar(
+            content: material.Text('Grupo "$name" creado correctamente.')),
       );
       return true;
     } catch (error) {
       if (!mounted) return false;
       messenger.showSnackBar(
-        material.SnackBar(content: material.Text('No se pudo crear el grupo: $error')),
+        material.SnackBar(
+            content: material.Text('No se pudo crear el grupo: $error')),
       );
       return false;
     } finally {
@@ -249,11 +276,14 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     }
   }
 
-  Future<bool> _joinGroupByCode(material.BuildContext context, {required material.ScaffoldMessengerState messenger}) async {
+  Future<bool> _joinGroupByCode(material.BuildContext context,
+      {required material.ScaffoldMessengerState messenger}) async {
     final activeUser = ref.read(activeUserProvider).value;
     if (activeUser == null || !_isSynced) {
       messenger.showSnackBar(
-        const material.SnackBar(content: material.Text('Estamos terminando de sincronizar tu cuenta. Intenta en unos segundos.')),
+        const material.SnackBar(
+            content: material.Text(
+                'Estamos terminando de sincronizar tu cuenta. Intenta en unos segundos.')),
       );
       return false;
     }
@@ -273,13 +303,15 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
       );
       if (!mounted) return false;
       messenger.showSnackBar(
-        const material.SnackBar(content: material.Text('Te uniste al grupo correctamente.')),
+        const material.SnackBar(
+            content: material.Text('Te uniste al grupo correctamente.')),
       );
       return true;
     } catch (error) {
       if (!mounted) return false;
       messenger.showSnackBar(
-        material.SnackBar(content: material.Text('No se pudo unir al grupo: $error')),
+        material.SnackBar(
+            content: material.Text('No se pudo unir al grupo: $error')),
       );
       return false;
     } finally {
@@ -288,8 +320,6 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
       }
     }
   }
-
-
 
   void _initializeFromProgress(OnboardingProgress progress) {
     if (_initializedFromProgress) {
@@ -358,13 +388,15 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         final activeUser = activeUserAsync.asData?.value;
         _isSynced = activeUser != null && activeUser.remoteId != null;
 
-        if (authState.status == AuthStatus.loading || activeUserAsync.isLoading) {
+        if (authState.status == AuthStatus.loading ||
+            activeUserAsync.isLoading) {
           return const material.Scaffold(
             body: material.Center(child: material.CircularProgressIndicator()),
           );
         }
 
-        final steps = _buildSteps(context, displayName: activeUser?.username ?? '');
+        final steps =
+            _buildSteps(context, displayName: activeUser?.username ?? '');
 
         return material.Scaffold(
           appBar: material.AppBar(
@@ -389,15 +421,20 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
               return material.Row(
                 children: [
                   material.FilledButton.icon(
-                    onPressed: _isProcessing ? null : () => _handleContinue(context),
+                    onPressed:
+                        _isProcessing ? null : () => _handleContinue(context),
                     icon: material.Icon(_currentStep == _totalSteps - 1
                         ? material.Icons.check_circle_outline
                         : material.Icons.arrow_forward),
-                    label: material.Text(_currentStep == _totalSteps - 1 ? 'Finalizar' : 'Continuar'),
+                    label: material.Text(_currentStep == _totalSteps - 1
+                        ? 'Finalizar'
+                        : 'Continuar'),
                   ),
                   const material.SizedBox(width: 12),
                   material.TextButton(
-                    onPressed: _isProcessing ? null : () => _handleSkipStep(_currentStep),
+                    onPressed: _isProcessing
+                        ? null
+                        : () => _handleSkipStep(_currentStep),
                     child: const material.Text('Omitir paso'),
                   ),
                 ],
@@ -410,10 +447,12 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     );
   }
 
-  List<material.Step> _buildSteps(material.BuildContext context, {required String displayName}) {
+  List<material.Step> _buildSteps(material.BuildContext context,
+      {required String displayName}) {
     final theme = material.Theme.of(context);
 
-    material.Widget buildSyncNotice({required String title, required String subtitle}) {
+    material.Widget buildSyncNotice(
+        {required String title, required String subtitle}) {
       if (_isSynced) {
         return const material.SizedBox.shrink();
       }
@@ -435,7 +474,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     return [
       material.Step(
         title: const material.Text('Crea tu primer grupo'),
-        subtitle: const material.Text('Invita a tus amigos y comparte la biblioteca.'),
+        subtitle: const material.Text(
+            'Invita a tus amigos y comparte la biblioteca.'),
         isActive: _currentStep >= _groupStepIndex,
         state: _resolveStepState(_groupStepIndex),
         content: material.Form(
@@ -493,7 +533,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
       ),
       material.Step(
         title: const material.Text('Únete con un código'),
-        subtitle: const material.Text('Introduce el código que te compartieron.'),
+        subtitle:
+            const material.Text('Introduce el código que te compartieron.'),
         isActive: _currentStep >= _joinStepIndex,
         state: _resolveStepState(_joinStepIndex),
         content: material.Form(
@@ -508,7 +549,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
               const material.SizedBox(height: 12),
               buildSyncNotice(
                 title: 'Sincronizando tu cuenta...',
-                subtitle: 'Necesitamos tu usuario activo para validar el código.',
+                subtitle:
+                    'Necesitamos tu usuario activo para validar el código.',
               ),
               const material.SizedBox(height: 16),
               material.TextFormField(
@@ -537,7 +579,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
       ),
       material.Step(
         title: const material.Text('Resumen'),
-        subtitle: const material.Text('Confirma tu configuración antes de comenzar.'),
+        subtitle:
+            const material.Text('Confirma tu configuración antes de comenzar.'),
         isActive: _currentStep >= _summaryStepIndex,
         state: _resolveStepState(_summaryStepIndex),
         content: _SummaryStep(
@@ -580,7 +623,8 @@ class _GroupInfoBottomSheet extends material.StatelessWidget {
           mainAxisSize: material.MainAxisSize.min,
           crossAxisAlignment: material.CrossAxisAlignment.start,
           children: [
-            material.Text('¿Qué es un grupo?', style: theme.textTheme.titleMedium),
+            material.Text('¿Qué es un grupo?',
+                style: theme.textTheme.titleMedium),
             const material.SizedBox(height: 12),
             material.Text(
               'Los grupos reúnen a tus amigos o familiares para compartir bibliotecas locales. '
@@ -630,8 +674,12 @@ class _SummaryStep extends material.StatelessWidget {
     }) {
       return material.ListTile(
         leading: material.Icon(
-          done ? material.Icons.check_circle_outline : material.Icons.radio_button_unchecked,
-          color: done ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+          done
+              ? material.Icons.check_circle_outline
+              : material.Icons.radio_button_unchecked,
+          color: done
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurfaceVariant,
         ),
         title: material.Text(title),
         subtitle: material.Text(subtitle),

@@ -714,4 +714,88 @@ class LoanRepository {
     final cutoff = now.subtract(const Duration(days: 30));
     return _groupDao.deleteOldLoans(cutoff);
   }
+
+  Future<Map<String, dynamic>> getLoanStatistics(int userId) async {
+    final allLoans = await _groupDao.getAllLoanDetailsForUser(userId);
+    final now = DateTime.now();
+    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+    final oneYearAgo = now.subtract(const Duration(days: 365));
+
+    // Loans involved in (borrower or lender) in the last 30 days
+    final loansLast30Days = allLoans.where((l) {
+      final date = l.loan.createdAt; // Using createdAt as the reference
+      return date.isAfter(thirtyDaysAgo);
+    }).length;
+
+    // Loans involved in (borrower or lender) in the last year
+    final loansLastYear = allLoans.where((l) {
+      final date = l.loan.createdAt;
+      return date.isAfter(oneYearAgo);
+    }).length;
+
+    // Most loaned book (as lender)
+    // We only count loans where I am the lender
+    final myLendingLoans =
+        allLoans.where((l) => l.loan.lenderUserId == userId).toList();
+
+    if (myLendingLoans.isEmpty) {
+      return {
+        'loansLast30Days': loansLast30Days,
+        'loansLastYear': loansLastYear,
+        'mostLoanedBook': null,
+        'mostLoanedBookCount': 0,
+      };
+    }
+
+    final bookCounts = <int, int>{};
+    final bookTitles = <int, String>{};
+
+    for (final loanDetail in myLendingLoans) {
+      // Determines the effective book ID (shared or direct)
+      int? bookId;
+      String? title;
+
+      if (loanDetail.sharedBook != null) {
+        bookId = loanDetail.sharedBook!.bookId;
+        title = loanDetail.book?.title;
+      } else if (loanDetail.loan.bookId != null) {
+        bookId = loanDetail.loan.bookId;
+        title = loanDetail.book?.title; // Should be joined if available
+      }
+
+      if (bookId != null) {
+        bookCounts[bookId] = (bookCounts[bookId] ?? 0) + 1;
+        if (title != null) {
+          bookTitles[bookId] = title;
+        }
+      }
+    }
+
+    if (bookCounts.isEmpty) {
+      return {
+        'loansLast30Days': loansLast30Days,
+        'loansLastYear': loansLastYear,
+        'mostLoanedBook': null,
+        'mostLoanedBookCount': 0,
+      };
+    }
+
+    // Find max
+    var maxId = bookCounts.keys.first;
+    var maxCount = bookCounts[maxId]!;
+
+    bookCounts.forEach((k, v) {
+      if (v > maxCount) {
+        maxId = k;
+        maxCount = v;
+      }
+    });
+
+    return {
+      'loansLast30Days': loansLast30Days,
+      'loansLastYear': loansLastYear,
+      'mostLoanedBook': bookTitles[maxId] ?? 'Desconocido',
+      'mostLoanedBookCount': maxCount,
+    };
+  }
 }

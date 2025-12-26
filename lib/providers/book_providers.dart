@@ -99,18 +99,18 @@ final sharedBookDetailsProvider = StreamProvider.autoDispose
   return dao.watchSharedBookDetails(groupId);
 });
 
-final groupLoanDetailsProvider = StreamProvider.autoDispose
-    .family<List<LoanDetail>, int>((ref, groupId) {
+final groupLoanDetailsProvider =
+    StreamProvider.autoDispose.family<List<LoanDetail>, int>((ref, groupId) {
   final dao = ref.watch(groupDaoProvider);
   return dao.watchLoanDetailsForGroup(groupId);
 });
 
 // Filtered version that shows only loans where user is lender or borrower
-final userRelevantLoansProvider = StreamProvider.autoDispose
-    .family<List<LoanDetail>, int>((ref, groupId) {
+final userRelevantLoansProvider =
+    StreamProvider.autoDispose.family<List<LoanDetail>, int>((ref, groupId) {
   final dao = ref.watch(groupDaoProvider);
   final activeUserAsync = ref.watch(activeUserProvider);
-  
+
   return activeUserAsync.when<Stream<List<LoanDetail>>>(
     data: (user) {
       if (user == null) {
@@ -118,27 +118,32 @@ final userRelevantLoansProvider = StreamProvider.autoDispose
       }
       return dao.watchLoanDetailsForGroup(groupId).map((loans) {
         if (kDebugMode) {
-          debugPrint('[PROVIDER DEBUG] userRelevantLoansProvider received ${loans.length} loans');
+          debugPrint(
+              '[PROVIDER DEBUG] userRelevantLoansProvider received ${loans.length} loans');
           for (final detail in loans) {
-            debugPrint('[PROVIDER DEBUG] Input loan: ${detail.loan.uuid}, status: ${detail.loan.status}, borrowerUserId: ${detail.loan.borrowerUserId}');
+            debugPrint(
+                '[PROVIDER DEBUG] Input loan: ${detail.loan.uuid}, status: ${detail.loan.status}, borrowerUserId: ${detail.loan.borrowerUserId}');
           }
         }
-        
+
         // Filter to show ALL active loans in the group (including manual loans)
         // This ensures manual loans (borrowerUserId = null) are visible to other users
         final filteredLoans = loans.where((detail) {
           final loan = detail.loan;
-          final isActive = loan.status == 'active' || loan.status == 'requested';
+          final isActive =
+              loan.status == 'active' || loan.status == 'requested';
           return isActive;
         }).toList();
-        
+
         if (kDebugMode) {
-          debugPrint('[PROVIDER DEBUG] Filtered to ${filteredLoans.length} active loans');
+          debugPrint(
+              '[PROVIDER DEBUG] Filtered to ${filteredLoans.length} active loans');
           for (final detail in filteredLoans) {
-            debugPrint('[PROVIDER DEBUG] Output loan: ${detail.loan.uuid}, status: ${detail.loan.status}');
+            debugPrint(
+                '[PROVIDER DEBUG] Output loan: ${detail.loan.uuid}, status: ${detail.loan.status}');
           }
         }
-        
+
         return filteredLoans;
       });
     },
@@ -196,7 +201,8 @@ final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
   return repository;
 });
 
-final supabaseNotificationServiceProvider = Provider<SupabaseNotificationService>((ref) {
+final supabaseNotificationServiceProvider =
+    Provider<SupabaseNotificationService>((ref) {
   final service = SupabaseNotificationService();
   ref.onDispose(service.dispose);
   return service;
@@ -421,7 +427,8 @@ final loanExportServiceProvider = Provider<LoanExportService>((ref) {
   return const LoanExportService();
 });
 
-final supabaseGroupSyncRepositoryProvider = Provider<SupabaseGroupSyncRepository>((ref) {
+final supabaseGroupSyncRepositoryProvider =
+    Provider<SupabaseGroupSyncRepository>((ref) {
   final groupDao = ref.watch(groupDaoProvider);
   final userDao = ref.watch(userDaoProvider);
   final bookDao = ref.watch(bookDaoProvider);
@@ -477,4 +484,22 @@ final groupPushControllerProvider =
     syncCoordinator: syncCoordinator,
     notificationRepository: notificationRepository,
   );
+});
+
+final loanStatisticsProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final userRepository = ref.watch(userRepositoryProvider);
+  final loanRepository = ref.watch(loanRepositoryProvider);
+  final user = await userRepository.getActiveUser();
+
+  if (user == null) {
+    return {
+      'loansLast30Days': 0,
+      'loansLastYear': 0,
+      'mostLoanedBook': null,
+      'mostLoanedBookCount': 0,
+    };
+  }
+
+  return loanRepository.getLoanStatistics(user.id);
 });

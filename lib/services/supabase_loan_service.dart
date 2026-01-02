@@ -27,13 +27,12 @@ class SupabaseLoanService {
 
   /// Upserts a list of loans to Supabase.
   /// Returns the list of upserted records (with server-generated fields if any).
-  Future<List<Map<String, dynamic>>> upsertLoans(List<Map<String, dynamic>> loans) async {
+  Future<List<Map<String, dynamic>>> upsertLoans(
+      List<Map<String, dynamic>> loans) async {
     if (loans.isEmpty) return [];
 
-    final response = await _client
-        .from('loans')
-        .upsert(loans, onConflict: 'uuid')
-        .select();
+    final response =
+        await _client.from('loans').upsert(loans, onConflict: 'uuid').select();
 
     return List<Map<String, dynamic>>.from(response);
   }
@@ -41,5 +40,18 @@ class SupabaseLoanService {
   /// Deletes a loan by UUID.
   Future<void> deleteLoan(String uuid) async {
     await _client.from('loans').delete().eq('uuid', uuid);
+  }
+
+  /// Atomically accepts a loan using a server-side RPC.
+  /// Handles validation and auto-rejection of conflicting requests.
+  Future<Map<String, dynamic>> acceptLoan({
+    required String loanId,
+    required String lenderUserId,
+  }) async {
+    final response = await _client.rpc('accept_loan', params: {
+      'p_loan_id': loanId,
+      'p_lender_user_id': lenderUserId,
+    });
+    return response as Map<String, dynamic>;
   }
 }

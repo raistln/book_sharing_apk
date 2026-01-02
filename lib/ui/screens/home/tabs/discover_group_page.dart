@@ -38,7 +38,8 @@ List<SharedBookDetail> _filterSharedBooksForDiscover({
       return false;
     }
 
-    if (ownerUserIdFilter != null && sharedBook.ownerUserId != ownerUserIdFilter) {
+    if (ownerUserIdFilter != null &&
+        sharedBook.ownerUserId != ownerUserIdFilter) {
       return false;
     }
 
@@ -74,15 +75,16 @@ _DiscoverStatusDisplay _resolveStatusDisplay({
 
   if (loanDetail != null) {
     final status = loanDetail.loan.status;
-    if (status == 'pending') {
+    if (status == 'requested') {
       return _DiscoverStatusDisplay(
-        label: 'Pendiente',
+        label: 'Solicitado',
         icon: Icons.schedule_outlined,
         background: colors.secondaryContainer,
         foreground: colors.onSecondaryContainer,
         caption: 'Solicitud pendiente de aprobación',
       );
-    } else if (status == 'active') { // FIXED: accepted -> active
+    } else if (status == 'active') {
+      // FIXED: accepted -> active
       return _DiscoverStatusDisplay(
         label: 'En préstamo',
         icon: Icons.handshake_outlined,
@@ -129,7 +131,8 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
   bool _discoverTargetsReady = false;
   bool _discoverCoachTriggered = false;
   bool _waitingDiscoverCompletion = false;
-  late ProviderSubscription<AsyncValue<OnboardingProgress>> _discoverProgressSub;
+  late ProviderSubscription<AsyncValue<OnboardingProgress>>
+      _discoverProgressSub;
   late ProviderSubscription<CoachMarkState> _discoverCoachSub;
 
   @override
@@ -200,7 +203,8 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
 
   void _onSearchChanged() {
     final query = _searchController.text;
-    final currentState = ref.read(discoverGroupControllerProvider(widget.group.id));
+    final currentState =
+        ref.read(discoverGroupControllerProvider(widget.group.id));
     if (query == currentState.searchQuery) {
       return;
     }
@@ -213,7 +217,9 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
   }
 
   void _maybeTriggerDiscoverCoach() {
-    if (!_pendingDiscoverCoach || _discoverCoachTriggered || !_discoverTargetsReady) {
+    if (!_pendingDiscoverCoach ||
+        _discoverCoachTriggered ||
+        !_discoverTargetsReady) {
       return;
     }
 
@@ -234,7 +240,8 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
     final ownBooksAsync = ref.watch(bookListProvider);
     final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
     final loansAsync = ref.watch(userRelevantLoansProvider(group.id));
-    final showLargeDatasetNotice = state.isLargeDataset && state.searchQuery.isEmpty;
+    final showLargeDatasetNotice =
+        state.isLargeDataset && state.searchQuery.isEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -278,7 +285,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                   ],
                 ),
               ),
-              if (kDebugMode) ...[ 
+              if (kDebugMode) ...[
                 const SizedBox(height: 12),
                 _DiscoverMetricsBanner(state: state),
               ],
@@ -308,10 +315,13 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                     controller: controller,
                     ownBooks: ownBooks,
                     activeUser: activeUser,
-                    members: membersAsync.asData?.value ?? const <GroupMemberDetail>[],
-                    loanDetails: loansAsync.asData?.value ?? const <LoanDetail>[],
+                    members: membersAsync.asData?.value ??
+                        const <GroupMemberDetail>[],
+                    loanDetails:
+                        loansAsync.asData?.value ?? const <LoanDetail>[],
                   ),
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (error, _) => _DiscoverErrorView(
                     message: 'No pudimos cargar tu biblioteca.',
                     details: '$error',
@@ -357,7 +367,8 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
 
     if (filtered.isNotEmpty && !_discoverTargetsReady) {
       _discoverTargetsReady = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeTriggerDiscoverCoach());
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _maybeTriggerDiscoverCoach());
     }
 
     final ownerNames = <int, String>{
@@ -373,11 +384,14 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
         continue;
       }
       final status = detail.loan.status;
-      if (status != 'pending' && status != 'active') { // FIXED: accepted -> active
+      if (status != 'requested' && status != 'active') {
+        // FIXED: accepted -> active
         continue;
       }
       final entry = activeLoansBySharedBookId[shared.id];
-      if (entry == null || _loanStatusPriority(status) > _loanStatusPriority(entry.loan.status)) {
+      if (entry == null ||
+          _loanStatusPriority(status) >
+              _loanStatusPriority(entry.loan.status)) {
         activeLoansBySharedBookId[shared.id] = detail;
       }
     }
@@ -392,7 +406,8 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
 
       if (hasSearch) {
         title = 'Sin resultados para tu búsqueda';
-        message = 'Revisa el término ingresado o restablece los filtros para ver más libros.';
+        message =
+            'Revisa el término ingresado o restablece los filtros para ver más libros.';
         action = EmptyStateAction(
           label: 'Limpiar búsqueda',
           icon: Icons.clear,
@@ -597,8 +612,10 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
         final seen = <int>{};
         final sortedMembers = members.toList()
           ..sort((a, b) {
-            final nameA = a.user?.username ?? 'Miembro ${a.membership.memberUserId}';
-            final nameB = b.user?.username ?? 'Miembro ${b.membership.memberUserId}';
+            final nameA =
+                a.user?.username ?? 'Miembro ${a.membership.memberUserId}';
+            final nameB =
+                b.user?.username ?? 'Miembro ${b.membership.memberUserId}';
             return nameA.toLowerCase().compareTo(nameB.toLowerCase());
           });
 
@@ -613,14 +630,18 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
             continue;
           }
 
-          final displayName = (user?.username ?? 'Miembro ${membership.memberUserId}').trim();
+          final displayName =
+              (user?.username ?? 'Miembro ${membership.memberUserId}').trim();
           chips.add(
             FilterChip(
               label: Text(
-                displayName.isEmpty ? 'Miembro ${membership.memberUserId}' : displayName,
+                displayName.isEmpty
+                    ? 'Miembro ${membership.memberUserId}'
+                    : displayName,
               ),
               selected: state.ownerUserIdFilter == userId,
-              onSelected: (selected) => controller.setOwnerFilter(selected ? userId : null),
+              onSelected: (selected) =>
+                  controller.setOwnerFilter(selected ? userId : null),
             ),
           );
         }
@@ -651,7 +672,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
     switch (status) {
       case 'active': // FIXED: accepted -> active
         return 2;
-      case 'pending':
+      case 'requested':
         return 1;
       default:
         return 0;
@@ -696,10 +717,8 @@ class _DiscoverStatusChip extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               display.label,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelSmall
-                  ?.copyWith(color: display.foreground, fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: display.foreground, fontWeight: FontWeight.w600),
             ),
           ],
         ),

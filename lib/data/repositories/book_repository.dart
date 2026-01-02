@@ -297,7 +297,7 @@ class BookRepository {
         final hasActivePendingLoans = activeLoans.any((loan) =>
             loan.status == 'active' ||
             loan.status == 'requested' ||
-            loan.status == 'pending');
+            loan.status == 'requested');
 
         if (hasActivePendingLoans) {
           throw Exception(

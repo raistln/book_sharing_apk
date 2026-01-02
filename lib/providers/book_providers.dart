@@ -178,10 +178,12 @@ final loanRepositoryProvider = Provider<LoanRepository>((ref) {
   final groupDao = ref.watch(groupDaoProvider);
   final bookDao = ref.watch(bookDaoProvider);
   final userDao = ref.watch(userDaoProvider);
+  final supabaseLoanService = ref.watch(supabaseLoanServiceProvider);
   return LoanRepository(
     groupDao: groupDao,
     bookDao: bookDao,
     userDao: userDao,
+    supabaseLoanService: supabaseLoanService,
   );
 });
 

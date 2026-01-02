@@ -75,7 +75,7 @@ class LoanController extends StateNotifier<LoanActionState> {
         if (loan.status != 'active' || loan.dueDate == null) continue;
 
         final dueDate = loan.dueDate!;
-        
+
         // Check for expiration
         if (dueDate.isBefore(now)) {
           // If not already marked as expired in DB, we could trigger expireLoan
@@ -85,7 +85,7 @@ class LoanController extends StateNotifier<LoanActionState> {
         }
 
         // Check for "Due Soon" (7 days)
-        // We trigger this if the due date is within the next 7 days 
+        // We trigger this if the due date is within the next 7 days
         // and we haven't notified for this specific loan yet.
         // For simplicity, we can check if a notification of type loan_due_soon exists for this loan.
         if (dueDate.isBefore(sevenDaysFromNow)) {
@@ -93,7 +93,8 @@ class LoanController extends StateNotifier<LoanActionState> {
         }
       }
     } catch (e, stack) {
-      developer.log('Error checking upcoming loans: $e', name: 'LoanController', error: e, stackTrace: stack);
+      developer.log('Error checking upcoming loans: $e',
+          name: 'LoanController', error: e, stackTrace: stack);
     }
   }
 
@@ -123,11 +124,14 @@ class LoanController extends StateNotifier<LoanActionState> {
     String? borrowerContact,
   }) async {
     if (kDebugMode) {
-      debugPrint('[LOAN CONTROLLER] Creating manual loan for book ${sharedBook.bookUuid}');
-      debugPrint('[LOAN CONTROLLER] Borrower: $borrowerName, Owner ID: ${owner.id}');
+      debugPrint(
+          '[LOAN CONTROLLER] Creating manual loan for book ${sharedBook.bookUuid}');
+      debugPrint(
+          '[LOAN CONTROLLER] Borrower: $borrowerName, Owner ID: ${owner.id}');
     }
 
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final result = await _loanRepository.createManualLoan(
         sharedBook: sharedBook,
@@ -157,25 +161,26 @@ class LoanController extends StateNotifier<LoanActionState> {
     required LocalUser borrower,
     DateTime? dueDate,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final loan = await _loanRepository.requestLoan(
         sharedBook: sharedBook,
         borrower: borrower,
         dueDate: dueDate,
       );
-      
+
       // Evento crítico: sincronizar inmediatamente antes de crear notificación
       // Esto previene violaciones de FK constraints
       await _syncCoordinator.syncOnCriticalEvent(SyncEvent.loanCreated);
-      
+
       // Now create the notification (it will reference the synced loan)
       await _notifyLoanRequest(
         loan: loan,
         sharedBook: sharedBook,
         borrower: borrower,
       );
-      
+
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Solicitud enviada.',
@@ -194,7 +199,8 @@ class LoanController extends StateNotifier<LoanActionState> {
     required Loan loan,
     required LocalUser borrower,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final result = await _loanRepository.cancelLoan(
         loan: loan,
@@ -225,14 +231,16 @@ class LoanController extends StateNotifier<LoanActionState> {
     required Loan loan,
     required LocalUser owner,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final result = await _loanRepository.rejectLoan(
         loan: loan,
         owner: owner,
       );
       // Marcar cambios (no crítico, usa debouncing normal)
-      _syncCoordinator.markPendingChanges(SyncEntity.loans, priority: SyncPriority.medium);
+      _syncCoordinator.markPendingChanges(SyncEntity.loans,
+          priority: SyncPriority.medium);
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Solicitud rechazada.',
@@ -257,15 +265,22 @@ class LoanController extends StateNotifier<LoanActionState> {
     required LocalUser owner,
     DateTime? dueDate,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
+      final now = DateTime.now();
+      if (dueDate != null && dueDate.isBefore(now)) {
+        throw Exception('La fecha de devolución no puede ser anterior a hoy.');
+      }
+
       final result = await _loanRepository.acceptLoan(
         loan: loan,
         owner: owner,
         dueDate: dueDate,
       );
       // Marcar cambios (no crítico, usa debouncing normal)
-      _syncCoordinator.markPendingChanges(SyncEntity.loans, priority: SyncPriority.medium);
+      _syncCoordinator.markPendingChanges(SyncEntity.loans,
+          priority: SyncPriority.medium);
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Préstamo aceptado.',
@@ -277,9 +292,25 @@ class LoanController extends StateNotifier<LoanActionState> {
       await _scheduleLoanNotifications(result);
       return result;
     } catch (error) {
+      // Check for specific RPC race condition errors
+      final msg = error.toString().toLowerCase();
+      String? userFriendlyError;
+
+      if (msg.contains('cancelled') || msg.contains('cancelado')) {
+        userFriendlyError =
+            'El usuario canceló la solicitud antes de que pudieras aceptarla.';
+      } else if (msg.contains('already currently on loan') ||
+          msg.contains('ya se encuentra prestado')) {
+        userFriendlyError = 'Este libro ya ha sido prestado a otra persona.';
+      } else if (msg.contains('not in requested state') ||
+          msg.contains('no se encuentra en estado')) {
+        userFriendlyError =
+            'La solicitud ya no es válida (quizás ya fue aceptada o rechazada).';
+      }
+
       state = state.copyWith(
         isLoading: false,
-        lastError: () => error.toString(),
+        lastError: () => userFriendlyError ?? error.toString(),
       );
       rethrow;
     }
@@ -289,7 +320,8 @@ class LoanController extends StateNotifier<LoanActionState> {
     required Loan loan,
     required LocalUser actor,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final result = await _loanRepository.markReturned(
         loan: loan,
@@ -319,11 +351,13 @@ class LoanController extends StateNotifier<LoanActionState> {
   Future<Loan> expireLoan({
     required Loan loan,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final result = await _loanRepository.expireLoan(loan: loan);
       // Marcar cambios (no crítico, usa debouncing normal)
-      _syncCoordinator.markPendingChanges(SyncEntity.loans, priority: SyncPriority.medium);
+      _syncCoordinator.markPendingChanges(SyncEntity.loans,
+          priority: SyncPriority.medium);
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Préstamo marcado como expirado.',
@@ -355,7 +389,8 @@ class LoanController extends StateNotifier<LoanActionState> {
       return;
     }
 
-    final sharedBook = await _loanRepository.findSharedBookById(loan.sharedBookId!);
+    final sharedBook =
+        await _loanRepository.findSharedBookById(loan.sharedBookId!);
 
     final payload = <String, String>{
       NotificationPayloadKeys.loanId: loan.uuid,
@@ -427,7 +462,8 @@ class LoanController extends StateNotifier<LoanActionState> {
         loan: loan,
         sharedBook: sharedBook,
         fallback: '${borrower.username} solicitó un préstamo.',
-        withTitle: (title) => '${borrower.username} quiere pedir prestado "$title".',
+        withTitle: (title) =>
+            '${borrower.username} quiere pedir prestado "$title".',
       );
 
       await _notificationRepository.createLoanNotification(
@@ -454,7 +490,8 @@ class LoanController extends StateNotifier<LoanActionState> {
       final message = await _messageWithBook(
         loan: loan,
         fallback: '${borrower.username} canceló la solicitud de préstamo.',
-        withTitle: (title) => '${borrower.username} canceló la solicitud para "$title".',
+        withTitle: (title) =>
+            '${borrower.username} canceló la solicitud para "$title".',
       );
 
       await _notificationRepository.createLoanNotification(
@@ -484,7 +521,8 @@ class LoanController extends StateNotifier<LoanActionState> {
       final message = await _messageWithBook(
         loan: loan,
         fallback: '${owner.username} rechazó tu solicitud de préstamo.',
-        withTitle: (title) => '${owner.username} rechazó tu solicitud para "$title".',
+        withTitle: (title) =>
+            '${owner.username} rechazó tu solicitud para "$title".',
       );
 
       await _notificationRepository.createLoanNotification(
@@ -514,7 +552,8 @@ class LoanController extends StateNotifier<LoanActionState> {
       final message = await _messageWithBook(
         loan: loan,
         fallback: '${owner.username} aceptó tu solicitud de préstamo.',
-        withTitle: (title) => '${owner.username} aceptó tu solicitud para "$title".',
+        withTitle: (title) =>
+            '${owner.username} aceptó tu solicitud para "$title".',
       );
 
       await _notificationRepository.createLoanNotification(
@@ -539,8 +578,10 @@ class LoanController extends StateNotifier<LoanActionState> {
       );
 
       // Determine counterpart: if actor is borrower, notify owner; if actor is owner, notify borrower
-      final int? counterpartId = actor.id == loan.borrowerUserId ? loan.lenderUserId : loan.borrowerUserId;
-      
+      final int? counterpartId = actor.id == loan.borrowerUserId
+          ? loan.lenderUserId
+          : loan.borrowerUserId;
+
       // Don't notify if counterpart is null (manual loan) or is the same as actor
       if (counterpartId == null || counterpartId == actor.id) {
         return;
@@ -610,7 +651,8 @@ class LoanController extends StateNotifier<LoanActionState> {
     required DateTime dueDate,
     String? borrowerContact,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final result = await _loanRepository.createManualLoanDirect(
         book: book,
@@ -639,7 +681,8 @@ class LoanController extends StateNotifier<LoanActionState> {
     required Loan loan,
     required LocalUser owner,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final result = await _loanRepository.ownerForceConfirmReturn(
         loan: loan,
@@ -668,18 +711,20 @@ class LoanController extends StateNotifier<LoanActionState> {
   }) async {
     // Only for non-manual loans where I'm waiting for the other person
     if (loan.borrowerUserId == null) return;
-    
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
-      final targetUserId = actor.id == loan.lenderUserId 
-          ? loan.borrowerUserId! 
+      final targetUserId = actor.id == loan.lenderUserId
+          ? loan.borrowerUserId!
           : loan.lenderUserId;
 
       await _runNotificationTask(() async {
         final message = await _messageWithBook(
           loan: loan,
           fallback: 'Recordatorio para confirmar devolución.',
-          withTitle: (title) => 'Recordatorio: Por favor confirma la devolución de "$title".',
+          withTitle: (title) =>
+              'Recordatorio: Por favor confirma la devolución de "$title".',
         );
 
         await _notificationRepository.createLoanNotification(
@@ -730,9 +775,10 @@ class LoanController extends StateNotifier<LoanActionState> {
       final book = await _loanRepository.findBookById(loan.bookId!);
       return book?.title;
     }
-    
+
     if (loan.sharedBookId != null) {
-      final localShared = sharedBook ?? await _loanRepository.findSharedBookById(loan.sharedBookId!);
+      final localShared = sharedBook ??
+          await _loanRepository.findSharedBookById(loan.sharedBookId!);
       if (localShared != null) {
         final book = await _loanRepository.findBookById(localShared.bookId);
         return book?.title;

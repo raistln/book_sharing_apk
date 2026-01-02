@@ -8,14 +8,14 @@ import '../info_pop.dart';
 import '../../../providers/book_providers.dart';
 // ignore: unused_import
 import '../../../providers/loan_providers.dart';
-// ignore: unused_import  
+// ignore: unused_import
 import '../../../providers/auth_providers.dart';
 import '../../../services/stats_service.dart';
 // ignore: unused_import
 import '../../../services/loan_controller.dart';
 
 /// Widget that displays a list of active loans
-/// 
+///
 /// Shows loans in pending or accepted status with details like
 /// borrower name, status, request date, and due date.
 class ActiveLoansList extends ConsumerWidget {
@@ -70,7 +70,8 @@ class ActiveLoansList extends ConsumerWidget {
                   children: [
                     Text('Solicitante: ${loan.borrowerName}'),
                     Text('Estado: $statusLabel'),
-                    Text('Solicitado: ${DateFormat.yMMMd().format(loan.requestedAt)}'),
+                    Text(
+                        'Solicitado: ${DateFormat.yMMMd().format(loan.requestedAt)}'),
                     Text(
                       dueDate != null
                           ? 'Vence: ${DateFormat.yMMMd().format(dueDate)}'
@@ -82,7 +83,8 @@ class ActiveLoansList extends ConsumerWidget {
                   // Navigate to book detail page
                   // This requires importing the book detail page widget and navigation logic
                   // For now, show a message to the user
-                  InfoPop.show(context, message: 'Navegación a detalle de préstamo');
+                  InfoPop.show(context,
+                      message: 'Navegación a detalle de préstamo');
                 },
               ),
               if (loan.status == 'active')
@@ -106,13 +108,14 @@ class ActiveLoansList extends ConsumerWidget {
     );
   }
 
-  Future<void> _markReturned(BuildContext context, WidgetRef ref, StatsActiveLoan loan) async {
+  Future<void> _markReturned(
+      BuildContext context, WidgetRef ref, StatsActiveLoan loan) async {
     final activeUser = ref.read(activeUserProvider).value;
     if (activeUser == null) return;
     try {
       final controller = ref.read(loanControllerProvider.notifier);
       await controller.markReturned(loan: loan.loan, actor: activeUser);
-      
+
       if (!context.mounted) return;
       if (!context.mounted) return;
       InfoPop.success(context, 'Préstamo marcado como devuelto');
@@ -122,15 +125,21 @@ class ActiveLoansList extends ConsumerWidget {
       InfoPop.error(context, 'Error: $e');
     }
   }
- 
+
   String _statusLabel(String status) {
     switch (status) {
-      case 'pending':
-        return 'Pendiente';
-      case 'active': // FIXED: accepted -> active
+      case 'requested':
+        return 'Solicitado';
+      case 'active':
         return 'En curso';
       case 'returned':
         return 'Devuelto';
+      case 'cancelled':
+        return 'Cancelado';
+      case 'rejected':
+        return 'Rechazado';
+      case 'completed':
+        return 'Completado';
       case 'expired':
         return 'Expirado';
       default:
@@ -141,12 +150,14 @@ class ActiveLoansList extends ConsumerWidget {
   Color _statusColor(BuildContext context, String status) {
     final colors = Theme.of(context).colorScheme;
     switch (status) {
-      case 'pending':
-        return colors.secondary;
-      case 'active': // FIXED: accepted -> active
+      case 'requested':
+      case 'active':
         return colors.primary;
       case 'returned':
+      case 'completed':
         return colors.tertiary;
+      case 'cancelled':
+      case 'rejected':
       case 'expired':
         return colors.error;
       default:

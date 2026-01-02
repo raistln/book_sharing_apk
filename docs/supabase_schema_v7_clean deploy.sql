@@ -266,8 +266,8 @@ CREATE TABLE public.loans (
   external_borrower_name TEXT,
   external_borrower_contact TEXT,
   
-  -- Status: requested, active, returned, expired
-  status TEXT NOT NULL DEFAULT 'requested' CHECK (status IN ('requested', 'active', 'returned', 'expired')),
+  -- Status: requested, active, returned, cancelled, rejected, completed, expired
+  status TEXT NOT NULL DEFAULT 'requested' CHECK (status IN ('requested', 'active', 'returned', 'cancelled', 'rejected', 'completed', 'expired')),
   
   -- Dates
   requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

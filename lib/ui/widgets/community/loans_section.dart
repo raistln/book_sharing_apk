@@ -28,10 +28,10 @@ class LoansSection extends StatelessWidget {
         // Filter to show only loans where user is involved
         final userLoans = loans.where((detail) {
           final loan = detail.loan;
-          return loan?.borrowerUserId == activeUser?.id || 
-                 loan?.lenderUserId == activeUser?.id;
+          return loan?.borrowerUserId == activeUser?.id ||
+              loan?.lenderUserId == activeUser?.id;
         }).toList();
-        
+
         if (userLoans.isEmpty) {
           return Text('No tienes préstamos activos en este grupo.',
               style: theme.textTheme.bodyMedium);
@@ -61,7 +61,8 @@ class LoansSection extends StatelessWidget {
         child: LinearProgressIndicator(),
       ),
       error: (error, _) => Text('Error cargando préstamos: $error',
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.error)),
     );
   }
 
@@ -166,7 +167,8 @@ class LoansSection extends StatelessWidget {
     }
 
     try {
-      await loanController.requestLoan(sharedBook: sharedBook, borrower: borrower);
+      await loanController.requestLoan(
+          sharedBook: sharedBook, borrower: borrower);
       if (!context.mounted) return;
       onFeedback('Solicitud enviada.', false);
     } catch (error) {
@@ -200,7 +202,8 @@ class LoanCard extends StatelessWidget {
     final due = loan.dueDate != null
         ? DateFormat.yMd().format(loan.dueDate!)
         : 'Sin fecha límite';
-    final isBorrower = activeUser != null && loan.borrowerUserId == activeUser!.id;
+    final isBorrower =
+        activeUser != null && loan.borrowerUserId == activeUser!.id;
     final isOwner = activeUser != null && loan.lenderUserId == activeUser!.id;
     final isManualLoan = loan.externalBorrowerName != null;
 
@@ -238,7 +241,8 @@ class LoanCard extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _buildActionButtons(isBorrower, isOwner, isManualLoan, status),
+              children: _buildActionButtons(
+                  isBorrower, isOwner, isManualLoan, status),
             ),
           ],
         ),
@@ -246,13 +250,15 @@ class LoanCard extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildActionButtons(bool isBorrower, bool isOwner, bool isManualLoan, String status) {
+  List<Widget> _buildActionButtons(
+      bool isBorrower, bool isOwner, bool isManualLoan, String status) {
     final buttons = <Widget>[];
 
     if (isBorrower && status == 'requested') {
       buttons.add(
         OutlinedButton.icon(
-          onPressed: loanState.isLoading ? null : () => onAction(LoanAction.cancel),
+          onPressed:
+              loanState.isLoading ? null : () => onAction(LoanAction.cancel),
           icon: const Icon(Icons.cancel_outlined),
           label: const Text('Cancelar solicitud'),
         ),
@@ -262,22 +268,28 @@ class LoanCard extends StatelessWidget {
     if (isOwner && status == 'requested') {
       buttons.addAll([
         FilledButton.icon(
-          onPressed: loanState.isLoading ? null : () => onAction(LoanAction.accept),
+          onPressed:
+              loanState.isLoading ? null : () => onAction(LoanAction.accept),
           icon: const Icon(Icons.check_circle_outlined),
           label: const Text('Aceptar'),
         ),
         OutlinedButton.icon(
-          onPressed: loanState.isLoading ? null : () => onAction(LoanAction.reject),
+          onPressed:
+              loanState.isLoading ? null : () => onAction(LoanAction.reject),
           icon: const Icon(Icons.cancel_schedule_send_outlined),
           label: const Text('Rechazar'),
         ),
       ]);
     }
 
-    if (((isOwner || isBorrower) && !isManualLoan || (isOwner && isManualLoan)) && status == 'active') {
+    if (((isOwner || isBorrower) && !isManualLoan ||
+            (isOwner && isManualLoan)) &&
+        status == 'active') {
       buttons.add(
         FilledButton.icon(
-          onPressed: loanState.isLoading ? null : () => onAction(LoanAction.markReturned),
+          onPressed: loanState.isLoading
+              ? null
+              : () => onAction(LoanAction.markReturned),
           icon: const Icon(Icons.assignment_turned_in_outlined),
           label: const Text('Marcar devuelto'),
         ),
@@ -287,10 +299,11 @@ class LoanCard extends StatelessWidget {
     if (detail.sharedBook != null &&
         detail.sharedBook!.ownerUserId != activeUser?.id &&
         detail.sharedBook!.isAvailable &&
-        status == 'pending') {
+        status == 'requested') {
       buttons.add(
         FilledButton.icon(
-          onPressed: loanState.isLoading ? null : () => onAction(LoanAction.request),
+          onPressed:
+              loanState.isLoading ? null : () => onAction(LoanAction.request),
           icon: const Icon(Icons.handshake_outlined),
           label: const Text('Solicitar préstamo'),
         ),

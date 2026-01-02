@@ -5,6 +5,7 @@ import '../local/book_dao.dart';
 import '../local/database.dart';
 import '../local/group_dao.dart';
 import '../local/user_dao.dart';
+import '../../services/supabase_loan_service.dart';
 
 class LoanException implements Exception {
   const LoanException(this.message);
@@ -20,6 +21,7 @@ class LoanRepository {
     required GroupDao groupDao,
     required BookDao bookDao,
     required UserDao userDao,
+    this.supabaseLoanService,
     Uuid? uuid,
   })  : _groupDao = groupDao,
         _bookDao = bookDao,
@@ -29,6 +31,7 @@ class LoanRepository {
   final GroupDao _groupDao;
   final BookDao _bookDao;
   final UserDao _userDao;
+  final SupabaseLoanService? supabaseLoanService;
   final Uuid _uuid;
 
   AppDatabase get _db => _groupDao.attachedDatabase;
@@ -50,19 +53,15 @@ class LoanRepository {
           'El libro compartido no está disponible para préstamo.');
     }
 
-    // Check for existing ACTIVE or PENDING loans only (not rejected/cancelled)
+    // Check for existing ACTIVE loans (book is currently lent out)
     final activeLoans =
         await _groupDao.getActiveLoansForSharedBook(sharedBook.id);
-    final activePendingLoans = activeLoans
-        .where((loan) =>
-            loan.status == 'active' ||
-            loan.status == 'requested' ||
-            loan.status == 'pending')
-        .toList();
+    final isBookAlreadyLent = activeLoans
+        .any((loan) => loan.status == 'active' || loan.status == 'returned');
 
-    if (activePendingLoans.isNotEmpty) {
+    if (isBookAlreadyLent) {
       throw const LoanException(
-          'Este libro ya tiene un préstamo activo o pendiente.');
+          'Este libro ya se encuentra prestado actualmente.');
     }
 
     // Check if THIS borrower already has a pending/active request for this book
@@ -280,7 +279,11 @@ class LoanRepository {
     required LocalUser owner,
     DateTime? dueDate,
   }) async {
-    final current = await _requireLoan(loan.id);
+    final now = DateTime.now();
+
+    // 1. Optimistic Validation
+    final current = await _groupDao.findLoanById(loan.id);
+    if (current == null) throw const LoanException('El préstamo ya no existe.');
 
     if (current.status != 'requested') {
       throw const LoanException(
@@ -292,10 +295,61 @@ class LoanRepository {
           'Solo el propietario puede aceptar la solicitud.');
     }
 
-    final sharedBook = await _requireSharedBook(current.sharedBookId!);
-    final now = DateTime.now();
+    // Double booking check
+    final activeLoans =
+        await _groupDao.getActiveLoansForSharedBook(current.sharedBookId!);
+    final isAlreadyActive = activeLoans.any((l) => l.status == 'active');
+    if (isAlreadyActive) {
+      throw const LoanException('Este libro ya está prestado a otra persona.');
+    }
 
-    await _db.transaction(() async {
+    // 2. Attempt Remote RPC
+    bool rpcSuccess = false;
+
+    if (supabaseLoanService != null && owner.remoteId != null) {
+      try {
+        await supabaseLoanService!
+            .acceptLoan(loanId: current.uuid, lenderUserId: owner.remoteId!);
+        rpcSuccess = true;
+      } catch (e) {
+        // Fallback to offline logic if network fails, OR rethrow if logic error?
+        // If it's a logic error (cancelled, etc), the RPC throws.
+        // We should probably catch "network" vs "logic" errors.
+        // For simple hardening: If RPC fails, we ASSUME it's a valid rejection reason
+        // (like "already loaned") and abort, UNLESS it's purely connectivity.
+        // Differentiating is hard without specific error types.
+        // For safety/integrity: If we HAVE a remote ID, we prefer failing over corrupting state.
+        // The user explicitly wants to avoid race conditions.
+        // So we allow the error to bubble up if it's a race condition.
+
+        // Actually, let's catch standard exceptions but rethrow logic ones.
+        // PostgrestException is typical.
+        rethrow;
+      }
+    }
+
+    final sharedBook = await _requireSharedBook(current.sharedBookId!);
+
+    return _db.transaction(() async {
+      // Auto-reject other REQUESTED loans for this shared book
+      final others = await _groupDao.getActiveLoansForSharedBook(sharedBook.id);
+      for (final other in others) {
+        if (other.id != current.id && other.status == 'requested') {
+          // We mark them rejected.
+          // If RPC succeeded, server matches this.
+          // If RPC skipped (offline), we do it locally and sync later.
+          await _groupDao.updateLoanStatus(
+            loanId: other.id,
+            entry: LoansCompanion(
+              status: const Value('rejected'),
+              updatedAt: Value(now),
+              isDirty: Value(!rpcSuccess), // Clean if RPC handled it
+              syncedAt: rpcSuccess ? Value(now) : const Value<DateTime?>(null),
+            ),
+          );
+        }
+      }
+
       await _groupDao.updateLoanStatus(
         loanId: current.id,
         entry: LoansCompanion(
@@ -303,19 +357,16 @@ class LoanRepository {
           approvedAt: Value(now),
           dueDate: dueDate != null ? Value(dueDate) : const Value.absent(),
           returnedAt: const Value<DateTime?>(null),
-          isDirty: const Value(true),
-          syncedAt: const Value<DateTime?>(null),
+          isDirty: Value(!rpcSuccess),
+          syncedAt: rpcSuccess ? Value(now) : const Value<DateTime?>(null),
           updatedAt: Value(now),
         ),
       );
 
       await _updateAllSharedBooksAvailability(sharedBook.bookId, false, now);
 
-      // Note: Book status is NOT set to 'loaned' here
-      // It will be set when markAsLoaned is called after physical handoff
+      return (await _groupDao.findLoanById(current.id))!;
     });
-
-    return _requireLoan(current.id);
   }
 
   Future<Loan> markReturned({

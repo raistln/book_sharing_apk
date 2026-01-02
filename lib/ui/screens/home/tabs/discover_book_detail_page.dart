@@ -37,9 +37,9 @@ _DiscoverStatusDisplay _resolveStatusDisplay({
 
   if (loanDetail != null) {
     final status = loanDetail.loan.status;
-    if (status == 'pending') {
+    if (status == 'requested') {
       return _DiscoverStatusDisplay(
-        label: 'Pendiente',
+        label: 'Solicitado',
         icon: Icons.schedule_outlined,
         background: colors.secondaryContainer,
         foreground: colors.onSecondaryContainer,
@@ -244,7 +244,7 @@ class _DiscoverBookDetailPageState
                 continue;
               }
               final status = loanDetail.loan.status;
-              if (status != 'pending' && status != 'active') {
+              if (status != 'requested' && status != 'active') {
                 // FIXED: accepted -> active
                 continue;
               }
@@ -276,14 +276,14 @@ class _DiscoverBookDetailPageState
                 !hasOtherActiveLoan;
             final canCancel = borrower != null &&
                 borrowerLoanDetail != null &&
-                borrowerLoanDetail.loan.status == 'pending' &&
+                borrowerLoanDetail.loan.status == 'requested' &&
                 borrowerLoanDetail.loan.borrowerUserId == borrower.id;
             final LocalUser? owner = ownerUser;
             final LoanDetail? pendingOwnerLoan = borrowerLoanDetail != null &&
                     owner != null &&
                     activeUser != null &&
                     owner.id == activeUser.id &&
-                    borrowerLoanDetail.loan.status == 'pending' &&
+                    borrowerLoanDetail.loan.status == 'requested' &&
                     borrowerLoanDetail.loan.lenderUserId == owner.id
                 ? borrowerLoanDetail
                 : null;
@@ -444,7 +444,7 @@ class _DiscoverBookDetailPageState
                                 title:
                                     'Reservado por ${_resolveUserName(otherActiveLoan.borrower)}',
                                 subtitle:
-                                    'El préstamo está ${otherActiveLoan.loan.status == 'pending' ? 'pendiente de aprobación' : 'en curso'}. '
+                                    'El préstamo está ${otherActiveLoan.loan.status == 'requested' ? 'pendiente de aprobación' : 'en curso'}. '
                                     'Podrás solicitarlo cuando vuelva a estar disponible.',
                               )
                             else if (activeUser == null)
@@ -532,7 +532,7 @@ class _DiscoverBookDetailPageState
                                 padding: const EdgeInsets.only(top: 8),
                                 child: Text(
                                   borrowerLoan != null
-                                      ? 'Ya enviaste una solicitud para este libro y está ${borrowerLoan.loan.status == 'pending' ? 'pendiente de aprobación' : borrowerLoan.loan.status}.'
+                                      ? 'Ya enviaste una solicitud para este libro y está ${borrowerLoan.loan.status == 'requested' ? 'pendiente de aprobación' : borrowerLoan.loan.status}.'
                                       : 'Este libro no está disponible en este momento.',
                                   style: theme.textTheme.bodyMedium,
                                 ),

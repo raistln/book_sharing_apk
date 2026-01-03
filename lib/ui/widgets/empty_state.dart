@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../design_system/literary_animations.dart';
 
 class EmptyStateAction {
   const EmptyStateAction({
@@ -52,26 +53,42 @@ class EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: crossAxisAlignment,
           children: [
-            Icon(icon, size: 72, color: iconColor),
+            FadeScaleIn(
+              child: Icon(icon, size: 72, color: iconColor),
+            ),
             const SizedBox(height: 16),
-            Text(
-              title,
-              style: theme.textTheme.titleMedium,
-              textAlign: textAlign,
+            FadeScaleIn(
+              delay: const Duration(milliseconds: 100),
+              child: Text(
+                title,
+                style: theme.textTheme.titleMedium,
+                textAlign: textAlign,
+              ),
             ),
             const SizedBox(height: 8),
-            Text(
-              message,
-              style: theme.textTheme.bodyMedium,
-              textAlign: textAlign,
+            FadeScaleIn(
+              delay: const Duration(milliseconds: 200),
+              child: Text(
+                message,
+                style: theme.textTheme.bodyMedium,
+                textAlign: textAlign,
+              ),
             ),
             if (action != null || secondaryAction != null) ...[
               const SizedBox(height: 24),
-              _buildAction(context, action),
-              if (secondaryAction != null) ...[
-                const SizedBox(height: 12),
-                _buildAction(context, secondaryAction),
-              ],
+              FadeScaleIn(
+                delay: const Duration(milliseconds: 300),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildAction(context, action),
+                    if (secondaryAction != null) ...[
+                      const SizedBox(height: 12),
+                      _buildAction(context, secondaryAction),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ],
         ),

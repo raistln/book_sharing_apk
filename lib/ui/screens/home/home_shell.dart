@@ -1,6 +1,5 @@
 import 'dart:async';
 
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +10,7 @@ import '../../../providers/auth_providers.dart';
 import '../../../services/notification_service.dart';
 import '../../../providers/notification_providers.dart';
 import '../../widgets/sync_banner.dart';
+import '../../widgets/textured_background.dart';
 import '../auth/pin_setup_screen.dart';
 import 'tabs/community_tab.dart';
 import 'tabs/settings_tab.dart';
@@ -27,10 +27,6 @@ enum _BookFormResult {
 }
 
 final _currentTabProvider = StateProvider<int>((ref) => 0);
-
-
-
-
 
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
@@ -52,7 +48,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<NotificationIntent?>(notificationIntentProvider, (previous, next) {
+    ref.listen<NotificationIntent?>(notificationIntentProvider,
+        (previous, next) {
       if (next == null) {
         return;
       }
@@ -62,39 +59,42 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final currentIndex = ref.watch(_currentTabProvider);
 
     return Scaffold(
-      body: Column(
-        children: [
-          const SyncBanner(),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                NotificationBell(
-                  onPressed: () => _showNotificationsSheet(context, ref),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => _showProfileSheet(context),
-                  icon: const Icon(Icons.account_circle_outlined),
-                  tooltip: 'Mi Perfil',
-                ),
-              ],
+      body: TexturedBackground(
+        child: Column(
+          children: [
+            const SyncBanner(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  NotificationBell(
+                    onPressed: () => _showNotificationsSheet(context, ref),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => _showProfileSheet(context),
+                    icon: const Icon(Icons.account_circle_outlined),
+                    tooltip: 'Mi Perfil',
+                  ),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: IndexedStack(
-              index: currentIndex,
-              children: [
-                LibraryTab(onOpenForm: ({Book? book}) => _showBookFormSheet(context, ref, book: book)),
-                const LoansTab(),
-                const CommunityTab(),
-                const SettingsTab(),
-              ],
+            Expanded(
+              child: IndexedStack(
+                index: currentIndex,
+                children: [
+                  LibraryTab(
+                      onOpenForm: ({Book? book}) =>
+                          _showBookFormSheet(context, ref, book: book)),
+                  const LoansTab(),
+                  const CommunityTab(),
+                  const SettingsTab(),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
@@ -136,7 +136,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         label: const Text('Añadir libro'),
       );
     }
-    
+
     // Loans tab (index 1) has its own FAB in LoansTab scaffold
     if (currentIndex == 1) return null;
 
@@ -173,7 +173,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     });
   }
 
-  Future<void> _showNotificationsSheet(BuildContext context, WidgetRef ref) async {
+  Future<void> _showNotificationsSheet(
+      BuildContext context, WidgetRef ref) async {
     final theme = Theme.of(context);
     await showModalBottomSheet<void>(
       context: context,
@@ -184,7 +185,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     );
   }
 
-  Future<void> _showBookFormSheet(BuildContext context, WidgetRef ref, {Book? book}) async {
+  Future<void> _showBookFormSheet(BuildContext context, WidgetRef ref,
+      {Book? book}) async {
     final result = await showModalBottomSheet<_BookFormResult>(
       context: context,
       isScrollControlled: true,
@@ -234,9 +236,24 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor:
-            isError ? theme.colorScheme.error : theme.colorScheme.primary,
+        content: Text(
+          message,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: isError
+                ? theme.colorScheme.onError
+                : theme.colorScheme.onSurface,
+            fontFamily: 'Georgia', // Serif para toque literario
+          ),
+        ),
+        backgroundColor: isError
+            ? theme.colorScheme.error
+            : theme
+                .colorScheme.surfaceContainerHighest, // Color papel/superficie
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        elevation: 4,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       ),
     );
   }

@@ -5,7 +5,8 @@ import '../services/theme_persistence_service.dart';
 
 export '../services/theme_persistence_service.dart';
 
-final themePersistenceServiceProvider = Provider<ThemePersistenceService>((ref) {
+final themePersistenceServiceProvider =
+    Provider<ThemePersistenceService>((ref) {
   return ThemePersistenceService();
 });
 
@@ -31,7 +32,8 @@ class ThemeSettingsNotifier extends StateNotifier<AsyncValue<ThemePreference>> {
 }
 
 final themeSettingsProvider =
-    StateNotifierProvider<ThemeSettingsNotifier, AsyncValue<ThemePreference>>((ref) {
+    StateNotifierProvider<ThemeSettingsNotifier, AsyncValue<ThemePreference>>(
+        (ref) {
   final service = ref.watch(themePersistenceServiceProvider);
   return ThemeSettingsNotifier(service);
 });
@@ -59,10 +61,25 @@ ThemeData _buildTheme({required Brightness brightness}) {
     brightness: brightness,
   );
 
+  final baseTextTheme = ThemeData(brightness: brightness).textTheme;
+  final serifTextTheme = baseTextTheme.copyWith(
+    displayLarge: baseTextTheme.displayLarge?.copyWith(fontFamily: 'Georgia'),
+    displayMedium: baseTextTheme.displayMedium?.copyWith(fontFamily: 'Georgia'),
+    displaySmall: baseTextTheme.displaySmall?.copyWith(fontFamily: 'Georgia'),
+    headlineLarge: baseTextTheme.headlineLarge?.copyWith(fontFamily: 'Georgia'),
+    headlineMedium:
+        baseTextTheme.headlineMedium?.copyWith(fontFamily: 'Georgia'),
+    headlineSmall: baseTextTheme.headlineSmall?.copyWith(fontFamily: 'Georgia'),
+    titleLarge: baseTextTheme.titleLarge?.copyWith(fontFamily: 'Georgia'),
+    titleMedium: baseTextTheme.titleMedium?.copyWith(fontFamily: 'Georgia'),
+    titleSmall: baseTextTheme.titleSmall?.copyWith(fontFamily: 'Georgia'),
+  );
+
   return ThemeData(
     useMaterial3: true,
     colorScheme: colorScheme,
     brightness: brightness,
+    textTheme: serifTextTheme,
     visualDensity: VisualDensity.adaptivePlatformDensity,
   );
 }

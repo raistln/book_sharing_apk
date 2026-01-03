@@ -12,6 +12,9 @@ import '../../../../services/coach_marks/coach_mark_controller.dart';
 import '../../../../services/coach_marks/coach_mark_models.dart';
 import '../../../../ui/widgets/coach_mark_target.dart';
 import '../../../../utils/group_utils.dart';
+import '../../../../design_system/literary_shadows.dart';
+import '../../../../design_system/evocative_texts.dart';
+import '../../../../ui/utils/library_transition.dart';
 import 'group_stats_table.dart';
 import 'group_menu.dart';
 import '../../screens/home/tabs/discover_group_page.dart';
@@ -85,11 +88,13 @@ class _GroupCardState extends ConsumerState<GroupCard> {
     final isGroupBusy = groupActionState.isLoading;
 
     final members = membersAsync.asData?.value ?? const <GroupMemberDetail>[];
-    final isOwner = activeUser != null && group.ownerUserId != null && group.ownerUserId == activeUser.id;
-    final currentMembership = activeUser != null
-        ? _findMemberDetail(members, activeUser.id)
-        : null;
-    final isAdmin = isOwner || currentMembership?.membership.role == _kRoleAdmin;
+    final isOwner = activeUser != null &&
+        group.ownerUserId != null &&
+        group.ownerUserId == activeUser.id;
+    final currentMembership =
+        activeUser != null ? _findMemberDetail(members, activeUser.id) : null;
+    final isAdmin =
+        isOwner || currentMembership?.membership.role == _kRoleAdmin;
 
     final bool highlightManageInvitations = activeUser != null && isAdmin;
 
@@ -97,7 +102,9 @@ class _GroupCardState extends ConsumerState<GroupCard> {
     final isPersonalGroup = isPersonalLoansGroup(group.name);
 
     Widget? menuButton;
-    if (activeUser != null && (isOwner || isAdmin || currentMembership != null) && !isPersonalGroup) {
+    if (activeUser != null &&
+        (isOwner || isAdmin || currentMembership != null) &&
+        !isPersonalGroup) {
       final popup = GroupMenu(
         group: group,
         activeUser: activeUser,
@@ -125,87 +132,101 @@ class _GroupCardState extends ConsumerState<GroupCard> {
     }
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(group.name, style: theme.textTheme.titleMedium),
-                      // Mostrar propietario para todos excepto Préstamos Personales
-                      if (!isPersonalGroup && members.isNotEmpty) ...[
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: theme.cardTheme.color ?? theme.colorScheme.surface,
+          boxShadow: LiteraryShadows.groupCardShadow(context),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(group.name, style: theme.textTheme.titleMedium),
+                        // Mostrar propietario para todos excepto Préstamos Personales
+                        if (!isPersonalGroup && members.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          // Buscar el propietario en los miembros
+                          Builder(
+                            builder: (context) {
+                              final ownerMember =
+                                  members.cast<GroupMemberDetail?>().firstWhere(
+                                        (m) =>
+                                            m?.membership.memberUserId ==
+                                            group.ownerUserId,
+                                        orElse: () => null,
+                                      );
+                              final ownerName =
+                                  ownerMember?.user?.username ?? 'Desconocido';
+                              return Text(
+                                'Lector@ Maest@: $ownerName (Dueño)',
+                                style: theme.textTheme.bodySmall,
+                              );
+                            },
+                          ),
+                        ],
                         const SizedBox(height: 4),
-                        // Buscar el propietario en los miembros
-                        Builder(
-                          builder: (context) {
-                            final ownerMember = members.cast<GroupMemberDetail?>().firstWhere(
-                              (m) => m?.membership.memberUserId == group.ownerUserId,
-                              orElse: () => null,
-                            );
-                            final ownerName = ownerMember?.user?.username ?? 'Desconocido';
-                            return Text(
-                              'Lector@ Maest@: $ownerName (Dueño)',
-                              style: theme.textTheme.bodySmall,
-                            );
-                          },
-                        ),
+                        Text(
+                            'Última actualización: ${DateFormat.yMd().add_Hm().format(group.updatedAt)}',
+                            style: theme.textTheme.bodySmall),
                       ],
-                      const SizedBox(height: 4),
-                      Text('Última actualización: ${DateFormat.yMd().add_Hm().format(group.updatedAt)}',
-                          style: theme.textTheme.bodySmall),
+                    ),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        onPressed: isGroupBusy ? null : () => widget.onSync(),
+                        icon: const Icon(Icons.sync_outlined),
+                        tooltip: 'Sincronizar grupo',
+                      ),
+                      if (menuButton != null) menuButton,
                     ],
                   ),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: isGroupBusy ? null : () => widget.onSync(),
-                      icon: const Icon(Icons.sync_outlined),
-                      tooltip: 'Sincronizar grupo',
-                    ),
-                    if (menuButton != null) menuButton,
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Hide stats and shared books for personal loans group
-            if (!isPersonalGroup) ...[
-              GroupStatsTable(
-                members: members,
-                sharedBooks: sharedBooksAsync.asData?.value ?? [],
-                loansAsync: loansAsync,
-                currentUserId: activeUser?.id,
-              ),
-              const SizedBox(height: 16),
-              // Prominent Discovery Button
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.tonalIcon(
-                  onPressed: () {
-                     Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => DiscoverGroupPage(group: group),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.auto_stories), // Library icon
-                  label: const Text('La Gran Biblioteca'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
+                ],
               ),
               const SizedBox(height: 12),
+              // Hide stats and shared books for personal loans group
+              if (!isPersonalGroup) ...[
+                GroupStatsTable(
+                  members: members,
+                  sharedBooks: sharedBooksAsync.asData?.value ?? [],
+                  loansAsync: loansAsync,
+                  currentUserId: activeUser?.id,
+                ),
+                const SizedBox(height: 16),
+                // Prominent Discovery Button
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonalIcon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        LibraryPageRoute(
+                          page: DiscoverGroupPage(group: group),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.auto_stories), // Library icon
+                    label: Text(EvocativeTexts.archiveButtonText(group.name)),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -214,7 +235,8 @@ class _GroupCardState extends ConsumerState<GroupCard> {
 
 const _kRoleAdmin = 'admin';
 
-GroupMemberDetail? _findMemberDetail(List<GroupMemberDetail> members, int userId) {
+GroupMemberDetail? _findMemberDetail(
+    List<GroupMemberDetail> members, int userId) {
   for (final detail in members) {
     final user = detail.user;
     if (user != null && user.id == userId) {
@@ -261,7 +283,8 @@ void _showFeedbackSnackBar({
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(message),
-      backgroundColor: isError ? theme.colorScheme.error : theme.colorScheme.primary,
+      backgroundColor:
+          isError ? theme.colorScheme.error : theme.colorScheme.primary,
     ),
   );
 }
@@ -312,12 +335,12 @@ Future<void> _handleTransferOwnership(
 ) async {
   final membersAsync = ref.read(groupMemberDetailsProvider(group.id));
   final allMembers = membersAsync.asData?.value ?? [];
-  
+
   // Filter out the current owner from the list
   final members = allMembers
       .where((m) => m.membership.memberUserId != group.ownerUserId)
       .toList();
-  
+
   if (members.isEmpty) {
     _showFeedbackSnackBar(
       context: context,
@@ -359,7 +382,7 @@ Future<void> _handleTransferOwnership(
   final controller = ref.read(groupPushControllerProvider.notifier);
   final newOwner = selectedMember.user;
   if (newOwner == null) return;
-  
+
   try {
     await controller.transferOwnership(
       group: group,
@@ -430,7 +453,8 @@ Future<void> _handleDeleteGroup(
   }
 }
 
-Future<void> _handleLeaveGroup(BuildContext context, WidgetRef ref, Group group) async {
+Future<void> _handleLeaveGroup(
+    BuildContext context, WidgetRef ref, Group group) async {
   final activeUser = ref.read(activeUserProvider).value;
   if (activeUser == null) return;
 
@@ -458,9 +482,10 @@ Future<void> _handleLeaveGroup(BuildContext context, WidgetRef ref, Group group)
 
   final controller = ref.read(groupPushControllerProvider.notifier);
   final groupDao = ref.read(groupDaoProvider);
-  final membership = await groupDao.findMember(groupId: group.id, userId: activeUser.id);
+  final membership =
+      await groupDao.findMember(groupId: group.id, userId: activeUser.id);
   if (membership == null) return;
-  
+
   try {
     await controller.removeMember(
       member: membership,
@@ -528,7 +553,8 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName);
-    _descriptionController = TextEditingController(text: widget.initialDescription);
+    _descriptionController =
+        TextEditingController(text: widget.initialDescription);
   }
 
   @override
@@ -560,7 +586,8 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _descriptionController,
-              decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
+              decoration:
+                  const InputDecoration(labelText: 'Descripción (opcional)'),
               maxLines: 3,
             ),
           ],
@@ -670,14 +697,16 @@ class _ManageMembersSheet extends ConsumerWidget {
                     itemBuilder: (context, index) {
                       final member = members[index];
                       final user = member.user;
-                      final isCurrentOwner = group.ownerUserId == member.membership.memberUserId;
-                      
+                      final isCurrentOwner =
+                          group.ownerUserId == member.membership.memberUserId;
+
                       return ListTile(
                         leading: CircleAvatar(
                           child: Text((user?.username ?? '?')[0].toUpperCase()),
                         ),
                         title: Text(user?.username ?? 'Usuario desconocido'),
-                        subtitle: Text(_getRoleLabel(member.membership.role, isCurrentOwner)),
+                        subtitle: Text(_getRoleLabel(
+                            member.membership.role, isCurrentOwner)),
                         trailing: isOwner && !isCurrentOwner
                             ? PopupMenuButton<String>(
                                 itemBuilder: (context) => [
@@ -736,7 +765,7 @@ class _ManageMembersSheet extends ConsumerWidget {
     String action,
   ) async {
     final controller = ref.read(groupPushControllerProvider.notifier);
-    
+
     try {
       if (action == 'remove') {
         await controller.removeMember(
@@ -777,14 +806,17 @@ class _ManageInvitationsSheet extends ConsumerStatefulWidget {
   final Group group;
 
   @override
-  ConsumerState<_ManageInvitationsSheet> createState() => _ManageInvitationsSheetState();
+  ConsumerState<_ManageInvitationsSheet> createState() =>
+      _ManageInvitationsSheetState();
 }
 
-class _ManageInvitationsSheetState extends ConsumerState<_ManageInvitationsSheet> {
+class _ManageInvitationsSheetState
+    extends ConsumerState<_ManageInvitationsSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final invitationsAsync = ref.watch(groupInvitationDetailsProvider(widget.group.id));
+    final invitationsAsync =
+        ref.watch(groupInvitationDetailsProvider(widget.group.id));
     final activeUser = ref.watch(activeUserProvider).value;
 
     return DraggableScrollableSheet(
@@ -799,7 +831,8 @@ class _ManageInvitationsSheetState extends ConsumerState<_ManageInvitationsSheet
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Text('Gestionar invitaciones', style: theme.textTheme.titleLarge),
+                  Text('Gestionar invitaciones',
+                      style: theme.textTheme.titleLarge),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -812,7 +845,9 @@ class _ManageInvitationsSheetState extends ConsumerState<_ManageInvitationsSheet
             Padding(
               padding: const EdgeInsets.all(16),
               child: FilledButton.icon(
-                onPressed: activeUser != null ? () => _createInvitation(activeUser) : null,
+                onPressed: activeUser != null
+                    ? () => _createInvitation(activeUser)
+                    : null,
                 icon: const Icon(Icons.add),
                 label: const Text('Crear invitación'),
               ),
@@ -821,7 +856,8 @@ class _ManageInvitationsSheetState extends ConsumerState<_ManageInvitationsSheet
               child: invitationsAsync.when(
                 data: (invitations) {
                   if (invitations.isEmpty) {
-                    return const Center(child: Text('No hay invitaciones pendientes'));
+                    return const Center(
+                        child: Text('No hay invitaciones pendientes'));
                   }
                   return ListView.builder(
                     controller: scrollController,
@@ -829,7 +865,8 @@ class _ManageInvitationsSheetState extends ConsumerState<_ManageInvitationsSheet
                     itemBuilder: (context, index) {
                       final invitation = invitations[index].invitation;
                       return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
@@ -845,11 +882,13 @@ class _ManageInvitationsSheetState extends ConsumerState<_ManageInvitationsSheet
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.share),
-                                    onPressed: () => _shareInvitation(invitation.code),
+                                    onPressed: () =>
+                                        _shareInvitation(invitation.code),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete),
-                                    onPressed: () => _cancelInvitation(invitation.id),
+                                    onPressed: () =>
+                                        _cancelInvitation(invitation.id),
                                   ),
                                 ],
                               ),
@@ -900,8 +939,9 @@ class _ManageInvitationsSheetState extends ConsumerState<_ManageInvitationsSheet
   }
 
   Future<void> _shareInvitation(String code) async {
-    final message = 'Te envío esta invitación para unirte a mi grupo de lectores: $code';
-    
+    final message =
+        'Te envío esta invitación para unirte a mi grupo de lectores: $code';
+
     try {
       await Share.share(
         message,
@@ -943,7 +983,7 @@ class _ManageInvitationsSheetState extends ConsumerState<_ManageInvitationsSheet
     final groupDao = ref.read(groupDaoProvider);
     final invitation = await groupDao.findInvitationById(invitationId);
     if (invitation == null) return;
-    
+
     try {
       await controller.cancelInvitation(invitation: invitation);
       if (!mounted) return;

@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/local/database.dart';
 import '../../../../providers/book_providers.dart';
+import '../../../../design_system/literary_shadows.dart';
+import '../../../../design_system/literary_animations.dart';
 
 class BookList extends StatelessWidget {
   const BookList({
@@ -25,7 +27,7 @@ class BookList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     if (books.isEmpty) {
       return Center(
         child: Text(
@@ -98,196 +100,222 @@ class BookListTile extends ConsumerWidget {
     final statusColor = _getStatusColor(book.status, theme);
     final statusLabel = _getStatusLabel(book.status);
 
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Cover image
-              Container(
-                width: 60,
-                height: 90,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: theme.colorScheme.surfaceContainerHighest,
-                ),
-                child: book.coverPath != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(book.coverPath!),
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildPlaceholder(theme),
-                        ),
-                      )
-                    : _buildPlaceholder(theme),
-              ),
-              const SizedBox(width: 16),
-              // Book info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      book.title,
-                      style: theme.textTheme.titleMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+    return TapAnimation(
+      onTap: onTap,
+      child: Card(
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: theme.cardTheme.color ?? theme.colorScheme.surface,
+            boxShadow: LiteraryShadows.forBookStatus(book.status, context),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // Cover image
+                  Container(
+                    width: 60,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      boxShadow: book.coverPath != null
+                          ? LiteraryShadows.bookCoverShadow(context)
+                          : null,
                     ),
-                    if (book.author != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        book.author!,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    if (book.isbn != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'ISBN: ${book.isbn!}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    // Reviews section
-                    const SizedBox(height: 8),
-                    _buildReviewsSection(context, ref, theme),
-                    const SizedBox(height: 8),
-                    Row(
+                    child: book.coverPath != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              File(book.coverPath!),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _buildPlaceholder(theme),
+                            ),
+                          )
+                        : _buildPlaceholder(theme),
+                  ),
+                  const SizedBox(width: 16),
+                  // Book info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-                          ),
-                          child: Text(
-                            statusLabel,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: statusColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                        Text(
+                          book.title,
+                          style: theme.textTheme.titleMedium,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(width: 8),
-                        // Read status chip
-                        InkWell(
-                          onTap: () => _toggleReadStatus(ref, book),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                        if (book.author != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            book.author!,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
-                            decoration: BoxDecoration(
-                              color: book.isRead
-                                  ? Colors.green.withValues(alpha: 0.2)
-                                  : Colors.red.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: book.isRead ? Colors.green : Colors.red,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        if (book.isbn != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'ISBN: ${book.isbn!}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        // Reviews section
+                        const SizedBox(height: 8),
+                        _buildReviewsSection(context, ref, theme),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: statusColor.withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                statusLabel,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  book.isRead ? Icons.check_circle : Icons.circle_outlined,
-                                  size: 16,
-                                  color: book.isRead ? Colors.green : Colors.red,
+                            const SizedBox(width: 8),
+                            // Read status chip
+                            InkWell(
+                              onTap: () => _toggleReadStatus(ref, book),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  book.isRead ? 'Leído' : 'No leído',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: book.isRead ? Colors.green : Colors.red,
-                                    fontWeight: FontWeight.w500,
+                                decoration: BoxDecoration(
+                                  color: book.isRead
+                                      ? Colors.green.withValues(alpha: 0.2)
+                                      : Colors.red.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color:
+                                        book.isRead ? Colors.green : Colors.red,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        // Action buttons
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert),
-                          onSelected: (action) {
-                            switch (action) {
-                              case 'review':
-                                onAddReview();
-                                break;
-                              case 'reviews':
-                                onViewReviews();
-                                break;
-                              case 'loan':
-                                onCreateManualLoan();
-                                break;
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'review',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.star_border),
-                                  SizedBox(width: 8),
-                                  Text('Añadir reseña'),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'reviews',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.rate_review),
-                                  SizedBox(width: 8),
-                                  Text('Ver reseñas'),
-                                ],
-                              ),
-                            ),
-                            if (book.status == 'available')
-                              const PopupMenuItem(
-                                value: 'loan',
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.handshake_outlined),
-                                    SizedBox(width: 8),
-                                    Text('Crear préstamo manual'),
+                                    Icon(
+                                      book.isRead
+                                          ? Icons.check_circle
+                                          : Icons.circle_outlined,
+                                      size: 16,
+                                      color: book.isRead
+                                          ? Colors.green
+                                          : Colors.red,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      book.isRead ? 'Leído' : 'No leído',
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color: book.isRead
+                                            ? Colors.green
+                                            : Colors.red,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
+                            ),
+                            const Spacer(),
+                            // Action buttons
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert),
+                              onSelected: (action) {
+                                switch (action) {
+                                  case 'review':
+                                    onAddReview();
+                                    break;
+                                  case 'reviews':
+                                    onViewReviews();
+                                    break;
+                                  case 'loan':
+                                    onCreateManualLoan();
+                                    break;
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'review',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.star_border),
+                                      SizedBox(width: 8),
+                                      Text('Añadir reseña'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'reviews',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.rate_review),
+                                      SizedBox(width: 8),
+                                      Text('Ver reseñas'),
+                                    ],
+                                  ),
+                                ),
+                                if (book.status == 'available')
+                                  const PopupMenuItem(
+                                    value: 'loan',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.handshake_outlined),
+                                        SizedBox(width: 8),
+                                        Text('Crear préstamo manual'),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildReviewsSection(BuildContext context, WidgetRef ref, ThemeData theme) {
+  Widget _buildReviewsSection(
+      BuildContext context, WidgetRef ref, ThemeData theme) {
     final reviewsAsync = ref.watch(bookReviewsProvider(book.id));
-    
+
     return reviewsAsync.when(
       data: (reviews) {
         if (reviews.isEmpty) {
@@ -299,8 +327,8 @@ class BookListTile extends ConsumerWidget {
           );
         }
         final avg = reviews
-            .map((r) => r.rating)
-            .fold<double>(0, (prev, value) => prev + value) /
+                .map((r) => r.rating)
+                .fold<double>(0, (prev, value) => prev + value) /
             reviews.length;
         return Row(
           children: [
@@ -352,13 +380,13 @@ class BookListTile extends ConsumerWidget {
   Color _getStatusColor(String status, ThemeData theme) {
     switch (status) {
       case 'available':
-        return Colors.blue;      // Azul como en el formulario
+        return Colors.blue; // Azul como en el formulario
       case 'loaned':
-        return Colors.orange;    // Naranja (consistente)
+        return Colors.orange; // Naranja (consistente)
       case 'archived':
-        return Colors.orange;    // Naranja como en el formulario
+        return Colors.orange; // Naranja como en el formulario
       case 'private':
-        return Colors.purple;    // Púrpura como en el formulario
+        return Colors.purple; // Púrpura como en el formulario
       default:
         return theme.colorScheme.outline;
     }

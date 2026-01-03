@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../empty_state.dart';
+import '../../../design_system/evocative_texts.dart';
 
 class EmptyLibraryState extends StatelessWidget {
   const EmptyLibraryState({super.key, required this.onAddBook});
@@ -10,11 +11,10 @@ class EmptyLibraryState extends StatelessWidget {
   Widget build(BuildContext context) {
     return EmptyState(
       icon: Icons.menu_book_outlined,
-      title: 'Tu biblioteca está vacía',
-      message:
-          'Registra tu primer libro para organizar préstamos y compartir lecturas con tu grupo.',
+      title: EvocativeTexts.emptyLibraryTitle,
+      message: EvocativeTexts.emptyLibraryMessage,
       action: EmptyStateAction(
-        label: 'Registrar libro',
+        label: EvocativeTexts.emptyLibraryAction,
         icon: Icons.add_circle_outline,
         onPressed: onAddBook,
       ),

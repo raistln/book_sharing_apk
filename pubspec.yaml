@@ -63,4 +63,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+    - assets/shadows/
     - .env

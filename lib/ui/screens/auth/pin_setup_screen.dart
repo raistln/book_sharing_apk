@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
+import '../../widgets/textured_background.dart';
+import '../../widgets/auth/literary_pin_input.dart';
+import '../../../design_system/literary_animations.dart';
 import '../home/home_shell.dart';
 import '../onboarding/onboarding_intro_screen.dart';
 import 'existing_account_login_screen.dart';
@@ -33,7 +36,6 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   }
 
   @override
-  @override
   material.Widget build(material.BuildContext context) {
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
       if (!mounted || _navigated) return;
@@ -55,102 +57,189 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
     final authState = ref.watch(authControllerProvider);
     final activeUserAsync = ref.watch(activeUserProvider);
     final activeUser = activeUserAsync.asData?.value;
-    final isLoading =
-        authState.status == AuthStatus.loading || _isSubmitting;
+    final isLoading = authState.status == AuthStatus.loading || _isSubmitting;
     final isExistingUser = activeUser != null;
+    final theme = material.Theme.of(context);
+
+    // Si ya existe usuario, no pedimos nombre, solo PIN.
+    final stepTitle = isExistingUser ? 'Nueva Llave' : 'Nombra al Guardián';
+    final stepSubtitle = isExistingUser
+        ? 'Actualiza el código de acceso a tu biblioteca.'
+        : '¿Cómo deben conocerte en los círculos de lectura?';
 
     return material.Scaffold(
-      body: material.SafeArea(
-        child: material.Padding(
-          padding: const material.EdgeInsets.all(24),
+      // AppBar transparente para volver si es necesario (o logout en casos raros)
+      appBar: material.AppBar(
+        backgroundColor: material.Colors.transparent,
+        elevation: 0,
+        iconTheme: theme.iconTheme,
+      ),
+      extendBodyBehindAppBar: true,
+      body: TexturedBackground(
+        child: material.SafeArea(
           child: material.Center(
-            child: material.ConstrainedBox(
-              constraints: const material.BoxConstraints(maxWidth: 420),
-              child: material.Column(
-                mainAxisSize: material.MainAxisSize.min,
-                crossAxisAlignment: material.CrossAxisAlignment.center,
-                children: [
-                  material.Icon(material.Icons.pin,
-                      size: 96, color: material.Theme.of(context).colorScheme.primary),
-                  const material.SizedBox(height: 24),
-                  material.Text(
-                    'Configura un PIN de acceso',
-                    style: material.Theme.of(context).textTheme.headlineSmall,
-                    textAlign: material.TextAlign.center,
-                  ),
-                  const material.SizedBox(height: 16),
-                  if (!isExistingUser) ...[
-                    material.TextField(
-                      controller: _usernameController,
-                      enabled: !isLoading,
-                      textCapitalization: material.TextCapitalization.none,
-                      textInputAction: material.TextInputAction.next,
-                      decoration: const material.InputDecoration(
-                        labelText: 'Nombre de usuario',
-                        border: material.OutlineInputBorder(),
-                        hintText: 'Ej. ana_lectora',
+            child: material.SingleChildScrollView(
+              padding: const material.EdgeInsets.all(24),
+              child: material.ConstrainedBox(
+                constraints: const material.BoxConstraints(maxWidth: 420),
+                child: material.Column(
+                  mainAxisSize: material.MainAxisSize.min,
+                  children: [
+                    FadeScaleIn(
+                      child: material.Icon(
+                          material.Icons.shield_outlined, // Icono de Guardián
+                          size: 80,
+                          color: theme.colorScheme.primary),
+                    ),
+                    const material.SizedBox(height: 24),
+
+                    FadeScaleIn(
+                      delay: const Duration(milliseconds: 100),
+                      child: material.Text(
+                        stepTitle,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontFamily: 'Georgia',
+                        ),
+                        textAlign: material.TextAlign.center,
                       ),
                     ),
                     const material.SizedBox(height: 12),
-                  ],
-                  material.TextField(
-                    controller: _pinController,
-                    enabled: !isLoading,
-                    obscureText: true,
-                    maxLength: 6,
-                    keyboardType: material.TextInputType.number,
-                    textAlign: material.TextAlign.center,
-                    decoration: const material.InputDecoration(
-                      labelText: 'PIN nuevo',
-                      border: material.OutlineInputBorder(),
-                      counterText: '',
+                    FadeScaleIn(
+                      delay: const Duration(milliseconds: 150),
+                      child: material.Text(
+                        stepSubtitle,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: material.TextAlign.center,
+                      ),
                     ),
-                  ),
-                  const material.SizedBox(height: 12),
-                  material.TextField(
-                    controller: _confirmController,
-                    enabled: !isLoading,
-                    obscureText: true,
-                    maxLength: 6,
-                    keyboardType: material.TextInputType.number,
-                    textAlign: material.TextAlign.center,
-                    decoration: const material.InputDecoration(
-                      labelText: 'Confirmar PIN',
-                      border: material.OutlineInputBorder(),
-                      counterText: '',
+
+                    const material.SizedBox(height: 32),
+
+                    // SECTION 1: USERNAME (Solo si es nuevo)
+                    if (!isExistingUser) ...[
+                      FadeScaleIn(
+                        delay: const Duration(milliseconds: 200),
+                        child: material.TextField(
+                          controller: _usernameController,
+                          enabled: !isLoading,
+                          textCapitalization: material.TextCapitalization.none,
+                          textInputAction: material.TextInputAction.next,
+                          style: theme.textTheme.titleMedium,
+                          textAlign: material.TextAlign.center,
+                          decoration: material.InputDecoration(
+                            labelText: 'Nombre o Alias',
+                            hintText: 'Ej. El Bibliotecario',
+                            border: material.OutlineInputBorder(
+                              borderRadius: material.BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: theme.colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                      const material.SizedBox(height: 32),
+                    ],
+
+                    // SECTION 2: PIN CREATION
+                    FadeScaleIn(
+                      delay: const Duration(milliseconds: 300),
+                      child: material.Column(
+                        children: [
+                          material.Text(
+                            'Forja tu llave maestra (4 dígitos)',
+                            style: theme.textTheme.titleSmall,
+                          ),
+                          const material.SizedBox(height: 16),
+                          LiteraryPinInput(
+                            controller: _pinController,
+                            length: 4,
+                            onChanged: (_) => setState(
+                                () {}), // rebuild para validar visualmente si queremos
+                          ),
+                        ],
+                      ),
                     ),
-                    onSubmitted: (_) => _submit(),
-                  ),
-                  const material.SizedBox(height: 20),
-                  material.FilledButton.icon(
-                    onPressed: isLoading ? null : _submit,
-                    icon: const material.Icon(material.Icons.check_circle_outline),
-                    label: const material.Text('Guardar PIN'),
-                  ),
-                  const material.SizedBox(height: 12),
-                  if (!isExistingUser)
-                    material.TextButton.icon(
-                      onPressed: isLoading
-                          ? null
-                          : () {
-                              material.Navigator.of(context)
-                                  .pushNamed(ExistingAccountLoginScreen.routeName);
-                            },
-                      icon: const material.Icon(material.Icons.person_search),
-                      label: const material.Text('Ya tengo cuenta'),
-                    ),
-                  const material.SizedBox(height: 12),
-                  if (_errorMessage != null)
-                    material.Text(
-                      _errorMessage!,
-                      style: material.TextStyle(color: material.Theme.of(context).colorScheme.error),
-                      textAlign: material.TextAlign.center,
-                    ),
-                  if (isLoading) ...[
+
                     const material.SizedBox(height: 24),
-                    const material.CircularProgressIndicator(),
+
+                    FadeScaleIn(
+                      delay: const Duration(milliseconds: 400),
+                      child: material.Column(
+                        children: [
+                          material.Text(
+                            'Confirma la llave',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant),
+                          ),
+                          const material.SizedBox(height: 16),
+                          LiteraryPinInput(
+                            controller: _confirmController,
+                            length: 4,
+                            // Al terminar de confirmar, podríamos auto-submit, pero dejemos botón manual para seguridad
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const material.SizedBox(height: 32),
+
+                    // ACTION BUTTON
+                    FadeScaleIn(
+                      delay: const Duration(milliseconds: 500),
+                      child: material.SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: material.FilledButton.icon(
+                          onPressed: isLoading ? null : _submit,
+                          style: material.FilledButton.styleFrom(
+                              shape: material.RoundedRectangleBorder(
+                                  borderRadius:
+                                      material.BorderRadius.circular(16))),
+                          icon: const material.Icon(
+                              material.Icons.vpn_key_outlined),
+                          label: material.Text(isExistingUser
+                              ? 'Actualizar Llave'
+                              : 'Establecer Guardián'),
+                        ),
+                      ),
+                    ),
+
+                    const material.SizedBox(height: 16),
+
+                    if (!isExistingUser)
+                      FadeScaleIn(
+                        delay: const Duration(milliseconds: 600),
+                        child: material.TextButton(
+                          onPressed: isLoading
+                              ? null
+                              : () {
+                                  material.Navigator.of(context).pushNamed(
+                                      ExistingAccountLoginScreen.routeName);
+                                },
+                          child: const material.Text(
+                              '¿Ya tienes una cuenta? Recupérala aquí'),
+                        ),
+                      ),
+
+                    if (_errorMessage != null) ...[
+                      const material.SizedBox(height: 24),
+                      material.Text(
+                        _errorMessage!,
+                        style:
+                            material.TextStyle(color: theme.colorScheme.error),
+                        textAlign: material.TextAlign.center,
+                      ),
+                    ],
+
+                    if (isLoading) ...[
+                      const material.SizedBox(height: 24),
+                      const material.CircularProgressIndicator(),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -172,22 +261,24 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       if (username.length < 3) {
         setState(() {
           _errorMessage =
-              'El nombre de usuario debe tener al menos 3 caracteres.';
+              'El nombre del guardián debe ser legible (min 3 letras).';
         });
         return;
       }
     }
 
     if (pin.length < 4) {
+      // Changed to 4 per user request
       setState(() {
-        _errorMessage = 'El PIN debe tener al menos 4 dígitos.';
+        _errorMessage = 'La llave debe tener 4 dígitos.';
       });
       return;
     }
 
     if (pin != confirm) {
       setState(() {
-        _errorMessage = 'Los PIN introducidos no coinciden.';
+        _errorMessage = 'Las llaves no coinciden. Intenta forjarlas de nuevo.';
+        _confirmController.clear();
       });
       return;
     }
@@ -206,18 +297,18 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
           if (!mounted) return;
           setState(() {
             _errorMessage =
-                'Ese nombre de usuario ya existe en Supabase. Prueba con otro.';
+                'Este nombre de guardián ya está ocupado. Elige otro alias.';
           });
           return;
         }
 
         final userRepository = ref.read(userRepositoryProvider);
         await userRepository.createUser(username: username);
-        
-        // Reset onboarding for new user to show intro and coach marks
+
+        // Reset onboarding for new user
         final onboardingService = ref.read(onboardingServiceProvider);
         await onboardingService.reset();
-        
+
         ref.read(userSyncControllerProvider.notifier).markPendingChanges();
       }
 
@@ -226,7 +317,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'No se pudo crear el usuario: $error';
+        _errorMessage = 'No se pudo completar el ritual: $error';
       });
     } finally {
       if (mounted) {

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart' as material;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/book_providers.dart';
+import '../../widgets/textured_background.dart';
+import '../../../design_system/literary_animations.dart';
 import '../home/home_shell.dart';
 import 'onboarding_wizard_screen.dart';
 
@@ -11,7 +13,8 @@ class OnboardingIntroScreen extends ConsumerStatefulWidget {
   static const routeName = '/onboarding-intro';
 
   @override
-  ConsumerState<OnboardingIntroScreen> createState() => _OnboardingIntroScreenState();
+  ConsumerState<OnboardingIntroScreen> createState() =>
+      _OnboardingIntroScreenState();
 }
 
 class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
@@ -21,28 +24,28 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
 
   final _slides = const [
     _IntroSlide(
-      icon: material.Icons.menu_book_outlined,
-      title: 'Tu biblioteca personal',
+      icon: material.Icons.auto_stories_outlined, // Icono más literario
+      title: 'Tu propia colección',
       message:
-          'Registra tus libros, añade notas y mantén el control de tus ejemplares disponibles para préstamo.',
+          'Cada libro cuenta una historia. Preserva las tuyas, añade notas y mantén viva la memoria de tus lecturas.',
     ),
     _IntroSlide(
-      icon: material.Icons.groups_outlined,
-      title: 'Comparte con tu grupo',
+      icon: material.Icons.diversity_3_outlined,
+      title: 'Círculos de Lectura',
       message:
-          'Únete a comunidades, descubre colecciones compartidas y coordina préstamos sin perder el contexto.',
+          'Donde las historias se encuentran. Únete a comunidades y descubre bibliotecas compartidas con otros lectores.',
     ),
     _IntroSlide(
-      icon: material.Icons.handshake_outlined,
-      title: 'Préstamos con seguimiento',
+      icon: material.Icons.import_contacts_outlined,
+      title: 'El viaje del libro',
       message:
-          'Solicita, acepta y gestiona préstamos con recordatorios automáticos y estados claros para todos.',
+          'Sigue el rastro de cada ejemplar prestado. Gestiona devoluciones y comparte el conocimiento con confianza.',
     ),
     _IntroSlide(
-      icon: material.Icons.sync_outlined,
-      title: 'Sincronización en la nube',
+      icon: material.Icons.cloud_sync_outlined,
+      title: 'Crónica en la nube',
       message:
-          'La app se sincroniza con Supabase para mantener tus cambios disponibles en todos tus dispositivos.',
+          'Tu catálogo se preserva en Supabase, disponible siempre para continuar la historia desde cualquier lugar.',
     ),
   ];
 
@@ -91,102 +94,119 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
           ),
         ],
       ),
-      body: material.SafeArea(
-        child: material.Column(
-          children: [
-            material.Expanded(
-              child: material.PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                itemCount: _slides.length,
-                itemBuilder: (context, index) {
-                  final slide = _slides[index];
-                  return material.Padding(
-                    padding: const material.EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                    child: material.Column(
-                      mainAxisAlignment: material.MainAxisAlignment.center,
-                      children: [
-                        material.Icon(slide.icon, size: 120, color: theme.colorScheme.primary),
-                        const material.SizedBox(height: 32),
-                        material.Text(
-                          slide.title,
-                          style: theme.textTheme.headlineMedium,
-                          textAlign: material.TextAlign.center,
+      body: TexturedBackground(
+        child: material.SafeArea(
+          child: material.Column(
+            children: [
+              material.Expanded(
+                child: material.PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentPage = index;
+                    });
+                  },
+                  itemCount: _slides.length,
+                  itemBuilder: (context, index) {
+                    final slide = _slides[index];
+                    return material.Padding(
+                      padding: const material.EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 32),
+                      child: FadeScaleIn(
+                        key: material.ValueKey(
+                            index), // Para reiniciar animacion al cambiar
+                        child: material.Column(
+                          mainAxisAlignment: material.MainAxisAlignment.center,
+                          children: [
+                            material.Icon(slide.icon,
+                                size: 120, color: theme.colorScheme.primary),
+                            const material.SizedBox(height: 32),
+                            material.Text(
+                              slide.title,
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontFamily: 'Georgia', // Refuerzo literario
+                              ),
+                              textAlign: material.TextAlign.center,
+                            ),
+                            const material.SizedBox(height: 16),
+                            material.Text(
+                              slide.message,
+                              style: theme.textTheme.bodyLarge,
+                              textAlign: material.TextAlign.center,
+                            ),
+                          ],
                         ),
-                        const material.SizedBox(height: 16),
-                        material.Text(
-                          slide.message,
-                          style: theme.textTheme.bodyLarge,
-                          textAlign: material.TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-            material.Padding(
-              padding: const material.EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: material.Column(
-                children: [
-                  material.Row(
-                    mainAxisAlignment: material.MainAxisAlignment.center,
-                    children: List.generate(
-                      _slides.length,
-                      (index) => material.AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const material.EdgeInsets.symmetric(horizontal: 4),
-                        height: 8,
-                        width: _currentPage == index ? 24 : 8,
-                        decoration: material.BoxDecoration(
-                          color: _currentPage == index
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.primary.withValues(alpha: 0.3),
-                          borderRadius: material.BorderRadius.circular(999),
+              material.Padding(
+                padding: const material.EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 32),
+                child: material.Column(
+                  children: [
+                    material.Row(
+                      mainAxisAlignment: material.MainAxisAlignment.center,
+                      children: List.generate(
+                        _slides.length,
+                        (index) => material.AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const material.EdgeInsets.symmetric(
+                              horizontal: 4),
+                          height: 8,
+                          width: _currentPage == index ? 24 : 8,
+                          decoration: material.BoxDecoration(
+                            color: _currentPage == index
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.primary
+                                    .withValues(alpha: 0.3),
+                            borderRadius: material.BorderRadius.circular(999),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const material.SizedBox(height: 24),
-                  material.FilledButton.icon(
-                    onPressed: () {
-                      if (isLastPage) {
-                        _completeIntro(context);
-                      } else {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 250),
-                          curve: material.Curves.easeOut,
-                        );
-                      }
-                    },
-                    icon: material.Icon(
-                        isLastPage ? material.Icons.check_circle_outline : material.Icons.arrow_forward),
-                    label: material.Text(isLastPage ? 'Empezar' : 'Siguiente'),
-                  ),
-                  const material.SizedBox(height: 12),
-                  material.TextButton.icon(
-                    onPressed: () async {
-                      if (_isCompleting) return;
-                      setState(() {
-                        _isCompleting = true;
-                      });
-                      final onboardingService = ref.read(onboardingServiceProvider);
-                      final navigator = material.Navigator.of(context);
-                      await onboardingService.markIntroSeen();
-                      if (!mounted) return;
-                      navigator.pushReplacementNamed(HomeShell.routeName);
-                    },
-                    icon: const material.Icon(material.Icons.home_outlined),
-                    label: const material.Text('Ir a la app (volveré luego)'),
-                  ),
-                ],
+                    const material.SizedBox(height: 24),
+                    material.FilledButton.icon(
+                      onPressed: () {
+                        if (isLastPage) {
+                          _completeIntro(context);
+                        } else {
+                          _pageController.nextPage(
+                            duration: const Duration(milliseconds: 500),
+                            curve: material
+                                .Curves.easeInOutCubic, // Curva literaria
+                          );
+                        }
+                      },
+                      icon: material.Icon(isLastPage
+                          ? material.Icons.check_circle_outline
+                          : material.Icons.arrow_forward),
+                      label: material.Text(
+                          isLastPage ? 'Comenzar Crónica' : 'Siguiente Página'),
+                    ),
+                    const material.SizedBox(height: 12),
+                    material.TextButton.icon(
+                      onPressed: () async {
+                        if (_isCompleting) return;
+                        setState(() {
+                          _isCompleting = true;
+                        });
+                        final onboardingService =
+                            ref.read(onboardingServiceProvider);
+                        final navigator = material.Navigator.of(context);
+                        await onboardingService.markIntroSeen();
+                        if (!mounted) return;
+                        navigator.pushReplacementNamed(HomeShell.routeName);
+                      },
+                      icon: const material.Icon(material.Icons.home_outlined),
+                      label: const material.Text('Saltar Prólogo'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

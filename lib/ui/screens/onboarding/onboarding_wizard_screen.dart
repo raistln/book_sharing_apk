@@ -6,6 +6,7 @@ import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
 import '../../../services/onboarding_service.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/textured_background.dart';
 import '../home/home_shell.dart';
 import 'onboarding_intro_screen.dart';
 
@@ -38,6 +39,7 @@ class _OnboardingWizardScreenState
   bool _isProcessing = false;
   bool _isSynced = false;
   bool _groupCreated = false;
+  bool _navigationHandled = false;
 
   @override
   void initState() {
@@ -360,7 +362,9 @@ class _OnboardingWizardScreenState
       data: (progress) {
         if (!progress.introSeen || progress.completed) {
           material.WidgetsBinding.instance.addPostFrameCallback((_) async {
-            if (!mounted || _isProcessing) return;
+            // Evitar ejecuciones múltiples del callback
+            if (!mounted || _isProcessing || _navigationHandled) return;
+            _navigationHandled = true;
             setState(() => _isProcessing = true);
             try {
               if (!progress.introSeen) {
@@ -369,7 +373,18 @@ class _OnboardingWizardScreenState
                 return;
               }
 
+              // Si el wizard ya estaba completado (progress.completed == true),
+              // simplemente navegamos al HomeShell sin volver a hacer sync.
+              // La sincronización inicial se hará una sola vez en AuthController.
               final navigator = material.Navigator.of(context);
+              if (progress.completed) {
+                // Ya completado anteriormente, navegar directamente
+                navigator.pushNamedAndRemoveUntil(
+                    HomeShell.routeName, (route) => false);
+                return;
+              }
+
+              // Si llegamos aquí, el wizard no está completado, llamar a _completeWizard
               final messenger = material.ScaffoldMessenger.of(context);
               await _completeWizard(navigator: navigator, messenger: messenger);
             } finally {
@@ -400,47 +415,49 @@ class _OnboardingWizardScreenState
 
         return material.Scaffold(
           appBar: material.AppBar(
-            title: const material.Text('Primeros pasos'),
+            title: const material.Text('Comienza tu historia'),
             automaticallyImplyLeading: false,
             actions: [
               material.TextButton(
                 onPressed: _isProcessing ? null : () => _skipWizard(context),
-                child: const material.Text('Omitir wizard'),
+                child: const material.Text('Saltar Introducción'),
               ),
             ],
           ),
-          body: material.Stepper(
-            type: material.StepperType.vertical,
-            physics: const material.ClampingScrollPhysics(),
-            currentStep: _currentStep,
-            onStepTapped: (index) {
-              if (_isProcessing) return;
-              setState(() => _currentStep = index);
-            },
-            controlsBuilder: (context, details) {
-              return material.Row(
-                children: [
-                  material.FilledButton.icon(
-                    onPressed:
-                        _isProcessing ? null : () => _handleContinue(context),
-                    icon: material.Icon(_currentStep == _totalSteps - 1
-                        ? material.Icons.check_circle_outline
-                        : material.Icons.arrow_forward),
-                    label: material.Text(_currentStep == _totalSteps - 1
-                        ? 'Finalizar'
-                        : 'Continuar'),
-                  ),
-                  const material.SizedBox(width: 12),
-                  material.TextButton(
-                    onPressed: _isProcessing
-                        ? null
-                        : () => _handleSkipStep(_currentStep),
-                    child: const material.Text('Omitir paso'),
-                  ),
-                ],
-              );
-            },
-            steps: steps,
+          body: TexturedBackground(
+            child: material.Stepper(
+              type: material.StepperType.vertical,
+              physics: const material.ClampingScrollPhysics(),
+              currentStep: _currentStep,
+              onStepTapped: (index) {
+                if (_isProcessing) return;
+                setState(() => _currentStep = index);
+              },
+              controlsBuilder: (context, details) {
+                return material.Row(
+                  children: [
+                    material.FilledButton.icon(
+                      onPressed:
+                          _isProcessing ? null : () => _handleContinue(context),
+                      icon: material.Icon(_currentStep == _totalSteps - 1
+                          ? material.Icons.check_circle_outline
+                          : material.Icons.arrow_forward),
+                      label: material.Text(_currentStep == _totalSteps - 1
+                          ? 'Sellar Pacto'
+                          : 'Continuar'),
+                    ),
+                    const material.SizedBox(width: 12),
+                    material.TextButton(
+                      onPressed: _isProcessing
+                          ? null
+                          : () => _handleSkipStep(_currentStep),
+                      child: const material.Text('Omitir Capítulo'),
+                    ),
+                  ],
+                );
+              },
+              steps: steps,
+            ),
           ),
         );
       },
@@ -473,9 +490,9 @@ class _OnboardingWizardScreenState
 
     return [
       material.Step(
-        title: const material.Text('Crea tu primer grupo'),
+        title: const material.Text('Capítulo 1: La Fundación'),
         subtitle: const material.Text(
-            'Invita a tus amigos y comparte la biblioteca.'),
+            'Crea un círculo para compartir tus volúmenes.'),
         isActive: _currentStep >= _groupStepIndex,
         state: _resolveStepState(_groupStepIndex),
         content: material.Form(
@@ -532,9 +549,9 @@ class _OnboardingWizardScreenState
         ),
       ),
       material.Step(
-        title: const material.Text('Únete con un código'),
-        subtitle:
-            const material.Text('Introduce el código que te compartieron.'),
+        title: const material.Text('Capítulo 2: La Alianza'),
+        subtitle: const material.Text(
+            'Únete a un círculo existente mediante código.'),
         isActive: _currentStep >= _joinStepIndex,
         state: _resolveStepState(_joinStepIndex),
         content: material.Form(
@@ -543,7 +560,7 @@ class _OnboardingWizardScreenState
             crossAxisAlignment: material.CrossAxisAlignment.start,
             children: [
               material.Text(
-                'Las invitaciones por código se generan desde otros grupos. Si aún no tienes uno, puedes omitir este paso.',
+                'Si has recibido una invitación, este es el momento de responder al llamado.',
                 style: theme.textTheme.bodyMedium,
               ),
               const material.SizedBox(height: 12),
@@ -578,9 +595,9 @@ class _OnboardingWizardScreenState
         ),
       ),
       material.Step(
-        title: const material.Text('Resumen'),
+        title: const material.Text('Epílogo: Confirmaciones'),
         subtitle:
-            const material.Text('Confirma tu configuración antes de comenzar.'),
+            const material.Text('Revisa lo escrito antes de cerrar el libro.'),
         isActive: _currentStep >= _summaryStepIndex,
         state: _resolveStepState(_summaryStepIndex),
         content: _SummaryStep(

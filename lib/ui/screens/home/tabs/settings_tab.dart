@@ -7,7 +7,6 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../widgets/info_pop.dart';
 
-import '../../../../config/supabase_defaults.dart';
 import '../../../../providers/auth_providers.dart';
 import '../../../../providers/book_providers.dart';
 import '../../../../providers/cover_refresh_providers.dart';
@@ -52,7 +51,7 @@ class SettingsTab extends ConsumerWidget {
               // Donation card at the top
               _buildDonationCard(context, ref),
               const SizedBox(height: 32),
-              
+
               // Sección de importación de libros
               Text(
                 'Biblioteca',
@@ -70,21 +69,24 @@ class SettingsTab extends ConsumerWidget {
                     ListTile(
                       leading: const Icon(Icons.upload_file_outlined),
                       title: const Text('Exportar biblioteca'),
-                      subtitle: const Text('Guarda tu lista de libros en CSV, JSON o PDF'),
+                      subtitle: const Text(
+                          'Guarda tu lista de libros en CSV, JSON o PDF'),
                       onTap: () => ExportHandler.handle(context, ref),
                     ),
                     const Divider(height: 1),
                     ListTile(
                       leading: const Icon(Icons.history_edu_outlined),
                       title: const Text('Exportar historial de préstamos'),
-                      subtitle: const Text('Genera un informe de tus préstamos (CSV)'),
+                      subtitle: const Text(
+                          'Genera un informe de tus préstamos (CSV)'),
                       onTap: () => _handleExportLoans(context, ref),
                     ),
                     const Divider(height: 1),
                     ListTile(
                       leading: const Icon(Icons.import_export),
                       title: const Text('Importar libros'),
-                      subtitle: const Text('Importa libros desde un archivo CSV o JSON'),
+                      subtitle: const Text(
+                          'Importa libros desde un archivo CSV o JSON'),
                       onTap: () {
                         showDialog(
                           context: context,
@@ -96,7 +98,7 @@ class SettingsTab extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               // Sección de Almacenamiento
               Text(
                 'Almacenamiento',
@@ -107,20 +109,24 @@ class SettingsTab extends ConsumerWidget {
                 child: ListTile(
                   leading: const Icon(Icons.broken_image_outlined),
                   title: const Text('Borrar todas las portadas'),
-                  subtitle: const Text('Libera espacio eliminando las imágenes descargadas.'),
+                  subtitle: const Text(
+                      'Libera espacio eliminando las imágenes descargadas.'),
                   onTap: () => _handleDeleteCovers(context, ref),
                 ),
               ),
               Card(
                 child: ListTile(
-                  leading: const Icon(Icons.delete_sweep_outlined, color: Colors.red),
+                  leading: const Icon(Icons.delete_sweep_outlined,
+                      color: Colors.red),
                   title: const Text('Resetear base de datos local'),
-                  subtitle: const Text('Elimina todos los datos locales y comienza desde cero.', style: TextStyle(color: Colors.red)),
+                  subtitle: const Text(
+                      'Elimina todos los datos locales y comienza desde cero.',
+                      style: TextStyle(color: Colors.red)),
                   onTap: () => _handleResetDatabase(context, ref),
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               // Sección de Backup
               Text(
                 'Copias de seguridad',
@@ -155,17 +161,20 @@ class SettingsTab extends ConsumerWidget {
                 child: ListTile(
                   leading: const Icon(Icons.cancel_outlined),
                   title: const Text('Eliminar PIN y cambiar de usuario'),
-                  subtitle: const Text('Vuelve al inicio para configurar otra cuenta.'),
+                  subtitle: const Text(
+                      'Vuelve al inicio para configurar otra cuenta.'),
                   onTap: () async {
                     final confirmed = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('¿Eliminar PIN y salir de la cuenta?'),
+                        title:
+                            const Text('¿Eliminar PIN y salir de la cuenta?'),
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.warning_amber, size: 48, color: Colors.orange),
+                            const Icon(Icons.warning_amber,
+                                size: 48, color: Colors.orange),
                             const SizedBox(height: 16),
                             const Text(
                               'Se eliminarán TODOS los datos locales (libros, grupos, préstamos) '
@@ -181,7 +190,8 @@ class SettingsTab extends ConsumerWidget {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.lightbulb_outline, color: Colors.blue.shade700),
+                                  Icon(Icons.lightbulb_outline,
+                                      color: Colors.blue.shade700),
                                   const SizedBox(width: 12),
                                   const Expanded(
                                     child: Text(
@@ -206,7 +216,8 @@ class SettingsTab extends ConsumerWidget {
                           FilledButton(
                             onPressed: () => Navigator.of(context).pop(true),
                             style: FilledButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.error,
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.error,
                             ),
                             child: const Text('Eliminar todo'),
                           ),
@@ -249,20 +260,20 @@ class SettingsTab extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               const _ThemeSection(),
+
               const SizedBox(height: 16),
               Text(
                 'Integraciones externas',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 12),
-              const _SupabaseConfigCard(),
-              const SizedBox(height: 16),
               _GoogleBooksApiCard(
                 onConfigure: () => _handleConfigureGoogleBooksKey(context, ref),
                 onClear: () => _handleClearGoogleBooksKey(context, ref),
               ),
               const SizedBox(height: 16),
               _buildSyncActionsCard(context, ref),
+
               const SizedBox(height: 24),
               const _PlaceholderTab(
                 title: 'Más configuraciones próximamente',
@@ -317,7 +328,8 @@ class SettingsTab extends ConsumerWidget {
     );
   }
 
-  Future<void> _openDonationLink(BuildContext context, String donationUrl) async {
+  Future<void> _openDonationLink(
+      BuildContext context, String donationUrl) async {
     final uri = Uri.tryParse(donationUrl);
     if (uri == null) {
       _showFeedbackSnackBar(
@@ -329,7 +341,8 @@ class SettingsTab extends ConsumerWidget {
     }
 
     try {
-      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final launched =
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!launched && context.mounted) {
         _showFeedbackSnackBar(
           context: context,
@@ -389,18 +402,21 @@ class SettingsTab extends ConsumerWidget {
               children: [
                 Text(
                   'Estado de sincronización',
-                  style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   statusText,
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white),
+                  style:
+                      theme.textTheme.bodyMedium?.copyWith(color: Colors.white),
                 ),
                 if (state.hasPendingChanges && !state.isSyncing) ...[
                   const SizedBox(height: 8),
                   Text(
                     'Hay cambios pendientes por sincronizar.',
-                    style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: Colors.white70),
                   ),
                 ],
               ],
@@ -443,7 +459,9 @@ class SettingsTab extends ConsumerWidget {
               runSpacing: 8,
               children: [
                 FilledButton.icon(
-                  onPressed: state.isSyncing ? null : () => _handleSyncGroups(context, ref),
+                  onPressed: state.isSyncing
+                      ? null
+                      : () => _handleSyncGroups(context, ref),
                   icon: state.isSyncing
                       ? const SizedBox(
                           width: 16,
@@ -451,13 +469,17 @@ class SettingsTab extends ConsumerWidget {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.sync_outlined),
-                  label: Text(state.isSyncing ? 'Sincronizando...' : 'Sincronizar ahora'),
+                  label: Text(state.isSyncing
+                      ? 'Sincronizando...'
+                      : 'Sincronizar ahora'),
                 ),
                 if (state.lastError != null)
                   OutlinedButton.icon(
                     onPressed: state.isSyncing
                         ? null
-                        : () => ref.read(groupSyncControllerProvider.notifier).clearError(),
+                        : () => ref
+                            .read(groupSyncControllerProvider.notifier)
+                            .clearError(),
                     icon: const Icon(Icons.clear_all_outlined),
                     label: const Text('Limpiar error'),
                   ),
@@ -609,16 +631,17 @@ class SettingsTab extends ConsumerWidget {
     final activeUser = ref.read(activeUserProvider).value;
 
     try {
-      final count = await coverService.deleteAllCovers(ownerUserId: activeUser?.id);
-      
+      final count =
+          await coverService.deleteAllCovers(ownerUserId: activeUser?.id);
+
       if (!context.mounted) return;
-      
+
       _showFeedbackSnackBar(
         context: context,
         message: 'Se eliminaron $count portadas.',
         isError: false,
       );
-      
+
       // Refresh book list to show default covers
       ref.invalidate(bookListProvider);
     } catch (e) {
@@ -631,10 +654,12 @@ class SettingsTab extends ConsumerWidget {
     }
   }
 
-  Future<void> _handleConfigureGoogleBooksKey(BuildContext context, WidgetRef ref) async {
+  Future<void> _handleConfigureGoogleBooksKey(
+      BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController();
-    final currentKey = ref.read(googleBooksApiKeyControllerProvider).valueOrNull;
-    
+    final currentKey =
+        ref.read(googleBooksApiKeyControllerProvider).valueOrNull;
+
     if (currentKey != null) {
       controller.text = currentKey;
     }
@@ -649,7 +674,9 @@ class SettingsTab extends ConsumerWidget {
 
     if (result != null && context.mounted) {
       try {
-        await ref.read(googleBooksApiKeyControllerProvider.notifier).saveApiKey(result);
+        await ref
+            .read(googleBooksApiKeyControllerProvider.notifier)
+            .saveApiKey(result);
         if (context.mounted) {
           _showFeedbackSnackBar(
             context: context,
@@ -669,7 +696,8 @@ class SettingsTab extends ConsumerWidget {
     }
   }
 
-  Future<void> _handleClearGoogleBooksKey(BuildContext context, WidgetRef ref) async {
+  Future<void> _handleClearGoogleBooksKey(
+      BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -695,7 +723,9 @@ class SettingsTab extends ConsumerWidget {
 
     if (confirmed == true && context.mounted) {
       try {
-        await ref.read(googleBooksApiKeyControllerProvider.notifier).clearApiKey();
+        await ref
+            .read(googleBooksApiKeyControllerProvider.notifier)
+            .clearApiKey();
         if (context.mounted) {
           _showFeedbackSnackBar(
             context: context,
@@ -729,10 +759,10 @@ class SettingsTab extends ConsumerWidget {
 
       final repository = ref.read(loanRepositoryProvider);
       final exportService = ref.read(loan.loanExportServiceProvider);
-      
+
       // Fetch all loans to analyze
       final loans = await repository.getAllLoanDetails();
-      
+
       if (!context.mounted) return;
 
       // Ask for action (Share/Download)
@@ -753,14 +783,13 @@ class SettingsTab extends ConsumerWidget {
         mimeType: result.mimeType,
         action: action,
         onFeedback: (message, isError) {
-           _showFeedbackSnackBar(
+          _showFeedbackSnackBar(
             context: context,
             message: message,
             isError: isError,
           );
         },
       );
-
     } catch (e) {
       if (!context.mounted) return;
       _showFeedbackSnackBar(
@@ -862,12 +891,25 @@ class _ThemeSection extends ConsumerWidget {
   }
 }
 
-class _SupabaseConfigCard extends StatelessWidget {
-  const _SupabaseConfigCard();
+class _GoogleBooksApiCard extends ConsumerWidget {
+  const _GoogleBooksApiCard({
+    required this.onConfigure,
+    required this.onClear,
+  });
+
+  final VoidCallback onConfigure;
+  final VoidCallback onClear;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final apiKeyAsync = ref.watch(googleBooksApiKeyControllerProvider);
+    final apiKey = apiKeyAsync.valueOrNull;
+    final hasApiKey = apiKey != null && apiKey.isNotEmpty;
+    final isLoading = apiKeyAsync.isLoading;
+    final errorMessage = apiKeyAsync.whenOrNull(
+      error: (error, _) => error.toString(),
+    );
 
     return Card(
       child: Padding(
@@ -875,46 +917,260 @@ class _SupabaseConfigCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (isLoading) const LinearProgressIndicator(minHeight: 4),
+            if (isLoading) const SizedBox(height: 12),
             Row(
               children: [
                 Icon(
-                  Icons.cloud_outlined,
+                  Icons.book_outlined,
                   color: theme.colorScheme.primary,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Supabase oficial',
+                  'Google Books API',
                   style: theme.textTheme.titleMedium,
                 ),
+                if (hasApiKey) ...[
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 20,
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
             Text(
-              'Esta versión utiliza el espacio de Supabase mantenido por el proyecto. '
-              'Las credenciales están integradas y no se pueden editar desde la app.',
+              hasApiKey
+                  ? 'API key configurada. Puedes buscar libros en Google Books.'
+                  : 'Configura una API key para buscar libros en Google Books.',
               style: theme.textTheme.bodyMedium,
             ),
-            const SizedBox(height: 12),
-            Text(
-              'URL: $kSupabaseDefaultUrl',
-              style: theme.textTheme.bodySmall,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Anon key: ******',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            if (errorMessage != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Error: $errorMessage',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
               ),
+            ],
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  onPressed: isLoading ? null : onConfigure,
+                  icon: const Icon(Icons.key_outlined),
+                  label: Text(
+                      hasApiKey ? 'Cambiar API key' : 'Configurar API key'),
+                ),
+                if (hasApiKey)
+                  OutlinedButton.icon(
+                    onPressed: isLoading ? null : onClear,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Eliminar'),
+                  ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Si deseas alojar tu propio backend, revisa la guía "docs/self_host_supabase.md" en el repositorio.',
-              style: theme.textTheme.bodySmall,
-            ),
+            if (!hasApiKey) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline,
+                            color: Colors.blue.shade700, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          '¿Cómo obtener una API key?',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '1. Ve a Google Cloud Console\n'
+                      '2. Crea un nuevo proyecto o selecciona uno existente\n'
+                      '3. Habilita la "Books API"\n'
+                      '4. Crea credenciales tipo "API key"\n'
+                      '5. Copia la clave y pégala aquí',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+}
+
+class _GoogleBooksApiDialog extends StatefulWidget {
+  const _GoogleBooksApiDialog({
+    required this.initialKey,
+    required this.controller,
+  });
+
+  final String? initialKey;
+  final TextEditingController controller;
+
+  @override
+  State<_GoogleBooksApiDialog> createState() => _GoogleBooksApiDialogState();
+}
+
+class _GoogleBooksApiDialogState extends State<_GoogleBooksApiDialog> {
+  bool _isLoading = false;
+  bool _obscureKey = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AlertDialog(
+      title: const Text('Configurar API key de Google Books'),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Introduce tu API key de Google Books para poder buscar libros.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: widget.controller,
+              obscureText: _obscureKey,
+              decoration: InputDecoration(
+                labelText: 'API Key',
+                hintText: 'Pega tu API key aquí',
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(_obscureKey
+                          ? Icons.visibility
+                          : Icons.visibility_off),
+                      onPressed: () {
+                        setState(() {
+                          _obscureKey = !_obscureKey;
+                        });
+                      },
+                    ),
+                    if (widget.controller.text.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          widget.controller.clear();
+                          setState(() {});
+                        },
+                      ),
+                  ],
+                ),
+                border: const OutlineInputBorder(),
+              ),
+              maxLines: _obscureKey ? 1 : 3,
+            ),
+            if (widget.controller.text.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline,
+                        color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Puedes validar la API key antes de guardarla.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        if (widget.controller.text.isNotEmpty)
+          OutlinedButton(
+            onPressed: _isLoading ? null : () => _validateAndSave(context),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Validar y guardar'),
+          ),
+        FilledButton(
+          onPressed: _isLoading ? null : () => _saveAndClose(context),
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _validateAndSave(BuildContext context) async {
+    setState(() => _isLoading = true);
+
+    try {
+      // Here you could validate the API key
+      // For now, we'll just save it
+      _saveAndClose(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al validar API key: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _saveAndClose(BuildContext context) {
+    final apiKey = widget.controller.text.trim();
+    Navigator.of(context).pop(apiKey.isEmpty ? null : apiKey);
   }
 }
 
@@ -1002,12 +1258,12 @@ class _BackupSectionState extends State<_BackupSection> {
           _isEnabled = value;
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(value 
-              ? 'Backup automático semanal activado' 
-              : 'Backup automático desactivado'),
+            content: Text(value
+                ? 'Backup automático semanal activado'
+                : 'Backup automático desactivado'),
           ),
         );
       }
@@ -1034,293 +1290,14 @@ class _BackupSectionState extends State<_BackupSection> {
         subtitle: const Text(
           'Guarda una copia de tu biblioteca cada semana en segundo plano.',
         ),
-        secondary: _isLoading 
-          ? const SizedBox(
-              width: 24, 
-              height: 24, 
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.backup_outlined),
+        secondary: _isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.backup_outlined),
       ),
     );
-  }
-}
-
-class _GoogleBooksApiCard extends ConsumerWidget {
-  const _GoogleBooksApiCard({
-    required this.onConfigure,
-    required this.onClear,
-  });
-
-  final VoidCallback onConfigure;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final apiKeyAsync = ref.watch(googleBooksApiKeyControllerProvider);
-    final apiKey = apiKeyAsync.valueOrNull;
-    final hasApiKey = apiKey != null && apiKey.isNotEmpty;
-    final isLoading = apiKeyAsync.isLoading;
-    final errorMessage = apiKeyAsync.whenOrNull(
-      error: (error, _) => error.toString(),
-    );
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (isLoading)
-              const LinearProgressIndicator(minHeight: 4),
-            if (isLoading) const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  Icons.book_outlined,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Google Books API',
-                  style: theme.textTheme.titleMedium,
-                ),
-                if (hasApiKey) ...[
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                    size: 20,
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              hasApiKey
-                  ? 'API key configurada. Puedes buscar libros en Google Books.'
-                  : 'Configura una API key para buscar libros en Google Books.',
-              style: theme.textTheme.bodyMedium,
-            ),
-            if (errorMessage != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Error: $errorMessage',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                FilledButton.icon(
-                  onPressed: isLoading ? null : onConfigure,
-                  icon: const Icon(Icons.key_outlined),
-                  label: Text(hasApiKey ? 'Cambiar API key' : 'Configurar API key'),
-                ),
-                if (hasApiKey)
-                  OutlinedButton.icon(
-                    onPressed: isLoading ? null : onClear,
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Eliminar'),
-                  ),
-              ],
-            ),
-            if (!hasApiKey) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          '¿Cómo obtener una API key?',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.blue.shade700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '1. Ve a Google Cloud Console\n'
-                      '2. Crea un nuevo proyecto o selecciona uno existente\n'
-                      '3. Habilita la "Books API"\n'
-                      '4. Crea credenciales tipo "API key"\n'
-                      '5. Copia la clave y pégala aquí',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GoogleBooksApiDialog extends StatefulWidget {
-  const _GoogleBooksApiDialog({
-    required this.initialKey,
-    required this.controller,
-  });
-
-  final String? initialKey;
-  final TextEditingController controller;
-
-  @override
-  State<_GoogleBooksApiDialog> createState() => _GoogleBooksApiDialogState();
-}
-
-class _GoogleBooksApiDialogState extends State<_GoogleBooksApiDialog> {
-  bool _isLoading = false;
-  bool _obscureKey = true;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return AlertDialog(
-      title: const Text('Configurar API key de Google Books'),
-      content: SizedBox(
-        width: 400,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Introduce tu API key de Google Books para poder buscar libros.',
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: widget.controller,
-              obscureText: _obscureKey,
-              decoration: InputDecoration(
-                labelText: 'API Key',
-                hintText: 'Pega tu API key aquí',
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(_obscureKey ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () {
-                        setState(() {
-                          _obscureKey = !_obscureKey;
-                        });
-                      },
-                    ),
-                    if (widget.controller.text.isNotEmpty)
-                      IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          widget.controller.clear();
-                          setState(() {});
-                        },
-                      ),
-                  ],
-                ),
-                border: const OutlineInputBorder(),
-              ),
-              maxLines: _obscureKey ? 1 : 3,
-            ),
-            if (widget.controller.text.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Puedes validar la API key antes de guardarla.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue.shade700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        if (widget.controller.text.isNotEmpty)
-          OutlinedButton(
-            onPressed: _isLoading ? null : () => _validateAndSave(context),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Validar y guardar'),
-          ),
-        FilledButton(
-          onPressed: _isLoading ? null : () => _saveAndClose(context),
-          child: const Text('Guardar'),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _validateAndSave(BuildContext context) async {
-    setState(() => _isLoading = true);
-
-    try {
-      // Here you could validate the API key
-      // For now, we'll just save it
-      _saveAndClose(context);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al validar API key: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  void _saveAndClose(BuildContext context) {
-    final apiKey = widget.controller.text.trim();
-    Navigator.of(context).pop(apiKey.isEmpty ? null : apiKey);
   }
 }

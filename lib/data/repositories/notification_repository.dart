@@ -35,23 +35,29 @@ class NotificationRepository {
     }
     final controller = _notificationSyncController;
     if (controller == null) {
-      developer.log('[_scheduleSync] No sync controller available', name: 'NotificationRepository');
+      developer.log('[_scheduleSync] No sync controller available',
+          name: 'NotificationRepository');
       return;
     }
 
     if (!controller.mounted) {
-      developer.log('[_scheduleSync] Controller not mounted', name: 'NotificationRepository');
+      developer.log('[_scheduleSync] Controller not mounted',
+          name: 'NotificationRepository');
       return;
     }
 
     try {
       controller.markPendingChanges();
-      developer.log('[_scheduleSync] Marked pending changes', name: 'NotificationRepository');
+      developer.log('[_scheduleSync] Marked pending changes',
+          name: 'NotificationRepository');
     } on StateError catch (error) {
       if (controller.mounted) {
         rethrow;
       }
-      debugPrint('NotificationRepository: pending changes skipped after dispose — $error');
+      if (kDebugMode) {
+        debugPrint(
+            'NotificationRepository: pending changes skipped after dispose — $error');
+      }
       return;
     }
 
@@ -63,14 +69,19 @@ class NotificationRepository {
         return;
       }
       try {
-        developer.log('[_scheduleSync] Starting sync...', name: 'NotificationRepository');
+        developer.log('[_scheduleSync] Starting sync...',
+            name: 'NotificationRepository');
         await controller.sync();
-        developer.log('[_scheduleSync] Sync completed', name: 'NotificationRepository');
+        developer.log('[_scheduleSync] Sync completed',
+            name: 'NotificationRepository');
       } on StateError catch (error) {
         if (controller.mounted) {
           rethrow;
         }
-        debugPrint('NotificationRepository: sync skipped after dispose — $error');
+        if (kDebugMode) {
+          debugPrint(
+              'NotificationRepository: sync skipped after dispose — $error');
+        }
       } catch (error, stackTrace) {
         developer.log(
           '[_scheduleSync] Sync failed: $error',
@@ -98,16 +109,18 @@ class NotificationRepository {
       '[createNotification] Creating notification: type=${type.value}, targetUserId=$targetUserId, actorUserId=$actorUserId, loanId=$loanId',
       name: 'NotificationRepository',
     );
-    
+
     final now = DateTime.now();
     final entry = InAppNotificationsCompanion(
       uuid: Value(_uuid.v4()),
       type: Value(type.value),
       targetUserId: Value(targetUserId),
-      actorUserId: actorUserId != null ? Value(actorUserId) : const Value.absent(),
+      actorUserId:
+          actorUserId != null ? Value(actorUserId) : const Value.absent(),
       loanId: loanId != null ? Value(loanId) : const Value.absent(),
       loanUuid: loanUuid != null ? Value(loanUuid) : const Value.absent(),
-      sharedBookId: sharedBookId != null ? Value(sharedBookId) : const Value.absent(),
+      sharedBookId:
+          sharedBookId != null ? Value(sharedBookId) : const Value.absent(),
       title: title != null ? Value(title) : const Value.absent(),
       message: message != null ? Value(message) : const Value.absent(),
       status: Value(status),
@@ -153,11 +166,13 @@ class NotificationRepository {
     required String status,
   }) {
     final now = DateTime.now();
-    return _notificationDao.markAllForLoan(
-      loanId: loanId,
-      status: status,
-      timestamp: now,
-    ).then((_) => _scheduleSync());
+    return _notificationDao
+        .markAllForLoan(
+          loanId: loanId,
+          status: status,
+          timestamp: now,
+        )
+        .then((_) => _scheduleSync());
   }
 
   Future<void> markAs({
@@ -167,10 +182,10 @@ class NotificationRepository {
     final now = DateTime.now();
     return _notificationDao
         .markStatusByUuid(
-      uuid: uuid,
-      status: status,
-      timestamp: now,
-    )
+          uuid: uuid,
+          status: status,
+          timestamp: now,
+        )
         .then((_) => _scheduleSync());
   }
 
@@ -208,6 +223,18 @@ class NotificationRepository {
     return _notificationDao.purgeExpired(
       readThreshold: now.subtract(readRetention),
       othersThreshold: now.subtract(othersRetention),
+    );
+  }
+
+  Future<InAppNotification?> findRecentByType({
+    required InAppNotificationType type,
+    required int loanId,
+    required DateTime since,
+  }) {
+    return _notificationDao.findRecentByType(
+      type: type.value,
+      loanId: loanId,
+      since: since,
     );
   }
 }

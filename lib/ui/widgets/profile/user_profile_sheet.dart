@@ -316,8 +316,12 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
                           const SizedBox(height: 12),
                           loanStatsAsync.when(
                             data: (stats) {
-                              final loans30d = stats['loansLast30Days'] as int;
-                              final loans1y = stats['loansLastYear'] as int;
+                              final made30d = stats['loansMade30Days'] as int;
+                              final made1y = stats['loansMadeYear'] as int;
+                              final requested30d =
+                                  stats['loansRequested30Days'] as int;
+                              final requested1y =
+                                  stats['loansRequestedYear'] as int;
                               final mostLoaned =
                                   stats['mostLoanedBook'] as String?;
                               final mostLoanedCount =
@@ -328,17 +332,17 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
                                   Row(
                                     children: [
                                       _StatCard(
-                                        label: 'Préstamos (30d)',
-                                        value: loans30d.toString(),
-                                        icon: Icons.access_time,
+                                        label: 'Prestados (30d/1a)',
+                                        value: '$made30d / $made1y',
+                                        icon: Icons.outbox,
                                         color: Colors.orange.shade100,
                                         textColor: Colors.orange.shade900,
                                       ),
                                       const SizedBox(width: 12),
                                       _StatCard(
-                                        label: 'Préstamos (1a)',
-                                        value: loans1y.toString(),
-                                        icon: Icons.history,
+                                        label: 'Solicitados (30d/1a)',
+                                        value: '$requested30d / $requested1y',
+                                        icon: Icons.inbox,
                                         color: Colors.purple.shade100,
                                         textColor: Colors.purple.shade900,
                                       ),

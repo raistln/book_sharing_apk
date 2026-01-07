@@ -23,6 +23,11 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   final _usernameController = material.TextEditingController();
   final _pinController = material.TextEditingController();
   final _confirmController = material.TextEditingController();
+  
+  final _usernameFocusNode = material.FocusNode();
+  final _pinFocusNode = material.FocusNode();
+  final _confirmFocusNode = material.FocusNode();
+
   String? _errorMessage;
   bool _navigated = false;
   bool _isSubmitting = false;
@@ -32,6 +37,9 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
     _usernameController.dispose();
     _pinController.dispose();
     _confirmController.dispose();
+    _usernameFocusNode.dispose();
+    _pinFocusNode.dispose();
+    _confirmFocusNode.dispose();
     super.dispose();
   }
 
@@ -123,9 +131,14 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                         delay: const Duration(milliseconds: 200),
                         child: material.TextField(
                           controller: _usernameController,
+                          focusNode: _usernameFocusNode,
+                          autofocus: true,
                           enabled: !isLoading,
                           textCapitalization: material.TextCapitalization.none,
                           textInputAction: material.TextInputAction.next,
+                          onSubmitted: (_) {
+                            _pinFocusNode.requestFocus();
+                          },
                           style: theme.textTheme.titleMedium,
                           textAlign: material.TextAlign.center,
                           decoration: material.InputDecoration(
@@ -155,9 +168,13 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                           const material.SizedBox(height: 16),
                           LiteraryPinInput(
                             controller: _pinController,
+                            focusNode: _pinFocusNode,
+                            autofocus: isExistingUser,
                             length: 4,
-                            onChanged: (_) => setState(
-                                () {}), // rebuild para validar visualmente si queremos
+                            onCompleted: () {
+                              _confirmFocusNode.requestFocus();
+                            },
+                            onChanged: (_) => setState(() {}),
                           ),
                         ],
                       ),
@@ -177,8 +194,10 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                           const material.SizedBox(height: 16),
                           LiteraryPinInput(
                             controller: _confirmController,
+                            focusNode: _confirmFocusNode,
+                            autofocus: false,
                             length: 4,
-                            // Al terminar de confirmar, podríamos auto-submit, pero dejemos botón manual para seguridad
+                            onCompleted: _submit,
                           ),
                         ],
                       ),

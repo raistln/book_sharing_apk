@@ -772,27 +772,37 @@ class LoanRepository {
     final thirtyDaysAgo = now.subtract(const Duration(days: 30));
     final oneYearAgo = now.subtract(const Duration(days: 365));
 
-    // Loans involved in (borrower or lender) in the last 30 days
-    final loansLast30Days = allLoans.where((l) {
-      final date = l.loan.createdAt; // Using createdAt as the reference
-      return date.isAfter(thirtyDaysAgo);
-    }).length;
+    // Filter out rejected and cancelled loans for all counts
+    final validLoans = allLoans.where((l) {
+      final status = l.loan.status;
+      return status != 'rejected' && status != 'cancelled';
+    }).toList();
 
-    // Loans involved in (borrower or lender) in the last year
-    final loansLastYear = allLoans.where((l) {
-      final date = l.loan.createdAt;
-      return date.isAfter(oneYearAgo);
-    }).length;
+    // Loans MADE (as lender)
+    final loansMade =
+        validLoans.where((l) => l.loan.lenderUserId == userId).toList();
+    final loansMade30Days =
+        loansMade.where((l) => l.loan.createdAt.isAfter(thirtyDaysAgo)).length;
+    final loansMadeYear =
+        loansMade.where((l) => l.loan.createdAt.isAfter(oneYearAgo)).length;
+
+    // Loans REQUESTED (as borrower)
+    final loansRequested =
+        validLoans.where((l) => l.loan.borrowerUserId == userId).toList();
+    final loansRequested30Days = loansRequested
+        .where((l) => l.loan.createdAt.isAfter(thirtyDaysAgo))
+        .length;
+    final loansRequestedYear = loansRequested
+        .where((l) => l.loan.createdAt.isAfter(oneYearAgo))
+        .length;
 
     // Most loaned book (as lender)
-    // We only count loans where I am the lender
-    final myLendingLoans =
-        allLoans.where((l) => l.loan.lenderUserId == userId).toList();
-
-    if (myLendingLoans.isEmpty) {
+    if (loansMade.isEmpty) {
       return {
-        'loansLast30Days': loansLast30Days,
-        'loansLastYear': loansLastYear,
+        'loansMade30Days': loansMade30Days,
+        'loansMadeYear': loansMadeYear,
+        'loansRequested30Days': loansRequested30Days,
+        'loansRequestedYear': loansRequestedYear,
         'mostLoanedBook': null,
         'mostLoanedBookCount': 0,
       };
@@ -801,7 +811,7 @@ class LoanRepository {
     final bookCounts = <int, int>{};
     final bookTitles = <int, String>{};
 
-    for (final loanDetail in myLendingLoans) {
+    for (final loanDetail in loansMade) {
       // Determines the effective book ID (shared or direct)
       int? bookId;
       String? title;
@@ -824,8 +834,10 @@ class LoanRepository {
 
     if (bookCounts.isEmpty) {
       return {
-        'loansLast30Days': loansLast30Days,
-        'loansLastYear': loansLastYear,
+        'loansMade30Days': loansMade30Days,
+        'loansMadeYear': loansMadeYear,
+        'loansRequested30Days': loansRequested30Days,
+        'loansRequestedYear': loansRequestedYear,
         'mostLoanedBook': null,
         'mostLoanedBookCount': 0,
       };
@@ -843,8 +855,10 @@ class LoanRepository {
     });
 
     return {
-      'loansLast30Days': loansLast30Days,
-      'loansLastYear': loansLastYear,
+      'loansMade30Days': loansMade30Days,
+      'loansMadeYear': loansMadeYear,
+      'loansRequested30Days': loansRequested30Days,
+      'loansRequestedYear': loansRequestedYear,
       'mostLoanedBook': bookTitles[maxId] ?? 'Desconocido',
       'mostLoanedBookCount': maxCount,
     };

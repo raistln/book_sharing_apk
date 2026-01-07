@@ -48,7 +48,9 @@ class BookImportService {
   }) async {
     try {
       var csvString = utf8.decode(fileData);
-      debugPrint('CSV String: $csvString');
+      if (kDebugMode) {
+        debugPrint('CSV String: $csvString');
+      }
 
       csvString = csvString.replaceAll('\r\n', '\n');
       if (csvString.trim().isEmpty) {
@@ -66,7 +68,9 @@ class BookImportService {
       );
 
       final rawData = csvParser.convert(csvString);
-      debugPrint('Parsed CSV data: $rawData');
+      if (kDebugMode) {
+        debugPrint('Parsed CSV data: $rawData');
+      }
 
       if (rawData.isEmpty || rawData.first.isEmpty) {
         return const BookImportResult(

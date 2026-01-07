@@ -27,7 +27,8 @@ class NotificationDao extends DatabaseAccessor<AppDatabase>
     required int notificationId,
     required InAppNotificationsCompanion entry,
   }) {
-    return (update(inAppNotifications)..where((tbl) => tbl.id.equals(notificationId)))
+    return (update(inAppNotifications)
+          ..where((tbl) => tbl.id.equals(notificationId)))
         .write(entry);
   }
 
@@ -66,7 +67,8 @@ class NotificationDao extends DatabaseAccessor<AppDatabase>
     required String uuid,
     required DateTime timestamp,
   }) {
-    return (update(inAppNotifications)..where((tbl) => tbl.uuid.equals(uuid))).write(
+    return (update(inAppNotifications)..where((tbl) => tbl.uuid.equals(uuid)))
+        .write(
       InAppNotificationsCompanion(
         isDeleted: const Value(true),
         updatedAt: Value(timestamp),
@@ -80,7 +82,9 @@ class NotificationDao extends DatabaseAccessor<AppDatabase>
     required int userId,
     required DateTime timestamp,
   }) {
-    return (update(inAppNotifications)..where((tbl) => tbl.targetUserId.equals(userId))).write(
+    return (update(inAppNotifications)
+          ..where((tbl) => tbl.targetUserId.equals(userId)))
+        .write(
       InAppNotificationsCompanion(
         isDeleted: const Value(true),
         updatedAt: Value(timestamp),
@@ -102,8 +106,8 @@ class NotificationDao extends DatabaseAccessor<AppDatabase>
             final readCondition = tbl.status.isIn(readStatuses) &
                 tbl.updatedAt.isSmallerThanValue(readThreshold);
 
-            final otherCondition =
-                tbl.status.isNotIn(readStatuses) & tbl.updatedAt.isSmallerThanValue(othersThreshold);
+            final otherCondition = tbl.status.isNotIn(readStatuses) &
+                tbl.updatedAt.isSmallerThanValue(othersThreshold);
 
             final isClean = tbl.isDirty.equals(false) | tbl.isDirty.isNull();
 
@@ -111,8 +115,11 @@ class NotificationDao extends DatabaseAccessor<AppDatabase>
           }))
         .go();
   }
+
   Future<List<InAppNotification>> getDirtyNotifications() {
-    return (select(inAppNotifications)..where((tbl) => tbl.isDirty.equals(true))).get();
+    return (select(inAppNotifications)
+          ..where((tbl) => tbl.isDirty.equals(true)))
+        .get();
   }
 
   Future<void> markClean({
@@ -133,12 +140,15 @@ class NotificationDao extends DatabaseAccessor<AppDatabase>
         updatedAt: Value(syncedAt),
         isDeleted: isDeleted != null ? Value(isDeleted) : const Value.absent(),
         status: status != null ? Value(status) : const Value.absent(),
-        actorUserId:
-            actorUserId != null ? Value(actorUserId) : const Value<int?>.absent(),
+        actorUserId: actorUserId != null
+            ? Value(actorUserId)
+            : const Value<int?>.absent(),
         loanId: loanId != null ? Value(loanId) : const Value<int?>.absent(),
-        loanUuid: loanUuid != null ? Value(loanUuid) : const Value<String?>.absent(),
-        sharedBookId:
-            sharedBookId != null ? Value(sharedBookId) : const Value<int?>.absent(),
+        loanUuid:
+            loanUuid != null ? Value(loanUuid) : const Value<String?>.absent(),
+        sharedBookId: sharedBookId != null
+            ? Value(sharedBookId)
+            : const Value<int?>.absent(),
       ),
     );
   }
@@ -146,11 +156,13 @@ class NotificationDao extends DatabaseAccessor<AppDatabase>
   Stream<List<InAppNotification>> watchForUser(int userId) {
     final query = select(inAppNotifications)
       ..where(
-        (tbl) => tbl.targetUserId.equals(userId) &
+        (tbl) =>
+            tbl.targetUserId.equals(userId) &
             (tbl.isDeleted.equals(false) | tbl.isDeleted.isNull()),
       )
       ..orderBy([
-        (tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc),
+        (tbl) =>
+            OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc),
       ]);
     return query.watch();
   }
@@ -185,7 +197,9 @@ class NotificationDao extends DatabaseAccessor<AppDatabase>
     required String status,
     required DateTime timestamp,
   }) {
-    return (update(inAppNotifications)..where((tbl) => tbl.loanId.equals(loanId))).write(
+    return (update(inAppNotifications)
+          ..where((tbl) => tbl.loanId.equals(loanId)))
+        .write(
       InAppNotificationsCompanion(
         status: Value(status),
         updatedAt: Value(timestamp),
@@ -193,5 +207,19 @@ class NotificationDao extends DatabaseAccessor<AppDatabase>
         syncedAt: const Value(null),
       ),
     );
+  }
+
+  Future<InAppNotification?> findRecentByType({
+    required String type,
+    required int loanId,
+    required DateTime since,
+  }) {
+    return (select(inAppNotifications)
+          ..where((tbl) =>
+              tbl.type.equals(type) &
+              tbl.loanId.equals(loanId) &
+              tbl.createdAt.isBiggerOrEqualValue(since) &
+              (tbl.isDeleted.equals(false) | tbl.isDeleted.isNull())))
+        .getSingleOrNull();
   }
 }

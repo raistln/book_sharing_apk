@@ -85,7 +85,9 @@ class _OnboardingWizardScreenState
       await syncController.syncGroups();
     } catch (e) {
       // Ignoramos error de sync para no bloquear la navegación
-      material.debugPrint('Error syncing on skip wizard: $e');
+      if (kDebugMode) {
+        material.debugPrint('Error syncing on skip wizard: $e');
+      }
     }
     if (!mounted) return;
     navigator.pushNamedAndRemoveUntil(HomeShell.routeName, (route) => false);

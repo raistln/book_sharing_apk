@@ -530,7 +530,17 @@ CREATE POLICY "loan_notifications_update"
 
 CREATE POLICY "System can create notifications"
   ON public.loan_notifications FOR INSERT
-  WITH CHECK (true);
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.loans l
+      WHERE l.id = loan_id
+        AND (
+          l.borrower_user_id = (SELECT auth.uid()) 
+          OR l.lender_user_id = (SELECT auth.uid())
+          OR (SELECT auth.uid()) IS NULL
+        )
+    )
+  );
 
 -- SYSTEM TABLES
 ALTER TABLE public.system_logs ENABLE ROW LEVEL SECURITY;

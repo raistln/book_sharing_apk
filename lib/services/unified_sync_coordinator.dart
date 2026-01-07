@@ -151,14 +151,38 @@ class UnifiedSyncCoordinator {
   }) {
     _log('Cambios pendientes marcados: $entity (prioridad: $priority)');
 
+    // 1. Marcar estado interno del coordinador
     final entityState = _getEntityState(entity);
     _updateEntityState(
       entity,
       entityState.copyWith(hasPendingChanges: true),
     );
 
+    // 2. Propagar estado al controlador respectivo
+    _markControllerAsDirty(entity);
+
     _registerActivity();
     _scheduleDebouncedSync(entity, priority);
+  }
+
+  void _markControllerAsDirty(SyncEntity entity) {
+    switch (entity) {
+      case SyncEntity.users:
+        _userSyncController.markPendingChanges();
+        break;
+      case SyncEntity.books:
+        _bookSyncController.markPendingChanges();
+        break;
+      case SyncEntity.groups:
+        _groupSyncController.markPendingChanges();
+        break;
+      case SyncEntity.loans:
+        _loanSyncController.markPendingChanges();
+        break;
+      case SyncEntity.notifications:
+        _notificationSyncController.markPendingChanges();
+        break;
+    }
   }
 
   /// Sincronización manual forzada de entidades específicas o todas.
@@ -217,15 +241,24 @@ class UnifiedSyncCoordinator {
     // Mapear evento a entidades relevantes
     final entities = _getEntitiesForEvent(event);
 
-    // Cancelar debounce timers para estas entidades
+    // 1. Marcar todas las entidades como pendientes Y dirty en sus controladores
+    // Lo hacemos manualmente para no disparar el debounce timer antes de syncNow
     for (final entity in entities) {
+      final entityState = _getEntityState(entity);
+      _updateEntityState(
+        entity,
+        entityState.copyWith(hasPendingChanges: true),
+      );
+      _markControllerAsDirty(entity);
+
+      // Cancelar cualquier debounce timer pendiente
       _debounceTimers[entity]?.cancel();
       _debounceTimers[entity] = null;
     }
 
-    // Sincronizar inmediatamente
-    // syncNow() ya llama a los controladores individuales a través de _syncEntity()
-    // No es necesario llamarlos de nuevo aquí
+    _registerActivity();
+
+    // 2. Sincronizar inmediatamente y AWAIT para asegurar que la operación remota termine
     await syncNow(entities: entities);
   }
 

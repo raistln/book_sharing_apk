@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,7 +17,9 @@ Future<void> main() async {
   try {
     await dotenv.load();
   } catch (e) {
-    debugPrint('Failed to load .env: $e');
+    if (kDebugMode) {
+      debugPrint('Failed to load .env: $e');
+    }
   }
 
   try {
@@ -25,39 +28,51 @@ Future<void> main() async {
     if (url.isNotEmpty && key.isNotEmpty) {
       await Supabase.initialize(url: url, anonKey: key);
     } else {
-       debugPrint('[Main] Supabase URL or Key missing in .env');
-       // Fallback or skip? Supabase.initialize is required for Supabase.instance usage.
+      if (kDebugMode) {
+        debugPrint('[Main] Supabase URL or Key missing in .env');
+      }
+      // Fallback or skip? Supabase.initialize is required for Supabase.instance usage.
        // We might use defaults if available, but for now just log warning.
     }
   } catch (e) {
-    debugPrint('Failed to initialize Supabase: $e');
+    if (kDebugMode) {
+      debugPrint('Failed to initialize Supabase: $e');
+    }
   }
 
   final notificationService = NotificationService.instance;
   try {
     await notificationService.init();
   } catch (e) {
-    debugPrint('Failed to init notification service: $e');
+    if (kDebugMode) {
+      debugPrint('Failed to init notification service: $e');
+    }
   }
 
   // Initialize background backup scheduler
   try {
     await BackupSchedulerService.initialize();
   } catch (e) {
-    debugPrint('Failed to initialize backup scheduler: $e');
+    if (kDebugMode) {
+      debugPrint('Failed to initialize backup scheduler: $e');
+    }
   }
 
   final permissionService = PermissionService();
   try {
     await permissionService.ensureNotificationPermission();
   } catch (e) {
-    debugPrint('Failed to ensure notification permissions: $e');
+    if (kDebugMode) {
+      debugPrint('Failed to ensure notification permissions: $e');
+    }
   }
   
   try {
     await notificationService.requestPermissions();
   } catch (e) {
-    debugPrint('Failed to request notification permissions: $e');
+    if (kDebugMode) {
+      debugPrint('Failed to request notification permissions: $e');
+    }
   }
 
   runApp(

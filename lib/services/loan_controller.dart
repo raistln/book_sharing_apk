@@ -78,9 +78,17 @@ class LoanController extends StateNotifier<LoanActionState> {
 
         // Check for expiration
         if (dueDate.isBefore(now)) {
-          // If not already marked as expired in DB, we could trigger expireLoan
-          // but for notification purposes, we just ensure it's notified.
-          await _notifyLoanExpired(loan);
+          // Solo notificar una vez al día
+          final today = DateTime(now.year, now.month, now.day);
+          final existing = await _notificationRepository.findRecentByType(
+            type: InAppNotificationType.loanExpired,
+            loanId: loan.id,
+            since: today,
+          );
+
+          if (existing == null) {
+            await _notifyLoanExpired(loan);
+          }
           continue;
         }
 
@@ -89,7 +97,17 @@ class LoanController extends StateNotifier<LoanActionState> {
         // and we haven't notified for this specific loan yet.
         // For simplicity, we can check if a notification of type loan_due_soon exists for this loan.
         if (dueDate.isBefore(sevenDaysFromNow)) {
-          await _notifyLoanDueSoon(loan);
+          // Solo notificar una vez al día para evitar spam en cada sincronización
+          final today = DateTime(now.year, now.month, now.day);
+          final existing = await _notificationRepository.findRecentByType(
+            type: InAppNotificationType.loanDueSoon,
+            loanId: loan.id,
+            since: today,
+          );
+
+          if (existing == null) {
+            await _notifyLoanDueSoon(loan);
+          }
         }
       }
     } catch (e, stack) {
@@ -241,6 +259,10 @@ class LoanController extends StateNotifier<LoanActionState> {
       // Marcar cambios (no crítico, usa debouncing normal)
       _syncCoordinator.markPendingChanges(SyncEntity.loans,
           priority: SyncPriority.medium);
+      _syncCoordinator.markPendingChanges(SyncEntity.books,
+          priority: SyncPriority.medium);
+      _syncCoordinator.markPendingChanges(SyncEntity.groups,
+          priority: SyncPriority.medium);
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Solicitud rechazada.',
@@ -280,6 +302,10 @@ class LoanController extends StateNotifier<LoanActionState> {
       );
       // Marcar cambios (no crítico, usa debouncing normal)
       _syncCoordinator.markPendingChanges(SyncEntity.loans,
+          priority: SyncPriority.medium);
+      _syncCoordinator.markPendingChanges(SyncEntity.books,
+          priority: SyncPriority.medium);
+      _syncCoordinator.markPendingChanges(SyncEntity.groups,
           priority: SyncPriority.medium);
       state = state.copyWith(
         isLoading: false,
@@ -357,6 +383,10 @@ class LoanController extends StateNotifier<LoanActionState> {
       final result = await _loanRepository.expireLoan(loan: loan);
       // Marcar cambios (no crítico, usa debouncing normal)
       _syncCoordinator.markPendingChanges(SyncEntity.loans,
+          priority: SyncPriority.medium);
+      _syncCoordinator.markPendingChanges(SyncEntity.books,
+          priority: SyncPriority.medium);
+      _syncCoordinator.markPendingChanges(SyncEntity.groups,
           priority: SyncPriority.medium);
       state = state.copyWith(
         isLoading: false,

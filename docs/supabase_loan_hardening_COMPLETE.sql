@@ -8,7 +8,13 @@
 --    are now silently ignored (vetoed) instead of raising exceptions.
 --    This prevents sync "hanging" or "getting stuck".
 -- 3. Explicitly drops legacy schema triggers to avoid conflicts.
+-- 4. Hardened security: search_path restricted for functions.
+-- 5. Hardened RLS: restricted loan_notifications INSERT policy.
 -- =====================================================
+
+-- 0. CLEANUP LEGACY FUNCTIONS (Fixes Search Path Mutable Lints)
+DROP FUNCTION IF EXISTS public.check_loan_completion CASCADE;
+DROP FUNCTION IF EXISTS public.validate_loan_state_transition CASCADE;
 
 -- -----------------------------------------------------
 -- 1. RPC FUNCTION: accept_loan (Atomic Acceptance)
@@ -20,6 +26,7 @@ CREATE OR REPLACE FUNCTION accept_loan(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_loan RECORD;
@@ -141,7 +148,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- -----------------------------------------------------
 -- 3. SETUP TRIGGERS (Cleanup & Install)
@@ -159,6 +166,28 @@ CREATE TRIGGER loan_unified_handler
   BEFORE UPDATE ON loans
   FOR EACH ROW
   EXECUTE FUNCTION handle_loan_updates();
+
+-- -----------------------------------------------------
+-- 4. RLS HARDENING: loan_notifications
+-- -----------------------------------------------------
+
+DROP POLICY IF EXISTS "System can create notifications" ON public.loan_notifications;
+
+-- Only allow users to create notifications if they are a participant in the loan.
+CREATE POLICY "System can create notifications"
+  ON public.loan_notifications FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.loans l
+      WHERE l.id = loan_id
+        AND (
+          l.borrower_user_id = (SELECT auth.uid()) 
+          OR l.lender_user_id = (SELECT auth.uid())
+          -- Support for anonymous/service-role inserts if needed (auth.uid() is null)
+          OR (SELECT auth.uid()) IS NULL
+        )
+    )
+  );
 
 -- -----------------------------------------------------
 -- FINISHED

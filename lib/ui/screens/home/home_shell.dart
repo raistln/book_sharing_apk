@@ -64,7 +64,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           children: [
             const SyncBanner(),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [

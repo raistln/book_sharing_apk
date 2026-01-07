@@ -39,7 +39,7 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
       filtered = filtered.where((b) => b.isRead == _readStatusFilter).toList();
     }
     if (_searchQuery.isEmpty) return filtered;
-    
+
     return filtered.where((book) {
       final title = book.title.toLowerCase();
       final author = (book.author ?? '').toLowerCase();
@@ -47,7 +47,7 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
       return title.contains(query) || author.contains(query);
     }).toList();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final booksAsync = ref.watch(bookListProvider);
@@ -55,7 +55,7 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: booksAsync.when(
           data: (books) {
             final filteredBooks = _filterBooks(books);
@@ -63,8 +63,10 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Mi biblioteca', style: theme.textTheme.headlineMedium),
-                  const SizedBox(height: 8),
+                  Text('Mi biblioteca',
+                      style: theme.textTheme.titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
                   Text(
                     'Añade tus libros para gestionarlos desde aquí.',
                     style: theme.textTheme.bodyMedium,
@@ -73,7 +75,8 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: LibraryFilters(
-                      onRefreshCovers: () => CoverRefreshHandler.handle(context, ref),
+                      onRefreshCovers: () =>
+                          CoverRefreshHandler.handle(context, ref),
                       onExport: () => ExportHandler.handle(context, ref),
                     ),
                   ),
@@ -90,8 +93,10 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Mi biblioteca', style: theme.textTheme.headlineMedium),
-                const SizedBox(height: 8),
+                Text('Mi biblioteca',
+                    style: theme.textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
                 Text(
                   'Gestiona tus libros guardados y prepara los préstamos.',
                   style: theme.textTheme.bodyMedium,
@@ -102,10 +107,12 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                   children: [
                     ReadStatusFilter(
                       selectedFilter: _readStatusFilter,
-                      onChanged: (val) => setState(() => _readStatusFilter = val),
+                      onChanged: (val) =>
+                          setState(() => _readStatusFilter = val),
                     ),
                     LibraryFilters(
-                      onRefreshCovers: () => CoverRefreshHandler.handle(context, ref),
+                      onRefreshCovers: () =>
+                          CoverRefreshHandler.handle(context, ref),
                       onExport: () => ExportHandler.handle(context, ref),
                     ),
                   ],
@@ -129,13 +136,16 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
                       : BookList(
                           books: filteredBooks,
                           onBookTap: (book) => widget.onOpenForm(book: book),
-                          onAddReview: (book) => showAddReviewDialog(context, ref, book),
-                          onViewReviews: (book) => showReviewsListDialog(context, ref, book),
+                          onAddReview: (book) =>
+                              showAddReviewDialog(context, ref, book),
+                          onViewReviews: (book) =>
+                              showReviewsListDialog(context, ref, book),
                           onCreateManualLoan: (book) => showModalBottomSheet(
                             context: context,
                             isScrollControlled: true,
                             useSafeArea: true,
-                            builder: (context) => ManualLoanSheet(initialBook: book),
+                            builder: (context) =>
+                                ManualLoanSheet(initialBook: book),
                           ),
                         ),
                 ),
@@ -172,5 +182,5 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
         ),
       ),
     );
-  }  
+  }
 }

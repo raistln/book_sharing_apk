@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -132,14 +131,6 @@ class GroupStatsChips extends ConsumerWidget {
                     detail.loan.status == 'active')
                 .length;
             
-            // DEBUG: Print loan details to diagnose
-            if (kDebugMode) {
-              debugPrint('[STATS DEBUG] Group $groupId - Total loans: ${loans.length}');
-              debugPrint('[STATS DEBUG] Group $groupId - Active loans: $active');
-              for (final detail in loans) {
-                debugPrint('[STATS DEBUG] Group $groupId - Loan: ${detail.loan.uuid}, status: ${detail.loan.status}, borrowerUserId: ${detail.loan.borrowerUserId}, externalName: ${detail.loan.externalBorrowerName}');
-              }
-            }
             
             return Chip(
               avatar: const Icon(Icons.swap_horiz_outlined, size: 18),

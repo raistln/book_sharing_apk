@@ -74,8 +74,10 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     try {
       await task();
     } catch (error, stackTrace) {
-      debugPrint('Error in notification task: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      if (kDebugMode) {
+        debugPrint('Error in notification task: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
       // We don't rethrow as notifications are secondary to the main action
     }
   }
@@ -514,8 +516,10 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     try {
       await _notificationClient.cancel(NotificationIds.groupInvitation(invitationUuid));
     } catch (error, stackTrace) {
-      debugPrint('Error cancelling group invitation notification: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      if (kDebugMode) {
+        debugPrint('Error cancelling group invitation notification: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
     }
   }
 }

@@ -155,7 +155,14 @@ final userRelevantLoansProvider =
 final discoverGroupControllerProvider = StateNotifierProvider.autoDispose
     .family<DiscoverGroupController, DiscoverGroupState, int>((ref, groupId) {
   final dao = ref.watch(groupDaoProvider);
-  return DiscoverGroupController(groupDao: dao, groupId: groupId);
+  final activeUser = ref.watch(activeUserProvider).value;
+  final ownBooks = ref.watch(bookListProvider).value ?? const <Book>[];
+  return DiscoverGroupController(
+    groupDao: dao,
+    groupId: groupId,
+    activeUser: activeUser,
+    ownBooks: ownBooks,
+  );
 });
 
 final groupInvitationDetailsProvider = StreamProvider.autoDispose

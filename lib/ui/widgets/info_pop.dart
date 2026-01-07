@@ -95,70 +95,86 @@ class _InfoPopWidgetState extends State<_InfoPopWidget>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return SafeArea(
-      child: Stack(
-        children: [
-          Positioned(
-            top: 20,
-            left: 20,
-            right: 20,
-            child: SlideTransition(
-              position: _offsetAnimation,
-              child: FadeTransition(
-                opacity: _opacityAnimation,
-                child: Material(
-                  elevation: 8,
-                  borderRadius: BorderRadius.circular(16),
-                  color: widget.isError
-                      ? colorScheme.errorContainer
-                      : colorScheme.primaryContainer,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
+    // Add Material and Directionality just in case, as OverlayEntry can be outside of them
+    // Although normally MaterialApp provides them, it's safer for top-level OverlayEntry.
+    return Material(
+      type: MaterialType.transparency,
+      child: SafeArea(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints.expand(),
+          child: Stack(
+            children: [
+              Positioned(
+                top: 20,
+                left: 20,
+                right: 20,
+                child: SlideTransition(
+                  position: _offsetAnimation,
+                  child: FadeTransition(
+                    opacity: _opacityAnimation,
+                    child: Material(
+                      elevation: 8,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: (widget.isError
-                                ? colorScheme.error
-                                : colorScheme.primary)
-                            .withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          widget.isError
-                              ? Icons.error_outline
-                              : Icons.check_circle_outline,
-                          color: widget.isError
-                              ? colorScheme.onErrorContainer
-                              : colorScheme.onPrimaryContainer,
+                      color: widget.isError
+                          ? Theme.of(context).colorScheme.errorContainer
+                          : Theme.of(context).colorScheme.primaryContainer,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            widget.message,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: widget.isError
-                                  ? colorScheme.onErrorContainer
-                                  : colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: (widget.isError
+                                    ? Theme.of(context).colorScheme.error
+                                    : Theme.of(context).colorScheme.primary)
+                                .withValues(alpha: 0.2),
                           ),
                         ),
-                      ],
+                        child: Row(
+                          children: [
+                            Icon(
+                              widget.isError
+                                  ? Icons.error_outline
+                                  : Icons.check_circle_outline,
+                              color: widget.isError
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .onErrorContainer
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                widget.message,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: widget.isError
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onErrorContainer
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onPrimaryContainer,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

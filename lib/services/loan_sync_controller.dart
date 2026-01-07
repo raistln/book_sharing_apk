@@ -33,7 +33,6 @@ class LoanSyncController extends SyncController {
   Future<void> sync() async {
     final user = _ref.read(activeUserProvider).value;
     if (user == null) {
-      // debugPrint('[LoanSyncController] Skipping sync: No active user.');
       return;
     }
 

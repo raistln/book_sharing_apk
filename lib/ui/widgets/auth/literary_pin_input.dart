@@ -11,6 +11,7 @@ class LiteraryPinInput extends StatefulWidget {
     this.onCompleted,
     this.onChanged,
     this.autofocus = true,
+    this.focusNode,
   });
 
   final TextEditingController controller;
@@ -18,6 +19,7 @@ class LiteraryPinInput extends StatefulWidget {
   final VoidCallback? onCompleted;
   final ValueChanged<String>? onChanged;
   final bool autofocus;
+  final FocusNode? focusNode;
 
   @override
   State<LiteraryPinInput> createState() => _LiteraryPinInputState();
@@ -29,7 +31,8 @@ class _LiteraryPinInputState extends State<LiteraryPinInput> {
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode();
+    _focusNode = widget.focusNode ?? FocusNode();
+    _focusNode.addListener(_onFocusChange);
     if (widget.autofocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _focusNode.requestFocus();
@@ -38,10 +41,19 @@ class _LiteraryPinInputState extends State<LiteraryPinInput> {
     widget.controller.addListener(_handleTextChange);
   }
 
+  void _onFocusChange() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   void dispose() {
     widget.controller.removeListener(_handleTextChange);
-    _focusNode.dispose();
+    _focusNode.removeListener(_onFocusChange);
+    if (widget.focusNode == null) {
+      _focusNode.dispose();
+    }
     super.dispose();
   }
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -725,7 +726,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       }
 
       // Debug: Show which ISBN candidates we're trying
-      debugPrint('Barcode scanner candidates: ${isbnCandidates.join(", ")}');
+      if (kDebugMode) {
+        debugPrint('Barcode scanner candidates: ${isbnCandidates.join(", ")}');
+      }
 
       final apiKeyState = ref.read(googleBooksApiKeyControllerProvider);
       final apiKey = apiKeyState.valueOrNull;
@@ -754,7 +757,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
             )));
           } catch (err) {
             googleBooksFailed = true;
-            debugPrint('Google Books API failed for ISBN $isbn: $err');
+            if (kDebugMode) {
+              debugPrint('Google Books API failed for ISBN $isbn: $err');
+            }
           }
         }
       } else {
@@ -772,7 +777,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           );
           candidates.addAll(openResults.map(BookCandidate.fromOpenLibrary));
         } catch (err) {
-          debugPrint('OpenLibrary search failed for ISBN $isbn: $err');
+          if (kDebugMode) {
+            debugPrint('OpenLibrary search failed for ISBN $isbn: $err');
+          }
         }
       }
 
@@ -874,7 +881,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
               );
               candidates.addAll(gbResults.map(BookCandidate.fromGoogleBooks));
             } catch (e) {
-              debugPrint('GoogleBooks search failed for ISBN $candidateIsbn: $e');
+              if (kDebugMode) {
+                debugPrint('GoogleBooks search failed for ISBN $candidateIsbn: $e');
+              }
             }
           }
         } else {
@@ -891,9 +900,13 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           _searchError =
               'Google Books necesita una API key. Añádela en Configuración > Integraciones externas.';
         });
-        debugPrint('GoogleBooks search omitido por falta de API key');
+        if (kDebugMode) {
+          debugPrint('GoogleBooks search omitido por falta de API key');
+        }
       } catch (err) {
-        debugPrint('GoogleBooks search failed: $err');
+        if (kDebugMode) {
+          debugPrint('GoogleBooks search failed: $err');
+        }
       }
 
       // OpenLibrary always runs for additional results and backup data
@@ -905,7 +918,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         );
         candidates.addAll(olResults.map(BookCandidate.fromOpenLibrary));
       } catch (err) {
-        debugPrint('OpenLibrary search failed: $err');
+        if (kDebugMode) {
+          debugPrint('OpenLibrary search failed: $err');
+        }
       }
 
       // Deduplicate candidates

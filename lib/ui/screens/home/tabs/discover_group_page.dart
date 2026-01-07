@@ -16,45 +16,7 @@ import '../../../widgets/coach_mark_target.dart';
 import '../../../widgets/empty_state.dart';
 import 'discover_book_detail_page.dart';
 
-/// Helper function to filter shared books for discovery
-List<SharedBookDetail> _filterSharedBooksForDiscover({
-  required List<SharedBookDetail> details,
-  required LocalUser? activeUser,
-  required List<Book> ownBooks,
-  required bool includeUnavailable,
-  required int? ownerUserIdFilter,
-}) {
-  final ownIsbnSet = <String>{};
-  for (final book in ownBooks) {
-    final isbn = book.isbn?.trim();
-    if (isbn != null && isbn.isNotEmpty) {
-      ownIsbnSet.add(isbn);
-    }
-  }
-
-  return details.where((detail) {
-    final sharedBook = detail.sharedBook;
-    if (sharedBook.ownerUserId == activeUser?.id) {
-      return false;
-    }
-
-    if (ownerUserIdFilter != null &&
-        sharedBook.ownerUserId != ownerUserIdFilter) {
-      return false;
-    }
-
-    if (!includeUnavailable && !sharedBook.isAvailable) {
-      return false;
-    }
-
-    final isbn = detail.book?.isbn?.trim();
-    if (isbn != null && isbn.isNotEmpty && ownIsbnSet.contains(isbn)) {
-      return false;
-    }
-
-    return true;
-  }).toList();
-}
+// Redundant filtering removed as it is now handled at the DAO level.
 
 /// Helper to resolve owner name
 String _resolveOwnerName(LocalUser? ownerUser, int ownerIdFallback) {
@@ -357,13 +319,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
       );
     }
 
-    final filtered = _filterSharedBooksForDiscover(
-      details: state.items,
-      activeUser: activeUser,
-      ownBooks: ownBooks,
-      includeUnavailable: state.includeUnavailable,
-      ownerUserIdFilter: state.ownerUserIdFilter,
-    );
+    final filtered = state.items;
 
     if (filtered.isNotEmpty && !_discoverTargetsReady) {
       _discoverTargetsReady = true;

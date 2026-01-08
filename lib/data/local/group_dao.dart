@@ -360,6 +360,16 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
 
     if (excludeUserId != null) {
       query.where(sharedBooks.ownerUserId.isNotValue(excludeUserId));
+
+      // Exclude books with same Title + Author that the user already owns
+      final otherBooks = alias(books, 'otherBooks');
+      query.where(notExistsQuery(
+        select(otherBooks).join([])
+          ..where((otherBooks.ownerUserId.equals(excludeUserId)) &
+              (otherBooks.title.equalsExp(books.title)) &
+              (otherBooks.author.equalsExp(books.author) |
+                  (otherBooks.author.isNull() & books.author.isNull()))),
+      ));
     }
 
     if (excludeIsbns != null && excludeIsbns.isNotEmpty) {

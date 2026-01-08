@@ -1,51 +1,57 @@
-Book Sharing App Non-Commercial License (Version 1.0)
-====================================================
+Book Sharing App Non-Commercial & Source Available License (Version 1.1)
+======================================================================
 
-Copyright (c) 2025, <Samuel Martín Fonseca / book_sharing_app>
-All rights reserved.
+Copyright (c) 2025-2026, Samuel Martín Fonseca
+Todos los derechos reservados.
 
 1. Definiciones
 ----------------
-- "Software": todo el código fuente, recursos, documentación y archivos asociados en este repositorio.
-- "Titular": la persona identificada en la línea de copyright anterior.
-- "Usted": cualquier persona que copie, distribuya, modifique o utilice el Software.
-- "Uso Comercial": cualquier uso cuyo objetivo principal sea obtener un beneficio económico directo o indirecto, incluyendo pero sin limitarse a ventas, sublicencias, alquiler, publicidad pagada o servicios de pago que integren el Software.
+- "Software": todo el código fuente, recursos, documentación, activos gráficos y archivos asociados en este repositorio o sus derivados.
+- "Titular": Samuel Martín Fonseca, único propietario de los derechos de autor.
+- "Usted": cualquier persona física o jurídica que obtenga una copia del Software.
+- "Uso Comercial": cualquier actividad destinada a obtener un beneficio económico, ya sea directo (venta, suscripción, cuotas) o indirecto (publicidad, marketing de servicios, uso como base para productos de pago, soporte de pago relacionado con el Software).
 
-2. Concesión de licencia
--------------------------
-Se concede a Usted una licencia limitada, intransferible y no exclusiva para:
-- Descargar, instalar y ejecutar el Software para fines personales, educativos o de evaluación.
-- Modificar el Software para uso interno propio, siempre que se respeten los términos de esta licencia.
-- Distribuir copias no modificadas del Software de forma gratuita, siempre que incluya este archivo de licencia y la nota de copyright.
+2. Concesión de Licencia Limitada
+---------------------------------
+Se concede a Usted una licencia limitada, no exclusiva, intransferible y gratuita para:
+- Descargar, instalar y ejecutar el Software para fines estrictamente personales, educativos, de evaluación o de investigación.
+- Modificar el Software para uso exclusivamente interno propio, sujeto a la Sección 3.
+- Distribuir copias del Software (modificadas o no) de forma gratuita, cumpliendo SIEMPRE las condiciones de la Sección 4.
 
-3. Restricciones
------------------
-Queda expresamente prohibido:
-- Utilizar, distribuir o modificar el Software con fines comerciales sin una autorización escrita del Titular.
-- Integrar el Software o derivados en productos o servicios de pago sin permiso explícito.
-- Eliminar, ocultar o alterar avisos de copyright o esta licencia.
-- sublicenciar, vender o redistribuir versiones modificadas del Software a terceros con fines comerciales.
+3. Derechos de Monetización
+---------------------------
+El Titular se reserva el derecho EXCLUSIVO de monetizar el Software en cualquier forma actual o futura. Esto incluye, pero no se limita a:
+- Publicación en tiendas de aplicaciones (App Store, Play Store) bajo modelos de pago o freemium.
+- Inclusión de publicidad o servicios de suscripción dentro del ecosistema del Software.
+- Venta de licencias comerciales a terceros.
 
-4. Solicitud de permisos comerciales
+4. Restricciones y Obligaciones (Prohibición de Lucro por Terceros)
+-------------------------------------------------------------------
+Queda terminantemente prohibido a Usted:
+- Utilizar el Software, su código o sus derivados para cualquier Uso Comercial sin el consentimiento expreso y por escrito del Titular.
+- Cobrar cualquier tipo de tarifa por la distribución, acceso o uso de este Software o sus derivados.
+- Eliminar, ocultar o alterar cualquier aviso de copyright, marca de agua o esta licencia.
+- Sublicenciar el Software a terceros.
+
+5. Atribución y Compartir Igual (Copyleft)
+------------------------------------------
+Toda copia o versión modificada del Software que Usted distribuya debe cumplir con lo siguiente:
+- Atribución: Debe mantener créditos claros y visibles al autor original (Samuel Martín Fonseca).
+- Licencia Identica: Debe distribuirse bajo esta MISMA licencia ("Book Sharing App Non-Commercial & Source Available License"). No puede añadir restricciones adicionales ni relajar las existentes.
+- Código Abierto: Si distribuye una versión modificada, debe poner el código fuente de dichas modificaciones a disposición del público de forma gratuita.
+
+6. Solicitud de Permisos Comerciales
 -------------------------------------
-Para cualquier uso comercial, debe obtenerse una licencia separada del Titular. Contacto: <samumarfon@gmail.com>.
+Para cualquier uso que exceda el ámbito personal o educativo, o para consultas sobre licencias comerciales, contacte con el Titular en: <samumarfon@gmail.com>.
 
-5. Propiedad intelectual
+7. Propiedad Intelectual
 -------------------------
-El Software es propiedad del Titular. Esta licencia no transfiere ningún derecho de propiedad intelectual y se revoca automáticamente en caso de incumplimiento.
+El Software es propiedad intelectual protegida del Titular. Esta licencia no constituye una venta de los derechos de autor. El incumplimiento de cualquier término revoca automáticamente todos los derechos concedidos.
 
-6. Garantía y responsabilidad
+8. Garantía y Responsabilidad
 ------------------------------
-EL SOFTWARE SE PROPORCIONA "TAL CUAL", SIN GARANTÍAS DE NINGÚN TIPO, EXPLÍCITAS O IMPLÍCITAS. EL TITULAR NO SERÁ RESPONSABLE POR NINGÚN DAÑO DERIVADO DE SU USO.
+EL SOFTWARE SE PROPORCIONA "TAL CUAL", SIN GARANTÍA DE NINGÚN TIPO. EL TITULAR NO SERÁ RESPONSABLE DE RECLAMACIONES, DAÑOS O RESPONSABILIDADES DERIVADAS DEL USO DEL SOFTWARE.
 
-7. Terminación
----------------
-Esta licencia termina automáticamente si incumple cualquiera de sus términos. Al finalizar, debe cesar todo uso y eliminar todas las copias del Software.
-
-8. Legislación aplicable
+9. Legislación Aplicable
 -------------------------
-Esta licencia se interpretará conforme a las leyes de la jurisdicción del Titular, salvo que la legislación local disponga lo contrario.
-
----
-
-Para obtener un permiso comercial o resolver dudas sobre la licencia, contacte al Titular utilizando los datos indicados arriba.
+Esta licencia se rige por las leyes de la jurisdicción del Titular. Usted acepta someterse a dicha jurisdicción en caso de disputa.

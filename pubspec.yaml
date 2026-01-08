@@ -58,6 +58,7 @@ dev_dependencies:
   mocktail: ^1.0.0
   fake_async: ^1.3.1
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: 2.4.1
 
 flutter:
   uses-material-design: true
@@ -65,3 +66,10 @@ flutter:
     - assets/
     - assets/shadows/
     - .env
+
+flutter_native_splash:
+  color: "#225A93"
+  image: assets/book_icon.png
+  android_12:
+    color: "#225A93"
+    image: assets/book_icon.png

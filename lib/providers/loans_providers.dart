@@ -102,3 +102,28 @@ final loanHistoryProvider = Provider.autoDispose<List<LoanDetail>>((ref) {
 
   return history;
 });
+
+/// Successful loan history: Active and completed loans (excludes rejected/cancelled)
+final successfulLoanHistoryProvider =
+    Provider.autoDispose<List<LoanDetail>>((ref) {
+  final allLoans = ref.watch(allLoansProvider).value ?? [];
+
+  const validStatuses = {
+    'active',
+    'returned',
+    'completed',
+    'expired',
+  };
+
+  final history = allLoans.where((detail) {
+    return validStatuses.contains(detail.loan.status);
+  }).toList();
+
+  history.sort((a, b) {
+    final aDate = a.loan.updatedAt;
+    final bDate = b.loan.updatedAt;
+    return bDate.compareTo(aDate); // Descending
+  });
+
+  return history;
+});

@@ -13,6 +13,7 @@ import '../../../widgets/loan_feedback_banner.dart';
 import '../../../widgets/empty_state.dart';
 import '../../../../design_system/evocative_texts.dart';
 import '../../../../design_system/literary_animations.dart';
+import '../../loan_history_screen.dart';
 
 class LoansTab extends ConsumerWidget {
   const LoansTab({super.key});
@@ -55,9 +56,14 @@ class LoansTab extends ConsumerWidget {
               IconButton(
                 icon: const Icon(Icons.history),
                 onPressed: () {
-                  // TODO: Implement full history screen with filtering
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const LoanHistoryScreen(),
+                    ),
+                  );
                 },
-                tooltip: 'Historial completo',
+                tooltip: 'Historial de préstamos',
               ),
             ],
           ),

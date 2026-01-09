@@ -23,6 +23,7 @@ final statsSummaryProvider = StreamProvider.autoDispose<StatsSummary>((ref) {
           controller.add(
             const StatsSummary(
               totalBooks: 0,
+              totalBooksRead: 0,
               availableBooks: 0,
               totalLoans: 0,
               activeLoans: 0,
@@ -52,7 +53,8 @@ final statsSummaryProvider = StreamProvider.autoDispose<StatsSummary>((ref) {
     await emitForUser(activeUserState.asData?.value);
   }
 
-  final subscription = ref.listen<AsyncValue<LocalUser?>>(activeUserProvider, (_, next) {
+  final subscription =
+      ref.listen<AsyncValue<LocalUser?>>(activeUserProvider, (_, next) {
     emitForUser(next.asData?.value);
   });
 

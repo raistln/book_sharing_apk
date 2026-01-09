@@ -711,6 +711,22 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
   late final GeneratedColumn<DateTime> readAt = GeneratedColumn<DateTime>(
       'read_at', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _isBorrowedExternalMeta =
+      const VerificationMeta('isBorrowedExternal');
+  @override
+  late final GeneratedColumn<bool> isBorrowedExternal = GeneratedColumn<bool>(
+      'is_borrowed_external', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_borrowed_external" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _externalLenderNameMeta =
+      const VerificationMeta('externalLenderName');
+  @override
+  late final GeneratedColumn<String> externalLenderName =
+      GeneratedColumn<String>('external_lender_name', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
   @override
@@ -769,6 +785,8 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
         notes,
         isRead,
         readAt,
+        isBorrowedExternal,
+        externalLenderName,
         isDirty,
         isDeleted,
         syncedAt,
@@ -848,6 +866,18 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
       context.handle(_readAtMeta,
           readAt.isAcceptableOrUnknown(data['read_at']!, _readAtMeta));
     }
+    if (data.containsKey('is_borrowed_external')) {
+      context.handle(
+          _isBorrowedExternalMeta,
+          isBorrowedExternal.isAcceptableOrUnknown(
+              data['is_borrowed_external']!, _isBorrowedExternalMeta));
+    }
+    if (data.containsKey('external_lender_name')) {
+      context.handle(
+          _externalLenderNameMeta,
+          externalLenderName.isAcceptableOrUnknown(
+              data['external_lender_name']!, _externalLenderNameMeta));
+    }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
           isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
@@ -905,6 +935,10 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
           .read(DriftSqlType.bool, data['${effectivePrefix}is_read'])!,
       readAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}read_at']),
+      isBorrowedExternal: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool, data['${effectivePrefix}is_borrowed_external'])!,
+      externalLenderName: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}external_lender_name']),
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -939,6 +973,8 @@ class Book extends DataClass implements Insertable<Book> {
   final String? notes;
   final bool isRead;
   final DateTime? readAt;
+  final bool isBorrowedExternal;
+  final String? externalLenderName;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -959,6 +995,8 @@ class Book extends DataClass implements Insertable<Book> {
       this.notes,
       required this.isRead,
       this.readAt,
+      required this.isBorrowedExternal,
+      this.externalLenderName,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -999,6 +1037,10 @@ class Book extends DataClass implements Insertable<Book> {
     if (!nullToAbsent || readAt != null) {
       map['read_at'] = Variable<DateTime>(readAt);
     }
+    map['is_borrowed_external'] = Variable<bool>(isBorrowedExternal);
+    if (!nullToAbsent || externalLenderName != null) {
+      map['external_lender_name'] = Variable<String>(externalLenderName);
+    }
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
     if (!nullToAbsent || syncedAt != null) {
@@ -1038,6 +1080,10 @@ class Book extends DataClass implements Insertable<Book> {
       isRead: Value(isRead),
       readAt:
           readAt == null && nullToAbsent ? const Value.absent() : Value(readAt),
+      isBorrowedExternal: Value(isBorrowedExternal),
+      externalLenderName: externalLenderName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(externalLenderName),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -1066,6 +1112,9 @@ class Book extends DataClass implements Insertable<Book> {
       notes: serializer.fromJson<String?>(json['notes']),
       isRead: serializer.fromJson<bool>(json['isRead']),
       readAt: serializer.fromJson<DateTime?>(json['readAt']),
+      isBorrowedExternal: serializer.fromJson<bool>(json['isBorrowedExternal']),
+      externalLenderName:
+          serializer.fromJson<String?>(json['externalLenderName']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -1091,6 +1140,8 @@ class Book extends DataClass implements Insertable<Book> {
       'notes': serializer.toJson<String?>(notes),
       'isRead': serializer.toJson<bool>(isRead),
       'readAt': serializer.toJson<DateTime?>(readAt),
+      'isBorrowedExternal': serializer.toJson<bool>(isBorrowedExternal),
+      'externalLenderName': serializer.toJson<String?>(externalLenderName),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -1114,6 +1165,8 @@ class Book extends DataClass implements Insertable<Book> {
           Value<String?> notes = const Value.absent(),
           bool? isRead,
           Value<DateTime?> readAt = const Value.absent(),
+          bool? isBorrowedExternal,
+          Value<String?> externalLenderName = const Value.absent(),
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -1135,6 +1188,10 @@ class Book extends DataClass implements Insertable<Book> {
         notes: notes.present ? notes.value : this.notes,
         isRead: isRead ?? this.isRead,
         readAt: readAt.present ? readAt.value : this.readAt,
+        isBorrowedExternal: isBorrowedExternal ?? this.isBorrowedExternal,
+        externalLenderName: externalLenderName.present
+            ? externalLenderName.value
+            : this.externalLenderName,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -1160,6 +1217,12 @@ class Book extends DataClass implements Insertable<Book> {
       notes: data.notes.present ? data.notes.value : this.notes,
       isRead: data.isRead.present ? data.isRead.value : this.isRead,
       readAt: data.readAt.present ? data.readAt.value : this.readAt,
+      isBorrowedExternal: data.isBorrowedExternal.present
+          ? data.isBorrowedExternal.value
+          : this.isBorrowedExternal,
+      externalLenderName: data.externalLenderName.present
+          ? data.externalLenderName.value
+          : this.externalLenderName,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -1185,6 +1248,8 @@ class Book extends DataClass implements Insertable<Book> {
           ..write('notes: $notes, ')
           ..write('isRead: $isRead, ')
           ..write('readAt: $readAt, ')
+          ..write('isBorrowedExternal: $isBorrowedExternal, ')
+          ..write('externalLenderName: $externalLenderName, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -1195,26 +1260,29 @@ class Book extends DataClass implements Insertable<Book> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      uuid,
-      remoteId,
-      ownerUserId,
-      ownerRemoteId,
-      title,
-      author,
-      isbn,
-      barcode,
-      coverPath,
-      status,
-      notes,
-      isRead,
-      readAt,
-      isDirty,
-      isDeleted,
-      syncedAt,
-      createdAt,
-      updatedAt);
+  int get hashCode => Object.hashAll([
+        id,
+        uuid,
+        remoteId,
+        ownerUserId,
+        ownerRemoteId,
+        title,
+        author,
+        isbn,
+        barcode,
+        coverPath,
+        status,
+        notes,
+        isRead,
+        readAt,
+        isBorrowedExternal,
+        externalLenderName,
+        isDirty,
+        isDeleted,
+        syncedAt,
+        createdAt,
+        updatedAt
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1233,6 +1301,8 @@ class Book extends DataClass implements Insertable<Book> {
           other.notes == this.notes &&
           other.isRead == this.isRead &&
           other.readAt == this.readAt &&
+          other.isBorrowedExternal == this.isBorrowedExternal &&
+          other.externalLenderName == this.externalLenderName &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -1255,6 +1325,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
   final Value<String?> notes;
   final Value<bool> isRead;
   final Value<DateTime?> readAt;
+  final Value<bool> isBorrowedExternal;
+  final Value<String?> externalLenderName;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -1275,6 +1347,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.notes = const Value.absent(),
     this.isRead = const Value.absent(),
     this.readAt = const Value.absent(),
+    this.isBorrowedExternal = const Value.absent(),
+    this.externalLenderName = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -1296,6 +1370,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.notes = const Value.absent(),
     this.isRead = const Value.absent(),
     this.readAt = const Value.absent(),
+    this.isBorrowedExternal = const Value.absent(),
+    this.externalLenderName = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -1318,6 +1394,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     Expression<String>? notes,
     Expression<bool>? isRead,
     Expression<DateTime>? readAt,
+    Expression<bool>? isBorrowedExternal,
+    Expression<String>? externalLenderName,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -1339,6 +1417,10 @@ class BooksCompanion extends UpdateCompanion<Book> {
       if (notes != null) 'notes': notes,
       if (isRead != null) 'is_read': isRead,
       if (readAt != null) 'read_at': readAt,
+      if (isBorrowedExternal != null)
+        'is_borrowed_external': isBorrowedExternal,
+      if (externalLenderName != null)
+        'external_lender_name': externalLenderName,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -1362,6 +1444,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
       Value<String?>? notes,
       Value<bool>? isRead,
       Value<DateTime?>? readAt,
+      Value<bool>? isBorrowedExternal,
+      Value<String?>? externalLenderName,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -1382,6 +1466,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
       notes: notes ?? this.notes,
       isRead: isRead ?? this.isRead,
       readAt: readAt ?? this.readAt,
+      isBorrowedExternal: isBorrowedExternal ?? this.isBorrowedExternal,
+      externalLenderName: externalLenderName ?? this.externalLenderName,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -1435,6 +1521,12 @@ class BooksCompanion extends UpdateCompanion<Book> {
     if (readAt.present) {
       map['read_at'] = Variable<DateTime>(readAt.value);
     }
+    if (isBorrowedExternal.present) {
+      map['is_borrowed_external'] = Variable<bool>(isBorrowedExternal.value);
+    }
+    if (externalLenderName.present) {
+      map['external_lender_name'] = Variable<String>(externalLenderName.value);
+    }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
     }
@@ -1470,6 +1562,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
           ..write('notes: $notes, ')
           ..write('isRead: $isRead, ')
           ..write('readAt: $readAt, ')
+          ..write('isBorrowedExternal: $isBorrowedExternal, ')
+          ..write('externalLenderName: $externalLenderName, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -5226,6 +5320,21 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
   late final GeneratedColumn<DateTime> returnedAt = GeneratedColumn<DateTime>(
       'returned_at', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _wasReadMeta =
+      const VerificationMeta('wasRead');
+  @override
+  late final GeneratedColumn<bool> wasRead = GeneratedColumn<bool>(
+      'was_read', aliasedName, true,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("was_read" IN (0, 1))'));
+  static const VerificationMeta _markedReadAtMeta =
+      const VerificationMeta('markedReadAt');
+  @override
+  late final GeneratedColumn<DateTime> markedReadAt = GeneratedColumn<DateTime>(
+      'marked_read_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
   @override
@@ -5286,6 +5395,8 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
         borrowerReturnedAt,
         lenderReturnedAt,
         returnedAt,
+        wasRead,
+        markedReadAt,
         isDirty,
         isDeleted,
         syncedAt,
@@ -5390,6 +5501,16 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
           returnedAt.isAcceptableOrUnknown(
               data['returned_at']!, _returnedAtMeta));
     }
+    if (data.containsKey('was_read')) {
+      context.handle(_wasReadMeta,
+          wasRead.isAcceptableOrUnknown(data['was_read']!, _wasReadMeta));
+    }
+    if (data.containsKey('marked_read_at')) {
+      context.handle(
+          _markedReadAtMeta,
+          markedReadAt.isAcceptableOrUnknown(
+              data['marked_read_at']!, _markedReadAtMeta));
+    }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
           isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
@@ -5454,6 +5575,10 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
           DriftSqlType.dateTime, data['${effectivePrefix}lender_returned_at']),
       returnedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}returned_at']),
+      wasRead: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}was_read']),
+      markedReadAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}marked_read_at']),
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -5490,6 +5615,8 @@ class Loan extends DataClass implements Insertable<Loan> {
   final DateTime? borrowerReturnedAt;
   final DateTime? lenderReturnedAt;
   final DateTime? returnedAt;
+  final bool? wasRead;
+  final DateTime? markedReadAt;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -5512,6 +5639,8 @@ class Loan extends DataClass implements Insertable<Loan> {
       this.borrowerReturnedAt,
       this.lenderReturnedAt,
       this.returnedAt,
+      this.wasRead,
+      this.markedReadAt,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -5558,6 +5687,12 @@ class Loan extends DataClass implements Insertable<Loan> {
     }
     if (!nullToAbsent || returnedAt != null) {
       map['returned_at'] = Variable<DateTime>(returnedAt);
+    }
+    if (!nullToAbsent || wasRead != null) {
+      map['was_read'] = Variable<bool>(wasRead);
+    }
+    if (!nullToAbsent || markedReadAt != null) {
+      map['marked_read_at'] = Variable<DateTime>(markedReadAt);
     }
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
@@ -5608,6 +5743,12 @@ class Loan extends DataClass implements Insertable<Loan> {
       returnedAt: returnedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(returnedAt),
+      wasRead: wasRead == null && nullToAbsent
+          ? const Value.absent()
+          : Value(wasRead),
+      markedReadAt: markedReadAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(markedReadAt),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -5642,6 +5783,8 @@ class Loan extends DataClass implements Insertable<Loan> {
       lenderReturnedAt:
           serializer.fromJson<DateTime?>(json['lenderReturnedAt']),
       returnedAt: serializer.fromJson<DateTime?>(json['returnedAt']),
+      wasRead: serializer.fromJson<bool?>(json['wasRead']),
+      markedReadAt: serializer.fromJson<DateTime?>(json['markedReadAt']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -5670,6 +5813,8 @@ class Loan extends DataClass implements Insertable<Loan> {
       'borrowerReturnedAt': serializer.toJson<DateTime?>(borrowerReturnedAt),
       'lenderReturnedAt': serializer.toJson<DateTime?>(lenderReturnedAt),
       'returnedAt': serializer.toJson<DateTime?>(returnedAt),
+      'wasRead': serializer.toJson<bool?>(wasRead),
+      'markedReadAt': serializer.toJson<DateTime?>(markedReadAt),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -5695,6 +5840,8 @@ class Loan extends DataClass implements Insertable<Loan> {
           Value<DateTime?> borrowerReturnedAt = const Value.absent(),
           Value<DateTime?> lenderReturnedAt = const Value.absent(),
           Value<DateTime?> returnedAt = const Value.absent(),
+          Value<bool?> wasRead = const Value.absent(),
+          Value<DateTime?> markedReadAt = const Value.absent(),
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -5727,6 +5874,9 @@ class Loan extends DataClass implements Insertable<Loan> {
             ? lenderReturnedAt.value
             : this.lenderReturnedAt,
         returnedAt: returnedAt.present ? returnedAt.value : this.returnedAt,
+        wasRead: wasRead.present ? wasRead.value : this.wasRead,
+        markedReadAt:
+            markedReadAt.present ? markedReadAt.value : this.markedReadAt,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -5768,6 +5918,10 @@ class Loan extends DataClass implements Insertable<Loan> {
           : this.lenderReturnedAt,
       returnedAt:
           data.returnedAt.present ? data.returnedAt.value : this.returnedAt,
+      wasRead: data.wasRead.present ? data.wasRead.value : this.wasRead,
+      markedReadAt: data.markedReadAt.present
+          ? data.markedReadAt.value
+          : this.markedReadAt,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -5795,6 +5949,8 @@ class Loan extends DataClass implements Insertable<Loan> {
           ..write('borrowerReturnedAt: $borrowerReturnedAt, ')
           ..write('lenderReturnedAt: $lenderReturnedAt, ')
           ..write('returnedAt: $returnedAt, ')
+          ..write('wasRead: $wasRead, ')
+          ..write('markedReadAt: $markedReadAt, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -5822,6 +5978,8 @@ class Loan extends DataClass implements Insertable<Loan> {
         borrowerReturnedAt,
         lenderReturnedAt,
         returnedAt,
+        wasRead,
+        markedReadAt,
         isDirty,
         isDeleted,
         syncedAt,
@@ -5848,6 +6006,8 @@ class Loan extends DataClass implements Insertable<Loan> {
           other.borrowerReturnedAt == this.borrowerReturnedAt &&
           other.lenderReturnedAt == this.lenderReturnedAt &&
           other.returnedAt == this.returnedAt &&
+          other.wasRead == this.wasRead &&
+          other.markedReadAt == this.markedReadAt &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -5872,6 +6032,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
   final Value<DateTime?> borrowerReturnedAt;
   final Value<DateTime?> lenderReturnedAt;
   final Value<DateTime?> returnedAt;
+  final Value<bool?> wasRead;
+  final Value<DateTime?> markedReadAt;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -5894,6 +6056,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     this.borrowerReturnedAt = const Value.absent(),
     this.lenderReturnedAt = const Value.absent(),
     this.returnedAt = const Value.absent(),
+    this.wasRead = const Value.absent(),
+    this.markedReadAt = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -5917,6 +6081,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     this.borrowerReturnedAt = const Value.absent(),
     this.lenderReturnedAt = const Value.absent(),
     this.returnedAt = const Value.absent(),
+    this.wasRead = const Value.absent(),
+    this.markedReadAt = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -5941,6 +6107,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     Expression<DateTime>? borrowerReturnedAt,
     Expression<DateTime>? lenderReturnedAt,
     Expression<DateTime>? returnedAt,
+    Expression<bool>? wasRead,
+    Expression<DateTime>? markedReadAt,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -5967,6 +6135,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
         'borrower_returned_at': borrowerReturnedAt,
       if (lenderReturnedAt != null) 'lender_returned_at': lenderReturnedAt,
       if (returnedAt != null) 'returned_at': returnedAt,
+      if (wasRead != null) 'was_read': wasRead,
+      if (markedReadAt != null) 'marked_read_at': markedReadAt,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -5992,6 +6162,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       Value<DateTime?>? borrowerReturnedAt,
       Value<DateTime?>? lenderReturnedAt,
       Value<DateTime?>? returnedAt,
+      Value<bool?>? wasRead,
+      Value<DateTime?>? markedReadAt,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -6015,6 +6187,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       borrowerReturnedAt: borrowerReturnedAt ?? this.borrowerReturnedAt,
       lenderReturnedAt: lenderReturnedAt ?? this.lenderReturnedAt,
       returnedAt: returnedAt ?? this.returnedAt,
+      wasRead: wasRead ?? this.wasRead,
+      markedReadAt: markedReadAt ?? this.markedReadAt,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -6077,6 +6251,12 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     if (returnedAt.present) {
       map['returned_at'] = Variable<DateTime>(returnedAt.value);
     }
+    if (wasRead.present) {
+      map['was_read'] = Variable<bool>(wasRead.value);
+    }
+    if (markedReadAt.present) {
+      map['marked_read_at'] = Variable<DateTime>(markedReadAt.value);
+    }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
     }
@@ -6114,6 +6294,8 @@ class LoansCompanion extends UpdateCompanion<Loan> {
           ..write('borrowerReturnedAt: $borrowerReturnedAt, ')
           ..write('lenderReturnedAt: $lenderReturnedAt, ')
           ..write('returnedAt: $returnedAt, ')
+          ..write('wasRead: $wasRead, ')
+          ..write('markedReadAt: $markedReadAt, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -8148,6 +8330,8 @@ typedef $$BooksTableCreateCompanionBuilder = BooksCompanion Function({
   Value<String?> notes,
   Value<bool> isRead,
   Value<DateTime?> readAt,
+  Value<bool> isBorrowedExternal,
+  Value<String?> externalLenderName,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -8169,6 +8353,8 @@ typedef $$BooksTableUpdateCompanionBuilder = BooksCompanion Function({
   Value<String?> notes,
   Value<bool> isRead,
   Value<DateTime?> readAt,
+  Value<bool> isBorrowedExternal,
+  Value<String?> externalLenderName,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -8284,6 +8470,14 @@ class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
 
   ColumnFilters<DateTime> get readAt => $composableBuilder(
       column: $table.readAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isBorrowedExternal => $composableBuilder(
+      column: $table.isBorrowedExternal,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get externalLenderName => $composableBuilder(
+      column: $table.externalLenderName,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -8433,6 +8627,14 @@ class $$BooksTableOrderingComposer
   ColumnOrderings<DateTime> get readAt => $composableBuilder(
       column: $table.readAt, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get isBorrowedExternal => $composableBuilder(
+      column: $table.isBorrowedExternal,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get externalLenderName => $composableBuilder(
+      column: $table.externalLenderName,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
 
@@ -8516,6 +8718,12 @@ class $$BooksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get readAt =>
       $composableBuilder(column: $table.readAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isBorrowedExternal => $composableBuilder(
+      column: $table.isBorrowedExternal, builder: (column) => column);
+
+  GeneratedColumn<String> get externalLenderName => $composableBuilder(
+      column: $table.externalLenderName, builder: (column) => column);
 
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
@@ -8657,6 +8865,8 @@ class $$BooksTableTableManager extends RootTableManager<
             Value<String?> notes = const Value.absent(),
             Value<bool> isRead = const Value.absent(),
             Value<DateTime?> readAt = const Value.absent(),
+            Value<bool> isBorrowedExternal = const Value.absent(),
+            Value<String?> externalLenderName = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -8678,6 +8888,8 @@ class $$BooksTableTableManager extends RootTableManager<
             notes: notes,
             isRead: isRead,
             readAt: readAt,
+            isBorrowedExternal: isBorrowedExternal,
+            externalLenderName: externalLenderName,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -8699,6 +8911,8 @@ class $$BooksTableTableManager extends RootTableManager<
             Value<String?> notes = const Value.absent(),
             Value<bool> isRead = const Value.absent(),
             Value<DateTime?> readAt = const Value.absent(),
+            Value<bool> isBorrowedExternal = const Value.absent(),
+            Value<String?> externalLenderName = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -8720,6 +8934,8 @@ class $$BooksTableTableManager extends RootTableManager<
             notes: notes,
             isRead: isRead,
             readAt: readAt,
+            isBorrowedExternal: isBorrowedExternal,
+            externalLenderName: externalLenderName,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -11780,6 +11996,8 @@ typedef $$LoansTableCreateCompanionBuilder = LoansCompanion Function({
   Value<DateTime?> borrowerReturnedAt,
   Value<DateTime?> lenderReturnedAt,
   Value<DateTime?> returnedAt,
+  Value<bool?> wasRead,
+  Value<DateTime?> markedReadAt,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -11803,6 +12021,8 @@ typedef $$LoansTableUpdateCompanionBuilder = LoansCompanion Function({
   Value<DateTime?> borrowerReturnedAt,
   Value<DateTime?> lenderReturnedAt,
   Value<DateTime?> returnedAt,
+  Value<bool?> wasRead,
+  Value<DateTime?> markedReadAt,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -11937,6 +12157,12 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
 
   ColumnFilters<DateTime> get returnedAt => $composableBuilder(
       column: $table.returnedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get wasRead => $composableBuilder(
+      column: $table.wasRead, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get markedReadAt => $composableBuilder(
+      column: $table.markedReadAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -12104,6 +12330,13 @@ class $$LoansTableOrderingComposer
   ColumnOrderings<DateTime> get returnedAt => $composableBuilder(
       column: $table.returnedAt, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get wasRead => $composableBuilder(
+      column: $table.wasRead, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get markedReadAt => $composableBuilder(
+      column: $table.markedReadAt,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
 
@@ -12244,6 +12477,12 @@ class $$LoansTableAnnotationComposer
 
   GeneratedColumn<DateTime> get returnedAt => $composableBuilder(
       column: $table.returnedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get wasRead =>
+      $composableBuilder(column: $table.wasRead, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get markedReadAt => $composableBuilder(
+      column: $table.markedReadAt, builder: (column) => column);
 
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
@@ -12407,6 +12646,8 @@ class $$LoansTableTableManager extends RootTableManager<
             Value<DateTime?> borrowerReturnedAt = const Value.absent(),
             Value<DateTime?> lenderReturnedAt = const Value.absent(),
             Value<DateTime?> returnedAt = const Value.absent(),
+            Value<bool?> wasRead = const Value.absent(),
+            Value<DateTime?> markedReadAt = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -12430,6 +12671,8 @@ class $$LoansTableTableManager extends RootTableManager<
             borrowerReturnedAt: borrowerReturnedAt,
             lenderReturnedAt: lenderReturnedAt,
             returnedAt: returnedAt,
+            wasRead: wasRead,
+            markedReadAt: markedReadAt,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -12453,6 +12696,8 @@ class $$LoansTableTableManager extends RootTableManager<
             Value<DateTime?> borrowerReturnedAt = const Value.absent(),
             Value<DateTime?> lenderReturnedAt = const Value.absent(),
             Value<DateTime?> returnedAt = const Value.absent(),
+            Value<bool?> wasRead = const Value.absent(),
+            Value<DateTime?> markedReadAt = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -12476,6 +12721,8 @@ class $$LoansTableTableManager extends RootTableManager<
             borrowerReturnedAt: borrowerReturnedAt,
             lenderReturnedAt: lenderReturnedAt,
             returnedAt: returnedAt,
+            wasRead: wasRead,
+            markedReadAt: markedReadAt,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,

@@ -148,13 +148,15 @@ void main() {
           owner: otherUser,
         );
 
-        final ownerBooks = await bookRepository.fetchActiveBooks(ownerUserId: owner.id);
+        final ownerBooks =
+            await bookRepository.fetchActiveBooks(ownerUserId: owner.id);
         final allBooks = await bookRepository.fetchActiveBooks();
 
         expect(ownerBooks.length, 2);
         expect(allBooks.length, 3);
 
-        expect(ownerBooks.every((book) => book.ownerUserId == owner.id), isTrue);
+        expect(
+            ownerBooks.every((book) => book.ownerUserId == owner.id), isTrue);
       });
 
       test('watchAll provides stream of books', () async {
@@ -187,7 +189,8 @@ void main() {
           owner: owner,
         );
 
-        final allBooks = await bookRepository.fetchActiveBooks(ownerUserId: owner.id);
+        final allBooks =
+            await bookRepository.fetchActiveBooks(ownerUserId: owner.id);
         expect(allBooks.length, 2);
 
         // Both should be returned since they are not deleted
@@ -198,7 +201,8 @@ void main() {
 
     group('Review Operations', () {
       test('addReview creates review successfully', () async {
-        final book = await _insertBook(bookDao, owner: owner, title: 'Test Book');
+        final book =
+            await _insertBook(bookDao, owner: owner, title: 'Test Book');
 
         final reviewId = await bookRepository.addReview(
           book: book,
@@ -217,7 +221,8 @@ void main() {
       });
 
       test('addReview updates existing review', () async {
-        final book = await _insertBook(bookDao, owner: owner, title: 'Test Book');
+        final book =
+            await _insertBook(bookDao, owner: owner, title: 'Test Book');
 
         // Add initial review
         await bookRepository.addReview(
@@ -244,7 +249,8 @@ void main() {
       });
 
       test('watchReviews provides stream of reviews', () async {
-        final book = await _insertBook(bookDao, owner: owner, title: 'Test Book');
+        final book =
+            await _insertBook(bookDao, owner: owner, title: 'Test Book');
 
         await bookRepository.addReview(
           book: book,
@@ -276,6 +282,7 @@ void main() {
           status: 'available',
           notes: 'notes',
           isRead: false,
+          isBorrowedExternal: false,
           ownerUserId: owner.id,
           ownerRemoteId: owner.remoteId ?? 'remote-owner',
           isDirty: false,
@@ -293,7 +300,8 @@ void main() {
 }
 
 // Helper functions
-Future<LocalUser> _insertUser(UserDao userDao, {required String username}) async {
+Future<LocalUser> _insertUser(UserDao userDao,
+    {required String username}) async {
   final now = DateTime(2024, 1, 1, 12);
   final remoteId = 'remote-$username';
   final userId = await userDao.insertUser(
@@ -310,7 +318,8 @@ Future<LocalUser> _insertUser(UserDao userDao, {required String username}) async
   return (await userDao.getById(userId))!;
 }
 
-Future<Book> _insertBook(BookDao bookDao, {required LocalUser owner, required String title}) async {
+Future<Book> _insertBook(BookDao bookDao,
+    {required LocalUser owner, required String title}) async {
   final now = DateTime(2024, 1, 1, 12);
   final bookId = await bookDao.insertBook(
     BooksCompanion.insert(

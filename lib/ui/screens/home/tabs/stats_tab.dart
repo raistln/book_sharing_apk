@@ -6,7 +6,7 @@ import '../../../../services/stats_service.dart';
 import '../../../widgets/loans/active_loans_list.dart';
 
 /// Stats tab showing library statistics
-/// 
+///
 /// Displays:
 /// - Total books, loans, active loans, returned, expired
 /// - Active loans list
@@ -60,6 +60,11 @@ class _StatsContent extends ConsumerWidget {
                 icon: Icons.menu_book,
                 label: 'Libros totales',
                 value: summary.totalBooks,
+              ),
+              _StatHighlight(
+                icon: Icons.auto_stories,
+                label: 'Libros leídos',
+                value: summary.totalBooksRead,
               ),
               _StatHighlight(
                 icon: Icons.check_circle_outline,
@@ -128,7 +133,8 @@ class _StatHighlight extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 '$value',
-                style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.headlineMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
               Text(label, style: theme.textTheme.titleSmall),
@@ -206,7 +212,8 @@ class _StatsError extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'No pudimos cargar las estadísticas.',
-              style: theme.textTheme.titleLarge?.copyWith(color: theme.colorScheme.error),
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(color: theme.colorScheme.error),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),

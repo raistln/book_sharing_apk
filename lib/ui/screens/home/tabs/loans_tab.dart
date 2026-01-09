@@ -8,6 +8,7 @@ import '../../../../providers/loans_providers.dart';
 import '../../../../providers/book_providers.dart';
 import '../../../widgets/loans/loan_confirmation_card.dart';
 import '../../../widgets/loans/manual_loan_sheet.dart';
+import '../../../widgets/loans/receive_external_loan_sheet.dart';
 
 import '../../../widgets/loan_feedback_banner.dart';
 import '../../../widgets/empty_state.dart';
@@ -96,14 +97,7 @@ class LoansTab extends ConsumerWidget {
                   action: EmptyStateAction(
                     label: EvocativeTexts.emptyLoansAction,
                     icon: Icons.add_circle_outline,
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        useSafeArea: true,
-                        builder: (context) => const ManualLoanSheet(),
-                      );
-                    },
+                    onPressed: () => _showLoanCreationOptions(context),
                   ),
                 ),
               ),
@@ -177,14 +171,7 @@ class LoansTab extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            useSafeArea: true,
-            builder: (context) => const ManualLoanSheet(),
-          );
-        },
+        onPressed: () => _showLoanCreationOptions(context),
         label: const Text('Préstamo Manual'),
         icon: const Icon(Icons.add),
       ),
@@ -413,6 +400,54 @@ class LoansTab extends ConsumerWidget {
       leading: Icon(icon, color: color),
       title: Text('$action "$bookTitle"'),
       subtitle: Text('A: $otherName · ${detail.loan.status}'),
+      trailing: detail.loan.wasRead == true
+          ? const Tooltip(
+              message: 'Leído',
+              child: Icon(Icons.auto_stories, size: 20, color: Colors.amber),
+            )
+          : null,
+    );
+  }
+
+  void _showLoanCreationOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.outbox),
+              title: const Text('Prestar un libro manualmente'),
+              subtitle: const Text(
+                  'Registra un préstamo de tu biblioteca a alguien sin la app'),
+              onTap: () {
+                Navigator.pop(context);
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (context) => const ManualLoanSheet(),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.move_to_inbox),
+              title: const Text('Registrar libro recibido'),
+              subtitle: const Text('Registra un libro que alguien te prestó'),
+              onTap: () {
+                Navigator.pop(context);
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (context) => const ReceiveExternalLoanSheet(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

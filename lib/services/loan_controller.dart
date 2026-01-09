@@ -174,6 +174,41 @@ class LoanController extends StateNotifier<LoanActionState> {
     }
   }
 
+  Future<Loan> receiveExternalLoan({
+    required LocalUser user,
+    required String title,
+    required String author,
+    required String lenderName,
+    required DateTime dueDate,
+    String? lenderContact,
+  }) async {
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
+    try {
+      final result = await _loanRepository.createReceivedExternalLoan(
+        user: user,
+        title: title,
+        author: author,
+        lenderName: lenderName,
+        dueDate: dueDate,
+        lenderContact: lenderContact,
+      );
+      // Evento crítico: sincronizar inmediatamente
+      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.loanCreated);
+      state = state.copyWith(
+        isLoading: false,
+        lastSuccess: () => 'Préstamo externo registrado.',
+      );
+      return result;
+    } catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        lastError: () => error.toString(),
+      );
+      rethrow;
+    }
+  }
+
   Future<Loan> requestLoan({
     required SharedBook sharedBook,
     required LocalUser borrower,
@@ -345,6 +380,7 @@ class LoanController extends StateNotifier<LoanActionState> {
   Future<Loan> markReturned({
     required Loan loan,
     required LocalUser actor,
+    bool? wasRead,
   }) async {
     state = state.copyWith(
         isLoading: true, lastError: () => null, lastSuccess: () => null);
@@ -352,6 +388,7 @@ class LoanController extends StateNotifier<LoanActionState> {
       final result = await _loanRepository.markReturned(
         loan: loan,
         actor: actor,
+        wasRead: wasRead,
       );
       // Evento crítico: sincronizar inmediatamente
       await _syncCoordinator.syncOnCriticalEvent(SyncEvent.loanReturned);

@@ -87,6 +87,11 @@ class Books extends Table {
   BoolColumn get isRead => boolean().withDefault(const Constant(false))();
   DateTimeColumn get readAt => dateTime().nullable()();
 
+  // External loan tracking (when someone lends you a book)
+  BoolColumn get isBorrowedExternal =>
+      boolean().withDefault(const Constant(false))();
+  TextColumn get externalLenderName => text().nullable()();
+
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get syncedAt => dateTime().nullable()();
@@ -285,6 +290,10 @@ class Loans extends Table {
   DateTimeColumn get lenderReturnedAt => dateTime().nullable()();
   DateTimeColumn get returnedAt => dateTime().nullable()();
 
+  // Read tracking for borrowed books
+  BoolColumn get wasRead => boolean().nullable()();
+  DateTimeColumn get markedReadAt => dateTime().nullable()();
+
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get syncedAt => dateTime().nullable()();
@@ -312,7 +321,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -413,6 +422,17 @@ class AppDatabase extends _$AppDatabase {
           if (from < 14) {
             // Migration to v14: Add readAt column to Books
             await m.addColumn(books, books.readAt);
+          }
+
+          if (from < 15) {
+            // Migration to v15: Add read tracking fields
+            // Books: isBorrowedExternal, externalLenderName
+            await m.addColumn(books, books.isBorrowedExternal);
+            await m.addColumn(books, books.externalLenderName);
+
+            // Loans: wasRead, markedReadAt
+            await m.addColumn(loans, loans.wasRead);
+            await m.addColumn(loans, loans.markedReadAt);
           }
         },
       );

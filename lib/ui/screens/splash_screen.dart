@@ -179,7 +179,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   '— ${_quote.author}',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
                       ),

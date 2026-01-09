@@ -372,6 +372,7 @@ class LoanRepository {
   Future<Loan> markReturned({
     required Loan loan,
     required LocalUser actor,
+    bool? wasRead,
   }) async {
     final current = await _requireLoan(loan.id);
 
@@ -388,7 +389,16 @@ class LoanRepository {
 
     final now = DateTime.now();
     final isLender = actor.id == current.lenderUserId;
+    final isBorrower = actor.id == current.borrowerUserId;
     final isManualLoan = current.externalBorrowerName != null;
+
+    // Prepare read tracking update if borrower is returning and wasRead is specified
+    final readTrackingUpdate = (isBorrower && wasRead != null)
+        ? LoansCompanion(
+            wasRead: Value(wasRead),
+            markedReadAt: Value(wasRead ? now : null),
+          )
+        : const LoansCompanion();
 
     // For manual loans, only the owner can mark as returned and it completes immediately
     if (isManualLoan) {
@@ -405,6 +415,8 @@ class LoanRepository {
                 'completed'), // Completed when owner confirms manual loan
             lenderReturnedAt: Value(now),
             returnedAt: Value(now),
+            wasRead: readTrackingUpdate.wasRead,
+            markedReadAt: readTrackingUpdate.markedReadAt,
             isDirty: const Value(true),
             syncedAt: const Value<DateTime?>(null),
             updatedAt: Value(now),
@@ -459,6 +471,8 @@ class LoanRepository {
             borrowerReturnedAt: !isLender ? Value(now) : const Value.absent(),
             lenderReturnedAt: isLender ? Value(now) : const Value.absent(),
             returnedAt: Value(now),
+            wasRead: readTrackingUpdate.wasRead,
+            markedReadAt: readTrackingUpdate.markedReadAt,
             isDirty: const Value(true),
             syncedAt: const Value<DateTime?>(null),
             updatedAt: Value(now),
@@ -487,6 +501,8 @@ class LoanRepository {
           entry: LoansCompanion(
             borrowerReturnedAt: !isLender ? Value(now) : const Value.absent(),
             lenderReturnedAt: isLender ? Value(now) : const Value.absent(),
+            wasRead: readTrackingUpdate.wasRead,
+            markedReadAt: readTrackingUpdate.markedReadAt,
             isDirty: const Value(true),
             updatedAt: Value(now),
           ),
@@ -681,6 +697,61 @@ class LoanRepository {
     });
   }
 
+  Future<Loan> createReceivedExternalLoan({
+    required LocalUser user,
+    required String title,
+    required String author,
+    required String lenderName,
+    required DateTime dueDate,
+    String? lenderContact,
+  }) async {
+    final now = DateTime.now();
+
+    return _db.transaction(() async {
+      // 1. Create the external book
+      final bookId = await _bookDao.insertBook(
+        BooksCompanion.insert(
+          uuid: _uuid.v4(),
+          title: title,
+          author: Value(author),
+          ownerUserId: Value(user.id),
+          status: const Value('loaned'), // Status 'loaned' or 'private'
+          // We use 'loaned' to imply it's not available for lending, but 'private' might be better if supported.
+          // stick to 'loaned' as it's standard for "not available".
+          // And isBorrowedExternal = true distinguishes it.
+          isBorrowedExternal: const Value(true),
+          externalLenderName: Value(lenderName),
+          isDirty: const Value(true),
+          createdAt: Value(now),
+          updatedAt: Value(now),
+          notes: lenderContact != null
+              ? Value(
+                  'Propietario original: $lenderName\nContacto: $lenderContact')
+              : const Value.absent(),
+        ),
+      );
+
+      // 2. Create the loan
+      final loanId = await _groupDao.insertLoan(
+        LoansCompanion.insert(
+          uuid: _uuid.v4(),
+          bookId: Value(bookId),
+          lenderUserId: user.id, // Proxy lender
+          borrowerUserId: Value(user.id), // Borrower is me
+          status: const Value('active'),
+          dueDate: Value(dueDate),
+          requestedAt: Value(now),
+          approvedAt: Value(now),
+          createdAt: Value(now),
+          updatedAt: Value(now),
+          isDirty: const Value(true),
+        ),
+      );
+
+      return (await _groupDao.findLoanById(loanId))!;
+    });
+  }
+
   Future<Loan> ownerForceConfirmReturn({
     required Loan loan,
     required LocalUser owner,
@@ -779,8 +850,12 @@ class LoanRepository {
     }).toList();
 
     // Loans MADE (as lender)
-    final loansMade =
-        validLoans.where((l) => l.loan.lenderUserId == userId).toList();
+    final loansMade = validLoans.where((l) {
+      final isLender = l.loan.lenderUserId == userId;
+      // Exclude if it's an external loan received (book.isBorrowedExternal == true)
+      final isExternalReceived = l.book?.isBorrowedExternal == true;
+      return isLender && !isExternalReceived;
+    }).toList();
     final loansMade30Days =
         loansMade.where((l) => l.loan.createdAt.isAfter(thirtyDaysAgo)).length;
     final loansMadeYear =

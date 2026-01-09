@@ -8,6 +8,7 @@ import '../data/repositories/loan_repository.dart';
 class StatsSummary {
   const StatsSummary({
     required this.totalBooks,
+    required this.totalBooksRead,
     required this.availableBooks,
     required this.totalLoans,
     required this.activeLoans,
@@ -18,6 +19,7 @@ class StatsSummary {
   });
 
   final int totalBooks;
+  final int totalBooksRead;
   final int availableBooks;
   final int totalLoans;
   final int activeLoans;
@@ -76,13 +78,16 @@ class StatsService {
   static const _countableStatuses = {'active', 'returned', 'expired'};
 
   Future<StatsSummary> loadSummary({LocalUser? owner}) async {
-    final books = await _bookRepository.fetchActiveBooks(ownerUserId: owner?.id);
+    final books =
+        await _bookRepository.fetchActiveBooks(ownerUserId: owner?.id);
     final loanDetails = await _loanRepository.getAllLoanDetails();
 
     final totalLoans = loanDetails.length;
     final activeLoanDetails = loanDetails
         .where(
-          (detail) => detail.loan.status == 'active' || detail.loan.status == 'requested',
+          (detail) =>
+              detail.loan.status == 'active' ||
+              detail.loan.status == 'requested',
         )
         .map(
           (detail) => StatsActiveLoan(
@@ -90,7 +95,8 @@ class StatsService {
             loanId: detail.loan.id,
             loanUuid: detail.loan.uuid,
             bookTitle: _resolveActiveLoanTitle(detail, books),
-            borrowerName: detail.loan.externalBorrowerName ?? _resolveUserName(detail.borrower),
+            borrowerName: detail.loan.externalBorrowerName ??
+                _resolveUserName(detail.borrower),
             status: detail.loan.status,
             requestedAt: detail.loan.requestedAt,
             dueDate: detail.loan.dueDate,
@@ -101,8 +107,10 @@ class StatsService {
         )
         .toList(growable: false);
     final activeLoans = activeLoanDetails.length;
-    final returnedLoans = loanDetails.where((detail) => detail.loan.status == 'returned').length;
-    final expiredLoans = loanDetails.where((detail) => detail.loan.status == 'expired').length;
+    final returnedLoans =
+        loanDetails.where((detail) => detail.loan.status == 'returned').length;
+    final expiredLoans =
+        loanDetails.where((detail) => detail.loan.status == 'expired').length;
 
     final booksById = {for (final book in books) book.id: book};
 
@@ -133,8 +141,18 @@ class StatsService {
         .take(3)
         .toList();
 
+    // Calculate total books read
+    final booksReadOwned = books.where((b) => b.isRead).length;
+    final booksReadBorrowed = loanDetails
+        .where((detail) =>
+            detail.loan.wasRead == true &&
+            detail.loan.borrowerUserId == owner?.id)
+        .length;
+    final totalBooksRead = booksReadOwned + booksReadBorrowed;
+
     return StatsSummary(
       totalBooks: books.length,
+      totalBooksRead: totalBooksRead,
       availableBooks: books.where((b) => b.status == 'available').length,
       totalLoans: totalLoans,
       activeLoans: activeLoans,
@@ -148,7 +166,8 @@ class StatsService {
   String _resolveBookTitle(LoanDetail detail, List<Book> books) {
     final sharedBookId = detail.sharedBook?.bookId;
     if (sharedBookId != null) {
-      final book = books.firstWhereOrNull((element) => element.id == sharedBookId);
+      final book =
+          books.firstWhereOrNull((element) => element.id == sharedBookId);
       if (book != null && !_isBookDeleted(book) && book.title.isNotEmpty) {
         return book.title;
       }

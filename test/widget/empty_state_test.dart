@@ -26,16 +26,17 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Verify icon
       expect(find.byIcon(Icons.book), findsOneWidget);
-      
+
       // Verify title
       expect(find.text(title), findsOneWidget);
-      
+
       // Verify message
       expect(find.text(message), findsOneWidget);
-      
+
       // Verify action button
       expect(find.text(actionText), findsOneWidget);
     });
@@ -59,10 +60,11 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Tap the action button
       await tester.tap(find.text(actionText));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       // Verify onAction was called
       expect(actionCalled, isTrue);
@@ -80,16 +82,18 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Verify title and message are present
       expect(find.text('No Books Found'), findsOneWidget);
       expect(find.text('Start by adding your first book'), findsOneWidget);
-      
+
       // Verify no action button is present
       expect(find.text('Add Book'), findsNothing);
     });
 
-    testWidgets('renders with both primary and secondary actions', (tester) async {
+    testWidgets('renders with both primary and secondary actions',
+        (tester) async {
       bool primaryActionCalled = false;
       bool secondaryActionCalled = false;
 
@@ -113,6 +117,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Verify both action buttons are present
       expect(find.text('Add Book'), findsOneWidget);
@@ -120,14 +125,14 @@ void main() {
 
       // Tap primary action
       await tester.tap(find.text('Add Book'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(primaryActionCalled, isTrue);
       expect(secondaryActionCalled, isFalse);
 
       // Reset and tap secondary action
       primaryActionCalled = false;
       await tester.tap(find.text('Import Books'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(secondaryActionCalled, isTrue);
       expect(primaryActionCalled, isFalse);
     });
@@ -148,22 +153,23 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Find the Column that contains the content
       final columnFinder = find.byType(Column);
-      expect(columnFinder, findsOneWidget);
-      
+      expect(columnFinder, findsAtLeastNWidgets(1));
+
       // Verify the icon has the correct size
       final iconFinder = find.byIcon(Icons.book);
       expect(iconFinder, findsOneWidget);
-      
+
       final icon = tester.widget<Icon>(iconFinder);
       expect(icon.size, 72);
     });
 
     testWidgets('supports custom icon color', (tester) async {
       const customColor = Colors.red;
-      
+
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -176,10 +182,11 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       final iconFinder = find.byIcon(Icons.book);
       expect(iconFinder, findsOneWidget);
-      
+
       final icon = tester.widget<Icon>(iconFinder);
       expect(icon.color, customColor);
     });

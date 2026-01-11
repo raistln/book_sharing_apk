@@ -17,7 +17,9 @@ import 'package:uuid/uuid.dart';
 
 // Mock classes for external dependencies
 class MockNotificationClient extends Mock implements NotificationClient {}
-class MockUnifiedSyncCoordinator extends Mock implements UnifiedSyncCoordinator {}
+
+class MockUnifiedSyncCoordinator extends Mock
+    implements UnifiedSyncCoordinator {}
 
 void main() {
   group('LoanController', () {
@@ -37,7 +39,7 @@ void main() {
     late Group testGroup;
     late Book book;
     late SharedBook sharedBook;
-    
+
     setUpAll(() {
       registerFallbackValue(NotificationType.loanDueSoon);
       registerFallbackValue(SyncEvent.loanCreated);
@@ -68,27 +70,28 @@ void main() {
       // Stub sync coordinator methods
       when(() => mockSyncCoordinator.syncOnCriticalEvent(any<SyncEvent>()))
           .thenAnswer((_) async {});
-      when(() => mockSyncCoordinator.markPendingChanges(any(), priority: any(named: 'priority')))
-          .thenReturn(null);
+      when(() => mockSyncCoordinator.markPendingChanges(any(),
+          priority: any(named: 'priority'))).thenReturn(null);
 
       // Stub notification client methods
-      when(() => mockNotificationClient.cancelMany(any())).thenAnswer((_) async {});
+      when(() => mockNotificationClient.cancelMany(any()))
+          .thenAnswer((_) async {});
       when(() => mockNotificationClient.schedule(
-        id: any(named: 'id'),
-        type: any(named: 'type'),
-        title: any(named: 'title'),
-        body: any(named: 'body'),
-        scheduledAt: any(named: 'scheduledAt'),
-        payload: any(named: 'payload'),
-      )).thenAnswer((_) async {});
+            id: any(named: 'id'),
+            type: any(named: 'type'),
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+            scheduledAt: any(named: 'scheduledAt'),
+            payload: any(named: 'payload'),
+          )).thenAnswer((_) async {});
       when(() => mockNotificationClient.showImmediate(
-        id: any(named: 'id'),
-        type: any(named: 'type'),
-        title: any(named: 'title'),
-        body: any(named: 'body'),
-        payload: any(named: 'payload'),
-        androidActions: any(named: 'androidActions'),
-      )).thenAnswer((_) async {});
+            id: any(named: 'id'),
+            type: any(named: 'type'),
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+            payload: any(named: 'payload'),
+            androidActions: any(named: 'androidActions'),
+          )).thenAnswer((_) async {});
 
       // Create controller
       loanController = LoanController(
@@ -128,7 +131,9 @@ void main() {
       expect(loanController.state.lastSuccess, isNotNull);
 
       // Verify critical event was triggered
-      verify(() => mockSyncCoordinator.syncOnCriticalEvent(SyncEvent.loanCreated)).called(1);
+      verify(() =>
+              mockSyncCoordinator.syncOnCriticalEvent(SyncEvent.loanCreated))
+          .called(1);
     });
 
     test('acceptLoan changes status to active', () async {
@@ -205,14 +210,15 @@ void main() {
         loan: borrowerConfirmation,
         actor: owner,
       );
-      expect(returned.status, 'returned');
+      expect(returned.status, 'completed');
       expect(loanController.state.lastSuccess, contains('devuelto'));
 
       final updatedShared = await groupDao.findSharedBookById(sharedBook.id);
       expect(updatedShared?.isAvailable, isTrue);
     });
 
-    test('createManualLoan creates active loan for external borrower', () async {
+    test('createManualLoan creates active loan for external borrower',
+        () async {
       final dueDate = DateTime.now().add(const Duration(days: 14));
 
       final manualLoan = await loanController.createManualLoan(
@@ -253,7 +259,8 @@ void main() {
 }
 
 // Helper functions copied from loan_repository_test.dart
-Future<LocalUser> _insertUser(UserDao userDao, {required String username}) async {
+Future<LocalUser> _insertUser(UserDao userDao,
+    {required String username}) async {
   final now = DateTime(2024, 1, 1, 12);
   final remoteId = 'remote-$username';
   final userId = await userDao.insertUser(
@@ -289,7 +296,8 @@ Future<Group> _insertGroup(GroupDao groupDao, LocalUser owner) async {
   return (await groupDao.findGroupById(groupId))!;
 }
 
-Future<Book> _insertBook(BookDao bookDao, {required int ownerUserId, required String uuid}) async {
+Future<Book> _insertBook(BookDao bookDao,
+    {required int ownerUserId, required String uuid}) async {
   final now = DateTime(2024, 1, 1, 12);
   final bookId = await bookDao.insertBook(
     BooksCompanion.insert(

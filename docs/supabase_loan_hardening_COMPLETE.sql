@@ -19,7 +19,7 @@ DROP FUNCTION IF EXISTS public.validate_loan_state_transition CASCADE;
 -- -----------------------------------------------------
 -- 1. RPC FUNCTION: accept_loan (Atomic Acceptance)
 -- -----------------------------------------------------
-CREATE OR REPLACE FUNCTION accept_loan(
+CREATE OR REPLACE FUNCTION public.accept_loan(
   p_loan_id UUID,
   p_lender_user_id UUID
 )
@@ -35,7 +35,7 @@ DECLARE
 BEGIN
   -- 1. Lock the loan row
   SELECT * INTO v_loan
-  FROM loans
+  FROM public.loans
   WHERE id = p_loan_id
   FOR UPDATE;
 
@@ -52,7 +52,7 @@ BEGIN
 
   -- 3. Check for double booking (other ACTIVE loans)
   IF EXISTS (
-    SELECT 1 FROM loans 
+    SELECT 1 FROM public.loans 
     WHERE shared_book_id = v_shared_book_id 
       AND status = 'active'
       AND id != p_loan_id
@@ -61,7 +61,7 @@ BEGIN
   END IF;
 
   -- 4. Update the target loan to ACTIVE
-  UPDATE loans
+  UPDATE public.loans
   SET 
     status = 'active',
     approved_at = NOW(),
@@ -70,7 +70,7 @@ BEGIN
   RETURNING * INTO v_loan;
 
   -- 5. Auto-reject other REQUESTED loans for the same book
-  UPDATE loans
+  UPDATE public.loans
   SET 
     status = 'rejected',
     updated_at = NOW()
@@ -101,7 +101,7 @@ $$;
 -- By combining them, we ensure completion runs before validation
 -- and we can avoid sync-breaking exceptions.
 
-CREATE OR REPLACE FUNCTION handle_loan_updates()
+CREATE OR REPLACE FUNCTION public.handle_loan_updates()
 RETURNS TRIGGER AS $$
 BEGIN
   -- A. AUTO-COMPLETION LOGIC
@@ -163,9 +163,9 @@ DROP TRIGGER IF EXISTS loan_return_confirmation ON loans;
 
 -- 3. Create the new unified trigger
 CREATE TRIGGER loan_unified_handler
-  BEFORE UPDATE ON loans
+  BEFORE UPDATE ON public.loans
   FOR EACH ROW
-  EXECUTE FUNCTION handle_loan_updates();
+  EXECUTE FUNCTION public.handle_loan_updates();
 
 -- -----------------------------------------------------
 -- 4. RLS HARDENING: loan_notifications

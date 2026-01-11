@@ -142,115 +142,123 @@ Future<void> showReviewsListDialog(
   WidgetRef ref,
   Book book,
 ) async {
-  final reviewsAsync = ref.read(bookReviewsProvider(book.id));
-  final theme = Theme.of(context);
-
   await showDialog(
     context: context,
-    builder: (dialogContext) {
+    builder: (context) {
       return AlertDialog(
         title: Text('Reseñas de "${book.title}"'),
         content: SizedBox(
           width: double.maxFinite,
-          child: reviewsAsync.when(
-            data: (reviews) {
-              if (reviews.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.reviews_outlined, size: 48),
-                      SizedBox(height: 16),
-                      Text(
-                        'No hay reseñas todavía',
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                );
-              }
+          child: Consumer(
+            builder: (context, ref, child) {
+              final reviewsAsync = ref.watch(bookReviewsProvider(book.id));
+              final theme = Theme.of(context);
 
-              return ListView.separated(
-                shrinkWrap: true,
-                itemCount: reviews.length,
-                separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (context, index) {
-                  final review = reviews[index];
-                  return FutureBuilder<LocalUser?>(
-                    future: ref.read(loanRepositoryProvider).findUserById(review.authorUserId),
-                    builder: (context, snapshot) {
-                      final authorName = snapshot.data?.username ?? 'Usuario desconocido';
-                      
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                authorName,
-                                style: theme.textTheme.titleSmall,
-                              ),
+              return reviewsAsync.when(
+                data: (reviews) {
+                  if (reviews.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.reviews_outlined, size: 48),
+                          SizedBox(height: 16),
+                          Text(
+                            'No hay reseñas todavía',
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: reviews.length,
+                    separatorBuilder: (_, __) => const Divider(),
+                    itemBuilder: (context, index) {
+                      final review = reviews[index];
+                      return FutureBuilder<LocalUser?>(
+                        future: ref
+                            .read(loanRepositoryProvider)
+                            .findUserById(review.authorUserId),
+                        builder: (context, snapshot) {
+                          final authorName =
+                              snapshot.data?.username ?? 'Usuario desconocido';
+
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    authorName,
+                                    style: theme.textTheme.titleSmall,
+                                  ),
+                                ),
+                                ...List.generate(5, (starIndex) {
+                                  return Icon(
+                                    starIndex < review.rating
+                                        ? Icons.star
+                                        : Icons.star_border,
+                                    color: Colors.amber,
+                                    size: 16,
+                                  );
+                                }),
+                              ],
                             ),
-                            ...List.generate(5, (starIndex) {
-                              return Icon(
-                                starIndex < review.rating
-                                    ? Icons.star
-                                    : Icons.star_border,
-                                color: Colors.amber,
-                                size: 16,
-                              );
-                            }),
-                          ],
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text(
-                              DateFormat.yMMMd().format(review.createdAt),
-                              style: theme.textTheme.bodySmall,
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text(
+                                  DateFormat.yMMMd().format(review.createdAt),
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                                if (review.review != null &&
+                                    review.review!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    review.review!,
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ],
                             ),
-                            if (review.review != null && review.review!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                review.review!,
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ],
-                          ],
-                        ),
+                          );
+                        },
                       );
                     },
                   );
                 },
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+                error: (error, _) => Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error al cargar reseñas: $error',
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
               );
             },
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: CircularProgressIndicator(),
-              ),
-            ),
-            error: (error, _) => Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, size: 48),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error al cargar reseñas: $error',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
+            onPressed: () => Navigator.pop(context),
             child: const Text('Cerrar'),
           ),
         ],

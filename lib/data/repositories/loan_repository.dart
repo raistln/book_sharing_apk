@@ -400,12 +400,28 @@ class LoanRepository {
           )
         : const LoansCompanion();
 
-    // For manual loans, only the owner can mark as returned and it completes immediately
-    if (isManualLoan) {
-      if (!isLender) {
+    // Check if it's an external received loan (I borrowed from outsider)
+    // In this case, I am the borrower (and likely proxy lender too), so I can just "return" it.
+    bool isExternalReceivedLoan = false;
+    if (current.bookId != null) {
+      final book = await _bookDao.findById(current.bookId!);
+      isExternalReceivedLoan = book?.isBorrowedExternal == true;
+    } else if (current.sharedBookId != null) {
+      final sharedBook =
+          await _groupDao.findSharedBookById(current.sharedBookId!);
+      if (sharedBook != null) {
+        final book = await _bookDao.findById(sharedBook.bookId);
+        isExternalReceivedLoan = book?.isBorrowedExternal == true;
+      }
+    }
+
+    // For manual loans OR external received loans, immediate completion
+    if (isManualLoan || isExternalReceivedLoan) {
+      if (isManualLoan && !isLender) {
         throw const LoanException(
             'Solo el propietario puede marcar préstamos manuales como devueltos.');
       }
+      // For external received loans, the effective "user" of the app is the borrower/proxy, so we allow them.
 
       await _db.transaction(() async {
         await _groupDao.updateLoanStatus(
@@ -415,6 +431,8 @@ class LoanRepository {
                 'completed'), // Completed when owner confirms manual loan
             lenderReturnedAt: Value(now),
             returnedAt: Value(now),
+            borrowerReturnedAt:
+                Value(now), // Mark both as returned for consistency
             wasRead: readTrackingUpdate.wasRead,
             markedReadAt: readTrackingUpdate.markedReadAt,
             isDirty: const Value(true),
@@ -426,6 +444,33 @@ class LoanRepository {
         // Logic to get bookId safely
         final bookId = current.bookId ??
             (await _requireSharedBook(current.sharedBookId!)).bookId;
+
+        // Only update availability if it's NOT an external received loan
+        // (External borrowed books: when returned, they might leave the library or toggle status?
+        // Use case: I returned the book to my friend. It is no longer in my possession.
+        // I should probably mark it as returned/archived or just keep it as 'returned'?
+        // The Book status 'loaned' was used to indicate I have it but it's not mine?
+        // Actually, for External Received, status was 'loaned'.
+        // If I return it, I probably don't have it anymore.
+        // Should we soft-delete the book? Or just mark it 'returned'?
+        // Existing logic for manual loans makes it 'available'.
+        // For external received, 'available' implies *I* can lend it? No, checking logic.
+        // Let's stick to standard flow: book becomes 'available' (meaning "In my library" usually),
+        // BUT for external books, it means "I have it back"? No, I gave it back.
+        // If I gave it back, I don't have it.
+        // Changing status to 'returned' (custom) or deleting?
+        // User didn't specify. Assuming "completed" loan is enough.
+        // BUT if we set book to 'available', it appears in my library.
+        // If I returned it to owner, it shouldn't be in my library as "Available".
+        // Maybe we should delete the book or mark as archived?
+        // For now, let's keep it consistent with "completing the loan".
+        // If isExternalReceivedLoan, maybe we don't change book status to available?
+        // Or we set it to something else?
+        // Let's set it to 'available' for now, assuming the user might want to keep the record,
+        // unless 'isBorrowedExternal' + 'available' implies "I have it and can read it"?
+        // Actually, if I returned it, I shouldn't list it as available.
+        // Let's follow the standard path for now to avoid breaking changes,
+        // user can delete the book if they want.
 
         await _updateAllSharedBooksAvailability(bookId, true, now);
 
@@ -713,7 +758,9 @@ class LoanRepository {
         BooksCompanion.insert(
           uuid: _uuid.v4(),
           title: title,
-          author: Value(author),
+          author: author.trim().isEmpty
+              ? const Value.absent()
+              : Value(author.trim()),
           ownerUserId: Value(user.id),
           status: const Value('loaned'), // Status 'loaned' or 'private'
           // We use 'loaned' to imply it's not available for lending, but 'private' might be better if supported.

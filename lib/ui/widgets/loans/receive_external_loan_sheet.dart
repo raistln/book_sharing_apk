@@ -21,6 +21,7 @@ class _ReceiveExternalLoanSheetState
   final _lenderContactController = TextEditingController();
 
   DateTime _dueDate = DateTime.now().add(const Duration(days: 15));
+  bool _isIndefinite = false;
 
   @override
   void dispose() {
@@ -48,13 +49,46 @@ class _ReceiveExternalLoanSheetState
         title: _titleController.text.trim(),
         author: _authorController.text.trim(),
         lenderName: _lenderNameController.text.trim(),
-        dueDate: _dueDate,
+        dueDate: _isIndefinite
+            ? DateTime.now().add(const Duration(days: 365 * 10))
+            : _dueDate,
         lenderContact: _lenderContactController.text.trim(),
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Libro prestado registrado')),
+        Navigator.pop(context); // Close sheet
+
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            icon: const Icon(Icons.check_circle_outline,
+                color: Colors.green, size: 48),
+            title: const Text('Préstamo registrado'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDetailRow(context, 'Libro:', _titleController.text),
+                const SizedBox(height: 8),
+                _buildDetailRow(
+                    context, 'Propietario:', _lenderNameController.text),
+                const SizedBox(height: 8),
+                _buildDetailRow(
+                  context,
+                  'Vence:',
+                  _isIndefinite
+                      ? 'Indefinido'
+                      : DateFormat.yMMMd().format(_dueDate),
+                ),
+              ],
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
         );
       }
     } catch (e) {
@@ -67,6 +101,20 @@ class _ReceiveExternalLoanSheetState
         );
       }
     }
+  }
+
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
+    return RichText(
+      text: TextSpan(
+        style: Theme.of(context).textTheme.bodyMedium,
+        children: [
+          TextSpan(
+              text: '$label ',
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: value),
+        ],
+      ),
+    );
   }
 
   @override
@@ -111,8 +159,9 @@ class _ReceiveExternalLoanSheetState
                   prefixIcon: Icon(Icons.book_outlined),
                 ),
                 textCapitalization: TextCapitalization.sentences,
-                validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'Requerido' : null,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? '¿Cómo se llama la historia?'
+                    : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -138,8 +187,9 @@ class _ReceiveExternalLoanSheetState
                   prefixIcon: Icon(Icons.account_circle_outlined),
                 ),
                 textCapitalization: TextCapitalization.words,
-                validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'Requerido' : null,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? '¿Quién es el guardián de este libro?'
+                    : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -155,27 +205,51 @@ class _ReceiveExternalLoanSheetState
               const SizedBox(height: 24),
 
               // Due Date
-              InkWell(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _dueDate,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (picked != null) {
-                    setState(() => _dueDate = picked);
-                  }
-                },
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Fecha de devolución',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today),
-                  ),
-                  child: Text(
-                    DateFormat.yMMMd().format(_dueDate),
-                    style: theme.textTheme.bodyLarge,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Fecha de devolución',
+                      style: theme.textTheme.titleMedium),
+                  Row(
+                    children: [
+                      Text('Indefinido', style: theme.textTheme.bodySmall),
+                      Switch(
+                        value: _isIndefinite,
+                        onChanged: (val) => setState(() => _isIndefinite = val),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+              const SizedBox(height: 8),
+              Opacity(
+                opacity: _isIndefinite ? 0.5 : 1.0,
+                child: IgnorePointer(
+                  ignoring: _isIndefinite,
+                  child: InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _dueDate,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        setState(() => _dueDate = picked);
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.calendar_today),
+                      ),
+                      child: Text(
+                        _isIndefinite
+                            ? 'Sin fecha límite'
+                            : DateFormat.yMMMd().format(_dueDate),
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                    ),
                   ),
                 ),
               ),

@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 
 class ReadConfirmationDialog {
-  static Future<bool> show(BuildContext context, String bookTitle) async {
+  static Future<bool> show(BuildContext context, String bookTitle,
+      {String? borrowerName}) async {
+    final titleText = borrowerName != null
+        ? '¿$borrowerName ha leído este libro?'
+        : '¿Has leído este libro?';
+
+    final noText = borrowerName != null ? 'No, no lo leyó' : 'No lo he leído';
+    final yesText = borrowerName != null ? 'Sí, lo leyó' : 'Sí, lo he leído';
+
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false, // Must answer
       builder: (context) => AlertDialog(
-        title: const Text('¿Has leído este libro?'),
+        title: Text(titleText),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -20,7 +28,7 @@ class ReadConfirmationDialog {
             ),
             const SizedBox(height: 16),
             Text(
-              'Esta información se usará para tus estadísticas de lectura.',
+              'Esta información se usará para las estadísticas de lectura.',
               style: TextStyle(
                 fontSize: 14,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -31,11 +39,11 @@ class ReadConfirmationDialog {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('No lo he leído'),
+            child: Text(noText),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sí, lo he leído'),
+            child: Text(yesText),
           ),
         ],
       ),

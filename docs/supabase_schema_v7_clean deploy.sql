@@ -156,6 +156,8 @@ DROP FUNCTION IF EXISTS public.log_error(TEXT, TEXT) CASCADE;
 DROP FUNCTION IF EXISTS public.update_system_metrics(TEXT, TEXT, TEXT) CASCADE;
 DROP FUNCTION IF EXISTS public.check_is_group_member(UUID, UUID) CASCADE;
 DROP FUNCTION IF EXISTS public.check_is_group_owner(UUID, UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.accept_loan(UUID, UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.handle_loan_updates() CASCADE;
 
 -- ============================================================================
 -- STEP 6: ENABLE REQUIRED EXTENSIONS
@@ -250,6 +252,21 @@ CREATE TABLE public.shared_books (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- BOOK REVIEWS
+CREATE TABLE public.book_reviews (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  book_id UUID REFERENCES public.shared_books(id) ON DELETE CASCADE NOT NULL,
+  author_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  review TEXT,
+  
+  -- Soft delete support
+  is_deleted BOOLEAN NOT NULL DEFAULT false,
+  
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- LOANS
 CREATE TABLE public.loans (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -335,12 +352,16 @@ CREATE TABLE IF NOT EXISTS public.system_metrics (
   UNIQUE (metric_name, metric_hour)
 );
 
+
 -- ============================================================================
 -- STEP 8: CREATE INDEXES
 -- ============================================================================
 
 CREATE INDEX idx_shared_books_group ON public.shared_books(group_id) WHERE is_deleted = false;
 CREATE INDEX idx_shared_books_owner ON public.shared_books(owner_id) WHERE is_deleted = false;
+
+CREATE INDEX idx_book_reviews_book ON public.book_reviews(book_id) WHERE is_deleted = false;
+CREATE INDEX idx_book_reviews_author ON public.book_reviews(author_id) WHERE is_deleted = false;
 
 CREATE INDEX idx_loans_shared_book ON public.loans(shared_book_id) WHERE is_deleted = false;
 CREATE INDEX idx_loans_borrower ON public.loans(borrower_user_id) WHERE is_deleted = false;
@@ -485,6 +506,29 @@ CREATE POLICY "shared_books_delete"
   ON public.shared_books FOR DELETE
   USING ((select auth.uid()) IS NULL OR owner_id = (select auth.uid()));
 
+-- BOOK REVIEWS
+ALTER TABLE public.book_reviews ENABLE ROW LEVEL SECURITY;
+
+-- 1. Everyone can read reviews (Public)
+CREATE POLICY "book_reviews_select"
+  ON public.book_reviews FOR SELECT
+  USING ( true );
+
+-- 2. Users can insert their own reviews
+CREATE POLICY "book_reviews_insert"
+  ON public.book_reviews FOR INSERT
+  WITH CHECK ((select auth.uid()) IS NULL OR (select auth.uid()) = author_id);
+
+-- 3. Users can update their own reviews
+CREATE POLICY "book_reviews_update"
+  ON public.book_reviews FOR UPDATE
+  USING ((select auth.uid()) IS NULL OR (select auth.uid()) = author_id);
+
+-- 4. Users can delete their own reviews
+CREATE POLICY "book_reviews_delete"
+  ON public.book_reviews FOR DELETE
+  USING ((select auth.uid()) IS NULL OR (select auth.uid()) = author_id);
+
 -- LOANS
 ALTER TABLE public.loans ENABLE ROW LEVEL SECURITY;
 
@@ -554,55 +598,167 @@ CREATE POLICY "Admins can view metrics" ON public.system_metrics FOR SELECT TO a
 -- ============================================================================
 
 -- Function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER 
+LANGUAGE plpgsql 
+SET search_path = public
+AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SET search_path = public;
+$$;
 
 -- Apply updated_at trigger to all tables
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 CREATE TRIGGER update_groups_updated_at BEFORE UPDATE ON public.groups
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 CREATE TRIGGER update_group_members_updated_at BEFORE UPDATE ON public.group_members
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 CREATE TRIGGER update_group_invitations_updated_at BEFORE UPDATE ON public.group_invitations
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 CREATE TRIGGER update_shared_books_updated_at BEFORE UPDATE ON public.shared_books
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_book_reviews_updated_at BEFORE UPDATE ON public.book_reviews
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 CREATE TRIGGER update_loans_updated_at BEFORE UPDATE ON public.loans
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
--- Function to handle double-confirmation of loan returns
-CREATE OR REPLACE FUNCTION handle_loan_return_confirmation()
-RETURNS TRIGGER AS $$
+-- Function: accept_loan (Atomic Acceptance)
+CREATE OR REPLACE FUNCTION public.accept_loan(
+  p_loan_id UUID,
+  p_lender_user_id UUID
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_loan RECORD;
+  v_shared_book_id UUID;
+  v_updated_loan JSONB;
 BEGIN
-  -- If both borrower and lender have confirmed return, set final returned_at
-  IF NEW.borrower_returned_at IS NOT NULL 
-     AND NEW.lender_returned_at IS NOT NULL 
-     AND NEW.returned_at IS NULL THEN
-    NEW.returned_at = GREATEST(NEW.borrower_returned_at, NEW.lender_returned_at);
-    NEW.status = 'returned';
+  -- 1. Lock the loan row
+  SELECT * INTO v_loan
+  FROM public.loans
+  WHERE id = p_loan_id
+  FOR UPDATE;
+
+  -- 2. Validations
+  IF v_loan IS NULL THEN
+    RAISE EXCEPTION 'Loan not found';
+  END IF;
+
+  IF v_loan.status != 'requested' THEN
+    RAISE EXCEPTION 'Loan is not in requested state (current: %)', v_loan.status;
+  END IF;
+
+  v_shared_book_id := v_loan.shared_book_id;
+
+  -- 3. Check for double booking (other ACTIVE loans)
+  IF EXISTS (
+    SELECT 1 FROM public.loans 
+    WHERE shared_book_id = v_shared_book_id 
+      AND status = 'active'
+      AND id != p_loan_id
+  ) THEN
+    RAISE EXCEPTION 'This book is already currently on loan';
+  END IF;
+
+  -- 4. Update the target loan to ACTIVE
+  UPDATE public.loans
+  SET 
+    status = 'active',
+    approved_at = NOW(),
+    updated_at = NOW()
+  WHERE id = p_loan_id
+  RETURNING * INTO v_loan;
+
+  -- 5. Auto-reject other REQUESTED loans for the same book
+  UPDATE public.loans
+  SET 
+    status = 'rejected',
+    updated_at = NOW()
+  WHERE shared_book_id = v_shared_book_id
+    AND status = 'requested'
+    AND id != p_loan_id;
+
+  -- 6. Return the updated loan record (mapped for app)
+  v_updated_loan := jsonb_build_object(
+    'uuid', v_loan.id,
+    'shared_book_id', v_loan.shared_book_id,
+    'book_uuid', v_loan.book_uuid,
+    'borrower_user_id', v_loan.borrower_user_id,
+    'lender_user_id', v_loan.lender_user_id,
+    'status', v_loan.status,
+    'approved_at', v_loan.approved_at,
+    'updated_at', v_loan.updated_at
+  );
+
+  RETURN v_updated_loan;
+END;
+$$;
+
+-- Function: handle_loan_updates (Auto-completion & State Validation)
+CREATE OR REPLACE FUNCTION public.handle_loan_updates()
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- A. AUTO-COMPLETION LOGIC
+  -- If both parties confirmed return, force status to 'completed'
+  IF NEW.lender_returned_at IS NOT NULL AND NEW.borrower_returned_at IS NOT NULL THEN
+    IF NEW.status != 'completed' THEN
+      NEW.status := 'completed';
+      
+      -- Ensure returned_at is set to the latest of the two
+      IF NEW.lender_returned_at > NEW.borrower_returned_at THEN
+        NEW.returned_at := NEW.lender_returned_at;
+      ELSE
+        NEW.returned_at := NEW.borrower_returned_at;
+      END IF;
+    END IF;
+  END IF;
+
+  -- B. SYNC-FRIENDLY VALIDATION LOGIC
+  -- 1. Prevent "un-cancelling" or "un-rejecting" a loan (Must stay cancelled/rejected)
+  IF OLD.status IN ('cancelled', 'rejected') AND NEW.status = 'active' THEN
+    NEW.status := OLD.status;
+  END IF;
+
+  -- 2. Prevent cancelling/rejecting an ALREADY Active loan 
+  IF OLD.status = 'active' AND NEW.status IN ('cancelled', 'rejected') THEN
+    NEW.status := OLD.status;
+  END IF;
+
+  -- 3. Prevent reactivating a COMPLETED loan
+  IF OLD.status = 'completed' AND NEW.status != 'completed' THEN
+    NEW.status := OLD.status;
   END IF;
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SET search_path = public;
+$$;
 
-CREATE TRIGGER loan_return_confirmation BEFORE UPDATE ON public.loans
-  FOR EACH ROW EXECUTE FUNCTION handle_loan_return_confirmation();
+CREATE TRIGGER loan_updates_handler BEFORE UPDATE ON public.loans
+  FOR EACH ROW EXECUTE FUNCTION handle_loan_updates();
 
 -- Function to auto-expire loans past due date
-CREATE OR REPLACE FUNCTION expire_overdue_loans()
-RETURNS void AS $$
+CREATE OR REPLACE FUNCTION public.expire_overdue_loans()
+RETURNS void 
+LANGUAGE plpgsql 
+SET search_path = public
+AS $$
 BEGIN
   UPDATE public.loans
   SET status = 'expired'
@@ -610,11 +766,14 @@ BEGIN
     AND due_date < NOW()
     AND is_deleted = false;
 END;
-$$ LANGUAGE plpgsql SET search_path = public;
+$$;
 
 -- Function to send 7-day loan reminders
-CREATE OR REPLACE FUNCTION send_loan_reminders()
-RETURNS void AS $$
+CREATE OR REPLACE FUNCTION public.send_loan_reminders()
+RETURNS void 
+LANGUAGE plpgsql 
+SET search_path = public
+AS $$
 DECLARE
   reminder_date DATE;
 BEGIN
@@ -673,7 +832,7 @@ BEGIN
         AND DATE(ln.created_at) = CURRENT_DATE
     );
 END;
-$$ LANGUAGE plpgsql SET search_path = public;
+$$;
 
 -- Function to cleanup old notifications
 CREATE OR REPLACE FUNCTION public.cleanup_old_notifications()
@@ -727,14 +886,14 @@ $$;
 SELECT cron.schedule(
   'expire-overdue-loans',
   '0 * * * *',
-  $$SELECT expire_overdue_loans()$$
+  $$SELECT public.expire_overdue_loans()$$
 );
 
 -- Schedule 7-day loan reminders (runs daily at 9 AM)
 SELECT cron.schedule(
   'send-loan-reminders',
   '0 9 * * *',
-  $$SELECT send_loan_reminders()$$
+  $$SELECT public.send_loan_reminders()$$
 );
 
 -- Schedule cleanup jobs

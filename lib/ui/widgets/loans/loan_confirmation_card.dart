@@ -29,6 +29,29 @@ class LoanConfirmationCard extends ConsumerWidget {
         loan.borrowerUserId == null; // Manual loans have no borrowerUser
 
     // Determine state
+    final isExternalReceived = detail.book?.isBorrowedExternal ?? false;
+
+    final borrowerName = isExternalReceived
+        ? (detail.borrower?.username ?? 'Tú')
+        : (isManual
+            ? (loan.externalBorrowerName ?? 'Prestatario')
+            : (detail.borrower?.username ?? 'Usuario'));
+
+    final ownerName = isExternalReceived
+        ? (detail.book?.externalLenderName ?? 'Alguien')
+        : (detail.owner?.username ?? 'Propietario');
+
+    final dueDateStr = loan.dueDate != null
+        ? DateFormat.yMMMd().format(loan.dueDate!)
+        : 'Indefinido';
+
+    final loanInfo = isExternalReceived
+        ? 'Recibido de: $ownerName\nVence: $dueDateStr'
+        : 'Prestado a: $borrowerName\nPrestado de: $ownerName\nVence: $dueDateStr';
+
+    final otherName =
+        (isOwner && !isExternalReceived) ? borrowerName : ownerName;
+
     final myConfirmation =
         isOwner ? loan.lenderReturnedAt : loan.borrowerReturnedAt;
     final otherConfirmation =
@@ -36,20 +59,6 @@ class LoanConfirmationCard extends ConsumerWidget {
 
     final iHaveConfirmed = myConfirmation != null;
     final otherHasConfirmed = otherConfirmation != null;
-
-    final borrowerName = isManual
-        ? (loan.externalBorrowerName ?? 'Prestatario')
-        : (detail.borrower?.username ?? 'Usuario');
-    final ownerName = detail.owner?.username ?? 'Propietario';
-
-    final dueDateStr = loan.dueDate != null
-        ? DateFormat.yMMMd().format(loan.dueDate!)
-        : 'Indefinido';
-
-    final loanInfo =
-        'Prestado a: $borrowerName\nPrestado de: $ownerName\nVence: $dueDateStr';
-
-    final otherName = isOwner ? borrowerName : ownerName;
 
     // Manual Loan Case: Simple return
     if (isManual) {

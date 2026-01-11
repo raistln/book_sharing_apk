@@ -53,23 +53,48 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       author: "J.R.R. Tolkien",
     ),
     Quote(
-      text:
-          "Los libros son espejos: sólo se ve en ellos lo que uno ya lleva dentro.",
-      author: "Carlos Ruiz Zafón",
-    ),
-    Quote(
       text: "Para viajar lejos, no hay mejor nave que un libro.",
       author: "Emily Dickinson",
     ),
     Quote(
-      text: "La lectura es un acto de resistencia.",
-      author: "Daniel Pennac",
-    ),
+        text: 'La lectura es una conversación. Todos los libros hablan.',
+        author: 'Rebecca Solnit'),
+    Quote(
+        text: 'Los libros son una forma de libertad. Son una forma de ser.',
+        author: 'Isabel Allende'),
+    Quote(
+        text: 'Una palabra tras otra, tras otra, es poder.',
+        author: 'Margaret Atwood'),
+    Quote(
+        text: 'Un libro es un jardín que se lleva en el bolsillo.',
+        author: 'Proverbio árabe'),
+    Quote(
+        text: 'La literatura es el lugar más hospitalario del mundo.',
+        author: 'Irene Vallejo'),
+    Quote(
+        text: 'Escribo para descubrir lo que sé.', author: 'Flannery O’Connor'),
+    Quote(
+        text: 'Leer es elegir lo que uno quiere vivir.',
+        author: 'Elena Ferrante'),
+    Quote(text: 'La lectura es un acto de resistencia.', author: 'Zadie Smith'),
+    Quote(
+        text:
+            'No hay barrera, cerradura ni cerrojo que puedas imponer a la libertad de mi mente.',
+        author: 'Virginia Woolf'),
+    Quote(
+        text: 'La cultura no se hereda, se conquista.',
+        author: 'André Malraux'),
     Quote(
       text:
           "Un libro debe ser el hacha que rompa el mar helado dentro de nosotros.",
       author: "Franz Kafka",
     ),
+    Quote(
+        text: 'La gente no lee para aprender, sino para olvidar.',
+        author: 'Clarice Lispector'),
+    Quote(
+        text: 'Las historias importan. Muchas historias importan.',
+        author: 'Chimamanda Ngozi Adichie'),
   ];
 
   @override

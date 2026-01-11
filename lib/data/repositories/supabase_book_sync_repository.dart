@@ -60,7 +60,6 @@ class SupabaseBookSyncRepository {
       accessToken: accessToken,
     );
     final remoteReviews = await _bookService.fetchReviews(
-      authorId: ownerRemoteId,
       accessToken: accessToken,
     );
 
@@ -98,8 +97,13 @@ class SupabaseBookSyncRepository {
               ownerUserId: Value(owner.id),
               ownerRemoteId: Value(ownerRemoteId),
               title: Value(remote.title),
-              author: Value(remote.author),
-              isbn: Value(remote.isbn),
+              author:
+                  (remote.author != null && remote.author!.trim().isNotEmpty)
+                      ? Value(remote.author!.trim())
+                      : const Value.absent(),
+              isbn: (remote.isbn != null && remote.isbn!.trim().isNotEmpty)
+                  ? Value(remote.isbn!.trim())
+                  : const Value.absent(),
               coverPath: Value(remote.coverUrl),
               status: Value(_mapVisibilityToStatus(
                   remote.visibility, remote.isAvailable)),
@@ -146,8 +150,13 @@ class SupabaseBookSyncRepository {
                 ownerUserId: Value(owner.id),
                 ownerRemoteId: Value(ownerRemoteId),
                 title: remote.title,
-                author: Value(remote.author),
-                isbn: Value(remote.isbn),
+                author:
+                    (remote.author != null && remote.author!.trim().isNotEmpty)
+                        ? Value(remote.author!.trim())
+                        : const Value.absent(),
+                isbn: (remote.isbn != null && remote.isbn!.trim().isNotEmpty)
+                    ? Value(remote.isbn!.trim())
+                    : const Value.absent(),
                 coverPath: Value(remote.coverUrl),
                 status: Value(_mapVisibilityToStatus(
                     remote.visibility, remote.isAvailable)),
@@ -272,11 +281,90 @@ class SupabaseBookSyncRepository {
     required LocalUser owner,
     String? accessToken,
   }) async {
+    // Books are handled by GroupSyncController, but Reviews are handled here.
+
+    final dirtyReviews = await _bookDao.getDirtyReviews();
+    if (dirtyReviews.isEmpty) {
+      return;
+    }
+
     developer.log(
-      'pushLocalChanges está deshabilitado en SupabaseBookSyncRepository. '
-      'La sincronización de libros se maneja a través de GroupSyncController y SharedBooks.',
+      'Pushing ${dirtyReviews.length} dirty reviews...',
       name: 'SupabaseBookSyncRepository',
     );
-    return;
+
+    final ownerRemoteId = owner.remoteId;
+    if (ownerRemoteId == null) {
+      developer.log(
+        'Cannot push reviews: User has no remote ID.',
+        name: 'SupabaseBookSyncRepository',
+      );
+      return;
+    }
+
+    for (final review in dirtyReviews) {
+      // Ensure we have a remote book ID
+      final book = await _bookDao.findById(review.bookId);
+      final bookRemoteId = book?.remoteId;
+
+      if (book == null || bookRemoteId == null) {
+        developer.log(
+          'Skipping review ${review.id}: Associated book not synced/found.',
+          name: 'SupabaseBookSyncRepository',
+        );
+        continue;
+      }
+
+      try {
+        if (review.remoteId == null) {
+          // CREATE
+          final remoteId = await _bookService.createReview(
+            id: review.uuid,
+            bookId: bookRemoteId,
+            authorId: ownerRemoteId,
+            rating: review.rating,
+            review: review.review,
+            isDeleted: review.isDeleted == true,
+            createdAt: review.createdAt,
+            updatedAt: review.updatedAt,
+            accessToken: accessToken,
+          );
+
+          await _bookDao.updateReviewFields(
+            reviewId: review.id,
+            entry: BookReviewsCompanion(
+              remoteId: Value(remoteId),
+              syncedAt: Value(DateTime.now()),
+              isDirty: const Value(false),
+            ),
+          );
+        } else {
+          // UPDATE
+          await _bookService.updateReview(
+            id: review.remoteId!,
+            rating: review.rating,
+            review: review.review,
+            isDeleted: review.isDeleted == true,
+            updatedAt: review.updatedAt,
+            accessToken: accessToken,
+          );
+
+          await _bookDao.updateReviewFields(
+            reviewId: review.id,
+            entry: BookReviewsCompanion(
+              syncedAt: Value(DateTime.now()),
+              isDirty: const Value(false),
+            ),
+          );
+        }
+      } catch (e, st) {
+        developer.log(
+          'Error syncing review ${review.id}',
+          name: 'SupabaseBookSyncRepository',
+          error: e,
+          stackTrace: st,
+        );
+      }
+    }
   }
 }

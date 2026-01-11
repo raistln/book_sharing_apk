@@ -72,3 +72,13 @@ final statsSummaryProvider = StreamProvider.autoDispose<StatsSummary>((ref) {
 
   return controller.stream;
 });
+
+final readBooksProvider =
+    FutureProvider.autoDispose<List<ReadBookItem>>((ref) async {
+  final service = ref.watch(statsServiceProvider);
+  final activeUser = ref.watch(activeUserProvider).value;
+
+  if (activeUser == null) return [];
+
+  return service.getReadBooks(userId: activeUser.id);
+});

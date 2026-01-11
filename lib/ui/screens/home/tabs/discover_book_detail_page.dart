@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,6 +14,7 @@ import '../../../../services/loan_controller.dart';
 import '../../../../services/onboarding_service.dart';
 import '../../../utils/ui_helpers.dart';
 import '../../../widgets/coach_mark_target.dart';
+import '../../../widgets/library/review_dialog.dart';
 import '../../../widgets/loan_feedback_banner.dart';
 import '../../../widgets/notifications/in_app_notification_banner.dart';
 
@@ -373,6 +375,114 @@ class _DiscoverBookDetailPageState
                               ),
                             ],
                             const SizedBox(height: 12),
+                            if (book != null)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Consumer(
+                                  builder: (context, ref, _) {
+                                    final reviewsAsync =
+                                        ref.watch(bookReviewsProvider(book.id));
+                                    return reviewsAsync.when(
+                                      data: (reviews) {
+                                        final count = reviews.length;
+                                        final rating = count == 0
+                                            ? 0.0
+                                            : reviews
+                                                    .map((r) => r.rating)
+                                                    .reduce((a, b) => a + b) /
+                                                count;
+                                        final userReview = activeUser == null
+                                            ? null
+                                            : reviews.firstWhereOrNull((r) =>
+                                                r.authorUserId ==
+                                                activeUser.id);
+
+                                        return Row(
+                                          children: [
+                                            InkWell(
+                                              onTap: count > 0
+                                                  ? () => showReviewsListDialog(
+                                                      context, ref, book)
+                                                  : null,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(4),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      rating > 0
+                                                          ? rating
+                                                              .toStringAsFixed(
+                                                                  1)
+                                                          : '-',
+                                                      style: theme
+                                                          .textTheme.titleMedium
+                                                          ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    const Icon(Icons.star,
+                                                        size: 18,
+                                                        color: Colors.amber),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      '($count)',
+                                                      style: theme
+                                                          .textTheme.bodyMedium
+                                                          ?.copyWith(
+                                                        color: theme.colorScheme
+                                                            .onSurfaceVariant,
+                                                      ),
+                                                    ),
+                                                    if (count > 0) ...[
+                                                      const SizedBox(width: 2),
+                                                      Icon(
+                                                        Icons.chevron_right,
+                                                        size: 18,
+                                                        color: theme.colorScheme
+                                                            .onSurfaceVariant,
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            if (activeUser != null)
+                                              TextButton.icon(
+                                                onPressed: () =>
+                                                    showAddReviewDialog(
+                                                        context, ref, book),
+                                                icon: Icon(
+                                                  userReview != null
+                                                      ? Icons.edit_outlined
+                                                      : Icons
+                                                          .rate_review_outlined,
+                                                  size: 18,
+                                                ),
+                                                label: Text(userReview != null
+                                                    ? 'Editar'
+                                                    : 'Valorar'),
+                                                style: TextButton.styleFrom(
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                ),
+                                              ),
+                                          ],
+                                        );
+                                      },
+                                      loading: () => const SizedBox.shrink(),
+                                      error: (_, __) => const SizedBox.shrink(),
+                                    );
+                                  },
+                                ),
+                              ),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [

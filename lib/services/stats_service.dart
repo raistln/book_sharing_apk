@@ -54,6 +54,8 @@ class StatsActiveLoan {
     this.dueDate,
     this.groupId,
     this.sharedBookId,
+    this.isExternalReceived = false,
+    this.lenderName,
   });
 
   final Loan loan;
@@ -61,12 +63,14 @@ class StatsActiveLoan {
   final String loanUuid;
   final String bookTitle;
   final String borrowerName;
+  final String? lenderName;
   final String status;
   final DateTime requestedAt;
   final DateTime? dueDate;
   final int? groupId;
   final int? sharedBookId;
   final bool isManualLoan;
+  final bool isExternalReceived;
 }
 
 class StatsService {
@@ -85,27 +89,32 @@ class StatsService {
     final totalLoans = loanDetails.length;
     final activeLoanDetails = loanDetails
         .where(
-          (detail) =>
-              detail.loan.status == 'active' ||
-              detail.loan.status == 'requested',
-        )
+      (detail) =>
+          detail.loan.status == 'active' || detail.loan.status == 'requested',
+    )
         .map(
-          (detail) => StatsActiveLoan(
-            loan: detail.loan,
-            loanId: detail.loan.id,
-            loanUuid: detail.loan.uuid,
-            bookTitle: _resolveActiveLoanTitle(detail, books),
-            borrowerName: detail.loan.externalBorrowerName ??
-                _resolveUserName(detail.borrower),
-            status: detail.loan.status,
-            requestedAt: detail.loan.requestedAt,
-            dueDate: detail.loan.dueDate,
-            groupId: detail.sharedBook?.groupId,
-            sharedBookId: detail.sharedBook?.id,
-            isManualLoan: detail.loan.externalBorrowerName != null,
-          ),
-        )
-        .toList(growable: false);
+      (detail) {
+        final isExternalReceived = detail.book?.isBorrowedExternal ?? false;
+        return StatsActiveLoan(
+          loan: detail.loan,
+          loanId: detail.loan.id,
+          loanUuid: detail.loan.uuid,
+          bookTitle: _resolveActiveLoanTitle(detail, books),
+          borrowerName: detail.loan.externalBorrowerName ??
+              _resolveUserName(detail.borrower),
+          lenderName: isExternalReceived
+              ? (detail.book?.externalLenderName ?? 'Alguien')
+              : null,
+          status: detail.loan.status,
+          requestedAt: detail.loan.requestedAt,
+          dueDate: detail.loan.dueDate,
+          groupId: detail.sharedBook?.groupId,
+          sharedBookId: detail.sharedBook?.id,
+          isManualLoan: detail.loan.externalBorrowerName != null,
+          isExternalReceived: isExternalReceived,
+        );
+      },
+    ).toList(growable: false);
     final activeLoans = activeLoanDetails.length;
     final returnedLoans =
         loanDetails.where((detail) => detail.loan.status == 'returned').length;
@@ -141,8 +150,12 @@ class StatsService {
         .take(3)
         .toList();
 
+    // Calculate total books (only owned ones)
+    final ownedBooks =
+        books.where((b) => b.isBorrowedExternal == false).toList();
+
     // Calculate total books read
-    final booksReadOwned = books.where((b) => b.isRead).length;
+    final booksReadOwned = ownedBooks.where((b) => b.isRead).length;
     final booksReadBorrowed = loanDetails
         .where((detail) =>
             detail.loan.wasRead == true &&
@@ -151,9 +164,9 @@ class StatsService {
     final totalBooksRead = booksReadOwned + booksReadBorrowed;
 
     return StatsSummary(
-      totalBooks: books.length,
+      totalBooks: ownedBooks.length,
       totalBooksRead: totalBooksRead,
-      availableBooks: books.where((b) => b.status == 'available').length,
+      availableBooks: ownedBooks.where((b) => b.status == 'available').length,
       totalLoans: totalLoans,
       activeLoans: activeLoans,
       returnedLoans: returnedLoans,
@@ -202,6 +215,87 @@ class StatsService {
   String _resolveUserName(LocalUser? user) {
     return user?.username ?? 'Usuario';
   }
+
+  Future<List<ReadBookItem>> getReadBooks({required int userId}) async {
+    final books = await _bookRepository.fetchActiveBooks(ownerUserId: userId);
+    final allLoans = await _loanRepository.getAllLoanDetails();
+    final allReviews =
+        await _bookRepository.fetchActiveReviews(); // Fetch all reviews
+
+    // Filter reviews by current user
+    final myReviews = allReviews.where((r) => r.authorUserId == userId);
+    final reviewsByBookId = {for (final r in myReviews) r.bookId: r};
+
+    final List<ReadBookItem> readItems = [];
+
+    // 1. Owned books marked as read
+    for (final book in books) {
+      if (book.isRead) {
+        final review = reviewsByBookId[book.id];
+        readItems.add(ReadBookItem(
+          title: book.title,
+          author: book.author ?? 'Autor desconocido',
+          readAt: book.readAt ?? book.updatedAt,
+          coverPath: book.coverPath,
+          isBorrowed: false,
+          book: book,
+          personalRating: review?.rating,
+        ));
+      }
+    }
+
+    // 2. Borrowed books (loans) marked as read
+    // Filter for loans where I am the borrower and wasRead is true
+    final myReadLoans = allLoans.where((detail) =>
+        detail.loan.borrowerUserId == userId && detail.loan.wasRead == true);
+
+    for (final detail in myReadLoans) {
+      // Resolve the book object
+      Book? book = detail.book;
+
+      // If book is not directly linked (e.g. shared book), try to find it in my owned books (unlikely if I borrowed it)
+      // or we rely on what we have.
+      // If detail.book is null but sharedBook exists, we need the Book object for the dialog via ID.
+      // However, getAllLoanDetails might not preload the Book if it's via SharedBooks and not direct BookId?
+      // Actually Loan has nullable bookId and nullable sharedBookId.
+      // If sharedBookId is used, the Book record still exists in DB.
+      // We might need to fetch it if detail.book is null.
+      if (book == null && detail.sharedBook != null) {
+        // We can't synchronously fetch here easily without N+1, but let's try to look it up
+        // if we had a full list.
+        // For now, if we can't find the book object, we can't review it easily in UI (button disabled).
+        // But usually detail.book SHOULD be populated if the query joins correctly.
+        // Checking LoanRepository.getAllLoanDetails usually joins everything.
+      }
+
+      final title = book?.title ??
+          (detail.sharedBook != null
+              ? _resolveBookTitle(detail, [])
+              : 'Libro desconocido');
+
+      final author = book?.author ?? 'Autor desconocido';
+      final readDate = detail.loan.markedReadAt ??
+          detail.loan.returnedAt ??
+          detail.loan.updatedAt;
+
+      final review = book != null ? reviewsByBookId[book.id] : null;
+
+      readItems.add(ReadBookItem(
+        title: title,
+        author: author,
+        readAt: readDate,
+        coverPath: book?.coverPath,
+        isBorrowed: true,
+        book: book,
+        personalRating: review?.rating,
+      ));
+    }
+
+    // Sort by date descending (latest read first)
+    readItems.sort((a, b) => b.readAt.compareTo(a.readAt));
+
+    return readItems;
+  }
 }
 
 class _TopAccumulator {
@@ -209,4 +303,24 @@ class _TopAccumulator {
 
   final String title;
   int count = 0;
+}
+
+class ReadBookItem {
+  const ReadBookItem({
+    required this.title,
+    required this.author,
+    required this.readAt,
+    this.coverPath,
+    this.isBorrowed = false,
+    this.book,
+    this.personalRating,
+  });
+
+  final String title;
+  final String author;
+  final DateTime readAt;
+  final String? coverPath;
+  final bool isBorrowed;
+  final Book? book;
+  final int? personalRating;
 }

@@ -33,7 +33,9 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
   }
 
   List<Book> _filterBooks(List<Book> books) {
-    var filtered = books;
+    // Only show books owned by the user (exclude external borrowed books)
+    var filtered = books.where((b) => !b.isBorrowedExternal).toList();
+
     // Filtrar por estado de lectura
     if (_readStatusFilter != null) {
       filtered = filtered.where((b) => b.isRead == _readStatusFilter).toList();

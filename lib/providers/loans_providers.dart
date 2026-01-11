@@ -57,8 +57,11 @@ final activeLoansAsLenderProvider =
   if (activeUser == null) return [];
 
   return allLoans.where((detail) {
+    // Exclude books that I "borrowed externally" (where I am lender proxy but book is external)
+    final isExternalBorrowing = detail.book?.isBorrowedExternal == true;
     return detail.loan.lenderUserId == activeUser.id &&
-        detail.loan.status == 'active';
+        detail.loan.status == 'active' &&
+        !isExternalBorrowing;
   }).toList();
 });
 

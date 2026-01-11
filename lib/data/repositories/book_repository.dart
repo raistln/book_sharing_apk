@@ -166,9 +166,15 @@ class BookRepository {
       BooksCompanion.insert(
         uuid: bookUuid,
         title: title,
-        author: Value(author),
-        isbn: Value(isbn),
-        barcode: Value(barcode),
+        author: (author != null && author.trim().isNotEmpty)
+            ? Value(author.trim())
+            : const Value.absent(),
+        isbn: (isbn != null && isbn.trim().isNotEmpty)
+            ? Value(isbn.trim())
+            : const Value.absent(),
+        barcode: (barcode != null && barcode.trim().isNotEmpty)
+            ? Value(barcode.trim())
+            : const Value.absent(),
         coverPath: Value(coverPath),
         status: Value(status),
         notes: Value(notes),

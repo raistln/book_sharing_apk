@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../providers/stats_providers.dart';
 import '../../../../services/stats_service.dart';
 import '../../../widgets/loans/active_loans_list.dart';
+import '../../read_books_screen.dart';
 
 /// Stats tab showing library statistics
 ///
@@ -92,6 +93,19 @@ class _StatsContent extends ConsumerWidget {
                 value: summary.expiredLoans,
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ReadBooksScreen()),
+                );
+              },
+              icon: const Icon(Icons.list),
+              label: const Text('Ver historial de lecturas'),
+            ),
           ),
           const SizedBox(height: 28),
           Text('Préstamos activos', style: theme.textTheme.headlineSmall),

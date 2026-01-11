@@ -68,7 +68,9 @@ class ActiveLoansList extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Solicitante: ${loan.borrowerName}'),
+                    Text(loan.isExternalReceived
+                        ? 'Prestamista: ${loan.lenderName}'
+                        : 'Solicitante: ${loan.borrowerName}'),
                     Text('Estado: $statusLabel'),
                     Text(
                         'Solicitado: ${DateFormat.yMMMd().format(loan.requestedAt)}'),

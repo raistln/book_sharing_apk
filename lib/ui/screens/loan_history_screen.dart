@@ -49,11 +49,16 @@ class _HistoryLoanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLender = detail.loan.lenderUserId == activeUser.id;
+    final isExternalReceived = detail.book?.isBorrowedExternal ?? false;
+    final isLender =
+        detail.loan.lenderUserId == activeUser.id && !isExternalReceived;
+
     final bookTitle = detail.book?.title ?? 'Libro desconocido';
-    final otherName = detail.loan.externalBorrowerName ??
-        (isLender ? detail.borrower?.username : detail.owner?.username) ??
-        'Alguien';
+    final otherName = isExternalReceived
+        ? (detail.book?.externalLenderName ?? 'Alguien')
+        : (detail.loan.externalBorrowerName ??
+            (isLender ? detail.borrower?.username : detail.owner?.username) ??
+            'Alguien');
 
     final status = detail.loan.status;
     final isReturning = status == 'returned'; // One party confirmed
@@ -87,9 +92,10 @@ class _HistoryLoanCard extends StatelessWidget {
       statusText = status;
     }
 
-    // "Prestado a X" or "Prestado por X"
-    final relationText =
-        isLender ? 'Prestado a $otherName' : 'Prestado por $otherName';
+    // "Prestado a X", "Prestado por X" or "Recibido de X"
+    final relationText = isExternalReceived
+        ? 'Recibido de $otherName'
+        : (isLender ? 'Prestado a $otherName' : 'Prestado por $otherName');
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

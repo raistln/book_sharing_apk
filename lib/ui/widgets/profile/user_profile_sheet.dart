@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../providers/user_profile_provider.dart';
 import '../../../providers/book_providers.dart';
 import 'package:intl/intl.dart';
+import '../../screens/read_books_screen.dart';
+import '../../../providers/stats_providers.dart';
 
 class UserProfileSheet extends ConsumerStatefulWidget {
   const UserProfileSheet({super.key});
@@ -95,6 +97,7 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
     // Load statistics
     final allBooksAsync = ref.watch(bookListProvider);
     final loanStatsAsync = ref.watch(loanStatisticsProvider);
+    final readBooksHistoryAsync = ref.watch(readBooksProvider);
 
     return Container(
       decoration: BoxDecoration(
@@ -283,8 +286,11 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
                   // Statistics Section
                   allBooksAsync.when(
                     data: (books) {
-                      final totalBooks = books.length;
-                      final readBooks = books.where((b) => b.isRead).toList();
+                      final ownedBooks =
+                          books.where((b) => !b.isBorrowedExternal).toList();
+                      final totalBooks = ownedBooks.length;
+                      final readBooks =
+                          ownedBooks.where((b) => b.isRead).toList();
                       // We need to fetch loans for full stats, but for now we use books
 
                       return Column(
@@ -305,14 +311,16 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
                               const SizedBox(width: 12),
                               _StatCard(
                                 label: 'Leídos',
-                                value: readBooks.length.toString(),
+                                value: readBooksHistoryAsync
+                                        .asData?.value.length
+                                        .toString() ??
+                                    readBooks.length.toString(),
                                 icon: Icons.check_circle_outline,
                                 color: Colors.green.shade100,
                                 textColor: Colors.green.shade900,
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
                           const SizedBox(height: 12),
                           loanStatsAsync.when(
                             data: (stats) {
@@ -407,11 +415,26 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
                             loading: () => const SizedBox.shrink(),
                             error: (e, st) => Text('Error stats préstamos: $e'),
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 24),
+                          Center(
+                            child: FilledButton.tonalIcon(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) => const ReadBooksScreen()),
+                                );
+                              },
+                              icon: const Icon(Icons.menu_book),
+                              label: const Text('Libros leídos'),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
                           Text('Libros leídos el último año',
                               style: theme.textTheme.titleMedium),
                           const SizedBox(height: 16),
-                          _ReadingCalendar(readBooks: readBooks),
+                          _ReadingCalendar(
+                              readBooks:
+                                  readBooksHistoryAsync.asData?.value ?? []),
                         ],
                       );
                     },

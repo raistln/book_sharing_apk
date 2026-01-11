@@ -371,12 +371,31 @@ class LoansTab extends ConsumerWidget {
 
   Widget _buildHistoryItem(
       BuildContext context, LoanDetail detail, LocalUser activeUser) {
-    final isLender = detail.loan.lenderUserId == activeUser.id;
-    final action = isLender ? 'Prestaste' : 'Te prestaron';
+    // For external received loans, we are both lender and borrower in the loan object,
+    // but the book is marked as isBorrowedExternal.
+    final isActiveUserLender = detail.loan.lenderUserId == activeUser.id;
+    final isExternalReceived = detail.book?.isBorrowedExternal ?? false;
+
+    // We only treat the user as "lender" for labeling if they are the lender AND it's not a book they borrowed from someone else.
+    final isLenderLabel = isActiveUserLender && !isExternalReceived;
+
+    final action = isLenderLabel ? 'Prestaste' : 'Te prestaron';
     final bookTitle = detail.book?.title ?? 'Libro';
-    final otherName = detail.loan.externalBorrowerName ??
-        (isLender ? detail.borrower?.username : detail.owner?.username) ??
-        'Alguien';
+
+    final String otherName;
+    final String personLabel;
+
+    if (isExternalReceived) {
+      otherName = detail.book?.externalLenderName ?? 'Alguien';
+      personLabel = 'De:';
+    } else {
+      otherName = detail.loan.externalBorrowerName ??
+          (isLenderLabel
+              ? detail.borrower?.username
+              : detail.owner?.username) ??
+          'Alguien';
+      personLabel = isLenderLabel ? 'A:' : 'De:';
+    }
 
     IconData icon;
     Color color;
@@ -399,7 +418,8 @@ class LoansTab extends ConsumerWidget {
     return ListTile(
       leading: Icon(icon, color: color),
       title: Text('$action "$bookTitle"'),
-      subtitle: Text('A: $otherName · ${detail.loan.status}'),
+      subtitle:
+          Text('$personLabel $otherName · ${_statusLabel(detail.loan.status)}'),
       trailing: detail.loan.wasRead == true
           ? const Tooltip(
               message: 'Leído',
@@ -407,6 +427,27 @@ class LoansTab extends ConsumerWidget {
             )
           : null,
     );
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'requested':
+        return 'Solicitado';
+      case 'active':
+        return 'En curso';
+      case 'returned':
+        return 'Devuelto';
+      case 'cancelled':
+        return 'Cancelado';
+      case 'rejected':
+        return 'Rechazado';
+      case 'completed':
+        return 'Completado';
+      case 'expired':
+        return 'Expirado';
+      default:
+        return status;
+    }
   }
 
   void _showLoanCreationOptions(BuildContext context) {

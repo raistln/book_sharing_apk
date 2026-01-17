@@ -19,6 +19,18 @@ class SharedBookDetail {
   final Book? book;
 }
 
+class RecommendationDetail {
+  RecommendationDetail({
+    required this.sharedBook,
+    required this.book,
+    required this.group,
+  });
+
+  final SharedBook sharedBook;
+  final Book? book;
+  final Group group;
+}
+
 class LoanDetail {
   LoanDetail({
     required this.loan,
@@ -45,6 +57,15 @@ class GroupInvitationDetail {
   final GroupInvitation invitation;
   final LocalUser? inviter;
   final LocalUser? acceptedUser;
+}
+
+enum GroupSortOption {
+  titleAz,
+  titleZa,
+  authorAz,
+  authorZa,
+  newest,
+  oldest,
 }
 
 @DriftAccessor(tables: [
@@ -288,6 +309,38 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
         );
   }
 
+  Stream<List<RecommendationDetail>> watchAllAvailableSharedBooks(
+      {int? excludeUserId}) {
+    final query = select(sharedBooks).join([
+      leftOuterJoin(books, books.id.equalsExp(sharedBooks.bookId)),
+      leftOuterJoin(groups, groups.id.equalsExp(sharedBooks.groupId)),
+    ])
+      ..where(sharedBooks.isAvailable.equals(true) &
+          (sharedBooks.isDeleted.equals(false) |
+              sharedBooks.isDeleted.isNull()));
+
+    if (excludeUserId != null) {
+      query.where(sharedBooks.ownerUserId.equals(excludeUserId).not());
+    }
+
+    return query.watch().map(
+          (rows) => rows
+              .map(
+                (row) {
+                  final group = row.readTableOrNull(groups);
+                  if (group == null) return null;
+                  return RecommendationDetail(
+                    sharedBook: row.readTable(sharedBooks),
+                    book: row.readTableOrNull(books),
+                    group: group,
+                  );
+                },
+              )
+              .whereType<RecommendationDetail>()
+              .toList(),
+        );
+  }
+
   Future<SharedBook?> findSharedBookByUuid(String uuid) {
     return (select(sharedBooks)
           ..where((tbl) =>
@@ -344,6 +397,9 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
     int? ownerUserId,
     int? excludeUserId,
     List<String>? excludeIsbns,
+    bool excludeReadBooks = false,
+    String? genre,
+    GroupSortOption sortOption = GroupSortOption.titleAz,
   }) {
     final query = select(sharedBooks).join([
       leftOuterJoin(books, books.id.equalsExp(sharedBooks.bookId)),
@@ -353,6 +409,11 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
             (sharedBooks.isDeleted.equals(false) |
                 sharedBooks.isDeleted.isNull()),
       );
+
+    // SOCIAL RULE: Strict enforcement - only physical books in shared views
+    // Even if sync logic exists, this double-checks at read time.
+    // Assuming 'isPhysical' is on Books table.
+    query.where(books.isPhysical.equals(true));
 
     if (ownerUserId != null) {
       query.where(sharedBooks.ownerUserId.equals(ownerUserId));
@@ -370,6 +431,22 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
               (otherBooks.author.equalsExp(books.author) |
                   (otherBooks.author.isNull() & books.author.isNull()))),
       ));
+
+      if (excludeReadBooks) {
+        // Exclude books that I have marked as Read (isRead=true)
+        // Matching by ISBN or Title+Author
+        final myReadBooks = alias(books, 'myReadBooks');
+        query.where(notExistsQuery(
+          select(myReadBooks).join([])
+            ..where((myReadBooks.ownerUserId.equals(excludeUserId)) &
+                (myReadBooks.isRead.equals(true)) &
+                ((myReadBooks.isbn.equalsExp(books.isbn) &
+                        books.isbn.isNotNull() &
+                        books.isbn.length.isBiggerThanValue(0)) |
+                    (myReadBooks.title.equalsExp(books.title) &
+                        myReadBooks.author.equalsExp(books.author)))),
+        ));
+      }
     }
 
     if (excludeIsbns != null && excludeIsbns.isNotEmpty) {
@@ -378,6 +455,11 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
 
     if (!includeUnavailable) {
       query.where(sharedBooks.isAvailable.equals(true));
+    }
+
+    if (genre != null) {
+      // Assuming 'genre' column exists in sharedBooks table (added in Phase 3)
+      query.where(sharedBooks.genre.equals(genre));
     }
 
     final trimmedQuery = searchQuery?.trim();
@@ -391,11 +473,36 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
       );
     }
 
+    // Sorting logic
+    final List<OrderingTerm> orderBy = [];
+    switch (sortOption) {
+      case GroupSortOption.titleAz:
+        orderBy.add(OrderingTerm(expression: books.title.lower()));
+        break;
+      case GroupSortOption.titleZa:
+        orderBy.add(OrderingTerm(
+            expression: books.title.lower(), mode: OrderingMode.desc));
+        break;
+      case GroupSortOption.authorAz:
+        orderBy.add(OrderingTerm(expression: books.author.lower()));
+        break;
+      case GroupSortOption.authorZa:
+        orderBy.add(OrderingTerm(
+            expression: books.author.lower(), mode: OrderingMode.desc));
+        break;
+      case GroupSortOption.newest:
+        orderBy.add(OrderingTerm(
+            expression: sharedBooks.createdAt, mode: OrderingMode.desc));
+        break;
+      case GroupSortOption.oldest:
+        orderBy.add(OrderingTerm(expression: sharedBooks.createdAt));
+        break;
+    }
+    // Secondary sort by ID for stability
+    orderBy.add(OrderingTerm(expression: sharedBooks.id));
+
     query
-      ..orderBy([
-        OrderingTerm(expression: books.title.lower()),
-        OrderingTerm(expression: sharedBooks.id),
-      ])
+      ..orderBy(orderBy)
       ..limit(limit, offset: offset);
 
     return query

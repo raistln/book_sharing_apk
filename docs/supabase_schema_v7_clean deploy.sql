@@ -240,7 +240,8 @@ CREATE TABLE public.shared_books (
   author TEXT,
   isbn TEXT,
   cover_url TEXT,
-  
+  genre TEXT,
+
   -- Read status
   is_read BOOLEAN NOT NULL DEFAULT false,
   

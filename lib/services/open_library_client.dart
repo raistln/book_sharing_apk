@@ -21,7 +21,8 @@ class OpenLibraryClient {
     final trimmedQuery = query?.trim();
     final isbnCandidates = IsbnUtils.expandCandidates(isbn);
 
-    if ((trimmedQuery == null || trimmedQuery.isEmpty) && isbnCandidates.isEmpty) {
+    if ((trimmedQuery == null || trimmedQuery.isEmpty) &&
+        isbnCandidates.isEmpty) {
       return [];
     }
 
@@ -72,15 +73,19 @@ class OpenLibraryClient {
       return [];
     }
 
-    final uri = Uri.parse('$_baseUrl/search.json').replace(queryParameters: params);
-    final response = await _http.get(uri, headers: {'Accept': 'application/json'});
+    final uri =
+        Uri.parse('$_baseUrl/search.json').replace(queryParameters: params);
+    final response =
+        await _http.get(uri, headers: {'Accept': 'application/json'});
 
     if (response.statusCode != 200) {
-      throw OpenLibraryException('Error ${response.statusCode}: ${response.body}');
+      throw OpenLibraryException(
+          'Error ${response.statusCode}: ${response.body}');
     }
 
     final json = jsonDecode(utf8.decode(response.bodyBytes));
-    final docs = (json['docs'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+    final docs =
+        (json['docs'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
     return docs
         .map(OpenLibraryBookResult.fromJson)
         .where((book) => book.title.isNotEmpty)
@@ -99,6 +104,7 @@ class OpenLibraryBookResult {
     this.isbn,
     this.coverUrl,
     this.publishYear,
+    this.subjects = const [],
   });
 
   factory OpenLibraryBookResult.fromJson(Map<String, dynamic> json) {
@@ -112,6 +118,10 @@ class OpenLibraryBookResult {
           ? 'https://covers.openlibrary.org/b/id/$coverId-L.jpg'
           : null,
       publishYear: (json['first_publish_year'] as num?)?.toInt(),
+      subjects: (json['subject'] as List<dynamic>?)
+              ?.map((s) => s.toString())
+              .toList() ??
+          const [],
     );
   }
 
@@ -120,6 +130,7 @@ class OpenLibraryBookResult {
   final String? isbn;
   final String? coverUrl;
   final int? publishYear;
+  final List<String> subjects;
 
   OpenLibraryBookResult copyWith({
     String? title,
@@ -127,6 +138,7 @@ class OpenLibraryBookResult {
     String? isbn,
     String? coverUrl,
     int? publishYear,
+    List<String>? subjects,
   }) {
     return OpenLibraryBookResult(
       title: title ?? this.title,
@@ -134,6 +146,7 @@ class OpenLibraryBookResult {
       isbn: isbn ?? this.isbn,
       coverUrl: coverUrl ?? this.coverUrl,
       publishYear: publishYear ?? this.publishYear,
+      subjects: subjects ?? this.subjects,
     );
   }
 

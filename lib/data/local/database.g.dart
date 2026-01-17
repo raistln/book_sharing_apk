@@ -727,6 +727,21 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
   late final GeneratedColumn<String> externalLenderName =
       GeneratedColumn<String>('external_lender_name', aliasedName, true,
           type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _genreMeta = const VerificationMeta('genre');
+  @override
+  late final GeneratedColumn<String> genre = GeneratedColumn<String>(
+      'genre', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isPhysicalMeta =
+      const VerificationMeta('isPhysical');
+  @override
+  late final GeneratedColumn<bool> isPhysical = GeneratedColumn<bool>(
+      'is_physical', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_physical" IN (0, 1))'),
+      defaultValue: const Constant(true));
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
   @override
@@ -787,6 +802,8 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
         readAt,
         isBorrowedExternal,
         externalLenderName,
+        genre,
+        isPhysical,
         isDirty,
         isDeleted,
         syncedAt,
@@ -878,6 +895,16 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
           externalLenderName.isAcceptableOrUnknown(
               data['external_lender_name']!, _externalLenderNameMeta));
     }
+    if (data.containsKey('genre')) {
+      context.handle(
+          _genreMeta, genre.isAcceptableOrUnknown(data['genre']!, _genreMeta));
+    }
+    if (data.containsKey('is_physical')) {
+      context.handle(
+          _isPhysicalMeta,
+          isPhysical.isAcceptableOrUnknown(
+              data['is_physical']!, _isPhysicalMeta));
+    }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
           isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
@@ -939,6 +966,10 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
           DriftSqlType.bool, data['${effectivePrefix}is_borrowed_external'])!,
       externalLenderName: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}external_lender_name']),
+      genre: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}genre']),
+      isPhysical: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_physical'])!,
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -975,6 +1006,8 @@ class Book extends DataClass implements Insertable<Book> {
   final DateTime? readAt;
   final bool isBorrowedExternal;
   final String? externalLenderName;
+  final String? genre;
+  final bool isPhysical;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -997,6 +1030,8 @@ class Book extends DataClass implements Insertable<Book> {
       this.readAt,
       required this.isBorrowedExternal,
       this.externalLenderName,
+      this.genre,
+      required this.isPhysical,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -1041,6 +1076,10 @@ class Book extends DataClass implements Insertable<Book> {
     if (!nullToAbsent || externalLenderName != null) {
       map['external_lender_name'] = Variable<String>(externalLenderName);
     }
+    if (!nullToAbsent || genre != null) {
+      map['genre'] = Variable<String>(genre);
+    }
+    map['is_physical'] = Variable<bool>(isPhysical);
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
     if (!nullToAbsent || syncedAt != null) {
@@ -1084,6 +1123,9 @@ class Book extends DataClass implements Insertable<Book> {
       externalLenderName: externalLenderName == null && nullToAbsent
           ? const Value.absent()
           : Value(externalLenderName),
+      genre:
+          genre == null && nullToAbsent ? const Value.absent() : Value(genre),
+      isPhysical: Value(isPhysical),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -1115,6 +1157,8 @@ class Book extends DataClass implements Insertable<Book> {
       isBorrowedExternal: serializer.fromJson<bool>(json['isBorrowedExternal']),
       externalLenderName:
           serializer.fromJson<String?>(json['externalLenderName']),
+      genre: serializer.fromJson<String?>(json['genre']),
+      isPhysical: serializer.fromJson<bool>(json['isPhysical']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -1142,6 +1186,8 @@ class Book extends DataClass implements Insertable<Book> {
       'readAt': serializer.toJson<DateTime?>(readAt),
       'isBorrowedExternal': serializer.toJson<bool>(isBorrowedExternal),
       'externalLenderName': serializer.toJson<String?>(externalLenderName),
+      'genre': serializer.toJson<String?>(genre),
+      'isPhysical': serializer.toJson<bool>(isPhysical),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -1167,6 +1213,8 @@ class Book extends DataClass implements Insertable<Book> {
           Value<DateTime?> readAt = const Value.absent(),
           bool? isBorrowedExternal,
           Value<String?> externalLenderName = const Value.absent(),
+          Value<String?> genre = const Value.absent(),
+          bool? isPhysical,
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -1192,6 +1240,8 @@ class Book extends DataClass implements Insertable<Book> {
         externalLenderName: externalLenderName.present
             ? externalLenderName.value
             : this.externalLenderName,
+        genre: genre.present ? genre.value : this.genre,
+        isPhysical: isPhysical ?? this.isPhysical,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -1223,6 +1273,9 @@ class Book extends DataClass implements Insertable<Book> {
       externalLenderName: data.externalLenderName.present
           ? data.externalLenderName.value
           : this.externalLenderName,
+      genre: data.genre.present ? data.genre.value : this.genre,
+      isPhysical:
+          data.isPhysical.present ? data.isPhysical.value : this.isPhysical,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -1250,6 +1303,8 @@ class Book extends DataClass implements Insertable<Book> {
           ..write('readAt: $readAt, ')
           ..write('isBorrowedExternal: $isBorrowedExternal, ')
           ..write('externalLenderName: $externalLenderName, ')
+          ..write('genre: $genre, ')
+          ..write('isPhysical: $isPhysical, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -1277,6 +1332,8 @@ class Book extends DataClass implements Insertable<Book> {
         readAt,
         isBorrowedExternal,
         externalLenderName,
+        genre,
+        isPhysical,
         isDirty,
         isDeleted,
         syncedAt,
@@ -1303,6 +1360,8 @@ class Book extends DataClass implements Insertable<Book> {
           other.readAt == this.readAt &&
           other.isBorrowedExternal == this.isBorrowedExternal &&
           other.externalLenderName == this.externalLenderName &&
+          other.genre == this.genre &&
+          other.isPhysical == this.isPhysical &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -1327,6 +1386,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
   final Value<DateTime?> readAt;
   final Value<bool> isBorrowedExternal;
   final Value<String?> externalLenderName;
+  final Value<String?> genre;
+  final Value<bool> isPhysical;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -1349,6 +1410,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.readAt = const Value.absent(),
     this.isBorrowedExternal = const Value.absent(),
     this.externalLenderName = const Value.absent(),
+    this.genre = const Value.absent(),
+    this.isPhysical = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -1372,6 +1435,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.readAt = const Value.absent(),
     this.isBorrowedExternal = const Value.absent(),
     this.externalLenderName = const Value.absent(),
+    this.genre = const Value.absent(),
+    this.isPhysical = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -1396,6 +1461,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     Expression<DateTime>? readAt,
     Expression<bool>? isBorrowedExternal,
     Expression<String>? externalLenderName,
+    Expression<String>? genre,
+    Expression<bool>? isPhysical,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -1421,6 +1488,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
         'is_borrowed_external': isBorrowedExternal,
       if (externalLenderName != null)
         'external_lender_name': externalLenderName,
+      if (genre != null) 'genre': genre,
+      if (isPhysical != null) 'is_physical': isPhysical,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -1446,6 +1515,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
       Value<DateTime?>? readAt,
       Value<bool>? isBorrowedExternal,
       Value<String?>? externalLenderName,
+      Value<String?>? genre,
+      Value<bool>? isPhysical,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -1468,6 +1539,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
       readAt: readAt ?? this.readAt,
       isBorrowedExternal: isBorrowedExternal ?? this.isBorrowedExternal,
       externalLenderName: externalLenderName ?? this.externalLenderName,
+      genre: genre ?? this.genre,
+      isPhysical: isPhysical ?? this.isPhysical,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -1527,6 +1600,12 @@ class BooksCompanion extends UpdateCompanion<Book> {
     if (externalLenderName.present) {
       map['external_lender_name'] = Variable<String>(externalLenderName.value);
     }
+    if (genre.present) {
+      map['genre'] = Variable<String>(genre.value);
+    }
+    if (isPhysical.present) {
+      map['is_physical'] = Variable<bool>(isPhysical.value);
+    }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
     }
@@ -1564,6 +1643,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
           ..write('readAt: $readAt, ')
           ..write('isBorrowedExternal: $isBorrowedExternal, ')
           ..write('externalLenderName: $externalLenderName, ')
+          ..write('genre: $genre, ')
+          ..write('isPhysical: $isPhysical, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -3616,6 +3697,11 @@ class $SharedBooksTable extends SharedBooks
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'CHECK ("is_available" IN (0, 1))'),
       defaultValue: const Constant(true));
+  static const VerificationMeta _genreMeta = const VerificationMeta('genre');
+  @override
+  late final GeneratedColumn<String> genre = GeneratedColumn<String>(
+      'genre', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
   @override
@@ -3671,6 +3757,7 @@ class $SharedBooksTable extends SharedBooks
         ownerRemoteId,
         visibility,
         isAvailable,
+        genre,
         isDirty,
         isDeleted,
         syncedAt,
@@ -3750,6 +3837,10 @@ class $SharedBooksTable extends SharedBooks
           isAvailable.isAcceptableOrUnknown(
               data['is_available']!, _isAvailableMeta));
     }
+    if (data.containsKey('genre')) {
+      context.handle(
+          _genreMeta, genre.isAcceptableOrUnknown(data['genre']!, _genreMeta));
+    }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
           isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
@@ -3801,6 +3892,8 @@ class $SharedBooksTable extends SharedBooks
           .read(DriftSqlType.string, data['${effectivePrefix}visibility'])!,
       isAvailable: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_available'])!,
+      genre: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}genre']),
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -3832,6 +3925,7 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
   final String? ownerRemoteId;
   final String visibility;
   final bool isAvailable;
+  final String? genre;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -3849,6 +3943,7 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
       this.ownerRemoteId,
       required this.visibility,
       required this.isAvailable,
+      this.genre,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -3872,6 +3967,9 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
     }
     map['visibility'] = Variable<String>(visibility);
     map['is_available'] = Variable<bool>(isAvailable);
+    if (!nullToAbsent || genre != null) {
+      map['genre'] = Variable<String>(genre);
+    }
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
     if (!nullToAbsent || syncedAt != null) {
@@ -3899,6 +3997,8 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
           : Value(ownerRemoteId),
       visibility: Value(visibility),
       isAvailable: Value(isAvailable),
+      genre:
+          genre == null && nullToAbsent ? const Value.absent() : Value(genre),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -3924,6 +4024,7 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
       ownerRemoteId: serializer.fromJson<String?>(json['ownerRemoteId']),
       visibility: serializer.fromJson<String>(json['visibility']),
       isAvailable: serializer.fromJson<bool>(json['isAvailable']),
+      genre: serializer.fromJson<String?>(json['genre']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -3946,6 +4047,7 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
       'ownerRemoteId': serializer.toJson<String?>(ownerRemoteId),
       'visibility': serializer.toJson<String>(visibility),
       'isAvailable': serializer.toJson<bool>(isAvailable),
+      'genre': serializer.toJson<String?>(genre),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -3966,6 +4068,7 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
           Value<String?> ownerRemoteId = const Value.absent(),
           String? visibility,
           bool? isAvailable,
+          Value<String?> genre = const Value.absent(),
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -3984,6 +4087,7 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
             ownerRemoteId.present ? ownerRemoteId.value : this.ownerRemoteId,
         visibility: visibility ?? this.visibility,
         isAvailable: isAvailable ?? this.isAvailable,
+        genre: genre.present ? genre.value : this.genre,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -4008,6 +4112,7 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
           data.visibility.present ? data.visibility.value : this.visibility,
       isAvailable:
           data.isAvailable.present ? data.isAvailable.value : this.isAvailable,
+      genre: data.genre.present ? data.genre.value : this.genre,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -4030,6 +4135,7 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
           ..write('ownerRemoteId: $ownerRemoteId, ')
           ..write('visibility: $visibility, ')
           ..write('isAvailable: $isAvailable, ')
+          ..write('genre: $genre, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -4052,6 +4158,7 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
       ownerRemoteId,
       visibility,
       isAvailable,
+      genre,
       isDirty,
       isDeleted,
       syncedAt,
@@ -4072,6 +4179,7 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
           other.ownerRemoteId == this.ownerRemoteId &&
           other.visibility == this.visibility &&
           other.isAvailable == this.isAvailable &&
+          other.genre == this.genre &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -4091,6 +4199,7 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
   final Value<String?> ownerRemoteId;
   final Value<String> visibility;
   final Value<bool> isAvailable;
+  final Value<String?> genre;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -4108,6 +4217,7 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
     this.ownerRemoteId = const Value.absent(),
     this.visibility = const Value.absent(),
     this.isAvailable = const Value.absent(),
+    this.genre = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -4126,6 +4236,7 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
     this.ownerRemoteId = const Value.absent(),
     this.visibility = const Value.absent(),
     this.isAvailable = const Value.absent(),
+    this.genre = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -4149,6 +4260,7 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
     Expression<String>? ownerRemoteId,
     Expression<String>? visibility,
     Expression<bool>? isAvailable,
+    Expression<String>? genre,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -4167,6 +4279,7 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
       if (ownerRemoteId != null) 'owner_remote_id': ownerRemoteId,
       if (visibility != null) 'visibility': visibility,
       if (isAvailable != null) 'is_available': isAvailable,
+      if (genre != null) 'genre': genre,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -4187,6 +4300,7 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
       Value<String?>? ownerRemoteId,
       Value<String>? visibility,
       Value<bool>? isAvailable,
+      Value<String?>? genre,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -4204,6 +4318,7 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
       ownerRemoteId: ownerRemoteId ?? this.ownerRemoteId,
       visibility: visibility ?? this.visibility,
       isAvailable: isAvailable ?? this.isAvailable,
+      genre: genre ?? this.genre,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -4248,6 +4363,9 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
     if (isAvailable.present) {
       map['is_available'] = Variable<bool>(isAvailable.value);
     }
+    if (genre.present) {
+      map['genre'] = Variable<String>(genre.value);
+    }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
     }
@@ -4280,6 +4398,7 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
           ..write('ownerRemoteId: $ownerRemoteId, ')
           ..write('visibility: $visibility, ')
           ..write('isAvailable: $isAvailable, ')
+          ..write('genre: $genre, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -8332,6 +8451,8 @@ typedef $$BooksTableCreateCompanionBuilder = BooksCompanion Function({
   Value<DateTime?> readAt,
   Value<bool> isBorrowedExternal,
   Value<String?> externalLenderName,
+  Value<String?> genre,
+  Value<bool> isPhysical,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -8355,6 +8476,8 @@ typedef $$BooksTableUpdateCompanionBuilder = BooksCompanion Function({
   Value<DateTime?> readAt,
   Value<bool> isBorrowedExternal,
   Value<String?> externalLenderName,
+  Value<String?> genre,
+  Value<bool> isPhysical,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -8478,6 +8601,12 @@ class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
   ColumnFilters<String> get externalLenderName => $composableBuilder(
       column: $table.externalLenderName,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get genre => $composableBuilder(
+      column: $table.genre, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isPhysical => $composableBuilder(
+      column: $table.isPhysical, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -8635,6 +8764,12 @@ class $$BooksTableOrderingComposer
       column: $table.externalLenderName,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get genre => $composableBuilder(
+      column: $table.genre, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isPhysical => $composableBuilder(
+      column: $table.isPhysical, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
 
@@ -8724,6 +8859,12 @@ class $$BooksTableAnnotationComposer
 
   GeneratedColumn<String> get externalLenderName => $composableBuilder(
       column: $table.externalLenderName, builder: (column) => column);
+
+  GeneratedColumn<String> get genre =>
+      $composableBuilder(column: $table.genre, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPhysical => $composableBuilder(
+      column: $table.isPhysical, builder: (column) => column);
 
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
@@ -8867,6 +9008,8 @@ class $$BooksTableTableManager extends RootTableManager<
             Value<DateTime?> readAt = const Value.absent(),
             Value<bool> isBorrowedExternal = const Value.absent(),
             Value<String?> externalLenderName = const Value.absent(),
+            Value<String?> genre = const Value.absent(),
+            Value<bool> isPhysical = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -8890,6 +9033,8 @@ class $$BooksTableTableManager extends RootTableManager<
             readAt: readAt,
             isBorrowedExternal: isBorrowedExternal,
             externalLenderName: externalLenderName,
+            genre: genre,
+            isPhysical: isPhysical,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -8913,6 +9058,8 @@ class $$BooksTableTableManager extends RootTableManager<
             Value<DateTime?> readAt = const Value.absent(),
             Value<bool> isBorrowedExternal = const Value.absent(),
             Value<String?> externalLenderName = const Value.absent(),
+            Value<String?> genre = const Value.absent(),
+            Value<bool> isPhysical = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -8936,6 +9083,8 @@ class $$BooksTableTableManager extends RootTableManager<
             readAt: readAt,
             isBorrowedExternal: isBorrowedExternal,
             externalLenderName: externalLenderName,
+            genre: genre,
+            isPhysical: isPhysical,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -10602,6 +10751,7 @@ typedef $$SharedBooksTableCreateCompanionBuilder = SharedBooksCompanion
   Value<String?> ownerRemoteId,
   Value<String> visibility,
   Value<bool> isAvailable,
+  Value<String?> genre,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -10621,6 +10771,7 @@ typedef $$SharedBooksTableUpdateCompanionBuilder = SharedBooksCompanion
   Value<String?> ownerRemoteId,
   Value<String> visibility,
   Value<bool> isAvailable,
+  Value<String?> genre,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -10740,6 +10891,9 @@ class $$SharedBooksTableFilterComposer
 
   ColumnFilters<bool> get isAvailable => $composableBuilder(
       column: $table.isAvailable, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get genre => $composableBuilder(
+      column: $table.genre, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -10893,6 +11047,9 @@ class $$SharedBooksTableOrderingComposer
   ColumnOrderings<bool> get isAvailable => $composableBuilder(
       column: $table.isAvailable, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get genre => $composableBuilder(
+      column: $table.genre, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
 
@@ -11001,6 +11158,9 @@ class $$SharedBooksTableAnnotationComposer
 
   GeneratedColumn<bool> get isAvailable => $composableBuilder(
       column: $table.isAvailable, builder: (column) => column);
+
+  GeneratedColumn<String> get genre =>
+      $composableBuilder(column: $table.genre, builder: (column) => column);
 
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
@@ -11160,6 +11320,7 @@ class $$SharedBooksTableTableManager extends RootTableManager<
             Value<String?> ownerRemoteId = const Value.absent(),
             Value<String> visibility = const Value.absent(),
             Value<bool> isAvailable = const Value.absent(),
+            Value<String?> genre = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -11178,6 +11339,7 @@ class $$SharedBooksTableTableManager extends RootTableManager<
             ownerRemoteId: ownerRemoteId,
             visibility: visibility,
             isAvailable: isAvailable,
+            genre: genre,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -11196,6 +11358,7 @@ class $$SharedBooksTableTableManager extends RootTableManager<
             Value<String?> ownerRemoteId = const Value.absent(),
             Value<String> visibility = const Value.absent(),
             Value<bool> isAvailable = const Value.absent(),
+            Value<String?> genre = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -11214,6 +11377,7 @@ class $$SharedBooksTableTableManager extends RootTableManager<
             ownerRemoteId: ownerRemoteId,
             visibility: visibility,
             isAvailable: isAvailable,
+            genre: genre,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,

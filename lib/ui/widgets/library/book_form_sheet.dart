@@ -4,11 +4,13 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../data/local/database.dart';
 import '../../../providers/api_providers.dart';
 import '../../../providers/book_providers.dart';
 import '../../../providers/permission_providers.dart';
+import '../../../models/book_genre.dart';
 import '../../../services/cover_image_service_base.dart';
 import '../../../services/google_books_api_controller.dart';
 import '../../../services/google_books_client.dart';
@@ -29,6 +31,7 @@ class BookCandidate {
     this.isbn,
     this.description,
     this.coverUrl,
+    this.categories = const [],
     required this.source,
   });
 
@@ -38,6 +41,7 @@ class BookCandidate {
       author: result.author,
       isbn: result.isbn,
       coverUrl: result.coverUrl,
+      categories: result.subjects,
       source: BookSource.openLibrary,
     );
   }
@@ -49,6 +53,7 @@ class BookCandidate {
       isbn: volume.isbn,
       description: volume.description,
       coverUrl: volume.thumbnailUrl,
+      categories: volume.categories,
       source: BookSource.googleBooks,
     );
   }
@@ -58,6 +63,7 @@ class BookCandidate {
   final String? isbn;
   final String? description;
   final String? coverUrl;
+  final List<String> categories;
   final BookSource source;
 }
 
@@ -82,6 +88,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
   bool _isRead = false;
   bool _submitting = false;
   String? _coverPath;
+  List<BookGenre> _selectedGenres = [];
+  bool _isPhysical = true;
   late final String? _initialCoverPath;
   final Set<String> _temporaryCoverPaths = <String>{};
   bool _didSubmit = false;
@@ -108,7 +116,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       _notesController.text = book.notes ?? '';
       _status = book.status == 'archived' ? 'private' : book.status;
       _isRead = book.isRead;
-      
+      _selectedGenres = BookGenre.fromCsv(book.genre);
+      _isPhysical = book.isPhysical;
+
       // Verificar si el libro tiene préstamos activos
       _checkActiveLoans(book);
     }
@@ -134,18 +144,20 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     try {
       final groupDao = ref.read(groupDaoProvider);
       final sharedBooks = await groupDao.findSharedBooksByBookId(book.id);
-      
+
       for (final sharedBook in sharedBooks) {
-        final activeLoans = await groupDao.getActiveLoansForSharedBook(sharedBook.id);
+        final activeLoans =
+            await groupDao.getActiveLoansForSharedBook(sharedBook.id);
         if (activeLoans.isNotEmpty) {
           setState(() {
             _hasActiveLoans = true;
-            _status = 'loaned'; // Mostrar como prestado cuando tiene préstamos activos
+            _status =
+                'loaned'; // Mostrar como prestado cuando tiene préstamos activos
           });
           return;
         }
       }
-      
+
       setState(() {
         _hasActiveLoans = false;
         // Si no hay préstamos activos, mantener el estado original del libro
@@ -156,6 +168,94 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       setState(() {
         _hasActiveLoans = false;
         _status = book.status == 'archived' ? 'private' : book.status;
+      });
+    }
+  }
+
+  Widget _buildGenreAndTypeSelectors(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Géneros', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ..._selectedGenres.map((genre) => Chip(
+                      label: Text(genre.label),
+                      onDeleted: () {
+                        setState(() {
+                          _selectedGenres.remove(genre);
+                        });
+                      },
+                    )),
+                ActionChip(
+                  avatar: const Icon(Icons.add, size: 18),
+                  label: const Text('Añadir género'),
+                  onPressed: () => _showGenreSelector(context),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SwitchListTile(
+          title: Text(
+            _isPhysical ? 'Libro Físico' : 'Libro Digital',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color:
+                  _isPhysical ? Colors.blue.shade700 : Colors.purple.shade700,
+            ),
+          ),
+          subtitle: Text(_isPhysical
+              ? 'Este libro se podrá compartir con tus grupos.'
+              : 'Los libros digitales son privados y no se comparten.'),
+          value: _isPhysical,
+          secondary: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _isPhysical ? Colors.blue.shade50 : Colors.purple.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _isPhysical ? Icons.menu_book_rounded : Icons.vibration_rounded,
+              color: _isPhysical ? Colors.blue : Colors.purple,
+            ),
+          ),
+          onChanged: (value) {
+            setState(() {
+              _isPhysical = value;
+              // Lógica automática de estado
+              if (value) {
+                _status = 'available';
+              } else {
+                _status = 'private';
+              }
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showGenreSelector(BuildContext context) async {
+    final selected = await showDialog<List<BookGenre>>(
+      context: context,
+      builder: (context) {
+        return _GenreMultiSelectDialog(
+          initialSelection: _selectedGenres,
+        );
+      },
+    );
+
+    if (selected != null) {
+      setState(() {
+        _selectedGenres = selected;
       });
     }
   }
@@ -189,16 +289,18 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
 
     // Solo añadir la opción 'prestado' si hay préstamos activos
     if (_hasActiveLoans) {
-      items.insert(1, const DropdownMenuItem(
-        value: 'loaned',
-        child: Row(
-          children: [
-            Icon(Icons.swap_horiz_outlined, color: Colors.red, size: 20),
-            SizedBox(width: 8),
-            Text('Prestado'),
-          ],
-        ),
-      ));
+      items.insert(
+          1,
+          const DropdownMenuItem(
+            value: 'loaned',
+            child: Row(
+              children: [
+                Icon(Icons.swap_horiz_outlined, color: Colors.red, size: 20),
+                SizedBox(width: 8),
+                Text('Prestado'),
+              ],
+            ),
+          ));
     }
 
     return items;
@@ -219,10 +321,31 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _isEditing ? 'Editar libro' : 'Añadir libro',
-                style: Theme.of(context).textTheme.headlineSmall,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _isEditing ? 'Editar libro' : 'Añadir libro',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  ),
+                  if (_isEditing)
+                    IconButton(
+                      icon: const Icon(Icons.share_outlined),
+                      tooltip: 'Compartir libro',
+                      onPressed: () {
+                        final book = widget.initialBook!;
+                        final text =
+                            'Me he acordado de ti al leer este libro 📚\n\n'
+                            '"${book.title}"${book.author != null ? ' de ${book.author}' : ''}\n\n'
+                            '¡Descárgate PassTheBook para compartir lecturas!';
+                        unawaited(Share.share(text));
+                      },
+                    ),
+                ],
               ),
+              const SizedBox(height: 16),
+              _buildGenreAndTypeSelectors(context),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _titleController,
@@ -287,13 +410,15 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                               setState(() {
                                 _barcodeController.text = result;
                                 // Also fill ISBN field if empty and barcode looks like ISBN
-                                if (_isbnController.text.trim().isEmpty && result.length >= 10) {
+                                if (_isbnController.text.trim().isEmpty &&
+                                    result.length >= 10) {
                                   _isbnController.text = result;
                                 }
                               });
                               // Auto-search directly from Google Books API after scanning
                               if (searchContext.mounted) {
-                                await _handleGoogleBooksSearch(searchContext, result);
+                                await _handleGoogleBooksSearch(
+                                    searchContext, result);
                               }
                             }
                           },
@@ -317,7 +442,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                         label: const Text('Limpiar formulario'),
                       ),
                     OutlinedButton.icon(
-                      onPressed: _isSearching ? null : () => _handleSearch(context),
+                      onPressed:
+                          _isSearching ? null : () => _handleSearch(context),
                       icon: _isSearching
                           ? const SizedBox(
                               width: 16,
@@ -325,15 +451,15 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.search),
-                      label: Text(_isSearching ? 'Buscando…' : 'Buscar datos del libro'),
+                      label: Text(_isSearching
+                          ? 'Buscando…'
+                          : 'Buscar datos del libro'),
                     ),
                     if (_searchError != null)
                       Text(
                         _searchError!,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: Theme.of(context).colorScheme.error),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.error),
                       ),
                   ],
                 ),
@@ -342,32 +468,40 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
               CoverField(
                 coverPath: _coverPath,
                 onPick: coverService.supportsPicking ? _handlePickCover : null,
-                onPickFromCamera: coverService.supportsPicking ? _handlePickCoverFromCamera : null,
+                onPickFromCamera: coverService.supportsPicking
+                    ? _handlePickCoverFromCamera
+                    : null,
                 onRemove: _coverPath != null ? _handleRemoveCover : null,
                 pickingSupported: coverService.supportsPicking,
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                initialValue: _status,
+                value: _status,
                 decoration: InputDecoration(
                   labelText: 'Estado del libro',
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.bookmark_outline),
-                  suffixText: _hasActiveLoans ? '🔒 Bloqueado' : null,
-                  helperText: _hasActiveLoans 
-                    ? 'El libro tiene préstamos activos y no se puede modificar el estado'
-                    : null,
+                  suffixText:
+                      (_hasActiveLoans || !_isPhysical) ? '🔒 Bloqueado' : null,
+                  helperText: _hasActiveLoans
+                      ? 'El libro tiene préstamos activos y no se puede modificar el estado'
+                      : !_isPhysical
+                          ? 'Los libros digitales son siempre privados'
+                          : null,
                   helperStyle: TextStyle(
-                    color: _hasActiveLoans ? Colors.red : null,
+                    color:
+                        (_hasActiveLoans || !_isPhysical) ? Colors.red : null,
                     fontSize: 12,
                   ),
                 ),
                 items: _buildDropdownItems(),
-                onChanged: _hasActiveLoans ? null : (value) {
-                  if (value != null) {
-                    setState(() => _status = value);
-                  }
-                },
+                onChanged: (_hasActiveLoans || !_isPhysical)
+                    ? null
+                    : (value) {
+                        if (value != null) {
+                          setState(() => _status = value);
+                        }
+                      },
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -404,8 +538,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                     const SizedBox(width: 12),
                   ],
                   TextButton(
-                    onPressed:
-                        _submitting ? null : () => Navigator.of(context).maybePop(),
+                    onPressed: _submitting
+                        ? null
+                        : () => Navigator.of(context).maybePop(),
                     child: const Text('Cancelar'),
                   ),
                   const SizedBox(width: 12),
@@ -439,7 +574,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       _status = 'available';
       _isRead = false;
       _searchError = null;
-      
+
       // Clear cover image if it's not the initial cover (shouldn't happen for new books)
       if (_coverPath != null && _coverPath != _initialCoverPath) {
         _temporaryCoverPaths.remove(_coverPath);
@@ -494,7 +629,10 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           notes: Value(notes.isEmpty ? null : notes),
           status: _status,
           isRead: _isRead,
+          syncedAt: const Value(null),
           updatedAt: DateTime.now(),
+          genre: Value(BookGenre.toCsv(_selectedGenres)),
+          isPhysical: _isPhysical,
         );
 
         await repository.updateBook(updated);
@@ -509,6 +647,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           status: _status,
           isRead: _isRead,
           owner: activeUser,
+          genre: BookGenre.toCsv(_selectedGenres),
+          isPhysical: _isPhysical,
         );
       }
 
@@ -529,13 +669,14 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     } catch (err) {
       if (context.mounted) {
         final errorMessage = err.toString();
-        
+
         // Check if it's a duplicate book error
         if (errorMessage.contains('Ya tienes ese libro')) {
           await showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              icon: const Icon(Icons.info_outline, size: 48, color: Colors.blue),
+              icon:
+                  const Icon(Icons.info_outline, size: 48, color: Colors.blue),
               title: const Text('Libro duplicado'),
               content: Text(errorMessage.replaceAll('Exception: ', '')),
               actions: [
@@ -708,7 +849,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     });
   }
 
-  Future<void> _handleGoogleBooksSearch(BuildContext context, String barcode) async {
+  Future<void> _handleGoogleBooksSearch(
+      BuildContext context, String barcode) async {
     setState(() {
       _isSearching = true;
       _searchError = null;
@@ -717,7 +859,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     try {
       // Expand ISBN to include both ISBN-13 and ISBN-10 variants
       final isbnCandidates = IsbnUtils.expandCandidates(barcode);
-      
+
       if (isbnCandidates.isEmpty) {
         setState(() {
           _searchError = 'El código escaneado no es un ISBN válido.';
@@ -734,7 +876,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       final apiKey = apiKeyState.valueOrNull;
       final openLibrary = ref.read(openLibraryClientProvider);
       final coverService = ref.read(coverImageServiceProvider);
-      
+
       final candidates = <BookCandidate>[];
       bool googleBooksFailed = false;
 
@@ -748,13 +890,14 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
               maxResults: 5,
             );
             candidates.addAll(googleResults.map((book) => BookCandidate(
-              title: book.title,
-              author: book.authors.isNotEmpty ? book.authors.join(', ') : null,
-              isbn: book.isbn13 ?? book.isbn,
-              description: book.description,
-              coverUrl: book.thumbnailUrl,
-              source: BookSource.googleBooks,
-            )));
+                  title: book.title,
+                  author:
+                      book.authors.isNotEmpty ? book.authors.join(', ') : null,
+                  isbn: book.isbn13 ?? book.isbn,
+                  description: book.description,
+                  coverUrl: book.thumbnailUrl,
+                  source: BookSource.googleBooks,
+                )));
           } catch (err) {
             googleBooksFailed = true;
             if (kDebugMode) {
@@ -796,9 +939,11 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       if (finalCandidates.isEmpty) {
         setState(() {
           if (googleBooksFailed && apiKey == null) {
-            _searchError = 'No se encontraron resultados. Configura una API key de Google Books en Configuración para mejores resultados.';
+            _searchError =
+                'No se encontraron resultados. Configura una API key de Google Books en Configuración para mejores resultados.';
           } else {
-            _searchError = 'No se encontró el libro con ninguno de los ISBNs: ${isbnCandidates.join(", ")}\n\nPrueba buscando manualmente por título si conoces el nombre del libro.';
+            _searchError =
+                'No se encontró el libro con ninguno de los ISBNs: ${isbnCandidates.join(", ")}\n\nPrueba buscando manualmente por título si conoces el nombre del libro.';
           }
         });
         return;
@@ -806,7 +951,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
 
       // Show picker dialog for user to select the correct book
       if (!mounted || !context.mounted) return;
-      
+
       final selectedCandidate = await _pickCandidate(context, finalCandidates);
       if (selectedCandidate == null) {
         // User cancelled selection
@@ -815,7 +960,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
 
       // Apply the selected candidate
       await _applyCandidate(selectedCandidate, coverService);
-      
+
       // Show success feedback
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -869,7 +1014,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       // Google Books first (priority source)
       try {
         final isbnCandidates = IsbnUtils.expandCandidates(isbn);
-        
+
         if (isbnCandidates.isNotEmpty) {
           // If we have ISBNs, search for each variant
           for (final candidateIsbn in isbnCandidates) {
@@ -882,7 +1027,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
               candidates.addAll(gbResults.map(BookCandidate.fromGoogleBooks));
             } catch (e) {
               if (kDebugMode) {
-                debugPrint('GoogleBooks search failed for ISBN $candidateIsbn: $e');
+                debugPrint(
+                    'GoogleBooks search failed for ISBN $candidateIsbn: $e');
               }
             }
           }
@@ -998,7 +1144,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                                 child: Image.network(
                                   candidate.coverUrl!,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(Icons.book_outlined),
+                                  errorBuilder: (_, __, ___) =>
+                                      const Icon(Icons.book_outlined),
                                 ),
                               )
                             : const Icon(Icons.book_outlined),
@@ -1006,9 +1153,11 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (candidate.author != null && candidate.author!.isNotEmpty)
+                            if (candidate.author != null &&
+                                candidate.author!.isNotEmpty)
                               Text(candidate.author!),
-                            if (candidate.isbn != null && candidate.isbn!.isNotEmpty)
+                            if (candidate.isbn != null &&
+                                candidate.isbn!.isNotEmpty)
                               Text('ISBN: ${candidate.isbn}'),
                             Text(
                               'Fuente: ${switch (candidate.source) {
@@ -1038,7 +1187,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     String? newCoverPath = _coverPath;
 
     if (candidate.coverUrl != null && candidate.coverUrl!.isNotEmpty) {
-      final downloaded = await coverService.saveRemoteCover(candidate.coverUrl!);
+      final downloaded =
+          await coverService.saveRemoteCover(candidate.coverUrl!);
       if (downloaded != null) {
         if (newCoverPath != null && newCoverPath != _initialCoverPath) {
           _temporaryCoverPaths.remove(newCoverPath);
@@ -1068,6 +1218,15 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       }
       _coverPath = newCoverPath;
       _searchError = null;
+
+      // Extract and map genres
+      final mappedGenres =
+          BookGenre.fromExternalCategories(candidate.categories);
+      if (mappedGenres.isNotEmpty) {
+        // Merge with existing selection if desired, or replace.
+        // For new book search, replacement is better.
+        _selectedGenres = mappedGenres;
+      }
     });
   }
 }
@@ -1110,7 +1269,8 @@ class CoverField extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                coverPath ?? 'Añade una imagen para identificar mejor tus libros.',
+                coverPath ??
+                    'Añade una imagen para identificar mejor tus libros.',
                 style: Theme.of(context).textTheme.bodySmall,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -1146,6 +1306,91 @@ class CoverField extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GenreMultiSelectDialog extends StatefulWidget {
+  const _GenreMultiSelectDialog({required this.initialSelection});
+
+  final List<BookGenre> initialSelection;
+
+  @override
+  State<_GenreMultiSelectDialog> createState() =>
+      _GenreMultiSelectDialogState();
+}
+
+class _GenreMultiSelectDialogState extends State<_GenreMultiSelectDialog> {
+  late final List<BookGenre> _selected;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List.from(widget.initialSelection);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var filtered = BookGenre.values;
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered
+          .where(
+              (g) => g.label.toLowerCase().contains(_searchQuery.toLowerCase()))
+          .toList();
+    }
+
+    return AlertDialog(
+      title: const Text('Seleccionar géneros'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              decoration: const InputDecoration(
+                hintText: 'Buscar género...',
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (value) => setState(() => _searchQuery = value),
+            ),
+            const SizedBox(height: 16),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final genre = filtered[index];
+                  final isSelected = _selected.contains(genre);
+                  return CheckboxListTile(
+                    title: Text(genre.label),
+                    value: isSelected,
+                    onChanged: (value) {
+                      setState(() {
+                        if (value == true) {
+                          _selected.add(genre);
+                        } else {
+                          _selected.remove(genre);
+                        }
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_selected),
+          child: const Text('Aceptar'),
         ),
       ],
     );

@@ -110,6 +110,7 @@ class SupabaseBookSyncRepository {
               notes: const Value(null), // Notes not stored in shared_books
               isRead: Value(remote.isRead),
               isDeleted: Value(remote.isDeleted),
+              genre: Value(remote.genre),
               isDirty: const Value(false),
               syncedAt: Value(now),
               updatedAt: Value(remote.updatedAt ?? remote.createdAt),
@@ -163,6 +164,7 @@ class SupabaseBookSyncRepository {
                 notes: const Value(null), // Notes not stored in shared_books
                 isRead: Value(remote.isRead),
                 isDeleted: Value(remote.isDeleted),
+                genre: Value(remote.genre),
                 isDirty: const Value(false),
                 createdAt: Value(remote.createdAt),
                 updatedAt: Value(remote.updatedAt ?? remote.createdAt),

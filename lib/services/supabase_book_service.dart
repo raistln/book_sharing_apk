@@ -48,7 +48,7 @@ class SupabaseBookService {
     final config = await _loadConfig();
     final query = <String, String>{
       'select':
-          'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_read,is_deleted,created_at,updated_at',
+          'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_read,is_deleted,genre,created_at,updated_at',
       'owner_id': 'eq.$ownerId',
       'order': 'updated_at.asc',
     };
@@ -91,7 +91,7 @@ class SupabaseBookService {
     final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
       queryParameters: {
         'select':
-            'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_read,is_deleted,created_at,updated_at',
+            'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_read,is_deleted,genre,created_at,updated_at',
         'id': 'eq.$id',
         'limit': '1',
       },
@@ -297,6 +297,7 @@ class SupabaseBookRecord {
     this.isAvailable,
     this.isRead = false,
     required this.isDeleted,
+    this.genre,
     required this.createdAt,
     this.updatedAt,
   });
@@ -313,6 +314,7 @@ class SupabaseBookRecord {
   final bool? isAvailable;
   final bool isRead;
   final bool isDeleted;
+  final String? genre;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -337,6 +339,7 @@ class SupabaseBookRecord {
       isAvailable: json['is_available'] as bool?,
       isRead: (json['is_read'] as bool?) ?? false,
       isDeleted: (json['is_deleted'] as bool?) ?? false,
+      genre: json['genre'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: parseDate(json['updated_at']),
     );

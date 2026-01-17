@@ -57,9 +57,9 @@ class BookRepository {
     var sharedCount = 0;
 
     for (final book in books) {
-      if (!_shouldShare(book.status)) {
+      if (!_shouldShare(book.status, book.isPhysical)) {
         developer.log(
-          '[shareExistingBooksWithGroup] Skipping book ${book.id} (status: ${book.status})',
+          '[shareExistingBooksWithGroup] Skipping book ${book.id} (status: ${book.status}, physical: ${book.isPhysical})',
           name: 'BookRepository',
         );
         continue;
@@ -118,10 +118,12 @@ class BookRepository {
   Future<List<Book>> fetchActiveBooks({int? ownerUserId}) =>
       _bookDao.getActiveBooks(ownerUserId: ownerUserId);
 
-  Stream<List<BookReview>> watchReviews(int bookId) =>
-      _bookDao.watchReviewsForBook(bookId);
+  Stream<Book?> watchBook(int bookId) => _bookDao.watchBookById(bookId);
 
   Future<List<BookReview>> fetchActiveReviews() => _bookDao.getActiveReviews();
+
+  Stream<List<BookReview>> watchReviews(int bookId) =>
+      _bookDao.watchReviewsForBook(bookId);
 
   Future<int> addBook({
     required String title,
@@ -133,6 +135,8 @@ class BookRepository {
     String? notes,
     bool isRead = false,
     LocalUser? owner,
+    String? genre,
+    bool isPhysical = true,
   }) async {
     // Check for duplicates
     Book? existingBook;
@@ -186,12 +190,15 @@ class BookRepository {
             : const Value.absent(),
         createdAt: Value(now),
         updatedAt: Value(now),
+        genre: Value(genre),
+        isPhysical: Value(isPhysical),
       ),
     );
     await _autoShareBook(
       bookId: bookId,
       bookUuid: bookUuid,
       status: status,
+      isPhysical: isPhysical,
       timestamp: now,
       ownerUserId: owner?.id,
       ownerRemoteId: owner?.remoteId,
@@ -282,6 +289,7 @@ class BookRepository {
         bookId: book.id,
         bookUuid: book.uuid,
         status: book.status,
+        isPhysical: book.isPhysical,
         timestamp: now,
         ownerUserId: book.ownerUserId,
         ownerRemoteId: book.ownerRemoteId,
@@ -333,7 +341,10 @@ class BookRepository {
 
   Future<Book?> findById(int id) => _bookDao.findById(id);
 
-  bool _shouldShare(String status) {
+  bool _shouldShare(String status, bool isPhysical) {
+    // Non-physical books (digital) are never shared
+    if (!isPhysical) return false;
+
     // Don't share private or archived books
     // Only share available and loaned books
     return status == 'available' || status == 'loaned';
@@ -359,6 +370,7 @@ class BookRepository {
     required int bookId,
     required String bookUuid,
     required String status,
+    required bool isPhysical,
     required DateTime timestamp,
     int? ownerUserId,
     String? ownerRemoteId,
@@ -369,9 +381,9 @@ class BookRepository {
       return;
     }
 
-    final shouldShare = _shouldShare(status);
+    final shouldShare = _shouldShare(status, isPhysical);
     developer.log(
-        '[_autoShareBook] Processing book $bookId (status: $status, shouldShare: $shouldShare)',
+        '[_autoShareBook] Processing book $bookId (status: $status, isPhysical: $isPhysical, shouldShare: $shouldShare)',
         name: 'BookRepository');
 
     if (!shouldShare) {

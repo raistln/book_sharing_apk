@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../providers/stats_providers.dart';
+import '../../../../providers/book_providers.dart';
 import '../../../../services/stats_service.dart';
 import '../../../widgets/loans/active_loans_list.dart';
 import '../../read_books_screen.dart';
+import 'discover_book_detail_page.dart';
+import '../../../../ui/utils/library_transition.dart';
 
 /// Stats tab showing library statistics
 ///
@@ -115,6 +118,9 @@ class _StatsContent extends ConsumerWidget {
           Text('Libros más prestados', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 12),
           _TopBooksList(topBooks: summary.topBooks),
+          const SizedBox(height: 28),
+          const _RecommendationSection(),
+          const SizedBox(height: 40),
         ],
       ),
     );
@@ -239,6 +245,77 @@ class _StatsError extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RecommendationSection extends ConsumerWidget {
+  const _RecommendationSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final recommendationsAsync = ref.watch(randomRecommendationsProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('Recomendaciones para ti',
+                style: theme.textTheme.headlineSmall),
+            const SizedBox(width: 8),
+            Icon(Icons.auto_awesome,
+                size: 20, color: theme.colorScheme.primary),
+          ],
+        ),
+        const SizedBox(height: 12),
+        recommendationsAsync.when(
+          data: (books) {
+            if (books.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            return Column(
+              children: books.map((detail) {
+                final book = detail.book;
+                if (book == null) return const SizedBox.shrink();
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        LibraryPageRoute(
+                          page: DiscoverBookDetailPage(
+                            group: detail.group,
+                            sharedBookId: detail.sharedBook.id,
+                          ),
+                        ),
+                      );
+                    },
+                    leading: book.coverPath != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.network(
+                              book.coverPath!,
+                              width: 40,
+                              height: 60,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : const Icon(Icons.book, size: 40),
+                    title: Text(book.title),
+                    subtitle: Text(book.author ?? 'Autor desconocido'),
+                    trailing: const Icon(Icons.chevron_right),
+                  ),
+                );
+              }).toList(),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 }

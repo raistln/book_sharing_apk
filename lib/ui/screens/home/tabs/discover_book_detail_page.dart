@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/local/database.dart';
 import '../../../../data/local/group_dao.dart';
 import '../../../../data/models/in_app_notification_status.dart';
+import '../../../../models/book_genre.dart';
 import '../../../../providers/book_providers.dart';
 import '../../../../services/coach_marks/coach_mark_controller.dart';
 import '../../../../services/coach_marks/coach_mark_models.dart';
@@ -301,6 +302,8 @@ class _DiscoverBookDetailPageState
               loanDetail: borrowerLoanDetail ?? otherActiveLoan,
             );
 
+            final genres = BookGenre.fromCsv(book?.genre ?? '');
+
             if (!_detailTargetsReady) {
               final hasRequestTarget = canRequest;
               final hasOwnerTarget = pendingOwnerLoan != null && owner != null;
@@ -496,17 +499,53 @@ class _DiscoverBookDetailPageState
                                 ),
                               ],
                             ),
-                            if (isbn != null && isbn.isNotEmpty) ...[
+                            if ((isbn != null && isbn.isNotEmpty) ||
+                                genres.isNotEmpty ||
+                                book != null) ...[
                               const SizedBox(height: 12),
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: [
-                                  Chip(
-                                    avatar: const Icon(Icons.qr_code_2_outlined,
-                                        size: 18),
-                                    label: Text('ISBN $isbn'),
-                                  ),
+                                  if (isbn != null && isbn.isNotEmpty)
+                                    Chip(
+                                      avatar: const Icon(
+                                          Icons.qr_code_2_outlined,
+                                          size: 18),
+                                      label: Text('ISBN $isbn'),
+                                    ),
+                                  ...genres.map((g) => Chip(
+                                        avatar: const Icon(
+                                            Icons.category_outlined,
+                                            size: 18),
+                                        label: Text(g.label),
+                                      )),
+                                  if (book != null) ...[
+                                    if (book.isPhysical)
+                                      Chip(
+                                        avatar: const Icon(Icons.book,
+                                            size: 18, color: Colors.blue),
+                                        label: const Text('Físico',
+                                            style: TextStyle(
+                                                color: Colors.blue,
+                                                fontWeight: FontWeight.bold)),
+                                        backgroundColor: Colors.blue.shade50,
+                                        side: BorderSide(
+                                            color: Colors.blue.shade200),
+                                      )
+                                    else
+                                      Chip(
+                                        avatar: const Icon(Icons.tablet_mac,
+                                            size: 18, color: Colors.purple),
+                                        label: const Text('Digital',
+                                            style: TextStyle(
+                                                color: Colors.purple,
+                                                fontWeight: FontWeight.bold)),
+                                        backgroundColor: Colors.purple.shade50,
+                                        side: BorderSide(
+                                            color: Colors.purple.shade200),
+                                      ),
+                                  ],
                                 ],
                               ),
                             ],
@@ -633,6 +672,7 @@ class _DiscoverBookDetailPageState
                               borrowerLoanDetail: borrowerLoanDetail,
                               loanState: loanState,
                               sharedBook: sharedBook,
+                              originalBookMetadata: book,
                             ),
                             if (!canRequest &&
                                 !canCancel &&
@@ -770,6 +810,7 @@ class _DiscoverBookDetailPageState
     required LoanDetail? borrowerLoanDetail,
     required LoanActionState loanState,
     required SharedBook sharedBook,
+    required Book? originalBookMetadata,
   }) sync* {
     if (canRequest && borrower != null) {
       final LocalUser borrowerNonNull = borrower;
@@ -804,6 +845,88 @@ class _DiscoverBookDetailPageState
           label: const Text('Cancelar solicitud'),
         ),
       );
+    }
+
+    // Always allow adding to library if not owned by self
+    yield Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: OutlinedButton.icon(
+        onPressed: () => _copyToLibrary(sharedBook, originalBookMetadata),
+        icon: const Icon(Icons.library_add_outlined),
+        label: const Text('Añadir a mi biblioteca'),
+      ),
+    );
+  }
+
+  Future<void> _copyToLibrary(
+      SharedBook sharedBook, Book? originalBookMetadata) async {
+    final activeUser = ref.read(activeUserProvider).value;
+    if (activeUser == null) return;
+
+    // Confirmación antes de copiar
+    final confirmed = await UIHelpers.showConfirmDialog(
+      context: context,
+      title: '¿Añadir a mi biblioteca?',
+      message: '¿Seguro que quieres pasar este libro a tu biblioteca personal?',
+      isDangerous: false,
+    );
+    if (!confirmed) return;
+
+    final repository = ref.read(bookRepositoryProvider);
+    final theme = Theme.of(context);
+
+    try {
+      if (originalBookMetadata == null) {
+        throw Exception('No se encontraron los metadatos del libro original');
+      }
+
+      await repository.addBook(
+        title: originalBookMetadata.title,
+        author: originalBookMetadata.author,
+        isbn: originalBookMetadata.isbn,
+        barcode: originalBookMetadata.barcode,
+        coverPath: null,
+        notes: 'Añadido desde un grupo',
+        status: 'private',
+        isRead: false,
+        owner: activeUser,
+        genre: originalBookMetadata.genre,
+        isPhysical: originalBookMetadata.isPhysical,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                      '"${originalBookMetadata.title}" añadido a tu biblioteca'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        final errorMessage = e.toString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage.contains('Ya tienes ese libro')
+                ? 'Ya tienes este libro en tu biblioteca'
+                : 'Error al añadir a la biblioteca: $e'),
+            backgroundColor: errorMessage.contains('Ya tienes ese libro')
+                ? theme.colorScheme.primary
+                : theme.colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 

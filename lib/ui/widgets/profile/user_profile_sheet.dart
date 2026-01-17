@@ -48,8 +48,10 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
     super.dispose();
   }
 
-  void _initControllers(userProfile) {
-    if (_nameController.text.isEmpty && !_isEditing) {
+  void _initControllers(userProfile, String? activeUsername) {
+    if (activeUsername != null) {
+      _nameController.text = activeUsername;
+    } else if (_nameController.text.isEmpty && !_isEditing) {
       _nameController.text = userProfile.name;
     }
     if (_emailController.text.isEmpty && !_isEditing) {
@@ -112,7 +114,9 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
         builder: (context, scrollController) {
           return profileAsync.when(
             data: (profile) {
-              _initControllers(profile);
+              final activeUser = ref.watch(activeUserProvider).value;
+              final displayName = activeUser?.username ?? profile.name;
+              _initControllers(profile, activeUser?.username);
               return ListView(
                 controller: scrollController,
                 padding: const EdgeInsets.all(24),
@@ -145,8 +149,8 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
                                   : null,
                               child: profile.imagePath == null
                                   ? Text(
-                                      (profile.name.isNotEmpty)
-                                          ? profile.name[0].toUpperCase()
+                                      (displayName.isNotEmpty)
+                                          ? displayName[0].toUpperCase()
                                           : 'U',
                                       style: theme.textTheme.displayMedium
                                           ?.copyWith(
@@ -189,8 +193,8 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              profile.name.isNotEmpty
-                                  ? profile.name
+                              displayName.isNotEmpty
+                                  ? displayName
                                   : 'Sin nombre',
                               style: theme.textTheme.headlineSmall,
                             ),
@@ -229,9 +233,11 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
                         children: [
                           TextFormField(
                             controller: _nameController,
+                            readOnly: true,
                             decoration: const InputDecoration(
-                                labelText: 'Nombre',
-                                border: OutlineInputBorder()),
+                                labelText: 'Nombre (desde registro)',
+                                border: OutlineInputBorder(),
+                                suffixIcon: Icon(Icons.lock_outline, size: 20)),
                           ),
                           const SizedBox(height: 12),
                           TextFormField(

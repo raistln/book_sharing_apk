@@ -51,14 +51,18 @@ class GoogleBooksClient {
     };
 
     final uri = Uri.https(_baseAuthority, _path, params);
-    final response = await _http.get(uri, headers: {'Accept': 'application/json'});
+    final response =
+        await _http.get(uri, headers: {'Accept': 'application/json'});
 
     if (response.statusCode != 200) {
-      throw GoogleBooksException('Error ${response.statusCode}: ${response.body}');
+      throw GoogleBooksException(
+          'Error ${response.statusCode}: ${response.body}');
     }
 
-    final json = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-    final items = (json['items'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+    final json =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    final items =
+        (json['items'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
 
     return items
         .map((item) => GoogleBooksVolume.fromJson(item))
@@ -80,6 +84,7 @@ class GoogleBooksVolume {
     this.description,
     this.publishedDate,
     this.thumbnailUrl,
+    this.categories = const [],
   });
 
   factory GoogleBooksVolume.fromJson(Map<String, dynamic> json) {
@@ -92,6 +97,7 @@ class GoogleBooksVolume {
       description: (volumeInfo['description'] as String?)?.trim(),
       publishedDate: (volumeInfo['publishedDate'] as String?)?.trim(),
       thumbnailUrl: _parseThumbnail(volumeInfo),
+      categories: _parseCategories(volumeInfo),
     );
   }
 
@@ -102,6 +108,7 @@ class GoogleBooksVolume {
   final String? description;
   final String? publishedDate;
   final String? thumbnailUrl;
+  final List<String> categories;
 
   String? get primaryAuthor => authors.isEmpty ? null : authors.first;
 
@@ -113,6 +120,7 @@ class GoogleBooksVolume {
     String? description,
     String? publishedDate,
     String? thumbnailUrl,
+    List<String>? categories,
   }) {
     return GoogleBooksVolume(
       title: title ?? this.title,
@@ -122,13 +130,17 @@ class GoogleBooksVolume {
       description: description ?? this.description,
       publishedDate: publishedDate ?? this.publishedDate,
       thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      categories: categories ?? this.categories,
     );
   }
 
   static List<String> _parseAuthors(Map<String, dynamic> volumeInfo) {
     final authors = volumeInfo['authors'] as List<dynamic>?;
     if (authors == null) return const [];
-    return authors.map((author) => author.toString().trim()).where((a) => a.isNotEmpty).toList();
+    return authors
+        .map((author) => author.toString().trim())
+        .where((a) => a.isNotEmpty)
+        .toList();
   }
 
   static String? _parseIsbn(Map<String, dynamic> volumeInfo) {
@@ -159,11 +171,21 @@ class GoogleBooksVolume {
     }
     return null;
   }
+
+  static List<String> _parseCategories(Map<String, dynamic> volumeInfo) {
+    final categories = volumeInfo['categories'] as List<dynamic>?;
+    if (categories == null) return const [];
+    return categories
+        .map((c) => c.toString().trim())
+        .where((c) => c.isNotEmpty)
+        .toList();
+  }
 }
 
 class GoogleBooksMissingApiKeyException implements Exception {
   @override
-  String toString() => 'GoogleBooksMissingApiKeyException: API key no configurada.';
+  String toString() =>
+      'GoogleBooksMissingApiKeyException: API key no configurada.';
 }
 
 class GoogleBooksException implements Exception {

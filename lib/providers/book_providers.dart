@@ -105,6 +105,31 @@ final groupLoanDetailsProvider =
   return dao.watchLoanDetailsForGroup(groupId);
 });
 
+final groupMemberActivityProvider =
+    Provider.autoDispose.family<Map<int, MemberActivity>, int>((ref, groupId) {
+  final members = ref.watch(groupMemberDetailsProvider(groupId)).value ?? [];
+  final sharedBooks = ref.watch(sharedBookDetailsProvider(groupId)).value ?? [];
+  final loans = ref.watch(groupLoanDetailsProvider(groupId)).value ?? [];
+
+  final activityMap = <int, MemberActivity>{};
+
+  for (final member in members) {
+    final userId = member.membership.memberUserId;
+    final sharedCount =
+        sharedBooks.where((sb) => sb.sharedBook.ownerUserId == userId).length;
+    final lendingCount = loans
+        .where(
+            (l) => l.loan.lenderUserId == userId && l.loan.status == 'active')
+        .length;
+    activityMap[userId] = MemberActivity(
+      sharedCount: sharedCount,
+      lendingCount: lendingCount,
+    );
+  }
+
+  return activityMap;
+});
+
 // Filtered version that shows only loans where user is lender or borrower
 final userRelevantLoansProvider =
     StreamProvider.autoDispose.family<List<LoanDetail>, int>((ref, groupId) {
@@ -150,6 +175,20 @@ final userRelevantLoansProvider =
     loading: () => Stream.value(const <LoanDetail>[]),
     error: (_, __) => Stream.value(const <LoanDetail>[]),
   );
+});
+
+final randomRecommendationsProvider =
+    StreamProvider.autoDispose<List<RecommendationDetail>>((ref) {
+  final dao = ref.watch(groupDaoProvider);
+  final activeUser = ref.watch(activeUserProvider).value;
+
+  return dao
+      .watchAllAvailableSharedBooks(excludeUserId: activeUser?.id)
+      .map((books) {
+    if (books.isEmpty) return [];
+    final shuffled = List<RecommendationDetail>.from(books)..shuffle();
+    return shuffled.take(2).toList();
+  });
 });
 
 final discoverGroupControllerProvider = StateNotifierProvider.autoDispose
@@ -428,6 +467,12 @@ final bookReviewsProvider =
   return repository.watchReviews(bookId);
 });
 
+final bookStreamProvider =
+    StreamProvider.autoDispose.family<Book?, int>((ref, bookId) {
+  final repository = ref.watch(bookRepositoryProvider);
+  return repository.watchBook(bookId);
+});
+
 final bookExportServiceProvider = Provider<BookExportService>((ref) {
   return const BookExportService();
 });
@@ -512,3 +557,15 @@ final loanStatisticsProvider =
 
   return loanRepository.getLoanStatistics(user.id);
 });
+
+class MemberActivity {
+  final int sharedCount;
+  final int lendingCount;
+
+  MemberActivity({
+    required this.sharedCount,
+    required this.lendingCount,
+  });
+
+  int get score => sharedCount + (lendingCount * 2);
+}

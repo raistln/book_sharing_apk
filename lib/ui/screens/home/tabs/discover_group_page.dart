@@ -15,8 +15,8 @@ import '../../../../services/onboarding_service.dart';
 import '../../../widgets/coach_mark_target.dart';
 import '../../../widgets/empty_state.dart';
 import 'discover_book_detail_page.dart';
-
-// Redundant filtering removed as it is now handled at the DAO level.
+import '../../../../models/book_genre.dart';
+import '../../../widgets/library/book_text_list.dart';
 
 /// Helper to resolve owner name
 String _resolveOwnerName(LocalUser? ownerUser, int ownerIdFallback) {
@@ -46,7 +46,6 @@ _DiscoverStatusDisplay _resolveStatusDisplay({
         caption: 'Solicitud pendiente de aprobación',
       );
     } else if (status == 'active') {
-      // FIXED: accepted -> active
       return _DiscoverStatusDisplay(
         label: 'En préstamo',
         icon: Icons.handshake_outlined,
@@ -93,6 +92,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
   bool _discoverTargetsReady = false;
   bool _discoverCoachTriggered = false;
   bool _waitingDiscoverCompletion = false;
+  bool _isGridView = true; // Default to Grid (3 columns)
   late ProviderSubscription<AsyncValue<OnboardingProgress>>
       _discoverProgressSub;
   late ProviderSubscription<CoachMarkState> _discoverCoachSub;
@@ -202,20 +202,63 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
     final ownBooksAsync = ref.watch(bookListProvider);
     final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
     final loansAsync = ref.watch(userRelevantLoansProvider(group.id));
-    final showLargeDatasetNotice =
-        state.isLargeDataset && state.searchQuery.isEmpty;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(group.name),
+        actions: [
+          IconButton(
+            icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
+            tooltip: _isGridView ? 'Ver lista' : 'Ver cuadrícula',
+            onPressed: () {
+              setState(() {
+                _isGridView = !_isGridView;
+              });
+            },
+          ),
+          PopupMenuButton<GroupSortOption>(
+            icon: const Icon(Icons.sort),
+            tooltip: 'Ordenar por',
+            initialValue: state.sortOption,
+            onSelected: (option) {
+              controller.setSortOption(option);
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: GroupSortOption.titleAz,
+                child: Text('Título (A-Z)'),
+              ),
+              const PopupMenuItem(
+                value: GroupSortOption.titleZa,
+                child: Text('Título (Z-A)'),
+              ),
+              const PopupMenuItem(
+                value: GroupSortOption.authorAz,
+                child: Text('Autor (A-Z)'),
+              ),
+              const PopupMenuItem(
+                value: GroupSortOption.authorZa,
+                child: Text('Autor (Z-A)'),
+              ),
+              const PopupMenuItem(
+                value: GroupSortOption.newest,
+                child: Text('Más recientes'),
+              ),
+              const PopupMenuItem(
+                value: GroupSortOption.oldest,
+                child: Text('Más antiguos'),
+              ),
+            ],
+          ),
+        ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _DiscoverSearchBar(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+              child: _DiscoverSearchBar(
                 controller: _searchController,
                 onClear: () {
                   _searchController.clear();
@@ -224,52 +267,69 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                 isLoading: state.isLoadingInitial,
                 focusNode: _searchFocusNode,
               ),
-              const SizedBox(height: 12),
-              CoachMarkTarget(
-                id: CoachMarkId.discoverFilterChips,
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+            ),
+            const SizedBox(height: 12),
+            CoachMarkTarget(
+              id: CoachMarkId.discoverFilterChips,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    FilterChip(
-                      label: const Text('Incluir no disponibles'),
-                      selected: state.includeUnavailable,
-                      onSelected: (value) {
-                        controller.setIncludeUnavailable(value);
-                      },
+                    // Row 1: Genres and Hide Read
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _GenreDropdown(
+                            currentValue: state.genreFilter,
+                            onChanged: (val) => controller.setGenreFilter(val),
+                          ),
+                          const SizedBox(width: 8),
+                          FilterChip(
+                            label: const Text('Ocultar leídos'),
+                            selected: state.hideRead,
+                            onSelected: (value) =>
+                                controller.setHideRead(value),
+                          ),
+                        ],
+                      ),
                     ),
-                    ..._buildOwnerFilterChips(
-                      membersAsync: membersAsync,
-                      state: state,
-                      controller: controller,
-                      activeUser: activeUser,
+                    const SizedBox(height: 4),
+                    // Row 2: Members and Include Unavailable
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _MemberSelector(
+                            membersAsync: membersAsync,
+                            selectedUserId: state.ownerUserIdFilter,
+                            onChanged: (userId) =>
+                                controller.setOwnerFilter(userId),
+                            activeUserId: activeUser?.id,
+                          ),
+                          const SizedBox(width: 8),
+                          FilterChip(
+                            label: const Text('Incluir no disponibles'),
+                            selected: state.includeUnavailable,
+                            onSelected: (value) =>
+                                controller.setIncludeUnavailable(value),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              if (kDebugMode) ...[
-                const SizedBox(height: 12),
-                _DiscoverMetricsBanner(state: state),
-              ],
-              if (showLargeDatasetNotice) ...[
-                const SizedBox(height: 12),
-                DiscoverLargeDatasetBanner(
-                  onSearchTap: () {
-                    _scrollController.animateTo(
-                      0,
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                    );
-                    _searchFocusNode.requestFocus();
-                  },
-                  canIncludeUnavailable: !state.includeUnavailable,
-                  onIncludeUnavailable: state.includeUnavailable
-                      ? null
-                      : () => controller.setIncludeUnavailable(true),
-                ),
-              ],
-              const SizedBox(height: 16),
-              Expanded(
+            ),
+            if (kDebugMode) ...[
+              const SizedBox(height: 8),
+              _DiscoverMetricsBanner(state: state),
+            ],
+            const SizedBox(height: 16),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: ownBooksAsync.when(
                   data: (ownBooks) => _buildResultsList(
                     theme: theme,
@@ -281,6 +341,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                         const <GroupMemberDetail>[],
                     loanDetails:
                         loansAsync.asData?.value ?? const <LoanDetail>[],
+                    isGridView: _isGridView,
                   ),
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
@@ -291,8 +352,8 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -306,6 +367,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
     required LocalUser? activeUser,
     required List<GroupMemberDetail> members,
     required List<LoanDetail> loanDetails,
+    required bool isGridView,
   }) {
     if (state.isLoadingInitial && state.items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -410,56 +472,48 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
 
     return RefreshIndicator(
       onRefresh: () => controller.refresh(),
-      child: ListView.separated(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: filtered.length + (state.hasMore ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          if (index >= filtered.length) {
-            if (state.error != null) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Column(
-                  children: [
-                    Text(
-                      'Error al cargar más resultados.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.error,
+      child: isGridView
+          ? GridView.builder(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3, // Set to 3 columns
+                childAspectRatio: 0.65,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 16,
+              ),
+              itemCount: filtered.length + (state.hasMore ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index >= filtered.length) {
+                  if (state.error != null) {
+                    return Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Center(
+                        child: Text(
+                          'Error',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
                       ),
-                    ),
-                    TextButton(
-                      onPressed: () => controller.loadMore(),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              );
-            }
+                    );
+                  }
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          final detail = filtered[index];
-          final book = detail.book;
-          final title = book?.title ?? 'Libro sin título';
-          final author = (book?.author ?? '').trim();
-          final ownerName = ownerNames[detail.sharedBook.ownerUserId] ??
-              _resolveOwnerName(null, detail.sharedBook.ownerUserId);
-          final activeLoan = activeLoansBySharedBookId[detail.sharedBook.id];
-          final statusDisplay = _resolveStatusDisplay(
-            theme: theme,
-            sharedBook: detail.sharedBook,
-            loanDetail: activeLoan,
-          );
-
-          final card = Card(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () {
+                final detail = filtered[index];
+                // Use a specialized Grid Item widget or adapt existing logic
+                // For simplicity, reusing a similar card structure but adapted for Grid
+                return _buildGridItem(context, detail, theme, ownerNames,
+                    activeLoansBySharedBookId);
+              },
+            )
+          : BookTextList(
+              books: filtered.map((d) => d.book).whereType<Book>().toList(),
+              onBookTap: (book) {
+                // We need to find the sharedBookId for this book in state.items
+                final detail =
+                    state.items.firstWhere((d) => d.book?.id == book.id);
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => DiscoverBookDetailPage(
@@ -469,158 +523,130 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                   ),
                 );
               },
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: theme.textTheme.titleMedium,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        _DiscoverStatusChip(display: statusDisplay),
+            ),
+    );
+  }
+
+  Widget _buildGridItem(
+    BuildContext context,
+    SharedBookDetail detail,
+    ThemeData theme,
+    Map<int, String> ownerNames,
+    Map<int, LoanDetail> activeLoansBySharedBookId,
+  ) {
+    final book = detail.book;
+    final title = book?.title ?? 'Libro sin título';
+    final author = (book?.author ?? '').trim();
+    final activeLoan = activeLoansBySharedBookId[detail.sharedBook.id];
+    final statusDisplay = _resolveStatusDisplay(
+      theme: theme,
+      sharedBook: detail.sharedBook,
+      loanDetail: activeLoan,
+    );
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => DiscoverBookDetailPage(
+                group: widget.group,
+                sharedBookId: detail.sharedBook.id,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: theme.colorScheme.surfaceContainerHighest,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Background (Image or Gradient)
+              if (book?.coverPath != null)
+                Image.network(
+                  book!.coverPath!,
+                  fit: BoxFit.cover,
+                  // Removed color filter on image itself, will use overlay
+                )
+              else
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        theme.colorScheme.primaryContainer,
+                        theme.colorScheme.surfaceContainerHighest,
                       ],
+                    ),
+                  ),
+                ),
+
+              // Contrast Overlay (Uniform for ALL cards to ensure text readability)
+              Container(
+                color: Colors.black.withValues(alpha: 0.55),
+              ),
+
+              // Content Overlay (Always visible, centered/large)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        height: 1.2,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (author.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.person_outline, size: 16),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              author,
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.group_outlined, size: 16),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Propietario: $ownerName',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (statusDisplay.caption != null) ...[
-                      const SizedBox(height: 8),
                       Text(
-                        statusDisplay.caption!,
-                        style: theme.textTheme.bodySmall,
+                        author,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ],
                 ),
               ),
-            ),
-          );
 
-          if (index == 0) {
-            return CoachMarkTarget(
-              id: CoachMarkId.discoverShareBook,
-              child: card,
-            );
-          }
-
-          return card;
-        },
-      ),
-    );
-  }
-
-  List<Widget> _buildOwnerFilterChips({
-    required AsyncValue<List<GroupMemberDetail>> membersAsync,
-    required DiscoverGroupState state,
-    required DiscoverGroupController controller,
-    required LocalUser? activeUser,
-  }) {
-    return membersAsync.when(
-      data: (members) {
-        if (members.isEmpty) {
-          return const <Widget>[];
-        }
-
-        final chips = <Widget>[
-          FilterChip(
-            label: const Text('Todos los dueños'),
-            selected: state.ownerUserIdFilter == null,
-            onSelected: (_) => controller.setOwnerFilter(null),
-          ),
-        ];
-
-        final seen = <int>{};
-        final sortedMembers = members.toList()
-          ..sort((a, b) {
-            final nameA =
-                a.user?.username ?? 'Miembro ${a.membership.memberUserId}';
-            final nameB =
-                b.user?.username ?? 'Miembro ${b.membership.memberUserId}';
-            return nameA.toLowerCase().compareTo(nameB.toLowerCase());
-          });
-
-        for (final detail in sortedMembers) {
-          final membership = detail.membership;
-          final user = detail.user;
-          final userId = membership.memberUserId;
-          if (activeUser?.id == userId) {
-            continue;
-          }
-          if (!seen.add(userId)) {
-            continue;
-          }
-
-          final displayName =
-              (user?.username ?? 'Miembro ${membership.memberUserId}').trim();
-          chips.add(
-            FilterChip(
-              label: Text(
-                displayName.isEmpty
-                    ? 'Miembro ${membership.memberUserId}'
-                    : displayName,
+              // Status Chip (Small, top right or bottom? User said "solo se vea nombre y autor",
+              // but status is critical. Let's keep it subtle at the bottom or top)
+              Positioned(
+                bottom: 8,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: _DiscoverStatusChip(display: statusDisplay),
+                ),
               ),
-              selected: state.ownerUserIdFilter == userId,
-              onSelected: (selected) =>
-                  controller.setOwnerFilter(selected ? userId : null),
-            ),
-          );
-        }
-
-        if (chips.length <= 1) {
-          return const <Widget>[];
-        }
-
-        return chips;
-      },
-      loading: () => const <Widget>[
-        SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
+            ],
+          ),
         ),
-      ],
-      error: (error, _) => <Widget>[
-        Tooltip(
-          message: 'Error al cargar dueños: $error',
-          child: const Icon(Icons.error_outline, size: 20),
-        ),
-      ],
+      ),
     );
   }
 
@@ -659,22 +685,30 @@ class _DiscoverStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: display.background,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(display.icon, size: 16, color: display.foreground),
-            const SizedBox(width: 6),
-            Text(
-              display.label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: display.foreground, fontWeight: FontWeight.w600),
+            Icon(display.icon, size: 10, color: display.foreground),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                display.label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: display.foreground,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 7.5,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -717,63 +751,105 @@ class _DiscoverMetricsBanner extends StatelessWidget {
   }
 }
 
-class DiscoverLargeDatasetBanner extends StatelessWidget {
-  const DiscoverLargeDatasetBanner({
-    super.key,
-    required this.onSearchTap,
-    required this.canIncludeUnavailable,
-    this.onIncludeUnavailable,
+class _GenreDropdown extends StatelessWidget {
+  const _GenreDropdown({
+    required this.currentValue,
+    required this.onChanged,
   });
 
-  final VoidCallback onSearchTap;
-  final bool canIncludeUnavailable;
-  final VoidCallback? onIncludeUnavailable;
+  final String? currentValue;
+  final ValueChanged<String?> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(12),
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.tune, color: theme.colorScheme.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Este grupo tiene muchos libros compartidos. Usa la búsqueda o ajusta los filtros para encontrar más rápido.',
-                  style: theme.textTheme.bodyMedium,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: currentValue,
+          hint: const Text('Género'),
+          style: theme.textTheme.bodyMedium,
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('Todos los géneros'),
+            ),
+            ...BookGenre.values.map((genre) {
+              return DropdownMenuItem<String?>(
+                value: genre.label,
+                child: Text(genre.label),
+              );
+            }),
+          ],
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+class _MemberSelector extends StatelessWidget {
+  const _MemberSelector({
+    required this.membersAsync,
+    required this.selectedUserId,
+    required this.onChanged,
+    this.activeUserId,
+  });
+
+  final AsyncValue<List<GroupMemberDetail>> membersAsync;
+  final int? selectedUserId;
+  final ValueChanged<int?> onChanged;
+  final int? activeUserId;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: membersAsync.when(
+        data: (members) {
+          final sortedMembers = members
+              .where((m) => m.membership.memberUserId != activeUserId)
+              .toList()
+            ..sort((a, b) =>
+                (a.user?.username ?? '').compareTo(b.user?.username ?? ''));
+
+          return DropdownButtonHideUnderline(
+            child: DropdownButton<int?>(
+              value: selectedUserId,
+              hint: const Text('Miembro'),
+              style: theme.textTheme.bodyMedium,
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('Todos los miembros'),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            children: [
-              FilledButton.tonalIcon(
-                onPressed: onSearchTap,
-                icon: const Icon(Icons.search),
-                label: const Text('Buscar o filtrar'),
-              ),
-              if (canIncludeUnavailable && onIncludeUnavailable != null)
-                OutlinedButton.icon(
-                  onPressed: onIncludeUnavailable,
-                  icon: const Icon(Icons.visibility_outlined),
-                  label: const Text('Ver no disponibles'),
-                ),
-            ],
-          ),
-        ],
+                ...sortedMembers.map((m) {
+                  return DropdownMenuItem<int?>(
+                    value: m.membership.memberUserId,
+                    child: Text(m.user?.username ??
+                        'Usuario ${m.membership.memberUserId}'),
+                  );
+                }),
+              ],
+              onChanged: onChanged,
+            ),
+          );
+        },
+        loading: () =>
+            const SizedBox(width: 100, child: LinearProgressIndicator()),
+        error: (_, __) => const Text('Error'),
       ),
     );
   }

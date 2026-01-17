@@ -100,6 +100,7 @@ class SupabaseSharedBookRecord {
     required this.visibility,
     required this.isAvailable,
     required this.isDeleted,
+    this.genre,
     required this.createdAt,
     required this.updatedAt,
     required this.loans,
@@ -117,6 +118,7 @@ class SupabaseSharedBookRecord {
   final String visibility;
   final bool isAvailable;
   final bool isDeleted;
+  final String? genre;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final List<SupabaseLoanRecord> loans;
@@ -143,6 +145,7 @@ class SupabaseSharedBookRecord {
       isDeleted: json['is_deleted'] is bool
           ? json['is_deleted'] as bool
           : (json['is_deleted'] as num?)?.toInt() == 1,
+      genre: json['genre'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: tryParse(json['updated_at'] as String?),
       loans: loansJson == null
@@ -202,7 +205,8 @@ class SupabaseLoanRecord {
     return SupabaseLoanRecord(
       id: json['id'] as String,
       sharedBookId: json['shared_book_id'] as String,
-      borrowerUserId: json['borrower_user_id'] as String? ?? '', // Handle manual loans (null borrower)
+      borrowerUserId: json['borrower_user_id'] as String? ??
+          '', // Handle manual loans (null borrower)
       lenderUserId: json['lender_user_id'] as String,
       borrowerUsername: borrowerProfile?['username'] as String?,
       lenderUsername: lenderProfile?['username'] as String?,
@@ -216,8 +220,8 @@ class SupabaseLoanRecord {
       isDeleted: json['is_deleted'] is bool
           ? json['is_deleted'] as bool
           : (json['is_deleted'] as num?)?.toInt() == 1,
-      createdAt:
-          DateTime.parse((json['created_at'] ?? json['requested_at']) as String),
+      createdAt: DateTime.parse(
+          (json['created_at'] ?? json['requested_at']) as String),
       updatedAt: tryParse(json['updated_at'] as String?),
     );
   }
@@ -297,7 +301,8 @@ class SupabaseGroupService {
       'Authorization': 'Bearer $token',
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      'Prefer': preferRepresentation ? 'return=representation' : 'return=minimal',
+      'Prefer':
+          preferRepresentation ? 'return=representation' : 'return=minimal',
     };
   }
 
@@ -305,10 +310,9 @@ class SupabaseGroupService {
     final config = await _loadConfig();
     final uri = Uri.parse('${config.url}/rest/v1/groups').replace(
       queryParameters: {
-        'select':
-            'id,name,description,owner_id,created_at,'
+        'select': 'id,name,description,owner_id,created_at,'
             'group_members(id,user_id,role,created_at,profiles(username)),'
-            'shared_books(id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,created_at,updated_at,'
+            'shared_books(id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,genre,created_at,updated_at,'
             'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at,'
             'borrower:profiles!borrower_user_id(username),lender:profiles!lender_user_id(username))),'
             'group_invitations(id,group_id,inviter_id,accepted_user_id,role,code,status,expires_at,responded_at,created_at,updated_at)',
@@ -329,7 +333,8 @@ class SupabaseGroupService {
       );
     }
 
-    final payload = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+    final payload =
+        jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
     if (kDebugMode) {
       debugPrint(
         '[SupabaseGroupService] GET /groups -> ${payload.length} groups (status=${response.statusCode})',
@@ -348,8 +353,7 @@ class SupabaseGroupService {
     final config = await _loadConfig();
     final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
       queryParameters: {
-        'select':
-            'id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,created_at,updated_at,'
+        'select': 'id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,created_at,updated_at,'
             'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at,'
             'borrower:profiles!borrower_user_id(username),lender:profiles!lender_user_id(username))',
         'group_id': 'eq.$groupId',
@@ -371,13 +375,15 @@ class SupabaseGroupService {
       );
     }
 
-    final payload = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+    final payload =
+        jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
     if (kDebugMode) {
       debugPrint(
         '[SupabaseGroupService] GET /shared_books (group=$groupId) -> ${payload.length} items (status=${response.statusCode})',
       );
       if (payload.isEmpty && response.body.isNotEmpty) {
-        debugPrint('[SupabaseGroupService] Raw body: ${_truncateForLog(response.body)}');
+        debugPrint(
+            '[SupabaseGroupService] Raw body: ${_truncateForLog(response.body)}');
       }
     }
     return payload
@@ -398,6 +404,7 @@ class SupabaseGroupService {
     required String visibility,
     required bool isAvailable,
     required bool isDeleted,
+    String? genre,
     required DateTime createdAt,
     required DateTime updatedAt,
     String? accessToken,
@@ -417,6 +424,7 @@ class SupabaseGroupService {
       'visibility': visibility,
       'is_available': isAvailable,
       'is_deleted': isDeleted,
+      'genre': genre,
       'created_at': createdAt.toUtc().toIso8601String(),
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
@@ -462,6 +470,7 @@ class SupabaseGroupService {
     required String visibility,
     required bool isAvailable,
     required bool isDeleted,
+    String? genre,
     required DateTime updatedAt,
     String? accessToken,
   }) async {
@@ -479,6 +488,7 @@ class SupabaseGroupService {
       'visibility': visibility,
       'is_available': isAvailable,
       'is_deleted': isDeleted,
+      'genre': genre,
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
 

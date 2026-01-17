@@ -24,6 +24,9 @@ class DiscoverGroupState {
     required this.searchQuery,
     required this.includeUnavailable,
     required this.ownerUserIdFilter,
+    required this.genreFilter,
+    required this.hideRead,
+    required this.sortOption,
     required this.pageSize,
     required this.lastLoadedAt,
     required this.lastLoadDuration,
@@ -41,6 +44,9 @@ class DiscoverGroupState {
         searchQuery: '',
         includeUnavailable: false,
         ownerUserIdFilter: null,
+        genreFilter: null,
+        hideRead: false,
+        sortOption: GroupSortOption.titleAz,
         pageSize: _discoverBasePageSize,
         lastLoadedAt: null,
         lastLoadDuration: null,
@@ -57,6 +63,9 @@ class DiscoverGroupState {
   final String searchQuery;
   final bool includeUnavailable;
   final int? ownerUserIdFilter;
+  final String? genreFilter;
+  final bool hideRead;
+  final GroupSortOption sortOption;
   final int pageSize;
   final DateTime? lastLoadedAt;
   final Duration? lastLoadDuration;
@@ -78,6 +87,9 @@ class DiscoverGroupState {
     bool? loadedFromCache,
     bool? isLargeDataset,
     Object? ownerUserIdFilter = _sentinel,
+    Object? genreFilter = _sentinel,
+    bool? hideRead,
+    GroupSortOption? sortOption,
     Set<int>? invalidatedSharedBookIds,
     Object? error = _sentinel,
   }) {
@@ -100,6 +112,11 @@ class DiscoverGroupState {
       ownerUserIdFilter: identical(ownerUserIdFilter, _sentinel)
           ? this.ownerUserIdFilter
           : ownerUserIdFilter as int?,
+      genreFilter: identical(genreFilter, _sentinel)
+          ? this.genreFilter
+          : genreFilter as String?,
+      hideRead: hideRead ?? this.hideRead,
+      sortOption: sortOption ?? this.sortOption,
       invalidatedSharedBookIds:
           invalidatedSharedBookIds ?? this.invalidatedSharedBookIds,
       error: identical(error, _sentinel) ? this.error : error,
@@ -175,7 +192,7 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
       final start = DateTime.now();
       if (kDebugMode) {
         debugPrint(
-            '[DiscoverGroupController] Fetch initial page (group=$groupId, offset=0, limit=$pageSize, query="${state.searchQuery}", includeUnavailable=${state.includeUnavailable}, owner=${state.ownerUserIdFilter})');
+            '[DiscoverGroupController] Fetch initial page (group=$groupId, offset=0, limit=$pageSize, query="${state.searchQuery}", includeUnavailable=${state.includeUnavailable}, owner=${state.ownerUserIdFilter}, genre=${state.genreFilter}, sort=${state.sortOption})');
       }
       final invalidatedIds = pendingInvalidations;
       final excludeIsbns = ownBooks
@@ -193,6 +210,9 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
         ownerUserId: state.ownerUserIdFilter,
         excludeUserId: activeUser?.id,
         excludeIsbns: excludeIsbns,
+        excludeReadBooks: state.hideRead,
+        genre: state.genreFilter,
+        sortOption: state.sortOption,
       );
 
       final completedAt = DateTime.now();
@@ -291,6 +311,9 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
         ownerUserId: state.ownerUserIdFilter,
         excludeUserId: activeUser?.id,
         excludeIsbns: excludeIsbns,
+        excludeReadBooks: state.hideRead,
+        genre: state.genreFilter,
+        sortOption: state.sortOption,
       );
 
       final completedAt = DateTime.now();
@@ -404,6 +427,71 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     await loadInitial(force: false);
   }
 
+  Future<void> setGenreFilter(String? genre) async {
+    if (state.genreFilter == genre) {
+      return;
+    }
+    _resetPageSize();
+    state = state.copyWith(
+      genreFilter: genre, // Use ObjectSentinel inside copyWith if needed
+      items: <SharedBookDetail>[],
+      hasMore: true,
+      error: null,
+      lastLoadedAt: null,
+      lastLoadDuration: null,
+      loadedFromCache: false,
+      pageSize: _pageSize,
+      isLargeDataset: false,
+      invalidatedSharedBookIds: <int>{},
+    );
+    // Explicitly nullify if passed null, handled by copyWith logic actually
+    // Re-check copyWith logic for genreFilter:
+    // genreFilter: identical(genreFilter, _sentinel) ? this.genreFilter : genreFilter as String?,
+    // If I pass null, it becomes null. Correct.
+
+    await loadInitial(force: false);
+  }
+
+  Future<void> setHideRead(bool value) async {
+    if (state.hideRead == value) {
+      return;
+    }
+    _resetPageSize();
+    state = state.copyWith(
+      hideRead: value,
+      items: <SharedBookDetail>[],
+      hasMore: true,
+      error: null,
+      lastLoadedAt: null,
+      lastLoadDuration: null,
+      loadedFromCache: false,
+      pageSize: _pageSize,
+      isLargeDataset: false,
+      invalidatedSharedBookIds: <int>{},
+    );
+    await loadInitial(force: false);
+  }
+
+  Future<void> setSortOption(GroupSortOption option) async {
+    if (state.sortOption == option) {
+      return;
+    }
+    _resetPageSize();
+    state = state.copyWith(
+      sortOption: option,
+      items: <SharedBookDetail>[],
+      hasMore: true,
+      error: null,
+      lastLoadedAt: null,
+      lastLoadDuration: null,
+      loadedFromCache: false,
+      pageSize: _pageSize,
+      isLargeDataset: false,
+      invalidatedSharedBookIds: <int>{},
+    );
+    await loadInitial(force: false);
+  }
+
   void invalidateSharedBooks(Iterable<int> sharedBookIds) {
     final ids = sharedBookIds.whereType<int>().toSet();
     if (ids.isEmpty) {
@@ -471,6 +559,9 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     }
     final merged = map.values.toList()
       ..sort((a, b) {
+        // Fallback or simplistic client-side sort if needed,
+        // but real sort is on DB.
+        // We can just keep existing order or re-sort by title as basic fallback.
         final titleA = (a.book?.title ?? '').toLowerCase();
         final titleB = (b.book?.title ?? '').toLowerCase();
         final titleCompare = titleA.compareTo(titleB);
@@ -497,6 +588,9 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
       ownerUserId: state.ownerUserIdFilter,
       excludeUserId: activeUser?.id,
       excludeIsbnsHash: isbnHash,
+      genreFilter: state.genreFilter,
+      hideRead: state.hideRead,
+      sortOption: state.sortOption,
     );
   }
 
@@ -535,14 +629,20 @@ class _DiscoverCacheKey {
     required this.ownerUserId,
     required this.excludeUserId,
     required this.excludeIsbnsHash,
+    required this.genreFilter,
+    required this.hideRead,
+    required this.sortOption,
   });
 
   final int groupId;
   final String searchQuery;
   final bool includeUnavailable;
+  final bool hideRead;
   final int? ownerUserId;
   final int? excludeUserId;
   final int excludeIsbnsHash;
+  final String? genreFilter;
+  final GroupSortOption sortOption;
 
   @override
   bool operator ==(Object other) {
@@ -553,7 +653,9 @@ class _DiscoverCacheKey {
         other.includeUnavailable == includeUnavailable &&
         other.ownerUserId == ownerUserId &&
         other.excludeUserId == excludeUserId &&
-        other.excludeIsbnsHash == excludeIsbnsHash;
+        other.excludeIsbnsHash == excludeIsbnsHash &&
+        other.genreFilter == genreFilter &&
+        other.sortOption == sortOption;
   }
 
   @override
@@ -564,6 +666,8 @@ class _DiscoverCacheKey {
         ownerUserId,
         excludeUserId,
         excludeIsbnsHash,
+        genreFilter,
+        sortOption,
       );
 }
 

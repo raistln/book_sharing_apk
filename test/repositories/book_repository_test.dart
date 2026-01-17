@@ -290,6 +290,8 @@ void main() {
           syncedAt: DateTime.now(),
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
+          genre: null,
+          isPhysical: true,
         );
 
         final result = await bookRepository.updateBook(nonExistentBook);

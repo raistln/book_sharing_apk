@@ -691,6 +691,9 @@ class _ManageMembersSheet extends ConsumerWidget {
                   if (members.isEmpty) {
                     return const Center(child: Text('No hay miembros'));
                   }
+                  final memberActivity =
+                      ref.watch(groupMemberActivityProvider(group.id));
+
                   return ListView.builder(
                     controller: scrollController,
                     itemCount: members.length,
@@ -699,14 +702,69 @@ class _ManageMembersSheet extends ConsumerWidget {
                       final user = member.user;
                       final isCurrentOwner =
                           group.ownerUserId == member.membership.memberUserId;
+                      final activity =
+                          memberActivity[member.membership.memberUserId];
+
+                      // Determine star member (top score)
+                      final isStarMember = activity != null &&
+                          activity.score > 0 &&
+                          !memberActivity.values.any(
+                              (a) => a != activity && a.score > activity.score);
 
                       return ListTile(
                         leading: CircleAvatar(
                           child: Text((user?.username ?? '?')[0].toUpperCase()),
                         ),
-                        title: Text(user?.username ?? 'Usuario desconocido'),
-                        subtitle: Text(_getRoleLabel(
-                            member.membership.role, isCurrentOwner)),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                user?.username ?? 'Usuario desconocido',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (isStarMember)
+                              const Tooltip(
+                                message: 'Miembro Estrella (Máxima actividad)',
+                                child: Text(' ⭐'),
+                              ),
+                          ],
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_getRoleLabel(
+                                member.membership.role, isCurrentOwner)),
+                            if (activity != null && activity.score > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Wrap(
+                                  spacing: 4,
+                                  runSpacing: 4,
+                                  children: [
+                                    if (activity.sharedCount >= 5)
+                                      const _ActivityBadge(
+                                        label: 'Bibliófilo',
+                                        icon: Icons.auto_stories,
+                                        color: Colors.blue,
+                                      ),
+                                    if (activity.sharedCount >= 10)
+                                      const _ActivityBadge(
+                                        label: 'Bibliotecario',
+                                        icon: Icons.account_balance,
+                                        color: Colors.purple,
+                                      ),
+                                    if (activity.lendingCount >= 3)
+                                      const _ActivityBadge(
+                                        label: 'Lector Activo',
+                                        icon: Icons.handshake_outlined,
+                                        color: Colors.green,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
                         trailing: isOwner && !isCurrentOwner
                             ? PopupMenuButton<String>(
                                 itemBuilder: (context) => [
@@ -1000,5 +1058,48 @@ class _ManageInvitationsSheetState
         isError: true,
       );
     }
+  }
+}
+
+class _ActivityBadge extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _ActivityBadge({
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Tooltip(
+      message: label,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: color,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

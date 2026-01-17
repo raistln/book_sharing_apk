@@ -92,6 +92,10 @@ class Books extends Table {
       boolean().withDefault(const Constant(false))();
   TextColumn get externalLenderName => text().nullable()();
 
+  // Metadata
+  TextColumn get genre => text().nullable()();
+  BoolColumn get isPhysical => boolean().withDefault(const Constant(true))();
+
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get syncedAt => dateTime().nullable()();
@@ -202,6 +206,9 @@ class SharedBooks extends Table {
   TextColumn get visibility =>
       text().withDefault(const Constant('group')).withLength(min: 1, max: 32)();
   BoolColumn get isAvailable => boolean().withDefault(const Constant(true))();
+
+  // Metadata
+  TextColumn get genre => text().nullable()();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
@@ -321,7 +328,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -433,6 +440,13 @@ class AppDatabase extends _$AppDatabase {
             // Loans: wasRead, markedReadAt
             await m.addColumn(loans, loans.wasRead);
             await m.addColumn(loans, loans.markedReadAt);
+          }
+
+          if (from < 16) {
+            // Migration to v16: Add genre to SharedBooks
+            await m.addColumn(sharedBooks, sharedBooks.genre);
+            // Optional: You could backfill genre from Books table here if needed,
+            // but since it's a new feature, null is acceptable for existing shared books.
           }
         },
       );

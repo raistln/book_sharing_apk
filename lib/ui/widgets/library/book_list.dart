@@ -7,6 +7,7 @@ import '../../../../data/local/database.dart';
 import '../../../../providers/book_providers.dart';
 import '../../../../design_system/literary_shadows.dart';
 import '../../../../design_system/literary_animations.dart';
+import '../../../../models/book_genre.dart';
 
 class BookList extends StatelessWidget {
   const BookList({
@@ -162,6 +163,24 @@ class BookListTile extends ConsumerWidget {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        if (book.genre != null) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.secondaryContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              BookGenre.fromString(book.genre)?.label ??
+                                  book.genre!,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSecondaryContainer,
+                              ),
+                            ),
                           ),
                         ],
                         if (book.isbn != null) ...[
@@ -330,17 +349,28 @@ class BookListTile extends ConsumerWidget {
                 .map((r) => r.rating)
                 .fold<double>(0, (prev, value) => prev + value) /
             reviews.length;
-        return Row(
-          children: [
-            _RatingStars(average: avg),
-            const SizedBox(width: 8),
-            Text(
-              '${avg.toStringAsFixed(1)} / 5 · ${reviews.length} reseñas',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+        return InkWell(
+          onTap: onViewReviews,
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _RatingStars(average: avg),
+                const SizedBox(width: 8),
+                Text(
+                  '${avg.toStringAsFixed(1)} / 5 · ${reviews.length} ${reviews.length == 1 ? 'reseña' : 'reseñas'}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Icon(Icons.chevron_right,
+                    size: 14, color: theme.colorScheme.primary),
+              ],
             ),
-          ],
+          ),
         );
       },
       loading: () => const SizedBox(

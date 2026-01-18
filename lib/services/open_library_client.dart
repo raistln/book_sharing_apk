@@ -105,6 +105,8 @@ class OpenLibraryBookResult {
     this.coverUrl,
     this.publishYear,
     this.subjects = const [],
+    this.pageCount,
+    this.publishedDate,
   });
 
   factory OpenLibraryBookResult.fromJson(Map<String, dynamic> json) {
@@ -122,6 +124,9 @@ class OpenLibraryBookResult {
               ?.map((s) => s.toString())
               .toList() ??
           const [],
+      pageCount: (json['number_of_pages_median'] as num?)?.toInt(),
+      publishedDate:
+          (json['publish_date'] as List<dynamic>?)?.first?.toString(),
     );
   }
 
@@ -131,6 +136,8 @@ class OpenLibraryBookResult {
   final String? coverUrl;
   final int? publishYear;
   final List<String> subjects;
+  final int? pageCount;
+  final String? publishedDate;
 
   OpenLibraryBookResult copyWith({
     String? title,
@@ -139,6 +146,8 @@ class OpenLibraryBookResult {
     String? coverUrl,
     int? publishYear,
     List<String>? subjects,
+    int? pageCount,
+    String? publishedDate,
   }) {
     return OpenLibraryBookResult(
       title: title ?? this.title,
@@ -147,6 +156,8 @@ class OpenLibraryBookResult {
       coverUrl: coverUrl ?? this.coverUrl,
       publishYear: publishYear ?? this.publishYear,
       subjects: subjects ?? this.subjects,
+      pageCount: pageCount ?? this.pageCount,
+      publishedDate: publishedDate ?? this.publishedDate,
     );
   }
 

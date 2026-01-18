@@ -742,6 +742,18 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("is_physical" IN (0, 1))'),
       defaultValue: const Constant(true));
+  static const VerificationMeta _pageCountMeta =
+      const VerificationMeta('pageCount');
+  @override
+  late final GeneratedColumn<int> pageCount = GeneratedColumn<int>(
+      'page_count', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _publicationYearMeta =
+      const VerificationMeta('publicationYear');
+  @override
+  late final GeneratedColumn<int> publicationYear = GeneratedColumn<int>(
+      'publication_year', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
   @override
@@ -804,6 +816,8 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
         externalLenderName,
         genre,
         isPhysical,
+        pageCount,
+        publicationYear,
         isDirty,
         isDeleted,
         syncedAt,
@@ -905,6 +919,16 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
           isPhysical.isAcceptableOrUnknown(
               data['is_physical']!, _isPhysicalMeta));
     }
+    if (data.containsKey('page_count')) {
+      context.handle(_pageCountMeta,
+          pageCount.isAcceptableOrUnknown(data['page_count']!, _pageCountMeta));
+    }
+    if (data.containsKey('publication_year')) {
+      context.handle(
+          _publicationYearMeta,
+          publicationYear.isAcceptableOrUnknown(
+              data['publication_year']!, _publicationYearMeta));
+    }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
           isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
@@ -970,6 +994,10 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
           .read(DriftSqlType.string, data['${effectivePrefix}genre']),
       isPhysical: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_physical'])!,
+      pageCount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}page_count']),
+      publicationYear: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}publication_year']),
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -1008,6 +1036,8 @@ class Book extends DataClass implements Insertable<Book> {
   final String? externalLenderName;
   final String? genre;
   final bool isPhysical;
+  final int? pageCount;
+  final int? publicationYear;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -1032,6 +1062,8 @@ class Book extends DataClass implements Insertable<Book> {
       this.externalLenderName,
       this.genre,
       required this.isPhysical,
+      this.pageCount,
+      this.publicationYear,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -1080,6 +1112,12 @@ class Book extends DataClass implements Insertable<Book> {
       map['genre'] = Variable<String>(genre);
     }
     map['is_physical'] = Variable<bool>(isPhysical);
+    if (!nullToAbsent || pageCount != null) {
+      map['page_count'] = Variable<int>(pageCount);
+    }
+    if (!nullToAbsent || publicationYear != null) {
+      map['publication_year'] = Variable<int>(publicationYear);
+    }
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
     if (!nullToAbsent || syncedAt != null) {
@@ -1126,6 +1164,12 @@ class Book extends DataClass implements Insertable<Book> {
       genre:
           genre == null && nullToAbsent ? const Value.absent() : Value(genre),
       isPhysical: Value(isPhysical),
+      pageCount: pageCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pageCount),
+      publicationYear: publicationYear == null && nullToAbsent
+          ? const Value.absent()
+          : Value(publicationYear),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -1159,6 +1203,8 @@ class Book extends DataClass implements Insertable<Book> {
           serializer.fromJson<String?>(json['externalLenderName']),
       genre: serializer.fromJson<String?>(json['genre']),
       isPhysical: serializer.fromJson<bool>(json['isPhysical']),
+      pageCount: serializer.fromJson<int?>(json['pageCount']),
+      publicationYear: serializer.fromJson<int?>(json['publicationYear']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -1188,6 +1234,8 @@ class Book extends DataClass implements Insertable<Book> {
       'externalLenderName': serializer.toJson<String?>(externalLenderName),
       'genre': serializer.toJson<String?>(genre),
       'isPhysical': serializer.toJson<bool>(isPhysical),
+      'pageCount': serializer.toJson<int?>(pageCount),
+      'publicationYear': serializer.toJson<int?>(publicationYear),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -1215,6 +1263,8 @@ class Book extends DataClass implements Insertable<Book> {
           Value<String?> externalLenderName = const Value.absent(),
           Value<String?> genre = const Value.absent(),
           bool? isPhysical,
+          Value<int?> pageCount = const Value.absent(),
+          Value<int?> publicationYear = const Value.absent(),
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -1242,6 +1292,10 @@ class Book extends DataClass implements Insertable<Book> {
             : this.externalLenderName,
         genre: genre.present ? genre.value : this.genre,
         isPhysical: isPhysical ?? this.isPhysical,
+        pageCount: pageCount.present ? pageCount.value : this.pageCount,
+        publicationYear: publicationYear.present
+            ? publicationYear.value
+            : this.publicationYear,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -1276,6 +1330,10 @@ class Book extends DataClass implements Insertable<Book> {
       genre: data.genre.present ? data.genre.value : this.genre,
       isPhysical:
           data.isPhysical.present ? data.isPhysical.value : this.isPhysical,
+      pageCount: data.pageCount.present ? data.pageCount.value : this.pageCount,
+      publicationYear: data.publicationYear.present
+          ? data.publicationYear.value
+          : this.publicationYear,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -1305,6 +1363,8 @@ class Book extends DataClass implements Insertable<Book> {
           ..write('externalLenderName: $externalLenderName, ')
           ..write('genre: $genre, ')
           ..write('isPhysical: $isPhysical, ')
+          ..write('pageCount: $pageCount, ')
+          ..write('publicationYear: $publicationYear, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -1334,6 +1394,8 @@ class Book extends DataClass implements Insertable<Book> {
         externalLenderName,
         genre,
         isPhysical,
+        pageCount,
+        publicationYear,
         isDirty,
         isDeleted,
         syncedAt,
@@ -1362,6 +1424,8 @@ class Book extends DataClass implements Insertable<Book> {
           other.externalLenderName == this.externalLenderName &&
           other.genre == this.genre &&
           other.isPhysical == this.isPhysical &&
+          other.pageCount == this.pageCount &&
+          other.publicationYear == this.publicationYear &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -1388,6 +1452,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
   final Value<String?> externalLenderName;
   final Value<String?> genre;
   final Value<bool> isPhysical;
+  final Value<int?> pageCount;
+  final Value<int?> publicationYear;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -1412,6 +1478,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.externalLenderName = const Value.absent(),
     this.genre = const Value.absent(),
     this.isPhysical = const Value.absent(),
+    this.pageCount = const Value.absent(),
+    this.publicationYear = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -1437,6 +1505,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.externalLenderName = const Value.absent(),
     this.genre = const Value.absent(),
     this.isPhysical = const Value.absent(),
+    this.pageCount = const Value.absent(),
+    this.publicationYear = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -1463,6 +1533,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     Expression<String>? externalLenderName,
     Expression<String>? genre,
     Expression<bool>? isPhysical,
+    Expression<int>? pageCount,
+    Expression<int>? publicationYear,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -1490,6 +1562,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
         'external_lender_name': externalLenderName,
       if (genre != null) 'genre': genre,
       if (isPhysical != null) 'is_physical': isPhysical,
+      if (pageCount != null) 'page_count': pageCount,
+      if (publicationYear != null) 'publication_year': publicationYear,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -1517,6 +1591,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
       Value<String?>? externalLenderName,
       Value<String?>? genre,
       Value<bool>? isPhysical,
+      Value<int?>? pageCount,
+      Value<int?>? publicationYear,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -1541,6 +1617,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
       externalLenderName: externalLenderName ?? this.externalLenderName,
       genre: genre ?? this.genre,
       isPhysical: isPhysical ?? this.isPhysical,
+      pageCount: pageCount ?? this.pageCount,
+      publicationYear: publicationYear ?? this.publicationYear,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -1606,6 +1684,12 @@ class BooksCompanion extends UpdateCompanion<Book> {
     if (isPhysical.present) {
       map['is_physical'] = Variable<bool>(isPhysical.value);
     }
+    if (pageCount.present) {
+      map['page_count'] = Variable<int>(pageCount.value);
+    }
+    if (publicationYear.present) {
+      map['publication_year'] = Variable<int>(publicationYear.value);
+    }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
     }
@@ -1645,6 +1729,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
           ..write('externalLenderName: $externalLenderName, ')
           ..write('genre: $genre, ')
           ..write('isPhysical: $isPhysical, ')
+          ..write('pageCount: $pageCount, ')
+          ..write('publicationYear: $publicationYear, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -8453,6 +8539,8 @@ typedef $$BooksTableCreateCompanionBuilder = BooksCompanion Function({
   Value<String?> externalLenderName,
   Value<String?> genre,
   Value<bool> isPhysical,
+  Value<int?> pageCount,
+  Value<int?> publicationYear,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -8478,6 +8566,8 @@ typedef $$BooksTableUpdateCompanionBuilder = BooksCompanion Function({
   Value<String?> externalLenderName,
   Value<String?> genre,
   Value<bool> isPhysical,
+  Value<int?> pageCount,
+  Value<int?> publicationYear,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -8607,6 +8697,13 @@ class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
 
   ColumnFilters<bool> get isPhysical => $composableBuilder(
       column: $table.isPhysical, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get pageCount => $composableBuilder(
+      column: $table.pageCount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get publicationYear => $composableBuilder(
+      column: $table.publicationYear,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -8770,6 +8867,13 @@ class $$BooksTableOrderingComposer
   ColumnOrderings<bool> get isPhysical => $composableBuilder(
       column: $table.isPhysical, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get pageCount => $composableBuilder(
+      column: $table.pageCount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get publicationYear => $composableBuilder(
+      column: $table.publicationYear,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
 
@@ -8865,6 +8969,12 @@ class $$BooksTableAnnotationComposer
 
   GeneratedColumn<bool> get isPhysical => $composableBuilder(
       column: $table.isPhysical, builder: (column) => column);
+
+  GeneratedColumn<int> get pageCount =>
+      $composableBuilder(column: $table.pageCount, builder: (column) => column);
+
+  GeneratedColumn<int> get publicationYear => $composableBuilder(
+      column: $table.publicationYear, builder: (column) => column);
 
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
@@ -9010,6 +9120,8 @@ class $$BooksTableTableManager extends RootTableManager<
             Value<String?> externalLenderName = const Value.absent(),
             Value<String?> genre = const Value.absent(),
             Value<bool> isPhysical = const Value.absent(),
+            Value<int?> pageCount = const Value.absent(),
+            Value<int?> publicationYear = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -9035,6 +9147,8 @@ class $$BooksTableTableManager extends RootTableManager<
             externalLenderName: externalLenderName,
             genre: genre,
             isPhysical: isPhysical,
+            pageCount: pageCount,
+            publicationYear: publicationYear,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -9060,6 +9174,8 @@ class $$BooksTableTableManager extends RootTableManager<
             Value<String?> externalLenderName = const Value.absent(),
             Value<String?> genre = const Value.absent(),
             Value<bool> isPhysical = const Value.absent(),
+            Value<int?> pageCount = const Value.absent(),
+            Value<int?> publicationYear = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -9085,6 +9201,8 @@ class $$BooksTableTableManager extends RootTableManager<
             externalLenderName: externalLenderName,
             genre: genre,
             isPhysical: isPhysical,
+            pageCount: pageCount,
+            publicationYear: publicationYear,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,

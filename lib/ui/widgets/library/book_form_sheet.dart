@@ -32,6 +32,8 @@ class BookCandidate {
     this.description,
     this.coverUrl,
     this.categories = const [],
+    this.pageCount,
+    this.publicationYear,
     required this.source,
   });
 
@@ -42,6 +44,8 @@ class BookCandidate {
       isbn: result.isbn,
       coverUrl: result.coverUrl,
       categories: result.subjects,
+      pageCount: result.pageCount,
+      publicationYear: _extractYear(result.publishedDate),
       source: BookSource.openLibrary,
     );
   }
@@ -54,6 +58,8 @@ class BookCandidate {
       description: volume.description,
       coverUrl: volume.thumbnailUrl,
       categories: volume.categories,
+      pageCount: volume.pageCount,
+      publicationYear: _extractYear(volume.publishedDate),
       source: BookSource.googleBooks,
     );
   }
@@ -64,7 +70,16 @@ class BookCandidate {
   final String? description;
   final String? coverUrl;
   final List<String> categories;
+  final int? pageCount;
+  final int? publicationYear;
   final BookSource source;
+
+  /// Extracts year from date string (e.g., "2020-01-15" -> 2020)
+  static int? _extractYear(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return null;
+    final match = RegExp(r'\d{4}').firstMatch(dateString);
+    return match != null ? int.tryParse(match.group(0)!) : null;
+  }
 }
 
 /// Book form sheet for creating/editing books
@@ -84,6 +99,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
   final _isbnController = TextEditingController();
   final _barcodeController = TextEditingController();
   final _notesController = TextEditingController();
+  final _pageCountController = TextEditingController();
+  final _publicationYearController = TextEditingController();
   String _status = 'available';
   bool _isRead = false;
   bool _submitting = false;
@@ -118,6 +135,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       _isRead = book.isRead;
       _selectedGenres = BookGenre.fromCsv(book.genre);
       _isPhysical = book.isPhysical;
+      _pageCountController.text = book.pageCount?.toString() ?? '';
+      _publicationYearController.text = book.publicationYear?.toString() ?? '';
 
       // Verificar si el libro tiene préstamos activos
       _checkActiveLoans(book);
@@ -136,6 +155,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     _isbnController.dispose();
     _barcodeController.dispose();
     _notesController.dispose();
+    _pageCountController.dispose();
+    _publicationYearController.dispose();
     super.dispose();
   }
 
@@ -170,6 +191,16 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         _status = book.status == 'archived' ? 'private' : book.status;
       });
     }
+  }
+
+  int? _parsePageCount() {
+    final text = _pageCountController.text.trim();
+    return text.isEmpty ? null : int.tryParse(text);
+  }
+
+  int? _parsePublicationYear() {
+    final text = _publicationYearController.text.trim();
+    return text.isEmpty ? null : int.tryParse(text);
   }
 
   Widget _buildGenreAndTypeSelectors(BuildContext context) {
@@ -429,6 +460,36 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                 ],
               ),
               const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _pageCountController,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Páginas',
+                        border: OutlineInputBorder(),
+                        hintText: 'Ej: 350',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _publicationYearController,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Año publicación',
+                        border: OutlineInputBorder(),
+                        hintText: 'Ej: 2020',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
                 child: Wrap(
@@ -633,6 +694,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           updatedAt: DateTime.now(),
           genre: Value(BookGenre.toCsv(_selectedGenres)),
           isPhysical: _isPhysical,
+          pageCount: Value(_parsePageCount()),
+          publicationYear: Value(_parsePublicationYear()),
         );
 
         await repository.updateBook(updated);
@@ -649,6 +712,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           owner: activeUser,
           genre: BookGenre.toCsv(_selectedGenres),
           isPhysical: _isPhysical,
+          pageCount: _parsePageCount(),
+          publicationYear: _parsePublicationYear(),
         );
       }
 
@@ -1226,6 +1291,14 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         // Merge with existing selection if desired, or replace.
         // For new book search, replacement is better.
         _selectedGenres = mappedGenres;
+      }
+
+      // Populate pageCount and publicationYear
+      if (candidate.pageCount != null) {
+        _pageCountController.text = candidate.pageCount.toString();
+      }
+      if (candidate.publicationYear != null) {
+        _publicationYearController.text = candidate.publicationYear.toString();
       }
     });
   }

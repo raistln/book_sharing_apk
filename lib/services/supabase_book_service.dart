@@ -298,6 +298,8 @@ class SupabaseBookRecord {
     this.isRead = false,
     required this.isDeleted,
     this.genre,
+    this.pageCount,
+    this.publicationYear,
     required this.createdAt,
     this.updatedAt,
   });
@@ -315,6 +317,8 @@ class SupabaseBookRecord {
   final bool isRead;
   final bool isDeleted;
   final String? genre;
+  final int? pageCount;
+  final int? publicationYear;
   final DateTime createdAt;
   final DateTime? updatedAt;
 

@@ -53,7 +53,7 @@ class BookGridItem extends StatelessWidget {
     return TapAnimation(
       onTap: onTap,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Container(

@@ -95,6 +95,8 @@ class Books extends Table {
   // Metadata
   TextColumn get genre => text().nullable()();
   BoolColumn get isPhysical => boolean().withDefault(const Constant(true))();
+  IntColumn get pageCount => integer().nullable()();
+  IntColumn get publicationYear => integer().nullable()();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
@@ -328,7 +330,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -447,6 +449,12 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(sharedBooks, sharedBooks.genre);
             // Optional: You could backfill genre from Books table here if needed,
             // but since it's a new feature, null is acceptable for existing shared books.
+          }
+
+          if (from < 17) {
+            // Migration to v17: Add pageCount and publicationYear to Books
+            await m.addColumn(books, books.pageCount);
+            await m.addColumn(books, books.publicationYear);
           }
         },
       );

@@ -85,6 +85,7 @@ class GoogleBooksVolume {
     this.publishedDate,
     this.thumbnailUrl,
     this.categories = const [],
+    this.pageCount,
   });
 
   factory GoogleBooksVolume.fromJson(Map<String, dynamic> json) {
@@ -98,6 +99,7 @@ class GoogleBooksVolume {
       publishedDate: (volumeInfo['publishedDate'] as String?)?.trim(),
       thumbnailUrl: _parseThumbnail(volumeInfo),
       categories: _parseCategories(volumeInfo),
+      pageCount: (volumeInfo['pageCount'] as num?)?.toInt(),
     );
   }
 
@@ -109,6 +111,7 @@ class GoogleBooksVolume {
   final String? publishedDate;
   final String? thumbnailUrl;
   final List<String> categories;
+  final int? pageCount;
 
   String? get primaryAuthor => authors.isEmpty ? null : authors.first;
 
@@ -121,6 +124,7 @@ class GoogleBooksVolume {
     String? publishedDate,
     String? thumbnailUrl,
     List<String>? categories,
+    int? pageCount,
   }) {
     return GoogleBooksVolume(
       title: title ?? this.title,
@@ -131,6 +135,7 @@ class GoogleBooksVolume {
       publishedDate: publishedDate ?? this.publishedDate,
       thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
       categories: categories ?? this.categories,
+      pageCount: pageCount ?? this.pageCount,
     );
   }
 

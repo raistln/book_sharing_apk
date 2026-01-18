@@ -137,6 +137,8 @@ class BookRepository {
     LocalUser? owner,
     String? genre,
     bool isPhysical = true,
+    int? pageCount,
+    int? publicationYear,
   }) async {
     // Check for duplicates
     Book? existingBook;
@@ -192,6 +194,8 @@ class BookRepository {
         updatedAt: Value(now),
         genre: Value(genre),
         isPhysical: Value(isPhysical),
+        pageCount: Value(pageCount),
+        publicationYear: Value(publicationYear),
       ),
     );
     await _autoShareBook(

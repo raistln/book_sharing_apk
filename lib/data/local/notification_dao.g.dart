@@ -11,4 +11,23 @@ mixin _$NotificationDaoMixin on DatabaseAccessor<AppDatabase> {
   $LoansTable get loans => attachedDatabase.loans;
   $InAppNotificationsTable get inAppNotifications =>
       attachedDatabase.inAppNotifications;
+  NotificationDaoManager get managers => NotificationDaoManager(this);
+}
+
+class NotificationDaoManager {
+  final _$NotificationDaoMixin _db;
+  NotificationDaoManager(this._db);
+  $$LocalUsersTableTableManager get localUsers =>
+      $$LocalUsersTableTableManager(_db.attachedDatabase, _db.localUsers);
+  $$GroupsTableTableManager get groups =>
+      $$GroupsTableTableManager(_db.attachedDatabase, _db.groups);
+  $$BooksTableTableManager get books =>
+      $$BooksTableTableManager(_db.attachedDatabase, _db.books);
+  $$SharedBooksTableTableManager get sharedBooks =>
+      $$SharedBooksTableTableManager(_db.attachedDatabase, _db.sharedBooks);
+  $$LoansTableTableManager get loans =>
+      $$LoansTableTableManager(_db.attachedDatabase, _db.loans);
+  $$InAppNotificationsTableTableManager get inAppNotifications =>
+      $$InAppNotificationsTableTableManager(
+          _db.attachedDatabase, _db.inAppNotifications);
 }

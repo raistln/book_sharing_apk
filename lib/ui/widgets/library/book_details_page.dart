@@ -144,6 +144,19 @@ class _BookDetailsContent extends ConsumerWidget {
               textAlign: TextAlign.center,
             ),
           ],
+          if (book.pageCount != null || book.publicationYear != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              [
+                if (book.pageCount != null) '${book.pageCount} páginas',
+                if (book.publicationYear != null) '${book.publicationYear}',
+              ].join(' • '),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
           const SizedBox(height: 24),
           Center(
             child: Wrap(

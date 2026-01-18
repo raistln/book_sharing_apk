@@ -296,6 +296,8 @@ class _DiscoverBookDetailPageState
             final author = (book?.author ?? '').trim();
             final isbn = book?.isbn?.trim();
             final description = book?.notes?.trim();
+            final pageCount = book?.pageCount;
+            final publicationYear = book?.publicationYear;
             final statusDisplay = _resolveStatusDisplay(
               theme: theme,
               sharedBook: sharedBook,
@@ -371,6 +373,28 @@ class _DiscoverBookDetailPageState
                                   Expanded(
                                     child: Text(
                                       author,
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            if (pageCount != null ||
+                                publicationYear != null) ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.info_outline, size: 18),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      [
+                                        if (pageCount != null)
+                                          '$pageCount páginas',
+                                        if (publicationYear != null)
+                                          '$publicationYear',
+                                      ].join(' • '),
                                       style: theme.textTheme.bodyMedium,
                                     ),
                                   ),

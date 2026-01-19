@@ -15,14 +15,17 @@ class CoverRefreshResult {
     required this.totalProcessed,
     required this.successCount,
     required this.failedCount,
+    required this.skippedCount,
   });
 
   final int totalProcessed;
   final int successCount;
   final int failedCount;
+  final int skippedCount;
 }
 
 class _MetadataCandidate {
+  final String? isbn;
   final String? coverUrl;
   final int? pageCount;
   final int? publicationYear;
@@ -30,6 +33,7 @@ class _MetadataCandidate {
   final String? description;
 
   _MetadataCandidate({
+    this.isbn,
     this.coverUrl,
     this.pageCount,
     this.publicationYear,
@@ -38,6 +42,7 @@ class _MetadataCandidate {
   });
 
   bool get hasData =>
+      isbn != null ||
       coverUrl != null ||
       pageCount != null ||
       publicationYear != null ||
@@ -61,20 +66,54 @@ class CoverRefreshService {
   final OpenLibraryClient _openLibraryClient;
   final GoogleBooksClient _googleBooksClient;
 
-  /// Refreshes metadata (cover, pages, year, desc, etc.) for books that are missing information.
-  Future<CoverRefreshResult> refreshMissingMetadata({int? ownerUserId}) async {
+  // Configuración del throttling (control de velocidad)
+  static const _defaultDelayBetweenRequests = Duration(milliseconds: 500);
+  static const _delayAfterError = Duration(seconds: 2);
+
+  /// Verifica si un libro tiene toda la metadata completa
+  bool _hasCompleteMetadata(Book book) {
+    final hasIsbn = book.isbn != null && book.isbn!.isNotEmpty;
+    final hasCover = book.coverPath != null &&
+        book.coverPath!.isNotEmpty &&
+        !book.coverPath!.contains('assets') &&
+        !book.coverPath!.contains('default');
+    final hasPages = book.pageCount != null && book.pageCount! > 0;
+    final hasYear = book.publicationYear != null && book.publicationYear! > 0;
+    final hasGenre = book.genre != null && book.genre!.isNotEmpty;
+    final hasNotes = book.notes != null && book.notes!.isNotEmpty;
+
+    return hasIsbn && hasCover && hasPages && hasYear && hasGenre && hasNotes;
+  }
+
+  /// Refreshes metadata (cover, pages, year, desc, isbn, etc.) for books that are missing information.
+  ///
+  /// Parámetros:
+  /// - [ownerUserId]: Filtrar libros por usuario
+  /// - [skipComplete]: Si es true, salta los libros que ya tienen toda la metadata completa (por defecto true)
+  /// - [delayBetweenRequests]: Tiempo de espera entre peticiones para no saturar la API
+  /// - [onProgress]: Callback opcional para reportar progreso (current, total, bookTitle)
+  Future<CoverRefreshResult> refreshMissingMetadata({
+    int? ownerUserId,
+    bool skipComplete = true,
+    Duration? delayBetweenRequests,
+    void Function(int current, int total, String bookTitle)? onProgress,
+  }) async {
     developer.log('[CoverRefreshService] Starting metadata refresh',
         name: 'CoverRefreshService');
+
+    final delay = delayBetweenRequests ?? _defaultDelayBetweenRequests;
 
     final books =
         await _bookRepository.fetchActiveBooks(ownerUserId: ownerUserId);
 
-    // Filter books that are missing metadata OR have potential for better metadata
-    // We now include ALL books in the target list to check if we can improve their data,
-    // especially covers which might be generic placeholders.
+    // Filter books that are missing metadata
     final targetBooks = books.where((book) {
+      // Si skipComplete está activado, saltar libros completos
+      if (skipComplete && _hasCompleteMetadata(book)) {
+        return false;
+      }
+
       final missingCover = book.coverPath == null || book.coverPath!.isEmpty;
-      // Also target books that might have a placeholder cover (heuristic)
       final hasPlaceholder = book.coverPath != null &&
           (book.coverPath!.contains('assets') ||
               book.coverPath!.contains('default') ||
@@ -86,51 +125,78 @@ class CoverRefreshService {
           book.publicationYear == null || book.publicationYear == 0;
       final missingGenre = book.genre == null || book.genre!.isEmpty;
       final missingNotes = book.notes == null || book.notes!.isEmpty;
+      final missingIsbn = book.isbn == null || book.isbn!.isEmpty;
 
       return missingCover ||
           hasPlaceholder ||
           missingPages ||
           missingYear ||
           missingGenre ||
-          missingNotes;
+          missingNotes ||
+          missingIsbn;
     }).toList();
 
     developer.log(
-      '[CoverRefreshService] Found ${targetBooks.length} books with missing or improvable metadata',
+      '[CoverRefreshService] Found ${targetBooks.length} books with missing metadata (skipComplete: $skipComplete)',
       name: 'CoverRefreshService',
     );
 
     int successCount = 0;
     int failedCount = 0;
+    int skippedCount = 0;
+    int currentIndex = 0;
 
     for (final book in targetBooks) {
+      currentIndex++;
+
+      // Reportar progreso si se proporcionó callback
+      onProgress?.call(currentIndex, targetBooks.length, book.title);
+
       try {
+        developer.log(
+          '[CoverRefreshService] Processing ($currentIndex/${targetBooks.length}): ${book.title}',
+          name: 'CoverRefreshService',
+        );
+
         final candidate = await _findMetadata(book);
 
         if (!candidate.hasData) {
-          failedCount++;
+          skippedCount++;
+          developer.log(
+            '[CoverRefreshService] No metadata found for: ${book.title}',
+            name: 'CoverRefreshService',
+          );
+
+          // Esperar antes de continuar con el siguiente
+          if (currentIndex < targetBooks.length) {
+            await Future.delayed(delay);
+          }
           continue;
         }
 
         var updatedBook = book;
         bool changed = false;
 
-        // 1. Process Cover
-        // Update if missing OR if we found a valid URL and current is suspect/placeholder
-        // We trust the API result to be better than a local placeholder
+        // 1. Process ISBN if missing and found
+        if ((book.isbn == null || book.isbn!.isEmpty) &&
+            candidate.isbn != null &&
+            candidate.isbn!.isNotEmpty) {
+          updatedBook = updatedBook.copyWith(isbn: Value(candidate.isbn));
+          changed = true;
+          developer.log(
+            '[CoverRefreshService] Found ISBN for ${book.title}: ${candidate.isbn}',
+            name: 'CoverRefreshService',
+          );
+        }
+
+        // 2. Process Cover
         if (candidate.coverUrl != null && candidate.coverUrl!.isNotEmpty) {
           final currentIsPlaceholder = book.coverPath == null ||
               book.coverPath!.isEmpty ||
               book.coverPath!.contains('assets') ||
               book.coverPath!.contains('default');
 
-          // If we have a new URL, and we either don't have a cover OR the user requested refresh
-          // (which implies they want to fix things), we try to download it.
-          // To be safe, we only overwrite if current is null/empty/placeholder OR if we simply want to force refresh.
-          // For now, let's be aggressive only on missing/placeholder, but technically the loop runs on "targetBooks".
-
           if (currentIsPlaceholder || book.coverPath != candidate.coverUrl) {
-            // Avoid re-downloading if it looks like the SAME remote URL (unlikely exact string match but good check)
             final localPath =
                 await _coverService.saveRemoteCover(candidate.coverUrl!);
             if (localPath != null && localPath != book.coverPath) {
@@ -140,7 +206,7 @@ class CoverRefreshService {
           }
         }
 
-        // 2. Process Page Count if missing and found
+        // 3. Process Page Count if missing and found
         if ((book.pageCount == null || book.pageCount == 0) &&
             candidate.pageCount != null) {
           updatedBook =
@@ -148,7 +214,7 @@ class CoverRefreshService {
           changed = true;
         }
 
-        // 3. Process Publication Year if missing and found
+        // 4. Process Publication Year if missing and found
         if ((book.publicationYear == null || book.publicationYear == 0) &&
             candidate.publicationYear != null) {
           updatedBook = updatedBook.copyWith(
@@ -156,14 +222,14 @@ class CoverRefreshService {
           changed = true;
         }
 
-        // 4. Process Genre if missing and found
+        // 5. Process Genre if missing and found
         if ((book.genre == null || book.genre!.isEmpty) &&
             candidate.genre != null) {
           updatedBook = updatedBook.copyWith(genre: Value(candidate.genre));
           changed = true;
         }
 
-        // 5. Process Description (Notes) if missing and found
+        // 6. Process Description (Notes) if missing and found
         if ((book.notes == null || book.notes!.isEmpty) &&
             candidate.description != null) {
           updatedBook =
@@ -179,8 +245,12 @@ class CoverRefreshService {
           );
           successCount++;
         } else {
-          // Found some data but maybe it wasn't relevant (e.g. cover found but download failed)
-          failedCount++;
+          skippedCount++;
+        }
+
+        // Esperar antes de la siguiente petición para no saturar la API
+        if (currentIndex < targetBooks.length) {
+          await Future.delayed(delay);
         }
       } catch (e) {
         developer.log(
@@ -188,11 +258,16 @@ class CoverRefreshService {
           name: 'CoverRefreshService',
         );
         failedCount++;
+
+        // Esperar más tiempo después de un error
+        if (currentIndex < targetBooks.length) {
+          await Future.delayed(_delayAfterError);
+        }
       }
     }
 
     developer.log(
-      '[CoverRefreshService] Refresh complete: $successCount success, $failedCount failed',
+      '[CoverRefreshService] Refresh complete: $successCount success, $failedCount failed, $skippedCount skipped',
       name: 'CoverRefreshService',
     );
 
@@ -200,6 +275,7 @@ class CoverRefreshService {
       totalProcessed: targetBooks.length,
       successCount: successCount,
       failedCount: failedCount,
+      skippedCount: skippedCount,
     );
   }
 
@@ -247,6 +323,7 @@ class CoverRefreshService {
     // OpenLibrary is preferred for structured data + cover.
     // GoogleBooks is fallback.
 
+    String? isbn;
     String? coverUrl;
     int? pageCount;
     int? publicationYear;
@@ -255,11 +332,13 @@ class CoverRefreshService {
 
     // --- 1. OpenLibrary ---
     try {
+      // Si ya tenemos ISBN, buscar por ISBN primero
       if (book.isbn != null && book.isbn!.isNotEmpty) {
         final results =
             await _openLibraryClient.search(isbn: book.isbn, limit: 1);
         if (results.isNotEmpty) {
           final result = results.first;
+          isbn ??= result.isbn;
           coverUrl ??= result.coverUrl;
           pageCount ??= result.pageCount;
           publicationYear ??= result.publishYear;
@@ -269,16 +348,48 @@ class CoverRefreshService {
               genre ??= BookGenre.toCsv(genres);
             }
           }
+
+          if (result.key != null ||
+              result.isbn != null ||
+              result.editionKey != null) {
+            final detail = await _openLibraryClient.getSmartMetadata(
+              isbn: result.isbn,
+              workKey: result.key,
+              editionKey: result.editionKey,
+            );
+            if (detail != null) {
+              isbn ??= detail.isbn;
+              description ??= detail.description;
+              coverUrl ??= detail.coverUrl;
+              pageCount ??= detail.pageCount;
+
+              if (detail.publishDate != null) {
+                final dateStr = detail.publishDate!;
+                if (dateStr.length >= 4) {
+                  publicationYear ??= int.tryParse(dateStr.substring(0, 4));
+                }
+              }
+
+              if (detail.subjects.isNotEmpty) {
+                final genres =
+                    BookGenre.fromExternalCategories(detail.subjects);
+                if (genres.isNotEmpty) {
+                  genre ??= BookGenre.toCsv(genres);
+                }
+              }
+            }
+          }
         }
       }
 
-      // If still missing crucial info, try title search on OL
-      if (coverUrl == null || pageCount == null) {
+      // Si no tenemos ISBN o falta información crucial, buscar por título
+      if (isbn == null || coverUrl == null || pageCount == null) {
         final query =
             book.author != null ? '${book.title} ${book.author}' : book.title;
         final results = await _openLibraryClient.search(query: query, limit: 1);
         if (results.isNotEmpty) {
           final result = results.first;
+          isbn ??= result.isbn;
           coverUrl ??= result.coverUrl;
           pageCount ??= result.pageCount;
           publicationYear ??= result.publishYear;
@@ -286,6 +397,37 @@ class CoverRefreshService {
             final genres = BookGenre.fromExternalCategories(result.subjects);
             if (genres.isNotEmpty) {
               genre = BookGenre.toCsv(genres);
+            }
+          }
+
+          if (result.key != null ||
+              result.isbn != null ||
+              result.editionKey != null) {
+            final detail = await _openLibraryClient.getSmartMetadata(
+              isbn: result.isbn,
+              workKey: result.key,
+              editionKey: result.editionKey,
+            );
+            if (detail != null) {
+              isbn ??= detail.isbn;
+              description ??= detail.description;
+              coverUrl ??= detail.coverUrl;
+              pageCount ??= detail.pageCount;
+
+              if (detail.publishDate != null) {
+                final dateStr = detail.publishDate!;
+                if (dateStr.length >= 4) {
+                  publicationYear ??= int.tryParse(dateStr.substring(0, 4));
+                }
+              }
+
+              if (detail.subjects.isNotEmpty) {
+                final genres =
+                    BookGenre.fromExternalCategories(detail.subjects);
+                if (genres.isNotEmpty) {
+                  genre ??= BookGenre.toCsv(genres);
+                }
+              }
             }
           }
         }
@@ -298,8 +440,8 @@ class CoverRefreshService {
     }
 
     // --- 2. Google Books (Fallback & Enrichment) ---
-    // always fetch from GB if description is missing
-    if (coverUrl == null ||
+    if (isbn == null ||
+        coverUrl == null ||
         pageCount == null ||
         publicationYear == null ||
         genre == null ||
@@ -312,6 +454,7 @@ class CoverRefreshService {
         );
         if (results.isNotEmpty) {
           final result = results.first;
+          isbn ??= result.isbn;
           coverUrl ??= result.thumbnailUrl;
           pageCount ??= result.pageCount;
           description ??= result.description;
@@ -340,6 +483,7 @@ class CoverRefreshService {
     }
 
     return _MetadataCandidate(
+      isbn: isbn,
       coverUrl: coverUrl,
       pageCount: pageCount,
       publicationYear: publicationYear,

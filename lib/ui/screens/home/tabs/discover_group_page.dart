@@ -573,30 +573,33 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Background (Image or Gradient)
-              if (book?.coverPath != null)
-                Image.network(
-                  book!.coverPath!,
-                  fit: BoxFit.cover,
-                  // Removed color filter on image itself, will use overlay
-                )
-              else
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        theme.colorScheme.primaryContainer,
-                        theme.colorScheme.surfaceContainerHighest,
-                      ],
-                    ),
+              // Background (Standardized Purple Gradient)
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      theme.colorScheme.primary,
+                      theme.colorScheme.primaryContainer,
+                    ],
+                    stops: const [0.3, 1.0],
                   ),
                 ),
+              ),
 
-              // Contrast Overlay (Uniform for ALL cards to ensure text readability)
+              // Subtle overlay to ensure text readability if needed
               Container(
-                color: Colors.black.withValues(alpha: 0.55),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.1),
+                      Colors.black.withValues(alpha: 0.4),
+                    ],
+                  ),
+                ),
               ),
 
               // Content Overlay (Always visible, centered/large)

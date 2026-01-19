@@ -34,6 +34,8 @@ class BookCandidate {
     this.categories = const [],
     this.pageCount,
     this.publicationYear,
+    this.workKey,
+    this.editionKey,
     required this.source,
   });
 
@@ -46,6 +48,8 @@ class BookCandidate {
       categories: result.subjects,
       pageCount: result.pageCount,
       publicationYear: _extractYear(result.publishedDate),
+      workKey: result.key,
+      editionKey: result.editionKey,
       source: BookSource.openLibrary,
     );
   }
@@ -72,6 +76,8 @@ class BookCandidate {
   final List<String> categories;
   final int? pageCount;
   final int? publicationYear;
+  final String? workKey;
+  final String? editionKey;
   final BookSource source;
 
   /// Extracts year from date string (e.g., "2020-01-15" -> 2020)
@@ -1288,12 +1294,10 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       final mappedGenres =
           BookGenre.fromExternalCategories(candidate.categories);
       if (mappedGenres.isNotEmpty) {
-        // Merge with existing selection if desired, or replace.
-        // For new book search, replacement is better.
         _selectedGenres = mappedGenres;
       }
 
-      // Populate pageCount and publicationYear
+      // Populate pageCount and publicationYear from current candidate
       if (candidate.pageCount != null) {
         _pageCountController.text = candidate.pageCount.toString();
       }
@@ -1301,6 +1305,70 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         _publicationYearController.text = candidate.publicationYear.toString();
       }
     });
+
+    // --- Deep Metadata Fetch (Discovery) ---
+    // If it's an Open Library candidate, we might need a second call for description/pages
+    if (candidate.source == BookSource.openLibrary &&
+        (candidate.workKey != null || candidate.editionKey != null)) {
+      try {
+        final openLibrary = ref.read(openLibraryClientProvider);
+        final detail = await openLibrary.getSmartMetadata(
+          isbn: candidate.isbn,
+          workKey: candidate.workKey,
+          editionKey: candidate.editionKey,
+        );
+
+        if (detail != null && mounted) {
+          setState(() {
+            // Only fill if not already present or if we want better data
+            if (_isbnController.text.isEmpty && detail.isbn != null) {
+              _isbnController.text = detail.isbn!;
+            }
+            if (_notesController.text.isEmpty && detail.description != null) {
+              _notesController.text = detail.description!;
+            }
+            if (_pageCountController.text.isEmpty && detail.pageCount != null) {
+              _pageCountController.text = detail.pageCount.toString();
+            }
+            if (_publicationYearController.text.isEmpty &&
+                detail.publishDate != null) {
+              final match = RegExp(r'\d{4}').firstMatch(detail.publishDate!);
+              if (match != null) {
+                _publicationYearController.text = match.group(0)!;
+              }
+            }
+
+            // Merge subjects
+            if (detail.subjects.isNotEmpty) {
+              final extraGenres =
+                  BookGenre.fromExternalCategories(detail.subjects);
+              final allGenres = <BookGenre>{..._selectedGenres, ...extraGenres};
+              _selectedGenres = allGenres.toList();
+            }
+
+            // Fallback cover if still missing
+            if (_coverPath == null && detail.coverUrl != null) {
+              downloadAndSetCover(detail.coverUrl!);
+            }
+          });
+        }
+      } catch (err) {
+        if (kDebugMode) {
+          debugPrint('Deep metadata fetch failed: $err');
+        }
+      }
+    }
+  }
+
+  Future<void> downloadAndSetCover(String url) async {
+    final coverService = ref.read(coverImageServiceProvider);
+    final downloaded = await coverService.saveRemoteCover(url);
+    if (downloaded != null && mounted) {
+      setState(() {
+        _coverPath = downloaded;
+        _temporaryCoverPaths.add(downloaded);
+      });
+    }
   }
 }
 

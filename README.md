@@ -294,3 +294,13 @@ Si este proyecto te ha sido útil, considera:
 *PassTheBook - Porque los libros están hechos para compartirse*
 
 </div>
+
+
+## Créditos y Atribución de Datos
+
+Esta aplicación utiliza servicios de datos abiertos para su catálogo bibliográfico:
+
+* **Open Library API**: Los metadatos de los libros, descripciones y géneros son proporcionados por [Open Library](https://openlibrary.org), un proyecto de [Internet Archive](https://archive.org). Los datos están bajo la licencia [ODC-By v1.0](https://opendatacommons.org/licenses/by/1-0/).
+* **Open Library Covers**: Las imágenes de las portadas se sirven a través del servicio de portadas de Open Library.
+
+Agradecemos a la comunidad de Open Library por mantener una base de datos de libros libre y accesible.

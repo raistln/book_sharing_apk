@@ -1,5 +1,5 @@
-import 'package:book_sharing_app/data/local/book_dao.dart';
 import 'package:book_sharing_app/data/local/database.dart';
+import 'package:book_sharing_app/data/local/book_dao.dart';
 import 'package:book_sharing_app/data/local/group_dao.dart';
 import 'package:book_sharing_app/data/local/user_dao.dart';
 import 'package:book_sharing_app/data/local/notification_dao.dart';
@@ -7,19 +7,10 @@ import 'package:book_sharing_app/data/repositories/loan_repository.dart';
 import 'package:book_sharing_app/data/repositories/notification_repository.dart';
 import 'package:book_sharing_app/models/global_sync_state.dart';
 import 'package:book_sharing_app/services/loan_controller.dart';
-import 'package:book_sharing_app/services/notification_service.dart';
-import 'package:book_sharing_app/services/unified_sync_coordinator.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:uuid/uuid.dart';
-
-// Mock classes for external dependencies
-class MockNotificationClient extends Mock implements NotificationClient {}
-
-class MockUnifiedSyncCoordinator extends Mock
-    implements UnifiedSyncCoordinator {}
+import '../helpers/test_helper.dart';
 
 void main() {
   group('LoanController', () {
@@ -41,14 +32,11 @@ void main() {
     late SharedBook sharedBook;
 
     setUpAll(() {
-      registerFallbackValue(NotificationType.loanDueSoon);
-      registerFallbackValue(SyncEvent.loanCreated);
-      registerFallbackValue(SyncEntity.books);
-      registerFallbackValue(SyncPriority.high);
+      setupTestFallbacks();
     });
 
     setUp(() async {
-      db = AppDatabase.test(NativeDatabase.memory());
+      db = createTestDatabase();
       groupDao = GroupDao(db);
       bookDao = BookDao(db);
       userDao = UserDao(db);
@@ -101,12 +89,13 @@ void main() {
         syncCoordinator: mockSyncCoordinator,
       );
 
-      // Setup test data using same pattern as loan_repository_test
-      owner = await _insertUser(userDao, username: 'owner');
-      borrower = await _insertUser(userDao, username: 'borrower');
-      testGroup = await _insertGroup(groupDao, owner);
-      book = await _insertBook(bookDao, ownerUserId: owner.id, uuid: 'book-1');
-      sharedBook = await _insertSharedBook(
+      // Setup test data using helpers
+      owner = await insertTestUser(userDao, username: 'owner');
+      borrower = await insertTestUser(userDao, username: 'borrower');
+      testGroup = await insertTestGroup(groupDao, owner);
+      book =
+          await insertTestBook(bookDao, ownerUserId: owner.id, uuid: 'book-1');
+      sharedBook = await insertTestSharedBook(
         groupDao,
         group: testGroup,
         book: book,
@@ -256,93 +245,4 @@ void main() {
       expect(loanController.state.lastSuccess, isNull);
     });
   });
-}
-
-// Helper functions copied from loan_repository_test.dart
-Future<LocalUser> _insertUser(UserDao userDao,
-    {required String username}) async {
-  final now = DateTime(2024, 1, 1, 12);
-  final remoteId = 'remote-$username';
-  final userId = await userDao.insertUser(
-    LocalUsersCompanion.insert(
-      uuid: 'user-$username',
-      username: username,
-      remoteId: drift.Value(remoteId),
-      isDirty: const drift.Value(false),
-      isDeleted: const drift.Value(false),
-      createdAt: drift.Value(now),
-      updatedAt: drift.Value(now),
-    ),
-  );
-  return (await userDao.getById(userId))!;
-}
-
-Future<Group> _insertGroup(GroupDao groupDao, LocalUser owner) async {
-  final now = DateTime(2024, 1, 1, 12);
-  final groupId = await groupDao.insertGroup(
-    GroupsCompanion.insert(
-      uuid: 'group-1',
-      remoteId: const drift.Value('group-remote-1'),
-      name: 'Club de lectura',
-      ownerUserId: drift.Value(owner.id),
-      ownerRemoteId: drift.Value(owner.remoteId ?? 'remote-owner'),
-      isDirty: const drift.Value(false),
-      isDeleted: const drift.Value(false),
-      syncedAt: drift.Value(now),
-      createdAt: drift.Value(now),
-      updatedAt: drift.Value(now),
-    ),
-  );
-  return (await groupDao.findGroupById(groupId))!;
-}
-
-Future<Book> _insertBook(BookDao bookDao,
-    {required int ownerUserId, required String uuid}) async {
-  final now = DateTime(2024, 1, 1, 12);
-  final bookId = await bookDao.insertBook(
-    BooksCompanion.insert(
-      uuid: uuid,
-      remoteId: const drift.Value('book-remote-1'),
-      ownerUserId: drift.Value(ownerUserId),
-      ownerRemoteId: const drift.Value('remote-owner'),
-      title: 'Clean Code',
-      author: const drift.Value('Robert C. Martin'),
-      status: const drift.Value('available'),
-      isDirty: const drift.Value(false),
-      isDeleted: const drift.Value(false),
-      syncedAt: drift.Value(now),
-      createdAt: drift.Value(now),
-      updatedAt: drift.Value(now),
-    ),
-  );
-  return (await bookDao.findById(bookId))!;
-}
-
-Future<SharedBook> _insertSharedBook(
-  GroupDao groupDao, {
-  required Group group,
-  required Book book,
-  required LocalUser owner,
-}) async {
-  final now = DateTime(2024, 1, 1, 12);
-  final sharedId = await groupDao.insertSharedBook(
-    SharedBooksCompanion.insert(
-      uuid: 'shared-${book.uuid}',
-      remoteId: drift.Value('shared-remote-${book.id}'),
-      groupId: group.id,
-      groupUuid: group.uuid,
-      bookId: book.id,
-      bookUuid: book.uuid,
-      ownerUserId: owner.id,
-      ownerRemoteId: drift.Value(owner.remoteId ?? 'remote-owner'),
-      visibility: const drift.Value('group'),
-      isAvailable: const drift.Value(true),
-      isDirty: const drift.Value(false),
-      isDeleted: const drift.Value(false),
-      syncedAt: drift.Value(now),
-      createdAt: drift.Value(now),
-      updatedAt: drift.Value(now),
-    ),
-  );
-  return (await groupDao.findSharedBookById(sharedId))!;
 }

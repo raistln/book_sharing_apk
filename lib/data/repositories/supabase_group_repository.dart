@@ -245,6 +245,8 @@ class SupabaseGroupSyncRepository {
                     updatedAt:
                         Value(remoteShared.updatedAt ?? remoteShared.createdAt),
                     syncedAt: Value(now),
+                    pageCount: Value(remoteShared.pageCount),
+                    publicationYear: Value(remoteShared.publicationYear),
                   ),
                 );
                 if (kDebugMode) {
@@ -624,6 +626,8 @@ class SupabaseGroupSyncRepository {
               isAvailable: shared.isAvailable,
               isDeleted: shared.isDeleted,
               genre: book?.genre ?? shared.genre,
+              pageCount: book?.pageCount,
+              publicationYear: book?.publicationYear,
               createdAt: shared.createdAt,
               updatedAt: shared.updatedAt,
               accessToken: accessToken,
@@ -642,6 +646,8 @@ class SupabaseGroupSyncRepository {
               isAvailable: shared.isAvailable,
               isDeleted: shared.isDeleted,
               genre: book?.genre ?? shared.genre,
+              pageCount: book?.pageCount,
+              publicationYear: book?.publicationYear,
               updatedAt: shared.updatedAt,
               accessToken: accessToken,
             );
@@ -660,6 +666,8 @@ class SupabaseGroupSyncRepository {
                 isAvailable: shared.isAvailable,
                 isDeleted: shared.isDeleted,
                 genre: book?.genre ?? shared.genre,
+                pageCount: book?.pageCount,
+                publicationYear: book?.publicationYear,
                 createdAt: shared.createdAt,
                 updatedAt: shared.updatedAt,
                 accessToken: accessToken,

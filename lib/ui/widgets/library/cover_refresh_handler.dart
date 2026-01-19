@@ -18,9 +18,9 @@ class CoverRefreshHandler {
     final confirmed = await showDialog<bool>(
       context: ctx,
       builder: (context) => AlertDialog(
-        title: const Text('Actualizar portadas'),
+        title: const Text('Actualizar metadatos'),
         content: const Text(
-          'Se buscarán portadas para todos los libros que no tengan una. '
+          'Se buscarán portadas y datos faltantes (páginas, año, género) para tus libros. '
           'Esto puede tardar varios minutos dependiendo de cuántos libros tengas.',
         ),
         actions: [
@@ -47,14 +47,14 @@ class CoverRefreshHandler {
           children: [
             CircularProgressIndicator(),
             SizedBox(width: 20),
-            Expanded(child: Text('Actualizando portadas...')),
+            Expanded(child: Text('Actualizando metadatos...')),
           ],
         ),
       ),
     );
 
     try {
-      final result = await coverRefreshService.refreshMissingCovers(
+      final result = await coverRefreshService.refreshMissingMetadata(
         ownerUserId: activeUser?.id,
       );
 
@@ -62,8 +62,8 @@ class CoverRefreshHandler {
       Navigator.pop(ctx); // Close progress dialog
 
       final message = result.totalProcessed == 0
-          ? 'Todos los libros ya tienen portada.'
-          : 'Portadas actualizadas: ${result.successCount} de ${result.totalProcessed}.';
+          ? 'Todos los libros ya tienen metadatos completos.'
+          : 'Metadatos actualizados: ${result.successCount} de ${result.totalProcessed}.';
 
       showFeedbackSnackBar(
         context: ctx,
@@ -78,7 +78,7 @@ class CoverRefreshHandler {
       Navigator.pop(ctx); // Close progress dialog
       showFeedbackSnackBar(
         context: ctx,
-        message: 'Error al actualizar portadas: $e',
+        message: 'Error al actualizar metadatos: $e',
         isError: true,
       );
     }

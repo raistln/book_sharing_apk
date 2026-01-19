@@ -101,6 +101,8 @@ class SupabaseSharedBookRecord {
     required this.isAvailable,
     required this.isDeleted,
     this.genre,
+    this.pageCount,
+    this.publicationYear,
     required this.createdAt,
     required this.updatedAt,
     required this.loans,
@@ -119,6 +121,8 @@ class SupabaseSharedBookRecord {
   final bool isAvailable;
   final bool isDeleted;
   final String? genre;
+  final int? pageCount;
+  final int? publicationYear;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final List<SupabaseLoanRecord> loans;
@@ -146,6 +150,8 @@ class SupabaseSharedBookRecord {
           ? json['is_deleted'] as bool
           : (json['is_deleted'] as num?)?.toInt() == 1,
       genre: json['genre'] as String?,
+      pageCount: json['page_count'] as int?,
+      publicationYear: json['publication_year'] as int?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: tryParse(json['updated_at'] as String?),
       loans: loansJson == null
@@ -312,7 +318,7 @@ class SupabaseGroupService {
       queryParameters: {
         'select': 'id,name,description,owner_id,created_at,'
             'group_members(id,user_id,role,created_at,profiles(username)),'
-            'shared_books(id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,genre,created_at,updated_at,'
+            'shared_books(id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,genre,page_count,publication_year,created_at,updated_at,'
             'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at,'
             'borrower:profiles!borrower_user_id(username),lender:profiles!lender_user_id(username))),'
             'group_invitations(id,group_id,inviter_id,accepted_user_id,role,code,status,expires_at,responded_at,created_at,updated_at)',
@@ -353,7 +359,7 @@ class SupabaseGroupService {
     final config = await _loadConfig();
     final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
       queryParameters: {
-        'select': 'id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,created_at,updated_at,'
+        'select': 'id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,created_at,updated_at,page_count,publication_year,'
             'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at,'
             'borrower:profiles!borrower_user_id(username),lender:profiles!lender_user_id(username))',
         'group_id': 'eq.$groupId',
@@ -405,6 +411,8 @@ class SupabaseGroupService {
     required bool isAvailable,
     required bool isDeleted,
     String? genre,
+    int? pageCount,
+    int? publicationYear,
     required DateTime createdAt,
     required DateTime updatedAt,
     String? accessToken,
@@ -425,6 +433,8 @@ class SupabaseGroupService {
       'is_available': isAvailable,
       'is_deleted': isDeleted,
       'genre': genre,
+      'page_count': pageCount,
+      'publication_year': publicationYear,
       'created_at': createdAt.toUtc().toIso8601String(),
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
@@ -471,6 +481,8 @@ class SupabaseGroupService {
     required bool isAvailable,
     required bool isDeleted,
     String? genre,
+    int? pageCount,
+    int? publicationYear,
     required DateTime updatedAt,
     String? accessToken,
   }) async {
@@ -489,6 +501,8 @@ class SupabaseGroupService {
       'is_available': isAvailable,
       'is_deleted': isDeleted,
       'genre': genre,
+      'page_count': pageCount,
+      'publication_year': publicationYear,
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
 

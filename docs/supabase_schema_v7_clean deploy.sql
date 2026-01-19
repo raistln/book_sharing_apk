@@ -241,6 +241,8 @@ CREATE TABLE public.shared_books (
   isbn TEXT,
   cover_url TEXT,
   genre TEXT,
+  page_count INTEGER,
+  publication_year INTEGER,
 
   -- Read status
   is_read BOOLEAN NOT NULL DEFAULT false,
@@ -252,6 +254,10 @@ CREATE TABLE public.shared_books (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Comments for clarity
+COMMENT ON COLUMN public.shared_books.page_count IS 'Number of pages in the book';
+COMMENT ON COLUMN public.shared_books.publication_year IS 'Year of publication (YYYY)';
 
 -- BOOK REVIEWS
 CREATE TABLE public.book_reviews (

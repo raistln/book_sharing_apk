@@ -5,6 +5,7 @@ import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
 import '../../screens/home/home_shell.dart';
 import '../../screens/onboarding/onboarding_intro_screen.dart';
+import '../../widgets/auth/literary_pin_input.dart';
 
 class ExistingAccountLoginScreen extends ConsumerStatefulWidget {
   const ExistingAccountLoginScreen({super.key});
@@ -35,8 +36,7 @@ class _ExistingAccountLoginScreenState
   @override
   material.Widget build(material.BuildContext context) {
     final authState = ref.watch(authControllerProvider);
-    final isLoading =
-        _isSubmitting || authState.status == AuthStatus.loading;
+    final isLoading = _isSubmitting || authState.status == AuthStatus.loading;
 
     return material.Scaffold(
       body: material.SafeArea(
@@ -50,7 +50,8 @@ class _ExistingAccountLoginScreenState
                 crossAxisAlignment: material.CrossAxisAlignment.center,
                 children: [
                   material.Icon(material.Icons.login,
-                      size: 96, color: material.Theme.of(context).colorScheme.primary),
+                      size: 96,
+                      color: material.Theme.of(context).colorScheme.primary),
                   const material.SizedBox(height: 24),
                   material.Text(
                     'Inicio con usuario existente',
@@ -70,24 +71,28 @@ class _ExistingAccountLoginScreenState
                     ),
                   ),
                   const material.SizedBox(height: 12),
-                  material.TextField(
-                    controller: _pinController,
-                    enabled: !isLoading,
-                    obscureText: true,
-                    keyboardType: material.TextInputType.number,
-                    textAlign: material.TextAlign.center,
-                    maxLength: 6,
-                    decoration: const material.InputDecoration(
-                      labelText: 'PIN',
-                      border: material.OutlineInputBorder(),
-                      counterText: '',
+                  const material.SizedBox(height: 12),
+                  // Usamos el nuevo input literario
+                  material.Padding(
+                    padding: const material.EdgeInsets.symmetric(vertical: 8.0),
+                    child: LiteraryPinInput(
+                      controller: _pinController,
+                      length: 4, // Match the maxLength used previously
+                      onCompleted: _submit,
+                      onChanged: (_) {
+                        if (_errorMessage != null) {
+                          setState(() {
+                            _errorMessage = null;
+                          });
+                        }
+                      },
                     ),
-                    onSubmitted: (_) => _submit(),
                   ),
                   const material.SizedBox(height: 20),
                   material.FilledButton.icon(
                     onPressed: isLoading ? null : _submit,
-                    icon: const material.Icon(material.Icons.check_circle_outline),
+                    icon: const material.Icon(
+                        material.Icons.check_circle_outline),
                     label: const material.Text('Acceder'),
                   ),
                   const material.SizedBox(height: 12),
@@ -103,8 +108,8 @@ class _ExistingAccountLoginScreenState
                     const material.SizedBox(height: 12),
                     material.Text(
                       _errorMessage!,
-                      style:
-                          material.TextStyle(color: material.Theme.of(context).colorScheme.error),
+                      style: material.TextStyle(
+                          color: material.Theme.of(context).colorScheme.error),
                       textAlign: material.TextAlign.center,
                     ),
                   ],
@@ -185,8 +190,7 @@ class _ExistingAccountLoginScreenState
       if (!result.success) {
         if (!mounted) return;
         setState(() {
-          _errorMessage =
-              result.message ?? 'PIN incorrecto. Intenta de nuevo.';
+          _errorMessage = result.message ?? 'PIN incorrecto. Intenta de nuevo.';
         });
         return;
       }

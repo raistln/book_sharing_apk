@@ -7,6 +7,7 @@ enum GroupMenuAction {
   transferOwnership,
   manageMembers,
   manageInvitations,
+  viewMembers,
   delete,
   leaveGroup,
 }
@@ -32,7 +33,7 @@ class GroupMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final menuEntries = <PopupMenuEntry<GroupMenuAction>>[];
-    
+
     if (isOwner || isAdmin) {
       menuEntries
         ..add(
@@ -53,8 +54,16 @@ class GroupMenu extends StatelessWidget {
             child: Text('Gestionar invitaciones'),
           ),
         );
+    } else {
+      // For non-admins, show View Members
+      menuEntries.add(
+        const PopupMenuItem<GroupMenuAction>(
+          value: GroupMenuAction.viewMembers,
+          child: Text('Ver miembros'),
+        ),
+      );
     }
-    
+
     if (isOwner) {
       if (menuEntries.isNotEmpty) {
         menuEntries.add(const PopupMenuDivider());

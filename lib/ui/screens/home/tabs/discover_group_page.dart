@@ -17,6 +17,7 @@ import '../../../widgets/empty_state.dart';
 import 'discover_book_detail_page.dart';
 import '../../../../models/book_genre.dart';
 import '../../../widgets/library/book_text_list.dart';
+import '../../../widgets/community/group_card.dart';
 
 /// Helper to resolve owner name
 String _resolveOwnerName(LocalUser? ownerUser, int ownerIdFallback) {
@@ -214,6 +215,17 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
               setState(() {
                 _isGridView = !_isGridView;
               });
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.people_outline),
+            tooltip: 'Ver miembros',
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (context) => GroupMembersSheet(group: group),
+              );
             },
           ),
           PopupMenuButton<GroupSortOption>(

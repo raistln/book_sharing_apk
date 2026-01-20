@@ -260,6 +260,7 @@ Future<void> _onGroupMenuAction({
       await _handleTransferOwnership(context, ref, group);
       break;
     case GroupMenuAction.manageMembers:
+    case GroupMenuAction.viewMembers:
       await _showManageMembersSheet(context, ref, group: group);
       break;
     case GroupMenuAction.manageInvitations:
@@ -514,7 +515,7 @@ Future<void> _showManageMembersSheet(
   await showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _ManageMembersSheet(group: group),
+    builder: (context) => GroupMembersSheet(group: group),
   );
 }
 
@@ -651,8 +652,8 @@ class _SelectMemberDialog extends StatelessWidget {
   }
 }
 
-class _ManageMembersSheet extends ConsumerWidget {
-  const _ManageMembersSheet({required this.group});
+class GroupMembersSheet extends ConsumerWidget {
+  const GroupMembersSheet({super.key, required this.group});
 
   final Group group;
 
@@ -662,6 +663,16 @@ class _ManageMembersSheet extends ConsumerWidget {
     final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
     final activeUser = ref.watch(activeUserProvider).value;
     final isOwner = activeUser != null && group.ownerUserId == activeUser.id;
+
+    // Check if current user is admin
+    final members = membersAsync.asData?.value ?? [];
+    final currentUserMembership = activeUser != null
+        ? members.cast<GroupMemberDetail?>().firstWhere(
+            (m) => m?.membership.memberUserId == activeUser.id,
+            orElse: () => null)
+        : null;
+    final isAdmin =
+        isOwner || currentUserMembership?.membership.role == 'admin';
 
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
@@ -675,7 +686,8 @@ class _ManageMembersSheet extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Text('Gestionar miembros', style: theme.textTheme.titleLarge),
+                  Text(isAdmin ? 'Gestionar miembros' : 'Miembros del grupo',
+                      style: theme.textTheme.titleLarge),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -748,6 +760,13 @@ class _ManageMembersSheet extends ConsumerWidget {
                                         icon: Icons.auto_stories,
                                         color: Colors.blue,
                                       ),
+                                    if (activity.sharedCount >= 20)
+                                      const _ActivityBadge(
+                                        label: 'Curador',
+                                        icon:
+                                            Icons.collections_bookmark_outlined,
+                                        color: Colors.amber,
+                                      ),
                                     if (activity.sharedCount >= 10)
                                       const _ActivityBadge(
                                         label: 'Bibliotecario',
@@ -760,12 +779,18 @@ class _ManageMembersSheet extends ConsumerWidget {
                                         icon: Icons.handshake_outlined,
                                         color: Colors.green,
                                       ),
+                                    if (activity.lendingCount >= 8)
+                                      const _ActivityBadge(
+                                        label: 'Generoso',
+                                        icon: Icons.volunteer_activism_outlined,
+                                        color: Colors.orange,
+                                      ),
                                   ],
                                 ),
                               ),
                           ],
                         ),
-                        trailing: isOwner && !isCurrentOwner
+                        trailing: isAdmin && !isCurrentOwner
                             ? PopupMenuButton<String>(
                                 itemBuilder: (context) => [
                                   const PopupMenuItem(

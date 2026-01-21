@@ -290,6 +290,22 @@ class ReadingTimelineEntries extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+class WishlistItems extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+
+  @ReferenceName('wishlistUser')
+  IntColumn get userId => integer().references(LocalUsers, #id)();
+
+  TextColumn get title => text().withLength(min: 1, max: 255)();
+  TextColumn get author => text().withLength(min: 1, max: 255).nullable()();
+  TextColumn get isbn => text().withLength(min: 10, max: 20).nullable()();
+  TextColumn get notes => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 class Loans extends Table {
   IntColumn get id => integer().autoIncrement()();
 
@@ -354,6 +370,7 @@ class Loans extends Table {
     GroupInvitations,
     Loans,
     InAppNotifications,
+    WishlistItems,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -362,7 +379,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -523,6 +540,10 @@ class AppDatabase extends _$AppDatabase {
             // But customConstraint affects onCreate. For onUpgrade, we'd need to recreate
             // but given it's a small change, updating data is the priority.
           }
+
+          if (from < 20) {
+            await m.createTable(wishlistItems);
+          }
         },
       );
 
@@ -539,6 +560,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(readingTimelineEntries).go();
       await delete(bookReviews).go();
       await delete(books).go();
+      await delete(wishlistItems).go();
       await delete(localUsers).go();
     });
   }

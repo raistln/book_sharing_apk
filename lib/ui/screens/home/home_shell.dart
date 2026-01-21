@@ -20,6 +20,8 @@ import '../../widgets/notifications/notification_bell.dart';
 import '../../widgets/notifications/notifications_sheet.dart';
 import '../../widgets/library/book_form_sheet.dart';
 import '../../widgets/profile/user_profile_sheet.dart';
+import '../../../services/release_notes_service.dart';
+import '../../widgets/release_notes_dialog.dart';
 
 enum _BookFormResult {
   saved,
@@ -43,7 +45,21 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(loanRepositoryProvider).deleteOldRejectedCancelledLoans();
+      _checkReleaseNotes();
     });
+  }
+
+  Future<void> _checkReleaseNotes() async {
+    final service = ref.read(releaseNotesServiceProvider);
+    final shouldShow = await service.shouldShowReleaseNotes();
+
+    if (shouldShow && mounted) {
+      final latestNote = service.getLatestReleaseNote();
+      if (latestNote != null) {
+        await ReleaseNotesDialog.show(context, latestNote);
+        await service.markReleaseNotesAsSeen();
+      }
+    }
   }
 
   @override

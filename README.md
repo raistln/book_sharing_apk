@@ -37,7 +37,9 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 - **Búsqueda Multifuente:** Integración con **Google Books API** y **Open Library** para obtener metadatos precisos automáticamente
 - **Colecciones Personalizadas:** Organiza tus libros por estado de lectura, autores, géneros o valoraciones personales
 - **Portadas Dinámicas:** Sistema automático de gestión de portadas con caché inteligente
-- **Reseñas y Valoraciones:** Añade tus propias reseñas y calificaciones con sistema de estrellas
+- **Reseñas y Valoraciones:** Añade tus propias reseñas y calificaciones con sistema de 4 niveles
+- **Lista de Deseos (Wishlist):** Guarda libros que te interesan para el futuro y pásalos a tu biblioteca personal con un solo toque cuando los consigas
+- **Interfaz Literaria:** Diseño cuidado con tipografías clásicas (Georgia), géneros visualmente organizados y scroll optimizado para lectura de reseñas
 - **Filtros Avanzados:** Busca y filtra por título, autor, ISBN, estado de disponibilidad y más
 
 ### 👥 Comunidad y Grupos
@@ -53,6 +55,7 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 - **Gestión de Estados:** Control total sobre préstamos pendientes, activos, devueltos o rechazados
 - **Préstamos Manuales:** Registra préstamos a personas fuera de la plataforma
 - **Historial Completo:** Mantén un registro detallado de todos los movimientos de tus libros
+- **Sistema de Préstamo a la Biblioteca:** Posibilidad de mover libros desde grupos o desde tu wishlist directamente a tu biblioteca personal con confirmación inteligente ("¿Ya lo tienes?")
 - **Confirmación Dual:** Sistema de doble confirmación para devoluciones (solicitante y propietario)
 - **Fechas de Vencimiento:** Establece y rastrea fechas límite para devoluciones
 
@@ -164,8 +167,9 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 ### Configuración de Supabase
 
 La aplicación requiere las siguientes tablas y funciones en Supabase. Puedes encontrar el esquema completo en:
-- `docs/supabase_schema_v7_clean deploy.sql` - Esquema completo de base de datos
+- `docs/supabase_schema_v7_clean deploy.sql` - Esquema inicial de base de datos
 - `docs/supabase_loan_hardening_COMPLETE.sql` - Funciones y triggers para préstamos
+- *Nota: La base de datos local utiliza la versión de esquema 20 con soporte para Wishlist y Reading Timeline.*
 
 Ejecuta estos scripts en el SQL Editor de tu proyecto Supabase.
 

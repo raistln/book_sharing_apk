@@ -1858,7 +1858,7 @@ class $BookReviewsTable extends BookReviews
       'rating', aliasedName, false,
       type: DriftSqlType.int,
       requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL CHECK (rating BETWEEN 1 AND 5)');
+      $customConstraints: 'NOT NULL CHECK (rating BETWEEN 1 AND 4)');
   static const VerificationMeta _reviewMeta = const VerificationMeta('review');
   @override
   late final GeneratedColumn<String> review = GeneratedColumn<String>(
@@ -7931,6 +7931,461 @@ class InAppNotificationsCompanion extends UpdateCompanion<InAppNotification> {
   }
 }
 
+class $WishlistItemsTable extends WishlistItems
+    with TableInfo<$WishlistItemsTable, WishlistItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WishlistItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+      'uuid', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<int> userId = GeneratedColumn<int>(
+      'user_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES local_users (id)'));
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 255),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _authorMeta = const VerificationMeta('author');
+  @override
+  late final GeneratedColumn<String> author = GeneratedColumn<String>(
+      'author', aliasedName, true,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 255),
+      type: DriftSqlType.string,
+      requiredDuringInsert: false);
+  static const VerificationMeta _isbnMeta = const VerificationMeta('isbn');
+  @override
+  late final GeneratedColumn<String> isbn = GeneratedColumn<String>(
+      'isbn', aliasedName, true,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 10, maxTextLength: 20),
+      type: DriftSqlType.string,
+      requiredDuringInsert: false);
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+      'notes', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, uuid, userId, title, author, isbn, notes, createdAt, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'wishlist_items';
+  @override
+  VerificationContext validateIntegrity(Insertable<WishlistItem> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+          _uuidMeta, uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta));
+    } else if (isInserting) {
+      context.missing(_uuidMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(_userIdMeta,
+          userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta));
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('author')) {
+      context.handle(_authorMeta,
+          author.isAcceptableOrUnknown(data['author']!, _authorMeta));
+    }
+    if (data.containsKey('isbn')) {
+      context.handle(
+          _isbnMeta, isbn.isAcceptableOrUnknown(data['isbn']!, _isbnMeta));
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+          _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  WishlistItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WishlistItem(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      uuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
+      userId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}user_id'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      author: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}author']),
+      isbn: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}isbn']),
+      notes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}notes']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $WishlistItemsTable createAlias(String alias) {
+    return $WishlistItemsTable(attachedDatabase, alias);
+  }
+}
+
+class WishlistItem extends DataClass implements Insertable<WishlistItem> {
+  final int id;
+  final String uuid;
+  final int userId;
+  final String title;
+  final String? author;
+  final String? isbn;
+  final String? notes;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const WishlistItem(
+      {required this.id,
+      required this.uuid,
+      required this.userId,
+      required this.title,
+      this.author,
+      this.isbn,
+      this.notes,
+      required this.createdAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    map['user_id'] = Variable<int>(userId);
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || author != null) {
+      map['author'] = Variable<String>(author);
+    }
+    if (!nullToAbsent || isbn != null) {
+      map['isbn'] = Variable<String>(isbn);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  WishlistItemsCompanion toCompanion(bool nullToAbsent) {
+    return WishlistItemsCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      userId: Value(userId),
+      title: Value(title),
+      author:
+          author == null && nullToAbsent ? const Value.absent() : Value(author),
+      isbn: isbn == null && nullToAbsent ? const Value.absent() : Value(isbn),
+      notes:
+          notes == null && nullToAbsent ? const Value.absent() : Value(notes),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory WishlistItem.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WishlistItem(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      userId: serializer.fromJson<int>(json['userId']),
+      title: serializer.fromJson<String>(json['title']),
+      author: serializer.fromJson<String?>(json['author']),
+      isbn: serializer.fromJson<String?>(json['isbn']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'userId': serializer.toJson<int>(userId),
+      'title': serializer.toJson<String>(title),
+      'author': serializer.toJson<String?>(author),
+      'isbn': serializer.toJson<String?>(isbn),
+      'notes': serializer.toJson<String?>(notes),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  WishlistItem copyWith(
+          {int? id,
+          String? uuid,
+          int? userId,
+          String? title,
+          Value<String?> author = const Value.absent(),
+          Value<String?> isbn = const Value.absent(),
+          Value<String?> notes = const Value.absent(),
+          DateTime? createdAt,
+          DateTime? updatedAt}) =>
+      WishlistItem(
+        id: id ?? this.id,
+        uuid: uuid ?? this.uuid,
+        userId: userId ?? this.userId,
+        title: title ?? this.title,
+        author: author.present ? author.value : this.author,
+        isbn: isbn.present ? isbn.value : this.isbn,
+        notes: notes.present ? notes.value : this.notes,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  WishlistItem copyWithCompanion(WishlistItemsCompanion data) {
+    return WishlistItem(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      title: data.title.present ? data.title.value : this.title,
+      author: data.author.present ? data.author.value : this.author,
+      isbn: data.isbn.present ? data.isbn.value : this.isbn,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WishlistItem(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('userId: $userId, ')
+          ..write('title: $title, ')
+          ..write('author: $author, ')
+          ..write('isbn: $isbn, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id, uuid, userId, title, author, isbn, notes, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WishlistItem &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.userId == this.userId &&
+          other.title == this.title &&
+          other.author == this.author &&
+          other.isbn == this.isbn &&
+          other.notes == this.notes &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class WishlistItemsCompanion extends UpdateCompanion<WishlistItem> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<int> userId;
+  final Value<String> title;
+  final Value<String?> author;
+  final Value<String?> isbn;
+  final Value<String?> notes;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const WishlistItemsCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.author = const Value.absent(),
+    this.isbn = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  WishlistItemsCompanion.insert({
+    this.id = const Value.absent(),
+    required String uuid,
+    required int userId,
+    required String title,
+    this.author = const Value.absent(),
+    this.isbn = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  })  : uuid = Value(uuid),
+        userId = Value(userId),
+        title = Value(title);
+  static Insertable<WishlistItem> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<int>? userId,
+    Expression<String>? title,
+    Expression<String>? author,
+    Expression<String>? isbn,
+    Expression<String>? notes,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (userId != null) 'user_id': userId,
+      if (title != null) 'title': title,
+      if (author != null) 'author': author,
+      if (isbn != null) 'isbn': isbn,
+      if (notes != null) 'notes': notes,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  WishlistItemsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? uuid,
+      Value<int>? userId,
+      Value<String>? title,
+      Value<String?>? author,
+      Value<String?>? isbn,
+      Value<String?>? notes,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt}) {
+    return WishlistItemsCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      userId: userId ?? this.userId,
+      title: title ?? this.title,
+      author: author ?? this.author,
+      isbn: isbn ?? this.isbn,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<int>(userId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (author.present) {
+      map['author'] = Variable<String>(author.value);
+    }
+    if (isbn.present) {
+      map['isbn'] = Variable<String>(isbn.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WishlistItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('userId: $userId, ')
+          ..write('title: $title, ')
+          ..write('author: $author, ')
+          ..write('isbn: $isbn, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7947,6 +8402,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LoansTable loans = $LoansTable(this);
   late final $InAppNotificationsTable inAppNotifications =
       $InAppNotificationsTable(this);
+  late final $WishlistItemsTable wishlistItems = $WishlistItemsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7961,7 +8417,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         sharedBooks,
         groupInvitations,
         loans,
-        inAppNotifications
+        inAppNotifications,
+        wishlistItems
       ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
@@ -8247,6 +8704,21 @@ final class $$LocalUsersTableReferences
 
     final cache =
         $_typedResult.readTableOrNull(_notificationsReceivedTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$WishlistItemsTable, List<WishlistItem>>
+      _wishlistUserTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+          db.wishlistItems,
+          aliasName:
+              $_aliasNameGenerator(db.localUsers.id, db.wishlistItems.userId));
+
+  $$WishlistItemsTableProcessedTableManager get wishlistUser {
+    final manager = $$WishlistItemsTableTableManager($_db, $_db.wishlistItems)
+        .filter((f) => f.userId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_wishlistUserTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -8543,6 +9015,27 @@ class $$LocalUsersTableFilterComposer
             $$InAppNotificationsTableFilterComposer(
               $db: $db,
               $table: $db.inAppNotifications,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> wishlistUser(
+      Expression<bool> Function($$WishlistItemsTableFilterComposer f) f) {
+    final $$WishlistItemsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.wishlistItems,
+        getReferencedColumn: (t) => t.userId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$WishlistItemsTableFilterComposer(
+              $db: $db,
+              $table: $db.wishlistItems,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -8899,6 +9392,27 @@ class $$LocalUsersTableAnnotationComposer
                 ));
     return f(composer);
   }
+
+  Expression<T> wishlistUser<T extends Object>(
+      Expression<T> Function($$WishlistItemsTableAnnotationComposer a) f) {
+    final $$WishlistItemsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.wishlistItems,
+        getReferencedColumn: (t) => t.userId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$WishlistItemsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.wishlistItems,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$LocalUsersTableTableManager extends RootTableManager<
@@ -8924,7 +9438,8 @@ class $$LocalUsersTableTableManager extends RootTableManager<
         bool loansBorrower,
         bool loansLender,
         bool notificationsAuthored,
-        bool notificationsReceived})> {
+        bool notificationsReceived,
+        bool wishlistUser})> {
   $$LocalUsersTableTableManager(_$AppDatabase db, $LocalUsersTable table)
       : super(TableManagerState(
           db: db,
@@ -9009,7 +9524,8 @@ class $$LocalUsersTableTableManager extends RootTableManager<
               loansBorrower = false,
               loansLender = false,
               notificationsAuthored = false,
-              notificationsReceived = false}) {
+              notificationsReceived = false,
+              wishlistUser = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
@@ -9024,7 +9540,8 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                 if (loansBorrower) db.loans,
                 if (loansLender) db.loans,
                 if (notificationsAuthored) db.inAppNotifications,
-                if (notificationsReceived) db.inAppNotifications
+                if (notificationsReceived) db.inAppNotifications,
+                if (wishlistUser) db.wishlistItems
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -9183,6 +9700,19 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.targetUserId == item.id),
+                        typedResults: items),
+                  if (wishlistUser)
+                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
+                            WishlistItem>(
+                        currentTable: table,
+                        referencedTable:
+                            $$LocalUsersTableReferences._wishlistUserTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LocalUsersTableReferences(db, table, p0)
+                                .wishlistUser,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.userId == item.id),
                         typedResults: items)
                 ];
               },
@@ -9214,7 +9744,8 @@ typedef $$LocalUsersTableProcessedTableManager = ProcessedTableManager<
         bool loansBorrower,
         bool loansLender,
         bool notificationsAuthored,
-        bool notificationsReceived})>;
+        bool notificationsReceived,
+        bool wishlistUser})>;
 typedef $$BooksTableCreateCompanionBuilder = BooksCompanion Function({
   Value<int> id,
   required String uuid,
@@ -15050,6 +15581,336 @@ typedef $$InAppNotificationsTableProcessedTableManager = ProcessedTableManager<
     InAppNotification,
     PrefetchHooks Function(
         {bool loanId, bool sharedBookId, bool actorUserId, bool targetUserId})>;
+typedef $$WishlistItemsTableCreateCompanionBuilder = WishlistItemsCompanion
+    Function({
+  Value<int> id,
+  required String uuid,
+  required int userId,
+  required String title,
+  Value<String?> author,
+  Value<String?> isbn,
+  Value<String?> notes,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+typedef $$WishlistItemsTableUpdateCompanionBuilder = WishlistItemsCompanion
+    Function({
+  Value<int> id,
+  Value<String> uuid,
+  Value<int> userId,
+  Value<String> title,
+  Value<String?> author,
+  Value<String?> isbn,
+  Value<String?> notes,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+
+final class $$WishlistItemsTableReferences
+    extends BaseReferences<_$AppDatabase, $WishlistItemsTable, WishlistItem> {
+  $$WishlistItemsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $LocalUsersTable _userIdTable(_$AppDatabase db) =>
+      db.localUsers.createAlias(
+          $_aliasNameGenerator(db.wishlistItems.userId, db.localUsers.id));
+
+  $$LocalUsersTableProcessedTableManager get userId {
+    final $_column = $_itemColumn<int>('user_id')!;
+
+    final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_userIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$WishlistItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $WishlistItemsTable> {
+  $$WishlistItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get author => $composableBuilder(
+      column: $table.author, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get isbn => $composableBuilder(
+      column: $table.isbn, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  $$LocalUsersTableFilterComposer get userId {
+    final $$LocalUsersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.userId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableFilterComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$WishlistItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $WishlistItemsTable> {
+  $$WishlistItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get author => $composableBuilder(
+      column: $table.author, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get isbn => $composableBuilder(
+      column: $table.isbn, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  $$LocalUsersTableOrderingComposer get userId {
+    final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.userId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableOrderingComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$WishlistItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $WishlistItemsTable> {
+  $$WishlistItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get author =>
+      $composableBuilder(column: $table.author, builder: (column) => column);
+
+  GeneratedColumn<String> get isbn =>
+      $composableBuilder(column: $table.isbn, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$LocalUsersTableAnnotationComposer get userId {
+    final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.userId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$WishlistItemsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $WishlistItemsTable,
+    WishlistItem,
+    $$WishlistItemsTableFilterComposer,
+    $$WishlistItemsTableOrderingComposer,
+    $$WishlistItemsTableAnnotationComposer,
+    $$WishlistItemsTableCreateCompanionBuilder,
+    $$WishlistItemsTableUpdateCompanionBuilder,
+    (WishlistItem, $$WishlistItemsTableReferences),
+    WishlistItem,
+    PrefetchHooks Function({bool userId})> {
+  $$WishlistItemsTableTableManager(_$AppDatabase db, $WishlistItemsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WishlistItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WishlistItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WishlistItemsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> uuid = const Value.absent(),
+            Value<int> userId = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String?> author = const Value.absent(),
+            Value<String?> isbn = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              WishlistItemsCompanion(
+            id: id,
+            uuid: uuid,
+            userId: userId,
+            title: title,
+            author: author,
+            isbn: isbn,
+            notes: notes,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String uuid,
+            required int userId,
+            required String title,
+            Value<String?> author = const Value.absent(),
+            Value<String?> isbn = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              WishlistItemsCompanion.insert(
+            id: id,
+            uuid: uuid,
+            userId: userId,
+            title: title,
+            author: author,
+            isbn: isbn,
+            notes: notes,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$WishlistItemsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({userId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (userId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.userId,
+                    referencedTable:
+                        $$WishlistItemsTableReferences._userIdTable(db),
+                    referencedColumn:
+                        $$WishlistItemsTableReferences._userIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$WishlistItemsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $WishlistItemsTable,
+    WishlistItem,
+    $$WishlistItemsTableFilterComposer,
+    $$WishlistItemsTableOrderingComposer,
+    $$WishlistItemsTableAnnotationComposer,
+    $$WishlistItemsTableCreateCompanionBuilder,
+    $$WishlistItemsTableUpdateCompanionBuilder,
+    (WishlistItem, $$WishlistItemsTableReferences),
+    WishlistItem,
+    PrefetchHooks Function({bool userId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -15075,4 +15936,6 @@ class $AppDatabaseManager {
       $$LoansTableTableManager(_db, _db.loans);
   $$InAppNotificationsTableTableManager get inAppNotifications =>
       $$InAppNotificationsTableTableManager(_db, _db.inAppNotifications);
+  $$WishlistItemsTableTableManager get wishlistItems =>
+      $$WishlistItemsTableTableManager(_db, _db.wishlistItems);
 }

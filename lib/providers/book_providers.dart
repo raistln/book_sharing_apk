@@ -15,6 +15,8 @@ import '../data/repositories/supabase_group_repository.dart';
 import '../data/repositories/supabase_book_sync_repository.dart';
 import '../data/repositories/supabase_user_sync_repository.dart';
 import '../data/repositories/user_repository.dart';
+import '../data/local/wishlist_dao.dart';
+import '../data/repositories/wishlist_repository.dart';
 import '../services/book_export_service.dart';
 import '../services/loan_export_service.dart';
 import '../services/cover_image_service.dart';
@@ -76,6 +78,11 @@ final bookRepositoryProvider = Provider<BookRepository>((ref) {
 final groupDaoProvider = Provider<GroupDao>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return GroupDao(db);
+});
+
+final wishlistDaoProvider = Provider<WishlistDao>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return WishlistDao(db);
 });
 
 final timelineEntryDaoProvider = Provider<TimelineEntryDao>((ref) {
@@ -248,6 +255,19 @@ final loanRepositoryProvider = Provider<LoanRepository>((ref) {
     userDao: userDao,
     supabaseLoanService: supabaseLoanService,
   );
+});
+
+final wishlistRepositoryProvider = Provider<WishlistRepository>((ref) {
+  final dao = ref.watch(wishlistDaoProvider);
+  return WishlistRepository(dao);
+});
+
+final wishlistItemsProvider =
+    StreamProvider.autoDispose<List<WishlistItem>>((ref) {
+  final repo = ref.watch(wishlistRepositoryProvider);
+  final user = ref.watch(activeUserProvider).value;
+  if (user == null) return Stream.value([]);
+  return repo.watchWishlist(user.id);
 });
 
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {

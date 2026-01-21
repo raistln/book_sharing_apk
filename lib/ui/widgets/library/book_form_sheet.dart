@@ -632,6 +632,8 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                   ),
                 ],
               ),
+              // Extra space for scrolling comfort
+              const SizedBox(height: 60),
             ],
           ),
         ),
@@ -869,7 +871,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         await coverService.deleteCover(existingCover);
       }
       if (!context.mounted) return;
-      navigator.pop();
+      navigator.pop(true); // Return true to indicate deletion
     } catch (err) {
       if (!context.mounted) return;
       showFeedbackSnackBar(

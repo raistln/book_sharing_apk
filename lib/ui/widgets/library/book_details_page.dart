@@ -60,13 +60,17 @@ class BookDetailsPage extends ConsumerWidget {
     );
   }
 
-  void _openEditSheet(BuildContext context, Book book) {
-    showModalBottomSheet(
+  Future<void> _openEditSheet(BuildContext context, Book book) async {
+    final deleted = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) => BookFormSheet(initialBook: book),
     );
+
+    if (deleted == true && context.mounted) {
+      Navigator.of(context).pop();
+    }
   }
 }
 
@@ -147,6 +151,32 @@ class _BookDetailsContent extends ConsumerWidget {
 
           const SizedBox(height: 20),
 
+          // GENRES (New centered placement)
+          if (book.genre != null && book.genre!.isNotEmpty) ...[
+            Center(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: BookGenre.fromCsv(book.genre)
+                    .map((g) => Chip(
+                          label: Text(g.label,
+                              style: const TextStyle(fontSize: 11)),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          backgroundColor: theme
+                              .colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.5),
+                          side: BorderSide(
+                              color: theme.colorScheme.outlineVariant
+                                  .withValues(alpha: 0.5)),
+                        ))
+                    .toList(),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
           // FORMAT & AVAILABILITY CHIPS
           Center(
             child: Wrap(
@@ -180,14 +210,6 @@ class _BookDetailsContent extends ConsumerWidget {
 
                 // Availability Chip
                 _buildAvailabilityChip(context, book),
-
-                // Existing Genres (Optional, maybe keep them but smaller?)
-                ...BookGenre.fromCsv(book.genre).map((g) => Chip(
-                      label:
-                          Text(g.label, style: const TextStyle(fontSize: 12)),
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                    )),
               ],
             ),
           ),
@@ -233,6 +255,9 @@ class _BookDetailsContent extends ConsumerWidget {
           _buildReviewsHeader(context, ref, theme),
           const SizedBox(height: 16),
           _buildReviewsList(context, ref, theme),
+
+          // Extra padding for scrolling comfort
+          const SizedBox(height: 48),
         ],
       ),
     );

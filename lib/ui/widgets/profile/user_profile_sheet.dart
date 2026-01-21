@@ -6,6 +6,7 @@ import '../../../providers/user_profile_provider.dart';
 import '../../../providers/book_providers.dart';
 import 'package:intl/intl.dart';
 import '../../screens/read_books_screen.dart';
+import '../../screens/wishlist_screen.dart';
 import '../../../providers/stats_providers.dart';
 
 class UserProfileSheet extends ConsumerStatefulWidget {
@@ -423,15 +424,33 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
                           ),
                           const SizedBox(height: 24),
                           Center(
-                            child: FilledButton.tonalIcon(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => const ReadBooksScreen()),
-                                );
-                              },
-                              icon: const Icon(Icons.menu_book),
-                              label: const Text('Libros leídos'),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                FilledButton.tonalIcon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const ReadBooksScreen()),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.menu_book),
+                                  label: const Text('Libros leídos'),
+                                ),
+                                const SizedBox(width: 12),
+                                FilledButton.tonalIcon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const WishlistScreen()),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.favorite_border),
+                                  label: const Text('Deseos'),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 24),

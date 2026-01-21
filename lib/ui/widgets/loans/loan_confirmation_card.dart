@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../../../data/local/database.dart'; // For LocalUser, Loan classes if distinct
 import '../../../data/local/group_dao.dart';
 import '../../../providers/book_providers.dart';
-import 'read_confirmation_dialog.dart';
 
 class LoanConfirmationCard extends ConsumerWidget {
   const LoanConfirmationCard({
@@ -106,13 +105,8 @@ class LoanConfirmationCard extends ConsumerWidget {
             onPressed: loanState.isLoading
                 ? null
                 : () async {
-                    bool? wasRead;
-                    if (loan.borrowerUserId == activeUser.id) {
-                      wasRead = await ReadConfirmationDialog.show(
-                          context, detail.book?.title ?? 'Libro');
-                    }
                     await loanController.markReturned(
-                        loan: loan, actor: activeUser, wasRead: wasRead);
+                        loan: loan, actor: activeUser, wasRead: null);
                   },
             icon: const Icon(Icons.check_circle_outlined),
             label: const Text('Confirmar devolución'),
@@ -135,7 +129,7 @@ class LoanConfirmationCard extends ConsumerWidget {
         icon: Icons.hourglass_top,
         title: '${detail.book?.title ?? 'Préstamo'}: Esperando a $otherName',
         subtitle:
-            '$loanInfo\n\nYa has confirmado la devolución el ${DateFormat.MMMd().format(myConfirmation)}.',
+            '$loanInfo\n\nYa has confirmed la devolución el ${DateFormat.MMMd().format(myConfirmation)}.',
         actions: [
           if (canForce)
             FilledButton.icon(
@@ -178,13 +172,8 @@ class LoanConfirmationCard extends ConsumerWidget {
             onPressed: loanState.isLoading
                 ? null
                 : () async {
-                    bool? wasRead;
-                    if (loan.borrowerUserId == activeUser.id) {
-                      wasRead = await ReadConfirmationDialog.show(
-                          context, detail.book?.title ?? 'Libro');
-                    }
                     await loanController.markReturned(
-                        loan: loan, actor: activeUser, wasRead: wasRead);
+                        loan: loan, actor: activeUser, wasRead: null);
                   },
             icon: const Icon(Icons.check_circle),
             label: const Text('Confirmar y finalizar'),

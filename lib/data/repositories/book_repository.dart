@@ -122,8 +122,8 @@ class BookRepository {
 
   Future<List<BookReview>> fetchActiveReviews() => _bookDao.getActiveReviews();
 
-  Stream<List<BookReview>> watchReviews(int bookId) =>
-      _bookDao.watchReviewsForBook(bookId);
+  Stream<List<ReviewWithAuthor>> watchReviews(int bookId) =>
+      _bookDao.watchReviewsWithAuthor(bookId);
 
   Future<int> addBook({
     required String title,

@@ -127,6 +127,24 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
     return query.getSingleOrNull();
   }
 
+  Stream<List<ReviewWithAuthor>> watchReviewsWithAuthor(int bookId) {
+    final query = select(bookReviews).join([
+      innerJoin(localUsers, localUsers.id.equalsExp(bookReviews.authorUserId)),
+    ])
+      ..where(bookReviews.bookId.equals(bookId) &
+          (bookReviews.isDeleted.equals(false) |
+              bookReviews.isDeleted.isNull()));
+
+    return query.watch().map((rows) {
+      return rows.map((row) {
+        return ReviewWithAuthor(
+          row.readTable(bookReviews),
+          row.readTable(localUsers),
+        );
+      }).toList();
+    });
+  }
+
   Stream<List<BookReview>> watchReviewsForBook(int bookId) {
     return (select(bookReviews)
           ..where((tbl) =>
@@ -208,4 +226,11 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
       ),
     );
   }
+}
+
+class ReviewWithAuthor {
+  final BookReview review;
+  final LocalUser author;
+
+  ReviewWithAuthor(this.review, this.author);
 }

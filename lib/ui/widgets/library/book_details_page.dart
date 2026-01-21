@@ -1,14 +1,13 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
 
 import 'package:intl/intl.dart';
 import '../../../data/local/database.dart';
+import '../../../data/local/book_dao.dart';
 import '../../../models/book_genre.dart';
-// import '../../../models/reading_status.dart'; // Removed
+import '../../../models/recommendation_level.dart';
 import '../../../providers/book_providers.dart';
 import 'book_form_sheet.dart';
 import 'review_dialog.dart';
@@ -43,17 +42,6 @@ class BookDetailsPage extends ConsumerWidget {
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
           ),
-          bookAsync.when(
-            data: (book) => book != null
-                ? IconButton(
-                    icon: const Icon(Icons.share_outlined),
-                    tooltip: 'Compartir',
-                    onPressed: () => _shareBook(book),
-                  )
-                : const SizedBox.shrink(),
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
         ],
       ),
       body: bookAsync.when(
@@ -80,20 +68,13 @@ class BookDetailsPage extends ConsumerWidget {
       builder: (context) => BookFormSheet(initialBook: book),
     );
   }
-
-  void _shareBook(Book book) {
-    final text = 'Me he acordado de ti al leer este libro 📚\n\n'
-        '"${book.title}"${book.author != null ? ' de ${book.author}' : ''}\n\n'
-        '¡Descárgate PassTheBook para compartir lecturas!';
-    unawaited(Share.share(text));
-  }
 }
 
 class _BookDetailsContent extends ConsumerWidget {
   const _BookDetailsContent({required this.book, required this.reviews});
 
   final Book book;
-  final List<BookReview> reviews;
+  final List<ReviewWithAuthor> reviews;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -315,16 +296,28 @@ class _BookDetailsContent extends ConsumerWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'Reseñas',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '¿Quién lo ha leído?',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (reviews.isNotEmpty)
+                Text(
+                  '${reviews.length} ${reviews.length == 1 ? 'persona' : 'personas'} han opinado',
+                  style: theme.textTheme.bodySmall,
+                ),
+            ],
           ),
         ),
         TextButton.icon(
           onPressed: () => showAddReviewDialog(context, ref, book),
           icon: const Icon(Icons.add_comment_outlined),
-          label: const Text('Añadir reseña'),
+          label: const Text('Opinar'),
         ),
       ],
     );
@@ -338,13 +331,13 @@ class _BookDetailsContent extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(vertical: 24),
           child: Column(
             children: [
-              Icon(Icons.reviews_outlined,
+              Icon(Icons.person_outline,
                   size: 48,
                   color: theme.colorScheme.onSurfaceVariant
                       .withValues(alpha: 0.5)),
               const SizedBox(height: 12),
               Text(
-                'Sin reseñas todavía',
+                'Nadie ha opinado todavía',
                 style: theme.textTheme.bodyMedium
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
@@ -354,54 +347,13 @@ class _BookDetailsContent extends ConsumerWidget {
       );
     }
 
-    final avg = reviews.map((r) => r.rating).fold<double>(0, (p, c) => p + c) /
-        reviews.length;
-
     return Column(
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Column(
-                  children: [
-                    Text(
-                      avg.toStringAsFixed(1),
-                      style: theme.textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary),
-                    ),
-                    Text(
-                      'de 5',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 24),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _RatingStars(average: avg),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Basado en ${reviews.length} ${reviews.length == 1 ? 'reseña' : 'reseñas'}',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        ...reviews.take(3).map((review) => _ReviewTile(review: review)),
-        if (reviews.length > 3)
+        ...reviews.take(5).map((item) => _ReviewTile(item: item)),
+        if (reviews.length > 5)
           TextButton(
             onPressed: () => showReviewsListDialog(context, ref, book),
-            child: const Text('Ver todas las reseñas'),
+            child: const Text('Ver todas las opiniones'),
           ),
       ],
     );
@@ -422,60 +374,67 @@ class _BookDetailsContent extends ConsumerWidget {
 }
 
 class _ReviewTile extends ConsumerWidget {
-  const _ReviewTile({required this.review});
-  final BookReview review;
+  const _ReviewTile({required this.item});
+  final ReviewWithAuthor item;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final review = item.review;
+    final author = item.author;
+    final level = RecommendationLevel.fromValue(review.rating);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              ...List.generate(
-                  5,
-                  (index) => Icon(
-                        index < review.rating ? Icons.star : Icons.star_border,
-                        size: 16,
-                        color: Colors.amber,
-                      )),
-              const SizedBox(width: 8),
-              Text(
-                DateFormat.yMMMd().format(review.createdAt),
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
+          CircleAvatar(
+            backgroundColor: level.color.withValues(alpha: 0.1),
+            child: Icon(level.icon, color: level.color, size: 20),
           ),
-          if (review.review != null && review.review!.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(review.review!, style: theme.textTheme.bodyMedium),
-          ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        author.username,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      DateFormat.yMMMd().format(review.createdAt),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+                Text(
+                  level.label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: level.color,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (review.review != null && review.review!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    review.review!,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _RatingStars extends StatelessWidget {
-  const _RatingStars({required this.average});
-  final double average;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (index) {
-        if (index < average.floor()) {
-          return const Icon(Icons.star, color: Colors.amber, size: 20);
-        } else if (index < average && (average - index) >= 0.5) {
-          return const Icon(Icons.star_half, color: Colors.amber, size: 20);
-        } else {
-          return const Icon(Icons.star_border, color: Colors.amber, size: 20);
-        }
-      }),
-    );
-  }
-}
+// Remove _RatingStars class as it's no longer used

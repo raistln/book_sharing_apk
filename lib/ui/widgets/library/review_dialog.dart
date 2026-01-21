@@ -3,14 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../data/local/database.dart';
+import '../../../models/recommendation_level.dart';
 import '../../../providers/book_providers.dart';
+import '../../../utils/share_utils.dart';
 import 'library_utils.dart';
+import 'recommendation_selector.dart';
 
 /// Review draft model
 class ReviewDraft {
-  const ReviewDraft({required this.rating, this.review});
+  const ReviewDraft({required this.level, this.review});
 
-  final int rating;
+  final RecommendationLevel level;
   final String? review;
 }
 
@@ -21,9 +24,8 @@ Future<void> showAddReviewDialog(
   Book book,
 ) async {
   final repository = ref.read(bookRepositoryProvider);
-  final theme = Theme.of(context);
   final controller = TextEditingController();
-  var rating = 5;
+  var selectedLevel = RecommendationLevel.recommendToSimilar;
 
   ReviewDraft? draft;
 
@@ -33,43 +35,30 @@ Future<void> showAddReviewDialog(
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: Text('Añadir reseña a "${book.title}"'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Puntuación',
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(5, (index) {
-                    final starValue = index + 1;
-                    final isActive = starValue <= rating;
-                    return IconButton(
-                      onPressed: () => setState(() {
-                        rating = starValue;
-                      }),
-                      icon: Icon(
-                        isActive ? Icons.star : Icons.star_border,
-                        color: Colors.amber,
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: controller,
-                  minLines: 2,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Escribe una reseña (opcional)',
-                    border: OutlineInputBorder(),
+            title: Text('¿Cómo recomendarías "${book.title}"?'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RecommendationSelector(
+                    selectedLevel: selectedLevel,
+                    onChanged: (level) => setState(() {
+                      selectedLevel = level;
+                    }),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    minLines: 2,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'Escribe una reseña (opcional)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -80,7 +69,7 @@ Future<void> showAddReviewDialog(
                 onPressed: () {
                   Navigator.of(context).pop(
                     ReviewDraft(
-                      rating: rating,
+                      level: selectedLevel,
                       review: controller.text.trim().isEmpty
                           ? null
                           : controller.text.trim(),
@@ -116,7 +105,7 @@ Future<void> showAddReviewDialog(
   try {
     await repository.addReview(
       book: book,
-      rating: draft.rating,
+      rating: draft.level.value,
       review: draft.review,
       author: activeUser,
     );
@@ -126,6 +115,36 @@ Future<void> showAddReviewDialog(
       message: 'Reseña añadida.',
       isError: false,
     );
+
+    // 💡 NEW: If recommendation is positive, ask to share
+    if (draft.level == RecommendationLevel.recommendToSimilar ||
+        draft.level == RecommendationLevel.mustRead) {
+      if (!context.mounted) return;
+
+      final bool? wantToShare = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('¿A quién se lo recomiendas?'),
+          content: const Text(
+              'Has dado una valoración positiva. ¿Quieres enviarle un mensaje a alguien para recomendárselo?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Ahora no'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.share_outlined),
+              label: const Text('Recomendar'),
+            ),
+          ],
+        ),
+      );
+
+      if (wantToShare == true) {
+        await ShareUtils.shareBookRecommendation(book);
+      }
+    }
   } catch (err) {
     if (!context.mounted) return;
     showFeedbackSnackBar(
@@ -146,7 +165,7 @@ Future<void> showReviewsListDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: Text('Reseñas de "${book.title}"'),
+        title: Text('Opiniones de "${book.title}"'),
         content: SizedBox(
           width: double.maxFinite,
           child: Consumer(
@@ -165,7 +184,7 @@ Future<void> showReviewsListDialog(
                           Icon(Icons.reviews_outlined, size: 48),
                           SizedBox(height: 16),
                           Text(
-                            'No hay reseñas todavía',
+                            'No hay opiniones todavía',
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -178,56 +197,61 @@ Future<void> showReviewsListDialog(
                     itemCount: reviews.length,
                     separatorBuilder: (_, __) => const Divider(),
                     itemBuilder: (context, index) {
-                      final review = reviews[index];
-                      return FutureBuilder<LocalUser?>(
-                        future: ref
-                            .read(loanRepositoryProvider)
-                            .findUserById(review.authorUserId),
-                        builder: (context, snapshot) {
-                          final authorName =
-                              snapshot.data?.username ?? 'Usuario desconocido';
+                      final item = reviews[index];
+                      final review = item.review;
+                      final author = item.author;
+                      final level =
+                          RecommendationLevel.fromValue(review.rating);
 
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    authorName,
-                                    style: theme.textTheme.titleSmall,
-                                  ),
-                                ),
-                                ...List.generate(5, (starIndex) {
-                                  return Icon(
-                                    starIndex < review.rating
-                                        ? Icons.star
-                                        : Icons.star_border,
-                                    color: Colors.amber,
-                                    size: 16,
-                                  );
-                                }),
-                              ],
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor: level.color.withValues(alpha: 0.1),
+                          child: Icon(level.icon, color: level.color, size: 20),
+                        ),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                author.username,
+                                style: theme.textTheme.titleSmall,
+                              ),
                             ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 4),
-                                Text(
-                                  DateFormat.yMMMd().format(review.createdAt),
-                                  style: theme.textTheme.bodySmall,
-                                ),
-                                if (review.review != null &&
-                                    review.review!.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    review.review!,
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
-                                ],
-                              ],
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: level.color.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: level.color.withValues(alpha: 0.2)),
+                              ),
+                              child: Text(
+                                level.shortLabel,
+                                style: theme.textTheme.labelSmall
+                                    ?.copyWith(color: level.color),
+                              ),
                             ),
-                          );
-                        },
+                          ],
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(
+                              DateFormat.yMMMd().format(review.createdAt),
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            if (review.review != null &&
+                                review.review!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                review.review!,
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ],
+                          ],
+                        ),
                       );
                     },
                   );
@@ -246,7 +270,7 @@ Future<void> showReviewsListDialog(
                       const Icon(Icons.error_outline, size: 48),
                       const SizedBox(height: 16),
                       Text(
-                        'Error al cargar reseñas: $error',
+                        'Error al cargar opiniones: $error',
                         textAlign: TextAlign.center,
                       ),
                     ],

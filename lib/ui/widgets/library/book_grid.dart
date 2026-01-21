@@ -82,11 +82,14 @@ class BookGridItem extends StatelessWidget {
       label = !book.isPhysical ? 'Digital' : 'Privado';
       chipColor = LibraryVisualConstants.getPrivateChipColor(theme);
       textColor = Colors.green.shade800; // Green-ish
-      if (theme.brightness == Brightness.dark)
+      if (theme.brightness == Brightness.dark) {
         textColor = Colors.green.shade200;
+      }
     }
 
-    if (label == null) return null;
+    if (label == null) {
+      return null;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

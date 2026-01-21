@@ -478,8 +478,8 @@ final bookListProvider = StreamProvider.autoDispose((ref) {
   );
 });
 
-final bookReviewsProvider =
-    StreamProvider.autoDispose.family<List<BookReview>, int>((ref, bookId) {
+final bookReviewsProvider = StreamProvider.autoDispose
+    .family<List<ReviewWithAuthor>, int>((ref, bookId) {
   final repository = ref.watch(bookRepositoryProvider);
   return repository.watchReviews(bookId);
 });

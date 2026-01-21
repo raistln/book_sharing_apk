@@ -55,30 +55,6 @@ class BookList extends StatelessWidget {
   }
 }
 
-class _RatingStars extends StatelessWidget {
-  const _RatingStars({required this.average});
-
-  final double average;
-
-  @override
-  Widget build(BuildContext context) {
-    final stars = List<Widget>.generate(5, (index) {
-      final starValue = index + 1;
-      IconData icon;
-      if (average >= starValue) {
-        icon = Icons.star;
-      } else if (average >= starValue - 0.5) {
-        icon = Icons.star_half;
-      } else {
-        icon = Icons.star_border;
-      }
-      return Icon(icon, color: Colors.amber, size: 18);
-    });
-
-    return Row(mainAxisSize: MainAxisSize.min, children: stars);
-  }
-}
-
 class BookListTile extends ConsumerWidget {
   const BookListTile({
     super.key,
@@ -339,16 +315,14 @@ class BookListTile extends ConsumerWidget {
       data: (reviews) {
         if (reviews.isEmpty) {
           return Text(
-            'Sin reseñas todavía',
+            'Sin opiniones todavía',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           );
         }
-        final avg = reviews
-                .map((r) => r.rating)
-                .fold<double>(0, (prev, value) => prev + value) /
-            reviews.length;
+
+        final count = reviews.length;
         return InkWell(
           onTap: onViewReviews,
           borderRadius: BorderRadius.circular(4),
@@ -357,13 +331,14 @@ class BookListTile extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _RatingStars(average: avg),
-                const SizedBox(width: 8),
+                Icon(Icons.people_outline,
+                    size: 16, color: theme.colorScheme.primary),
+                const SizedBox(width: 4),
                 Text(
-                  '${avg.toStringAsFixed(1)} / 5 · ${reviews.length} ${reviews.length == 1 ? 'reseña' : 'reseñas'}',
+                  '$count ${count == 1 ? 'opinión' : 'opiniones'}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 Icon(Icons.chevron_right,
@@ -379,7 +354,7 @@ class BookListTile extends ConsumerWidget {
         child: CircularProgressIndicator(strokeWidth: 2),
       ),
       error: (err, _) => Text(
-        'Error cargando reseñas',
+        'Error',
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.error,
         ),

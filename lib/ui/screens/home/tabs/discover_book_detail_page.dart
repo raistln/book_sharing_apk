@@ -13,6 +13,7 @@ import '../../../../services/coach_marks/coach_mark_controller.dart';
 import '../../../../services/coach_marks/coach_mark_models.dart';
 import '../../../../services/loan_controller.dart';
 import '../../../../services/onboarding_service.dart';
+import '../../../../data/local/book_dao.dart';
 import '../../../utils/ui_helpers.dart';
 import '../../../widgets/coach_mark_target.dart';
 import '../../../widgets/library/review_dialog.dart';
@@ -412,25 +413,37 @@ class _DiscoverBookDetailPageState
                                     return reviewsAsync.when(
                                       data: (reviews) {
                                         final count = reviews.length;
-                                        final rating = count == 0
-                                            ? 0.0
-                                            : reviews
-                                                    .map((r) => r.rating)
-                                                    .reduce((a, b) => a + b) /
-                                                count;
+                                        if (count == 0) {
+                                          return Row(
+                                            children: [
+                                              Text(
+                                                'Nadie ha opinado todavía',
+                                                style: theme
+                                                    .textTheme.bodyMedium
+                                                    ?.copyWith(
+                                                  color: theme.colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              if (activeUser != null)
+                                                _buildOpinarButton(
+                                                    context, ref, book, null),
+                                            ],
+                                          );
+                                        }
+
                                         final userReview = activeUser == null
                                             ? null
                                             : reviews.firstWhereOrNull((r) =>
-                                                r.authorUserId ==
-                                                activeUser.id);
+                                                r.author.id == activeUser.id);
 
                                         return Row(
                                           children: [
                                             InkWell(
-                                              onTap: count > 0
-                                                  ? () => showReviewsListDialog(
-                                                      context, ref, book)
-                                                  : null,
+                                              onTap: () =>
+                                                  showReviewsListDialog(
+                                                      context, ref, book),
                                               borderRadius:
                                                   BorderRadius.circular(8),
                                               child: Padding(
@@ -441,66 +454,31 @@ class _DiscoverBookDetailPageState
                                                       MainAxisSize.min,
                                                   children: [
                                                     Text(
-                                                      rating > 0
-                                                          ? rating
-                                                              .toStringAsFixed(
-                                                                  1)
-                                                          : '-',
-                                                      style: theme
-                                                          .textTheme.titleMedium
-                                                          ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    const Icon(Icons.star,
-                                                        size: 18,
-                                                        color: Colors.amber),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      '($count)',
+                                                      '$count ${count == 1 ? 'opinión' : 'opiniones'}',
                                                       style: theme
                                                           .textTheme.bodyMedium
                                                           ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                         color: theme.colorScheme
-                                                            .onSurfaceVariant,
+                                                            .primary,
                                                       ),
                                                     ),
-                                                    if (count > 0) ...[
-                                                      const SizedBox(width: 2),
-                                                      Icon(
-                                                        Icons.chevron_right,
-                                                        size: 18,
-                                                        color: theme.colorScheme
-                                                            .onSurfaceVariant,
-                                                      ),
-                                                    ],
+                                                    const SizedBox(width: 4),
+                                                    Icon(
+                                                      Icons.chevron_right,
+                                                      size: 18,
+                                                      color: theme
+                                                          .colorScheme.primary,
+                                                    ),
                                                   ],
                                                 ),
                                               ),
                                             ),
                                             const Spacer(),
                                             if (activeUser != null)
-                                              TextButton.icon(
-                                                onPressed: () =>
-                                                    showAddReviewDialog(
-                                                        context, ref, book),
-                                                icon: Icon(
-                                                  userReview != null
-                                                      ? Icons.edit_outlined
-                                                      : Icons
-                                                          .rate_review_outlined,
-                                                  size: 18,
-                                                ),
-                                                label: Text(userReview != null
-                                                    ? 'Editar'
-                                                    : 'Valorar'),
-                                                style: TextButton.styleFrom(
-                                                  visualDensity:
-                                                      VisualDensity.compact,
-                                                ),
-                                              ),
+                                              _buildOpinarButton(context, ref,
+                                                  book, userReview),
                                           ],
                                         );
                                       },
@@ -823,6 +801,21 @@ class _DiscoverBookDetailPageState
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildOpinarButton(BuildContext context, WidgetRef ref, Book book,
+      ReviewWithAuthor? userReview) {
+    return TextButton.icon(
+      onPressed: () => showAddReviewDialog(context, ref, book),
+      icon: Icon(
+        userReview != null ? Icons.edit_outlined : Icons.rate_review_outlined,
+        size: 18,
+      ),
+      label: Text(userReview != null ? 'Editar' : 'Opinar'),
+      style: TextButton.styleFrom(
+        visualDensity: VisualDensity.compact,
       ),
     );
   }

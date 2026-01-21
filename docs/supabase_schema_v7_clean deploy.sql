@@ -264,7 +264,7 @@ CREATE TABLE public.book_reviews (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   book_id UUID REFERENCES public.shared_books(id) ON DELETE CASCADE NOT NULL,
   author_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-  rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  rating INT NOT NULL CHECK (rating BETWEEN 1 AND 4),
   review TEXT,
   
   -- Soft delete support

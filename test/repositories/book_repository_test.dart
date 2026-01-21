@@ -260,11 +260,11 @@ void main() {
         );
 
         final stream = bookRepository.watchReviews(book.id);
-        expect(stream, isA<Stream<List<BookReview>>>());
+        expect(stream, isA<Stream<List<ReviewWithAuthor>>>());
 
         final reviews = await stream.first;
         expect(reviews.length, 1);
-        expect(reviews.first.rating, 4);
+        expect(reviews.first.review.rating, 4);
       });
     });
 

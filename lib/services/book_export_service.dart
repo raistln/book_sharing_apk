@@ -10,7 +10,8 @@ import '../data/local/database.dart';
 enum BookExportFormat { csv, json, pdf }
 
 class BookExportResult {
-  const BookExportResult({required this.bytes, required this.mimeType, required this.fileName});
+  const BookExportResult(
+      {required this.bytes, required this.mimeType, required this.fileName});
 
   final Uint8List bytes;
   final String mimeType;
@@ -54,7 +55,7 @@ class BookExportService {
       final average = bookReviews.isEmpty
           ? null
           : (bookReviews.map((r) => r.rating).reduce((a, b) => a + b) /
-              bookReviews.length)
+                  bookReviews.length)
               .toStringAsFixed(1);
       rows.add([
         book.title,
@@ -62,7 +63,7 @@ class BookExportService {
         book.isbn ?? '',
         book.status,
         DateFormat.yMd().add_Hm().format(book.updatedAt),
-        book.notes ?? '',
+        book.description ?? '',
         bookReviews.length,
         average ?? '',
       ]);
@@ -88,7 +89,7 @@ class BookExportService {
         'isbn': book.isbn,
         'barcode': book.barcode,
         'status': book.status,
-        'notes': book.notes,
+        'notes': book.description,
         'updatedAt': book.updatedAt.toIso8601String(),
         'createdAt': book.createdAt.toIso8601String(),
         'reviews': bookReviews
@@ -142,9 +143,7 @@ class BookExportService {
               final bookReviews = reviewMap[book.id] ?? const <BookReview>[];
               final average = bookReviews.isEmpty
                   ? null
-                  : bookReviews
-                          .map((r) => r.rating)
-                          .reduce((a, b) => a + b) /
+                  : bookReviews.map((r) => r.rating).reduce((a, b) => a + b) /
                       bookReviews.length;
 
               return pw.Container(
@@ -161,15 +160,13 @@ class BookExportService {
                     ),
                     pw.SizedBox(height: 4),
                     pw.Text('Autor: ${book.author ?? 'Desconocido'}'),
-                    if (book.isbn != null)
-                      pw.Text('ISBN: ${book.isbn}'),
+                    if (book.isbn != null) pw.Text('ISBN: ${book.isbn}'),
                     pw.Text('Estado: ${book.status}'),
-                    pw.Text('Última actualización: ${
-                      dateFormat.format(book.updatedAt)
-                    }'),
-                    if (book.notes?.isNotEmpty == true) ...[
+                    pw.Text(
+                        'Última actualización: ${dateFormat.format(book.updatedAt)}'),
+                    if (book.description?.isNotEmpty == true) ...[
                       pw.SizedBox(height: 4),
-                      pw.Text('Notas: ${book.notes}'),
+                      pw.Text('Notas: ${book.description}'),
                     ],
                     pw.SizedBox(height: 4),
                     pw.Text(

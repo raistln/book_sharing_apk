@@ -1,0 +1,45 @@
+00:00 +0: loading D:/IAs/book_sharing_apk/test/services/book_import_service_test.dart
+00:00 +0: BookImportService importFromCsv parses valid CSV correctly
+CSV String: T├¡tulo,Autor,ISBN
+El Quijote,Cervantes,978-1234567890
+Cien a├▒os de soledad,Garc├¡a M├írquez,978-0987654321
+Parsed CSV data: [[T├¡tulo, Autor, ISBN], [El Quijote, Cervantes, 978-1234567890], [Cien a├▒os de soledad, Garc├¡a M├írquez, 978-0987654321]]
+00:00 +1: BookImportService importFromCsv handles malformed CSV gracefully
+CSV String: T├¡tulo
+"Libro sin cerrar comillas
+Libro normal
+Parsed CSV data: [[T├¡tulo], [Libro sin cerrar comillas
+Libro normal]]
+00:00 +1 -1: BookImportService importFromCsv handles malformed CSV gracefully [E]
+  Expected: non-empty
+    Actual: []
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\services\book_import_service_test.dart 76:9    main.<fn>.<fn>.<fn>
+  
+00:00 +1 -1: BookImportService importFromCsv rejects CSV without title column
+CSV String: Autor,ISBN
+Cervantes,978-1234567890
+Parsed CSV data: [[Autor, ISBN], [Cervantes, 978-1234567890]]
+00:00 +2 -1: BookImportService importFromCsv skips rows with empty title
+CSV String: T├¡tulo,Autor
+,Cervantes
+El Quijote,Cervantes
+Parsed CSV data: [[T├¡tulo, Autor], [, Cervantes], [El Quijote, Cervantes]]
+00:00 +3 -1: BookImportService importFromCsv normalizes status to available or archived
+CSV String: T├¡tulo,Estado
+Libro Disponible,available
+Libro Archivado,archived
+Libro Prestado,loaned
+Parsed CSV data: [[T├¡tulo, Estado], [Libro Disponible, available], [Libro Archivado, archived], [Libro Prestado, loaned]]
+00:00 +4 -1: BookImportService importFromCsv detects duplicate books by ISBN
+CSV String: T├¡tulo,ISBN
+New Book,978-1234567890
+Parsed CSV data: [[T├¡tulo, ISBN], [New Book, 978-1234567890]]
+00:00 +5 -1: BookImportService importFromJson parses valid JSON correctly
+00:00 +6 -1: BookImportService importFromJson validates required title field
+00:00 +7 -1: BookImportService importFromJson handles empty JSON array
+00:00 +8 -1: BookImportService importFromJson handles invalid JSON format
+00:00 +9 -1: BookImportService importFromJson detects duplicate books by title and author
+00:00 +10 -1: Some tests failed.

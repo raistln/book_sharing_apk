@@ -207,7 +207,8 @@ class BookImportService {
             author: sanitizedAuthor,
             isbn: sanitizedIsbn,
             status: normalizedStatus,
-            notes: sanitizedNotes,
+            description: sanitizedNotes,
+            readingStatus: 'pending',
             barcode: sanitizedBarcode,
             owner: owner,
           );
@@ -314,7 +315,8 @@ class BookImportService {
             isbn: sanitizedIsbn,
             barcode: sanitizedBarcode,
             status: normalizedStatus,
-            notes: sanitizedNotes,
+            description: sanitizedNotes,
+            readingStatus: 'pending',
             owner: owner,
           );
           tracker.register(

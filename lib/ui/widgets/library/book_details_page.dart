@@ -8,9 +8,12 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import '../../../data/local/database.dart';
 import '../../../models/book_genre.dart';
+// import '../../../models/reading_status.dart'; // Removed
 import '../../../providers/book_providers.dart';
 import 'book_form_sheet.dart';
 import 'review_dialog.dart';
+import 'reading_status_selector.dart';
+import 'reading_timeline_widget.dart';
 
 class BookDetailsPage extends ConsumerWidget {
   const BookDetailsPage({
@@ -101,11 +104,12 @@ class _BookDetailsContent extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 🔝 HEADER SECTION
           Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(
-                maxWidth: 200,
-                maxHeight: 300,
+                maxWidth: 160, // Sligthly smaller
+                maxHeight: 240,
               ),
               child: Hero(
                 tag: 'book_cover_${book.id}',
@@ -126,10 +130,11 @@ class _BookDetailsContent extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           Text(
             book.title,
-            style: theme.textTheme.headlineMedium?.copyWith(
+            style: theme.textTheme.headlineSmall?.copyWith(
+              // Slightly smaller headline
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
@@ -144,89 +149,164 @@ class _BookDetailsContent extends ConsumerWidget {
               textAlign: TextAlign.center,
             ),
           ],
-          if (book.pageCount != null || book.publicationYear != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              [
-                if (book.pageCount != null) '${book.pageCount} páginas',
-                if (book.publicationYear != null) '${book.publicationYear}',
-              ].join(' • '),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
+
+          // Pages, Year, ISBN
+          const SizedBox(height: 8),
+          Text(
+            [
+              if (book.pageCount != null) '${book.pageCount} págs',
+              if (book.publicationYear != null) '${book.publicationYear}',
+              if (book.isbn != null) 'ISBN: ${book.isbn}',
+            ].join(' • '),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
-          ],
-          const SizedBox(height: 24),
+            textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 20),
+
+          // FORMAT & AVAILABILITY CHIPS
           Center(
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
               alignment: WrapAlignment.center,
               children: [
-                ...BookGenre.fromCsv(book.genre).map((g) => Chip(
-                      avatar: const Icon(Icons.category_outlined, size: 18),
-                      label: Text(g.label),
-                    )),
+                // Format Chip
                 if (!book.isPhysical)
                   Chip(
                     avatar: const Icon(Icons.tablet_mac,
-                        size: 18, color: Colors.purple),
+                        size: 16, color: Colors.purple),
                     label: const Text('Digital',
-                        style: TextStyle(
-                            color: Colors.purple, fontWeight: FontWeight.bold)),
+                        style: TextStyle(fontSize: 12, color: Colors.purple)),
                     backgroundColor: Colors.purple.shade50,
                     side: BorderSide(color: Colors.purple.shade200),
-                  ),
-                if (book.isPhysical)
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                  )
+                else
                   Chip(
                     avatar:
-                        const Icon(Icons.book, size: 18, color: Colors.blue),
+                        const Icon(Icons.book, size: 16, color: Colors.blue),
                     label: const Text('Físico',
-                        style: TextStyle(
-                            color: Colors.blue, fontWeight: FontWeight.bold)),
+                        style: TextStyle(fontSize: 12, color: Colors.blue)),
                     backgroundColor: Colors.blue.shade50,
                     side: BorderSide(color: Colors.blue.shade200),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
                   ),
+
+                // Availability Chip
+                _buildAvailabilityChip(context, book),
+
+                // Existing Genres (Optional, maybe keep them but smaller?)
+                ...BookGenre.fromCsv(book.genre).map((g) => Chip(
+                      label:
+                          Text(g.label, style: const TextStyle(fontSize: 12)),
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                    )),
               ],
             ),
           ),
-          const SizedBox(height: 32),
-          _buildInfoSection(theme, 'Estado de lectura'),
-          const SizedBox(height: 16),
-          SwitchListTile(
-            title: const Text('Marcar como leído'),
-            subtitle: Text(book.isRead
-                ? 'Ya has leído este libro'
-                : 'Aún no has leído este libro'),
-            value: book.isRead,
-            onChanged: (val) => _toggleReadStatus(ref, book),
-            secondary: Icon(
-                book.isRead ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: book.isRead ? Colors.green : null),
+
+          const SizedBox(height: 24),
+
+          // Reading Status Selector
+          ReadingStatusSelector(
+            book: book,
+            userId: ref.watch(activeUserProvider).value?.id ?? 0,
           ),
-          const SizedBox(height: 32),
-          _buildInfoSection(theme, 'Detalles'),
-          const SizedBox(height: 16),
-          _buildDetailRow(context, 'ISBN', book.isbn ?? '-'),
-          if (book.barcode != null && book.barcode != book.isbn)
-            _buildDetailRow(context, 'Código barras', book.barcode!),
-          _buildDetailRow(context, 'Estado', _getStatusLabel(book.status)),
-          if (book.notes != null && book.notes!.isNotEmpty) ...[
-            const SizedBox(height: 32),
-            _buildInfoSection(theme, 'Notas'),
-            const SizedBox(height: 16),
+
+          const SizedBox(height: 24),
+
+          // 📍 READING TIMELINE (Prioritized)
+          // Always show, or collapsed? Widget handles it?
+          // We pass it. If not reading/finished, maybe it shows empty state or 'Start reading'.
+          ReadingTimelineWidget(
+            book: book,
+            userId: ref.watch(activeUserProvider).value?.id ?? 0,
+          ),
+
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 24),
+
+          // 📘 DESCRIPTION SECTION
+          if (book.description != null && book.description!.isNotEmpty) ...[
             Text(
-              book.notes!,
-              style: theme.textTheme.bodyLarge,
+              'Sinopsis',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 12),
+            Text(
+              book.description!,
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 32),
           ],
-          const SizedBox(height: 32),
+
+          // ✍️ REVIEWS SECTION
           _buildReviewsHeader(context, ref, theme),
           const SizedBox(height: 16),
           _buildReviewsList(context, ref, theme),
         ],
       ),
+    );
+  }
+
+  Widget _buildAvailabilityChip(BuildContext context, Book book) {
+    // Logic for availability label
+    String label;
+    Color color;
+    IconData icon;
+
+    if (book.isBorrowedExternal) {
+      label = book.externalLenderName != null
+          ? 'De ${book.externalLenderName}'
+          : 'Prestado (Ext)';
+      color = Colors.indigo;
+      icon = Icons.input;
+    } else {
+      switch (book.status) {
+        case 'available':
+          label = 'Disponible';
+          color = Colors.teal;
+          icon = Icons.check_circle_outline;
+          break;
+        case 'loaned':
+          label = 'Prestado';
+          color = Colors.orange;
+          icon = Icons.outbox;
+          break;
+        case 'private':
+          label = 'Privado';
+          color = Colors.grey;
+          icon = Icons.lock_outline;
+          break;
+        case 'archived':
+          label = 'Archivado';
+          color = Colors.blueGrey;
+          icon = Icons.archive_outlined;
+          break;
+        default:
+          label = book.status;
+          color = Colors.grey;
+          icon = Icons.info_outline;
+      }
+    }
+
+    return Chip(
+      avatar: Icon(icon, size: 16, color: color),
+      label: Text(label,
+          style: TextStyle(
+              fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+      backgroundColor: color.withValues(alpha: 0.1),
+      side: BorderSide(color: color.withValues(alpha: 0.3)),
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
     );
   }
 
@@ -260,7 +340,8 @@ class _BookDetailsContent extends ConsumerWidget {
             children: [
               Icon(Icons.reviews_outlined,
                   size: 48,
-                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5)),
+                  color: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.5)),
               const SizedBox(height: 12),
               Text(
                 'Sin reseñas todavía',
@@ -326,11 +407,6 @@ class _BookDetailsContent extends ConsumerWidget {
     );
   }
 
-  void _toggleReadStatus(WidgetRef ref, Book book) {
-    ref.read(bookDaoProvider).toggleReadStatus(book.id, !book.isRead);
-    ref.invalidate(bookListProvider);
-  }
-
   Widget _buildPlaceholder(ThemeData theme) {
     return Container(
       color: theme.colorScheme.surfaceContainerHighest,
@@ -342,64 +418,6 @@ class _BookDetailsContent extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  Widget _buildInfoSection(ThemeData theme, String title) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const Divider(),
-      ],
-    );
-  }
-
-  Widget _buildDetailRow(BuildContext context, String label, String value) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: theme.textTheme.bodyMedium,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getStatusLabel(String status) {
-    switch (status) {
-      case 'available':
-        return 'Disponible';
-      case 'loaned':
-        return 'Prestado';
-      case 'private':
-        return 'Privado';
-      case 'archived':
-        return 'Archivado';
-      default:
-        return status;
-    }
   }
 }
 

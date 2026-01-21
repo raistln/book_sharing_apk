@@ -295,7 +295,7 @@ class _DiscoverBookDetailPageState
                 _resolveOwnerName(ownerUser, sharedBook.ownerUserId);
             final author = (book?.author ?? '').trim();
             final isbn = book?.isbn?.trim();
-            final description = book?.notes?.trim();
+            final description = book?.description?.trim();
             final pageCount = book?.pageCount;
             final publicationYear = book?.publicationYear;
             final statusDisplay = _resolveStatusDisplay(
@@ -887,6 +887,8 @@ class _DiscoverBookDetailPageState
     final activeUser = ref.read(activeUserProvider).value;
     if (activeUser == null) return;
 
+    final theme = Theme.of(context);
+
     // Confirmación antes de copiar
     final confirmed = await UIHelpers.showConfirmDialog(
       context: context,
@@ -897,7 +899,6 @@ class _DiscoverBookDetailPageState
     if (!confirmed) return;
 
     final repository = ref.read(bookRepositoryProvider);
-    final theme = Theme.of(context);
 
     try {
       if (originalBookMetadata == null) {
@@ -910,12 +911,14 @@ class _DiscoverBookDetailPageState
         isbn: originalBookMetadata.isbn,
         barcode: originalBookMetadata.barcode,
         coverPath: null,
-        notes: 'Añadido desde un grupo',
+        description: 'Añadido desde un grupo',
         status: 'private',
         isRead: false,
         owner: activeUser,
         genre: originalBookMetadata.genre,
         isPhysical: originalBookMetadata.isPhysical,
+        pageCount: originalBookMetadata.pageCount,
+        publicationYear: originalBookMetadata.publicationYear,
       );
 
       if (mounted) {

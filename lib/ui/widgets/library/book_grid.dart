@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../data/local/database.dart';
 import '../../../../design_system/literary_shadows.dart';
 import '../../../../design_system/literary_animations.dart';
+import '../../../../design_system/library_visual_constants.dart';
 
 class BookGridView extends StatelessWidget {
   const BookGridView({
@@ -41,14 +42,73 @@ class BookGridItem extends StatelessWidget {
     super.key,
     required this.book,
     required this.onTap,
+    this.isListView = false,
   });
 
   final Book book;
   final VoidCallback onTap;
+  final bool isListView;
+
+  Color _getBackgroundColor(ThemeData theme) {
+    if (book.isBorrowedExternal) {
+      return LibraryVisualConstants.getLoanedToYouTint(theme);
+    }
+    if (book.status == 'loaned') {
+      return LibraryVisualConstants.getLoanedByYouTint(theme);
+    }
+    if (book.status == 'private' || !book.isPhysical) {
+      return LibraryVisualConstants.getPrivateTint(theme);
+    }
+    return LibraryVisualConstants.getOwnedBookTint(theme);
+  }
+
+  Widget? _buildStatusChip(ThemeData theme) {
+    String? label;
+    Color? chipColor;
+    Color? textColor;
+
+    // Prioridad de etiquetas
+    if (book.isBorrowedExternal) {
+      label = book.externalLenderName != null
+          ? 'De ${book.externalLenderName}'
+          : 'Prestado';
+      chipColor = LibraryVisualConstants.getLoanedToYouChipColor(theme);
+      textColor = theme.colorScheme.primary; // Blue-ish
+    } else if (book.status == 'loaned') {
+      label = 'Prestado';
+      chipColor = LibraryVisualConstants.getLoanedChipColor(theme);
+      textColor = theme.colorScheme.onSurface;
+    } else if (book.status == 'private' || !book.isPhysical) {
+      label = !book.isPhysical ? 'Digital' : 'Privado';
+      chipColor = LibraryVisualConstants.getPrivateChipColor(theme);
+      textColor = Colors.green.shade800; // Green-ish
+      if (theme.brightness == Brightness.dark)
+        textColor = Colors.green.shade200;
+    }
+
+    if (label == null) return null;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: chipColor,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 9,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final backgroundColor = _getBackgroundColor(theme);
 
     return TapAnimation(
       onTap: onTap,
@@ -56,43 +116,48 @@ class BookGridItem extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: theme.colorScheme.surfaceContainerHighest,
-                boxShadow: book.coverPath != null
-                    ? LiteraryShadows.bookCoverShadow(context)
-                    : null,
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: book.coverPath != null
-                    ? Image.file(
-                        File(book.coverPath!),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _buildPlaceholder(theme),
-                      )
-                    : _buildPlaceholder(theme),
-              ),
+            child: Stack(
+              children: [
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: backgroundColor,
+                    boxShadow: book.coverPath != null
+                        ? LiteraryShadows.bookCoverShadow(context)
+                        : null,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: book.coverPath != null
+                        ? Image.file(
+                            File(book.coverPath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _buildPlaceholder(theme, backgroundColor),
+                          )
+                        : _buildPlaceholder(theme, backgroundColor),
+                  ),
+                ),
+                // Status Chip Positioned
+                if (_buildStatusChip(theme) != null)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: _buildStatusChip(theme)!,
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
-          // Fixed height container for text footer to ensure alignment
           SizedBox(
-            height: 54, // Adjusted height for ~3 lines of text
+            height: 54,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                // Title: Reserves 2 lines.
-                // Using a maxLines: 2 Text widget naturally takes up space.
-                // To enforce "blank line if 1 line", we can't easily do it with standard Text widget
-                // without advanced layout. However, the user said "solo en el caso que el titulo quepa en una fila".
-                // Actually they said "los que le sobra una, que la ultima linea este en blanco."
-                // This means checking text length? No, too complex.
-                // Simpler: Just give the Text widget a fixed height for 2 lines.
                 SizedBox(
-                  height: 36, // Approx 2 lines * 18px
+                  height: 36,
                   child: Text(
                     book.title,
                     style: theme.textTheme.labelMedium?.copyWith(
@@ -121,12 +186,15 @@ class BookGridItem extends StatelessWidget {
     );
   }
 
-  Widget _buildPlaceholder(ThemeData theme) {
-    return Center(
-      child: Icon(
-        Icons.menu_book,
-        size: 32,
-        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+  Widget _buildPlaceholder(ThemeData theme, Color bgColor) {
+    return Container(
+      color: bgColor,
+      child: Center(
+        child: Icon(
+          Icons.menu_book,
+          size: 32,
+          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+        ),
       ),
     );
   }

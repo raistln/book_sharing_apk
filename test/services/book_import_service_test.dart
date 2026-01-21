@@ -32,7 +32,8 @@ void main() {
             author: any(named: 'author'),
             isbn: any(named: 'isbn'),
             status: any(named: 'status'),
-            notes: any(named: 'notes'),
+            description: any(named: 'description'),
+            readingStatus: any(named: 'readingStatus'),
             barcode: any(named: 'barcode'),
             owner: any(named: 'owner'),
           )).thenAnswer((_) async => 1); // Return a valid book ID
@@ -40,7 +41,7 @@ void main() {
 
     group('importFromCsv', () {
       test('parses valid CSV correctly', () async {
-        final csvData = '''Título,Autor,ISBN
+        const csvData = '''Título,Autor,ISBN
 El Quijote,Cervantes,978-1234567890
 Cien años de soledad,García Márquez,978-0987654321''';
 
@@ -56,14 +57,15 @@ Cien años de soledad,García Márquez,978-0987654321''';
               author: 'Cervantes',
               isbn: '978-1234567890',
               status: 'available',
-              notes: null,
+              description: null,
+              readingStatus: 'pending',
               barcode: null,
               owner: testOwner,
             )).called(1);
       });
 
       test('handles malformed CSV gracefully', () async {
-        final csvData = '''Título
+        const csvData = '''Título
 "Libro sin cerrar comillas
 Libro normal''';
 
@@ -75,7 +77,7 @@ Libro normal''';
       });
 
       test('rejects CSV without title column', () async {
-        final csvData = '''Autor,ISBN
+        const csvData = '''Autor,ISBN
 Cervantes,978-1234567890''';
 
         final bytes = Uint8List.fromList(utf8.encode(csvData));
@@ -86,7 +88,7 @@ Cervantes,978-1234567890''';
       });
 
       test('skips rows with empty title', () async {
-        final csvData = '''Título,Autor
+        const csvData = '''Título,Autor
 ,Cervantes
 El Quijote,Cervantes''';
 
@@ -99,7 +101,7 @@ El Quijote,Cervantes''';
       });
 
       test('normalizes status to available or archived', () async {
-        final csvData = '''Título,Estado
+        const csvData = '''Título,Estado
 Libro Disponible,available
 Libro Archivado,archived
 Libro Prestado,loaned''';
@@ -115,7 +117,8 @@ Libro Prestado,loaned''';
               author: null,
               isbn: null,
               status: 'available', // Should be normalized
-              notes: null,
+              description: null,
+              readingStatus: 'pending',
               barcode: null,
               owner: testOwner,
             )).called(1);
@@ -131,7 +134,9 @@ Libro Prestado,loaned''';
                     uuid: 'book-1',
                     ownerUserId: testOwner.id,
                     title: 'Existing Book',
+                    description: null,
                     isbn: '978-1234567890',
+                    readingStatus: 'pending',
                     status: 'available',
                     isRead: false,
                     isBorrowedExternal: false,
@@ -139,10 +144,13 @@ Libro Prestado,loaned''';
                     isDeleted: false,
                     createdAt: DateTime.now(),
                     updatedAt: DateTime.now(),
+                    isPhysical: true,
+                    pageCount: null,
+                    publicationYear: null,
                   ),
                 ]);
 
-        final csvData = '''Título,ISBN
+        const csvData = '''Título,ISBN
 New Book,978-1234567890''';
 
         final bytes = Uint8List.fromList(utf8.encode(csvData));
@@ -200,7 +208,7 @@ New Book,978-1234567890''';
       });
 
       test('handles invalid JSON format', () async {
-        final invalidJson = '{not valid json}';
+        const invalidJson = '{not valid json}';
 
         final bytes = Uint8List.fromList(utf8.encode(invalidJson));
         final result = await service.importFromJson(bytes, owner: testOwner);
@@ -219,14 +227,19 @@ New Book,978-1234567890''';
                     uuid: 'book-1',
                     ownerUserId: testOwner.id,
                     title: 'El Quijote',
+                    description: null,
                     author: 'Cervantes',
                     status: 'available',
+                    readingStatus: 'pending',
                     isRead: false,
                     isBorrowedExternal: false,
                     isDirty: false,
                     isDeleted: false,
                     createdAt: DateTime.now(),
                     updatedAt: DateTime.now(),
+                    isPhysical: true,
+                    pageCount: null,
+                    publicationYear: null,
                   ),
                 ]);
 

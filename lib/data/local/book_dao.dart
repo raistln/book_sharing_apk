@@ -87,6 +87,16 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
     );
   }
 
+  Future<void> updateReadingStatus(int bookId, String status) async {
+    await (update(books)..where((b) => b.id.equals(bookId))).write(
+      BooksCompanion(
+        readingStatus: Value(status),
+        isDirty: const Value(true),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
   /// Find a book by ISBN (excluding deleted books)
   Future<Book?> findByIsbn(String isbn, {int? ownerUserId}) {
     final query = select(books)

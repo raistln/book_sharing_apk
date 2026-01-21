@@ -280,7 +280,20 @@ class SettingsTab extends ConsumerWidget {
                 description:
                     'Pronto podrás gestionar copias de seguridad, sincronización y preferencias.',
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 24),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'Datos bibliográficos proporcionados por Open Library (Internet Archive). Contenido bajo licencia ODC-By.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),

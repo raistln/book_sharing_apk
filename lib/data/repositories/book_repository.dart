@@ -132,7 +132,8 @@ class BookRepository {
     String? barcode,
     String? coverPath,
     String status = 'available',
-    String? notes,
+    String? description,
+    String readingStatus = 'pending',
     bool isRead = false,
     LocalUser? owner,
     String? genre,
@@ -172,6 +173,7 @@ class BookRepository {
       BooksCompanion.insert(
         uuid: bookUuid,
         title: title,
+        readingStatus: Value(readingStatus),
         author: (author != null && author.trim().isNotEmpty)
             ? Value(author.trim())
             : const Value.absent(),
@@ -183,7 +185,7 @@ class BookRepository {
             : const Value.absent(),
         coverPath: Value(coverPath),
         status: Value(status),
-        notes: Value(notes),
+        description: Value(description),
         isRead: Value(isRead),
         readAt: isRead ? Value(now) : const Value.absent(),
         ownerUserId: owner != null ? Value(owner.id) : const Value.absent(),

@@ -80,7 +80,7 @@ class CoverRefreshService {
     final hasPages = book.pageCount != null && book.pageCount! > 0;
     final hasYear = book.publicationYear != null && book.publicationYear! > 0;
     final hasGenre = book.genre != null && book.genre!.isNotEmpty;
-    final hasNotes = book.notes != null && book.notes!.isNotEmpty;
+    final hasNotes = book.description != null && book.description!.isNotEmpty;
 
     return hasIsbn && hasCover && hasPages && hasYear && hasGenre && hasNotes;
   }
@@ -124,7 +124,8 @@ class CoverRefreshService {
       final missingYear =
           book.publicationYear == null || book.publicationYear == 0;
       final missingGenre = book.genre == null || book.genre!.isEmpty;
-      final missingNotes = book.notes == null || book.notes!.isEmpty;
+      final missingNotes =
+          book.description == null || book.description!.isEmpty;
       final missingIsbn = book.isbn == null || book.isbn!.isEmpty;
 
       return missingCover ||
@@ -230,10 +231,10 @@ class CoverRefreshService {
         }
 
         // 6. Process Description (Notes) if missing and found
-        if ((book.notes == null || book.notes!.isEmpty) &&
+        if ((book.description == null || book.description!.isEmpty) &&
             candidate.description != null) {
           updatedBook =
-              updatedBook.copyWith(notes: Value(candidate.description));
+              updatedBook.copyWith(description: Value(candidate.description));
           changed = true;
         }
 

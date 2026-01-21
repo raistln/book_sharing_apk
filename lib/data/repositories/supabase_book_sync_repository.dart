@@ -107,7 +107,8 @@ class SupabaseBookSyncRepository {
               coverPath: Value(remote.coverUrl),
               status: Value(_mapVisibilityToStatus(
                   remote.visibility, remote.isAvailable)),
-              notes: const Value(null), // Notes not stored in shared_books
+              description:
+                  const Value(null), // Description not stored in shared_books
               isRead: Value(remote.isRead),
               isDeleted: Value(remote.isDeleted),
               genre: Value(remote.genre),
@@ -163,7 +164,8 @@ class SupabaseBookSyncRepository {
                 coverPath: Value(remote.coverUrl),
                 status: Value(_mapVisibilityToStatus(
                     remote.visibility, remote.isAvailable)),
-                notes: const Value(null), // Notes not stored in shared_books
+                description:
+                    const Value(null), // Notes not stored in shared_books
                 isRead: Value(remote.isRead),
                 isDeleted: Value(remote.isDeleted),
                 genre: Value(remote.genre),

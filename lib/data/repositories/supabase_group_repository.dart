@@ -238,7 +238,7 @@ class SupabaseGroupSyncRepository {
                     coverPath: Value(remoteShared.coverUrl),
                     status: Value(
                         remoteShared.isAvailable ? 'available' : 'loaned'),
-                    notes: const Value(null),
+                    description: const Value(null),
                     isDeleted: const Value(false),
                     isDirty: const Value(false),
                     createdAt: Value(remoteShared.createdAt),

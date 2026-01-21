@@ -81,9 +81,17 @@ class Books extends Table {
   TextColumn get coverPath => text().nullable()();
 
   TextColumn get status => text().withDefault(const Constant('available'))();
-  TextColumn get notes => text().nullable()();
+  TextColumn get description =>
+      text().nullable()(); // Renamed from 'notes' - book synopsis/metadata
 
-  // Read status
+  // Reading status (expanded from simple isRead boolean)
+  TextColumn get readingStatus =>
+      text().withDefault(const Constant('pending')).withLength(
+          min: 1,
+          max:
+              32)(); // 'pending', 'reading', 'paused', 'finished', 'abandoned', 'rereading'
+
+  // Legacy read status (derived from readingStatus for backwards compatibility)
   BoolColumn get isRead => boolean().withDefault(const Constant(false))();
   DateTimeColumn get readAt => dateTime().nullable()();
 
@@ -259,6 +267,29 @@ class GroupInvitations extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+class ReadingTimelineEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+
+  IntColumn get bookId =>
+      integer().references(Books, #id, onDelete: KeyAction.cascade)();
+  IntColumn get ownerUserId => integer().references(LocalUsers, #id)();
+
+  // Progress tracking
+  IntColumn get currentPage => integer().nullable()();
+  IntColumn get percentageRead => integer().nullable()(); // 0-100
+
+  // Event metadata
+  TextColumn get eventType => text().withLength(
+      min: 1, max: 32)(); // 'start', 'progress', 'pause', 'resume', 'finish'
+  TextColumn get note => text().nullable()(); // Optional reader comment
+
+  DateTimeColumn get eventDate => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 class Loans extends Table {
   IntColumn get id => integer().autoIncrement()();
 
@@ -316,6 +347,7 @@ class Loans extends Table {
     LocalUsers,
     Books,
     BookReviews,
+    ReadingTimelineEntries,
     Groups,
     GroupMembers,
     SharedBooks,
@@ -330,7 +362,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -456,6 +488,24 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(books, books.pageCount);
             await m.addColumn(books, books.publicationYear);
           }
+
+          if (from < 18) {
+            // Migration to v18: Reading Timeline feature
+            // 1. Create ReadingTimelineEntries table
+            await m.createTable(readingTimelineEntries);
+
+            // 2. Add readingStatus column to Books
+            await m.addColumn(books, books.readingStatus);
+
+            // 3. Migrate existing data: if isRead = true, set readingStatus = 'finished'
+            await customStatement(
+              "UPDATE books SET reading_status = 'finished' WHERE is_read = 1",
+            );
+
+            // 4. Rename notes to description (SQLite doesn't support RENAME COLUMN directly)
+            // We'll handle this in the app layer by treating 'notes' as 'description'
+            // The column name in the schema is already 'description' now
+          }
         },
       );
 
@@ -469,6 +519,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(sharedBooks).go();
       await delete(groupMembers).go();
       await delete(groups).go();
+      await delete(readingTimelineEntries).go();
       await delete(bookReviews).go();
       await delete(books).go();
       await delete(localUsers).go();

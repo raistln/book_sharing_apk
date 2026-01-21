@@ -31,29 +31,40 @@ class LibraryTab extends ConsumerStatefulWidget {
   ConsumerState<LibraryTab> createState() => _LibraryTabState();
 }
 
-class _LibraryTabState extends ConsumerState<LibraryTab> {
+class _LibraryTabState extends ConsumerState<LibraryTab>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   final _searchController = TextEditingController();
   String _searchQuery = '';
   bool? _readStatusFilter;
   BookGenre? _genreFilter;
-  bool _isGridView = true; // Default to Grid
+  bool _isGridView = true; // Global
   LibrarySortOption _sortOption = LibrarySortOption.titleAz;
 
   @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
   void dispose() {
+    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  List<Book> _filterBooks(List<Book> books) {
-    // Only show books owned by the user (exclude external borrowed books)
-    var filtered = books.where((b) => !b.isBorrowedExternal).toList();
+  List<Book> _filterBooks(List<Book> books,
+      {required bool isBorrowedExternal}) {
+    // 1. Separate based on tab requirement
+    var filtered =
+        books.where((b) => b.isBorrowedExternal == isBorrowedExternal).toList();
 
-    // Filtrar por estado de lectura
+    // 2. Apply common filters
     if (_readStatusFilter != null) {
       filtered = filtered.where((b) => b.isRead == _readStatusFilter).toList();
     }
-    // Filtrar por género
+
     if (_genreFilter != null) {
       filtered = filtered.where((b) {
         final bookGenres = BookGenre.fromCsv(b.genre);
@@ -70,7 +81,7 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
       }).toList();
     }
 
-    // Aplicar ordenación
+    // 3. Apply sorting
     switch (_sortOption) {
       case LibrarySortOption.titleAz:
         filtered.sort(
@@ -106,190 +117,188 @@ class _LibraryTabState extends ConsumerState<LibraryTab> {
     final booksAsync = ref.watch(bookListProvider);
     final theme = Theme.of(context);
 
+    // Common Header Actions
+    final headerActions = Row(
+      children: [
+        Text(
+          'Biblioteca',
+          style: theme.textTheme.headlineSmall
+              ?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const Spacer(),
+        IconButton(
+          onPressed: () => setState(() => _isGridView = !_isGridView),
+          icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
+          tooltip: _isGridView ? 'Ver lista' : 'Ver cuadrícula',
+          visualDensity: VisualDensity.compact,
+        ),
+        IconButton(
+          onPressed: () => CoverRefreshHandler.handle(context, ref),
+          icon: const Icon(Icons.refresh_rounded),
+          tooltip: 'Actualizar portadas',
+          visualDensity: VisualDensity.compact,
+        ),
+        IconButton(
+          onPressed: () => ExportHandler.handle(context, ref),
+          icon: const Icon(Icons.share_outlined),
+          tooltip: 'Exportar biblioteca',
+          visualDensity: VisualDensity.compact,
+        ),
+      ],
+    );
+
+    // Optional: Search & Sort Row (Global for both tabs)
+    final searchAndFilter = Column(
+      children: [
+        LibrarySearchBar(
+          controller: _searchController,
+          onChanged: (value) => setState(() => _searchQuery = value),
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _SortSelector(
+                selected: _sortOption,
+                onSelected: (val) => setState(() => _sortOption = val),
+              ),
+              const SizedBox(width: 8),
+              ReadStatusFilter(
+                selectedFilter: _readStatusFilter,
+                onChanged: (val) => setState(() => _readStatusFilter = val),
+              ),
+              const SizedBox(width: 8),
+              _GenreSelector(
+                selected: _genreFilter,
+                onSelected: (val) => setState(() => _genreFilter = val),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
     return SafeArea(
       child: Padding(
-        padding:
-            const EdgeInsets.fromLTRB(20, 0, 20, 16), // Adjusted top padding
-        child: booksAsync.when(
-          data: (books) {
-            final filteredBooks = _filterBooks(books);
-            if (books.isEmpty) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text('Mi biblioteca',
-                          style: theme.textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.bold)),
-                      const SizedBox(width: 12),
-                      IconButton(
-                        onPressed: () =>
-                            setState(() => _isGridView = !_isGridView),
-                        icon: Icon(
-                            _isGridView ? Icons.view_list : Icons.grid_view),
-                        tooltip: _isGridView ? 'Ver lista' : 'Ver cuadrícula',
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      IconButton(
-                        onPressed: () =>
-                            CoverRefreshHandler.handle(context, ref),
-                        icon: const Icon(Icons.refresh_rounded),
-                        tooltip: 'Actualizar portadas',
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: () => ExportHandler.handle(context, ref),
-                        icon: const Icon(Icons.share_outlined),
-                        tooltip: 'Exportar biblioteca',
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Añade tus libros para gestionarlos desde aquí.',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: EmptyLibraryState(
-                      onAddBook: () => widget.onOpenForm(),
-                    ),
-                  ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+        child: Column(
+          children: [
+            headerActions,
+            const SizedBox(height: 16),
+            Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                indicator: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                labelColor: theme.colorScheme.onPrimary,
+                unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                tabs: const [
+                  Tab(text: '  Mis libros  '),
+                  Tab(text: '  Me prestaron  '),
                 ],
-              );
-            }
+              ),
+            ),
+            const SizedBox(height: 16),
+            searchAndFilter,
+            const SizedBox(height: 16),
+            Expanded(
+              child: booksAsync.when(
+                data: (books) {
+                  final myBooks =
+                      _filterBooks(books, isBorrowedExternal: false);
+                  final borrowedBooks =
+                      _filterBooks(books, isBorrowedExternal: true);
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text('Mi biblioteca',
-                        style: theme.textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 12),
-                    IconButton(
-                      onPressed: () =>
-                          setState(() => _isGridView = !_isGridView),
-                      icon:
-                          Icon(_isGridView ? Icons.view_list : Icons.grid_view),
-                      tooltip: _isGridView ? 'Ver lista' : 'Ver cuadrícula',
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      onPressed: () => CoverRefreshHandler.handle(context, ref),
-                      icon: const Icon(Icons.refresh_rounded),
-                      tooltip: 'Actualizar portadas',
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () => ExportHandler.handle(context, ref),
-                      icon: const Icon(Icons.share_outlined),
-                      tooltip: 'Exportar biblioteca',
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
-                ),
-                Text(
-                  'Gestiona tus libros guardados y prepara los préstamos.',
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 16),
-                LibrarySearchBar(
-                  controller: _searchController,
-                  onChanged: (value) => setState(() => _searchQuery = value),
-                ),
-                const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
+                  return TabBarView(
+                    controller: _tabController,
                     children: [
-                      _SortSelector(
-                        selected: _sortOption,
-                        onSelected: (val) => setState(() => _sortOption = val),
+                      _buildBookListOrEmpty(
+                        context,
+                        myBooks,
+                        emptyMessage:
+                            'Añade tus libros para gestionarlos aquí.',
+                        isMyBooksTab: true,
                       ),
-                      const SizedBox(width: 8),
-                      ReadStatusFilter(
-                        selectedFilter: _readStatusFilter,
-                        onChanged: (val) =>
-                            setState(() => _readStatusFilter = val),
-                      ),
-                      const SizedBox(width: 8),
-                      _GenreSelector(
-                        selected: _genreFilter,
-                        onSelected: (val) => setState(() => _genreFilter = val),
+                      _buildBookListOrEmpty(
+                        context,
+                        borrowedBooks,
+                        emptyMessage:
+                            'Aquí aparecerán los libros que te presten amigos fuera de la app.',
+                        isMyBooksTab: false,
                       ),
                     ],
-                  ),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Text('Error: $error'),
                 ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: filteredBooks.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No se encontraron libros',
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        )
-                      : _isGridView
-                          ? BookGridView(
-                              books: filteredBooks,
-                              onBookTap: (book) {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        BookDetailsPage(bookId: book.id),
-                                  ),
-                                );
-                              },
-                            )
-                          : BookTextList(
-                              books: filteredBooks,
-                              onBookTap: (book) {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        BookDetailsPage(bookId: book.id),
-                                  ),
-                                );
-                              },
-                            ),
-                ),
-              ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stackTrace) => Center(
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookListOrEmpty(BuildContext context, List<Book> books,
+      {required String emptyMessage, required bool isMyBooksTab}) {
+    if (books.isEmpty) {
+      if (_searchQuery.isNotEmpty ||
+          _readStatusFilter != null ||
+          _genreFilter != null) {
+        return Center(
+            child: Text('No hay coincidencias con los filtros.',
+                style: Theme.of(context).textTheme.bodyMedium));
+      }
+      if (isMyBooksTab) {
+        return EmptyLibraryState(onAddBook: () => widget.onOpenForm());
+      } else {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 48),
-                const SizedBox(height: 12),
-                Text(
-                  'No pudimos cargar tu biblioteca.',
-                  style: theme.textTheme.titleMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  error.toString(),
-                  style: theme.textTheme.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
+                Icon(Icons.move_to_inbox_outlined,
+                    size: 48, color: Theme.of(context).colorScheme.outline),
                 const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () => ref.refresh(bookListProvider),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar'),
-                ),
+                Text(emptyMessage,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium),
               ],
             ),
           ),
-        ),
+        );
+      }
+    }
+
+    return _isGridView
+        ? BookGridView(
+            books: books,
+            onBookTap: (book) => _openBookDetails(context, book),
+          )
+        : BookTextList(
+            books: books,
+            onBookTap: (book) => _openBookDetails(context, book),
+          );
+  }
+
+  void _openBookDetails(BuildContext context, Book book) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => BookDetailsPage(bookId: book.id),
       ),
     );
   }

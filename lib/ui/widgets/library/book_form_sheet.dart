@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
@@ -7,17 +8,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../data/local/database.dart';
+import '../../../models/book_genre.dart';
+import '../../../models/reading_status.dart';
 import '../../../providers/api_providers.dart';
 import '../../../providers/book_providers.dart';
 import '../../../providers/permission_providers.dart';
-import '../../../models/book_genre.dart';
 import '../../../services/cover_image_service_base.dart';
 import '../../../services/google_books_api_controller.dart';
 import '../../../services/google_books_client.dart';
 import '../../../services/open_library_client.dart';
 import '../../../utils/isbn_utils.dart';
-import '../../widgets/barcode_scanner_sheet.dart';
-import '../../widgets/cover_preview.dart';
+import '../barcode_scanner_sheet.dart';
+import '../cover_preview.dart';
 import 'library_utils.dart';
 
 /// Book source enum for search results
@@ -136,9 +138,16 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       _authorController.text = book.author ?? '';
       _isbnController.text = book.isbn ?? '';
       _barcodeController.text = book.barcode ?? '';
-      _notesController.text = book.notes ?? '';
+      _notesController.text = book.description ?? '';
       _status = book.status == 'archived' ? 'private' : book.status;
       _isRead = book.isRead;
+      // Inconsistency safety check: if the book is being read, it shouldn't be "read"
+      final rStatus = ReadingStatus.fromValue(book.readingStatus);
+      if (_isRead &&
+          rStatus != ReadingStatus.finished &&
+          rStatus != ReadingStatus.rereading) {
+        _isRead = false;
+      }
       _selectedGenres = BookGenre.fromCsv(book.genre);
       _isPhysical = book.isPhysical;
       _pageCountController.text = book.pageCount?.toString() ?? '';
@@ -543,7 +552,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _status,
+                initialValue: _status,
                 decoration: InputDecoration(
                   labelText: 'Estado del libro',
                   border: const OutlineInputBorder(),
@@ -687,15 +696,48 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
 
       if (_isEditing) {
         final book = widget.initialBook!;
+        String newReadingStatus = book.readingStatus;
+
+        // Sync readingStatus with the isRead toggle
+        // If it was reading/paused/etc and user marks it as read, it becomes finished
+        if (_isRead &&
+            newReadingStatus != 'finished' &&
+            newReadingStatus != 'rereading') {
+          newReadingStatus = 'finished';
+        } else if (!_isRead &&
+            (newReadingStatus == 'finished' ||
+                newReadingStatus == 'rereading')) {
+          // If it was finished and user unchecks it, revert to pending
+          newReadingStatus = 'pending';
+        }
+
+        // If status actually changed via the toggle, notify ReadingTimelineService
+        // to create appropriate events (start, finish, etc.)
+        if (newReadingStatus != book.readingStatus && activeUser != null) {
+          final timelineService = ref.read(readingTimelineServiceProvider);
+          try {
+            await timelineService.onReadingStatusChanged(
+              book: book,
+              oldStatus: ReadingStatus.fromValue(book.readingStatus),
+              newStatus: ReadingStatus.fromValue(newReadingStatus),
+              userId: activeUser.id,
+            );
+          } catch (e) {
+            developer.log('Error updating reading status via service: $e',
+                name: 'BookFormSheet');
+          }
+        }
+
         final updated = book.copyWith(
           title: title,
           author: Value(author.isEmpty ? null : author),
           isbn: Value(isbn.isEmpty ? null : isbn),
           barcode: Value(barcode.isEmpty ? null : barcode),
           coverPath: Value(_coverPath),
-          notes: Value(notes.isEmpty ? null : notes),
+          description: Value(notes.isEmpty ? null : notes),
           status: _status,
           isRead: _isRead,
+          readingStatus: newReadingStatus,
           syncedAt: const Value(null),
           updatedAt: DateTime.now(),
           genre: Value(BookGenre.toCsv(_selectedGenres)),
@@ -712,9 +754,10 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           isbn: isbn.isEmpty ? null : isbn,
           barcode: barcode.isEmpty ? null : barcode,
           coverPath: _coverPath,
-          notes: notes.isEmpty ? null : notes,
+          description: notes.isEmpty ? null : notes,
           status: _status,
           isRead: _isRead,
+          readingStatus: _isRead ? 'finished' : 'pending',
           owner: activeUser,
           genre: BookGenre.toCsv(_selectedGenres),
           isPhysical: _isPhysical,

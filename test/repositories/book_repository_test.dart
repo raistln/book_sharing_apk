@@ -280,7 +280,8 @@ void main() {
           barcode: '456',
           coverPath: 'path',
           status: 'available',
-          notes: 'notes',
+          description: 'notes',
+          readingStatus: 'pending',
           isRead: false,
           isBorrowedExternal: false,
           ownerUserId: owner.id,
@@ -292,6 +293,8 @@ void main() {
           updatedAt: DateTime.now(),
           genre: null,
           isPhysical: true,
+          pageCount: null,
+          publicationYear: null,
         );
 
         final result = await bookRepository.updateBook(nonExistentBook);

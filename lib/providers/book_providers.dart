@@ -6,6 +6,7 @@ import '../data/local/database.dart';
 import '../data/local/group_dao.dart';
 import '../data/local/notification_dao.dart';
 import '../data/local/user_dao.dart';
+import '../data/local/timeline_entry_dao.dart';
 import '../data/repositories/book_repository.dart';
 import '../data/repositories/loan_repository.dart';
 import '../data/repositories/notification_repository.dart';
@@ -29,6 +30,8 @@ import '../data/repositories/group_push_repository.dart';
 import '../services/group_push_controller.dart';
 import '../services/discover_group_controller.dart';
 import '../services/onboarding_service.dart';
+import '../services/reading_timeline_service.dart';
+import '../services/reading_rhythm_analyzer.dart';
 import 'notification_providers.dart';
 import 'sync_providers.dart';
 
@@ -73,6 +76,20 @@ final bookRepositoryProvider = Provider<BookRepository>((ref) {
 final groupDaoProvider = Provider<GroupDao>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return GroupDao(db);
+});
+
+final timelineEntryDaoProvider = Provider<TimelineEntryDao>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return TimelineEntryDao(db);
+});
+
+final readingTimelineServiceProvider = Provider<ReadingTimelineService>((ref) {
+  final timelineDao = ref.watch(timelineEntryDaoProvider);
+  final bookDao = ref.watch(bookDaoProvider);
+  return ReadingTimelineService(
+    timelineDao: timelineDao,
+    bookDao: bookDao,
+  );
 });
 
 final groupListProvider = StreamProvider.autoDispose<List<Group>>((ref) {
@@ -471,6 +488,38 @@ final bookStreamProvider =
     StreamProvider.autoDispose.family<Book?, int>((ref, bookId) {
   final repository = ref.watch(bookRepositoryProvider);
   return repository.watchBook(bookId);
+});
+
+final readingTimelineProvider = StreamProvider.autoDispose
+    .family<List<ReadingTimelineEntry>, int>((ref, bookId) {
+  final dao = ref.watch(timelineEntryDaoProvider);
+  return dao.watchEntriesForBook(bookId);
+});
+
+final readingInsightProvider = FutureProvider.autoDispose
+    .family<ReadingInsight?, int>((ref, bookId) async {
+  final bookAsync = await ref.watch(bookStreamProvider(bookId).future);
+  if (bookAsync == null) return null;
+
+  final timeline = await ref.watch(readingTimelineProvider(bookId).future);
+  if (timeline.isEmpty) return null;
+
+  // Calculate user average (simplified - could be cached)
+  final allBooks = await ref.watch(bookListProvider.future);
+  final finishedBooks = allBooks.where((b) => b.isRead).toList();
+
+  final timelineDao = ref.watch(timelineEntryDaoProvider);
+  final userAverage =
+      await ReadingRhythmAnalyzer.calculateUserAveragePagesPerDay(
+    finishedBooks: finishedBooks,
+    getTimeline: (id) => timelineDao.getEntriesForBook(id),
+  );
+
+  return ReadingRhythmAnalyzer.generateInsight(
+    book: bookAsync,
+    timeline: timeline,
+    userAveragePagesPerDay: userAverage,
+  );
 });
 
 final bookExportServiceProvider = Provider<BookExportService>((ref) {

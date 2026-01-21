@@ -771,7 +771,7 @@ class LoanRepository {
           isDirty: const Value(true),
           createdAt: Value(now),
           updatedAt: Value(now),
-          notes: lenderContact != null
+          description: lenderContact != null
               ? Value(
                   'Propietario original: $lenderName\nContacto: $lenderContact')
               : const Value.absent(),

@@ -18,9 +18,11 @@ class BookDetailsPage extends ConsumerWidget {
   const BookDetailsPage({
     super.key,
     required this.bookId,
+    this.scrollToTimeline = false,
   });
 
   final int bookId;
+  final bool scrollToTimeline;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -50,7 +52,11 @@ class BookDetailsPage extends ConsumerWidget {
             return const Center(child: Text('Libro no encontrado'));
           }
           final reviews = reviewsAsync.asData?.value ?? [];
-          return _BookDetailsContent(book: book, reviews: reviews);
+          return _BookDetailsContent(
+            book: book,
+            reviews: reviews,
+            scrollToTimeline: scrollToTimeline,
+          );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
@@ -74,17 +80,61 @@ class BookDetailsPage extends ConsumerWidget {
   }
 }
 
-class _BookDetailsContent extends ConsumerWidget {
-  const _BookDetailsContent({required this.book, required this.reviews});
+class _BookDetailsContent extends ConsumerStatefulWidget {
+  const _BookDetailsContent({
+    required this.book,
+    required this.reviews,
+    this.scrollToTimeline = false,
+  });
 
   final Book book;
   final List<ReviewWithAuthor> reviews;
+  final bool scrollToTimeline;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_BookDetailsContent> createState() =>
+      _BookDetailsContentState();
+}
+
+class _BookDetailsContentState extends ConsumerState<_BookDetailsContent> {
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _timelineKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.scrollToTimeline) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToTimeline();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToTimeline() {
+    final context = _timelineKey.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final book = widget.book;
+    final reviews = widget.reviews;
 
     return SingleChildScrollView(
+      controller: _scrollController,
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,7 +143,7 @@ class _BookDetailsContent extends ConsumerWidget {
           Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(
-                maxWidth: 160, // Sligthly smaller
+                maxWidth: 160,
                 maxHeight: 240,
               ),
               child: Hero(
@@ -119,7 +169,6 @@ class _BookDetailsContent extends ConsumerWidget {
           Text(
             book.title,
             style: theme.textTheme.headlineSmall?.copyWith(
-              // Slightly smaller headline
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
@@ -135,7 +184,6 @@ class _BookDetailsContent extends ConsumerWidget {
             ),
           ],
 
-          // Pages, Year, ISBN
           const SizedBox(height: 8),
           Text(
             [
@@ -151,7 +199,6 @@ class _BookDetailsContent extends ConsumerWidget {
 
           const SizedBox(height: 20),
 
-          // GENRES (New centered placement)
           if (book.genre != null && book.genre!.isNotEmpty) ...[
             Center(
               child: Wrap(
@@ -177,14 +224,12 @@ class _BookDetailsContent extends ConsumerWidget {
             const SizedBox(height: 16),
           ],
 
-          // FORMAT & AVAILABILITY CHIPS
           Center(
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
               alignment: WrapAlignment.center,
               children: [
-                // Format Chip
                 if (!book.isPhysical)
                   Chip(
                     avatar: const Icon(Icons.tablet_mac,
@@ -207,8 +252,6 @@ class _BookDetailsContent extends ConsumerWidget {
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
                   ),
-
-                // Availability Chip
                 _buildAvailabilityChip(context, book),
               ],
             ),
@@ -216,7 +259,6 @@ class _BookDetailsContent extends ConsumerWidget {
 
           const SizedBox(height: 24),
 
-          // Reading Status Selector
           ReadingStatusSelector(
             book: book,
             userId: ref.watch(activeUserProvider).value?.id ?? 0,
@@ -224,10 +266,8 @@ class _BookDetailsContent extends ConsumerWidget {
 
           const SizedBox(height: 24),
 
-          // 📍 READING TIMELINE (Prioritized)
-          // Always show, or collapsed? Widget handles it?
-          // We pass it. If not reading/finished, maybe it shows empty state or 'Start reading'.
           ReadingTimelineWidget(
+            key: _timelineKey,
             book: book,
             userId: ref.watch(activeUserProvider).value?.id ?? 0,
           ),
@@ -236,7 +276,6 @@ class _BookDetailsContent extends ConsumerWidget {
           const Divider(),
           const SizedBox(height: 24),
 
-          // 📘 DESCRIPTION SECTION
           if (book.description != null && book.description!.isNotEmpty) ...[
             Text(
               'Sinopsis',
@@ -251,12 +290,10 @@ class _BookDetailsContent extends ConsumerWidget {
             const SizedBox(height: 32),
           ],
 
-          // ✍️ REVIEWS SECTION
-          _buildReviewsHeader(context, ref, theme),
+          _buildReviewsHeader(context, ref, theme, reviews, book),
           const SizedBox(height: 16),
-          _buildReviewsList(context, ref, theme),
+          _buildReviewsList(context, ref, theme, reviews, book),
 
-          // Extra padding for scrolling comfort
           const SizedBox(height: 48),
         ],
       ),
@@ -316,8 +353,8 @@ class _BookDetailsContent extends ConsumerWidget {
     );
   }
 
-  Widget _buildReviewsHeader(
-      BuildContext context, WidgetRef ref, ThemeData theme) {
+  Widget _buildReviewsHeader(BuildContext context, WidgetRef ref,
+      ThemeData theme, List<ReviewWithAuthor> reviews, Book book) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -348,8 +385,8 @@ class _BookDetailsContent extends ConsumerWidget {
     );
   }
 
-  Widget _buildReviewsList(
-      BuildContext context, WidgetRef ref, ThemeData theme) {
+  Widget _buildReviewsList(BuildContext context, WidgetRef ref, ThemeData theme,
+      List<ReviewWithAuthor> reviews, Book book) {
     if (reviews.isEmpty) {
       return Center(
         child: Padding(

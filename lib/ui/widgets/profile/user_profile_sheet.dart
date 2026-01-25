@@ -7,7 +7,9 @@ import '../../../providers/book_providers.dart';
 import 'package:intl/intl.dart';
 import '../../screens/read_books_screen.dart';
 import '../../screens/wishlist_screen.dart';
+import '../library/book_details_page.dart';
 import '../../../providers/stats_providers.dart';
+import '../../widgets/profile/reading_rhythm_chart.dart'; // Import chart
 
 class UserProfileSheet extends ConsumerStatefulWidget {
   const UserProfileSheet({super.key});
@@ -18,6 +20,7 @@ class UserProfileSheet extends ConsumerStatefulWidget {
 
 class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
   bool _isEditing = false;
+  int _selectedTabIndex = 0; // 0 = Calendar, 1 = Rhythm
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _nameController;
@@ -454,12 +457,72 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          Text('Libros leídos el último año',
-                              style: theme.textTheme.titleMedium),
-                          const SizedBox(height: 16),
-                          _ReadingCalendar(
-                              readBooks:
-                                  readBooksHistoryAsync.asData?.value ?? []),
+                          const SizedBox(height: 24),
+
+                          // Tab Selector
+                          Center(
+                            child: SegmentedButton<int>(
+                              segments: const [
+                                ButtonSegment<int>(
+                                  value: 0,
+                                  label: Text('Calendario'),
+                                  icon: Icon(Icons.calendar_month),
+                                ),
+                                ButtonSegment<int>(
+                                  value: 1,
+                                  label: Text('Ritmo'),
+                                  icon: Icon(Icons.ssid_chart),
+                                ),
+                              ],
+                              selected: {_selectedTabIndex},
+                              onSelectionChanged: (Set<int> newSelection) {
+                                setState(() {
+                                  _selectedTabIndex = newSelection.first;
+                                });
+                              },
+                              showSelectedIcon: false,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Tab Content
+                          if (_selectedTabIndex == 0) ...[
+                            Text('Libros leídos el último año',
+                                style: theme.textTheme.titleMedium),
+                            const SizedBox(height: 16),
+                            _ReadingCalendar(
+                                readBooks:
+                                    readBooksHistoryAsync.asData?.value ?? []),
+                          ] else ...[
+                            Text('Tu ritmo de lectura reciente',
+                                style: theme.textTheme.titleMedium),
+                            const SizedBox(height: 16),
+                            Consumer(
+                              builder: (context, ref, child) {
+                                final rhythmAsync =
+                                    ref.watch(readingRhythmProvider);
+                                return rhythmAsync.when(
+                                  data: (data) => ReadingRhythmChart(
+                                    data: data,
+                                    onBookTap: (book) {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => BookDetailsPage(
+                                            bookId: book.id,
+                                            scrollToTimeline: true,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  loading: () => const Center(
+                                      child: CircularProgressIndicator()),
+                                  error: (e, st) =>
+                                      Text('No se pudo cargar el ritmo: $e'),
+                                );
+                              },
+                            ),
+                          ],
                         ],
                       );
                     },

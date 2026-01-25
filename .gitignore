@@ -53,5 +53,5 @@ app.*.map.json
 .env
 
 # Documentation - Strategic planning
-docs\future_iterations.md
-docs\feedback.md
+docs/future_iterations.md
+docs/future_iterations_market.md

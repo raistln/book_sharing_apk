@@ -1,0 +1,111 @@
+import 'package:book_sharing_app/data/local/database.dart';
+import 'package:book_sharing_app/ui/widgets/profile/reading_rhythm_chart.dart';
+import 'package:book_sharing_app/utils/reading_rhythm_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('ReadingRhythmChart', () {
+    final now = DateTime(2024, 1, 24, 15, 0);
+
+    Book createBook(int id, String title) {
+      return Book(
+        id: id,
+        uuid: 'book-$id',
+        title: title,
+        status: 'available',
+        readingStatus: 'reading',
+        isRead: false,
+        createdAt: now.subtract(const Duration(days: 30)),
+        updatedAt: now,
+        isPhysical: true,
+        isBorrowedExternal: false,
+        isDirty: false,
+        isDeleted: false,
+      );
+    }
+
+    final mockData = ReadingRhythmData(
+      rows: [
+        RhythmRow(
+          book: createBook(1, 'Book 1'),
+          segments: [
+            RhythmSegment(
+                start: now.subtract(const Duration(days: 5)),
+                end: now,
+                isPause: false)
+          ],
+        ),
+        RhythmRow(
+          book: createBook(2, 'Book 2'),
+          segments: [
+            RhythmSegment(
+                start: now.subtract(const Duration(days: 3)),
+                end: now,
+                isPause: false)
+          ],
+        ),
+      ],
+      startDate: now.subtract(const Duration(days: 10)),
+      endDate: now,
+      insight: 'Test Insight',
+    );
+
+    testWidgets('Renders insight and rows', (WidgetTester tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: ReadingRhythmChart(
+            data: mockData,
+            onBookTap: (_) {},
+          ),
+        ),
+      ));
+
+      expect(find.text('Test Insight'), findsOneWidget);
+      // Row count: 2. Each row is an InkWell containing a stack of segments.
+      // We can look for the InkWell or the Book icon.
+      expect(find.byType(InkWell), findsNWidgets(2));
+    });
+
+    testWidgets('Tapping a row calls onBookTap', (WidgetTester tester) async {
+      Book? tappedBook;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: ReadingRhythmChart(
+            data: mockData,
+            onBookTap: (book) => tappedBook = book,
+          ),
+        ),
+      ));
+
+      await tester
+          .tap(find.text('Test Insight')); // Just to ensure layout is ready
+      await tester.tap(find.byType(InkWell).first);
+      await tester.pumpAndSettle();
+
+      expect(tappedBook, isNotNull);
+      expect(tappedBook!.id, 1);
+    });
+
+    testWidgets('Renders empty state message when no data',
+        (WidgetTester tester) async {
+      final emptyData = ReadingRhythmData(
+        rows: [],
+        startDate: now,
+        endDate: now,
+        insight: '',
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: ReadingRhythmChart(
+            data: emptyData,
+            onBookTap: (_) {},
+          ),
+        ),
+      ));
+
+      expect(find.textContaining('No hay suficientes datos'), findsOneWidget);
+    });
+  });
+}

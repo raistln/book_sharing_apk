@@ -1,8 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
+import '../../../providers/auto_backup_providers.dart';
 import '../widgets/inactivity_listener.dart';
 import 'auth/lock_screen.dart';
 import 'auth/pin_setup_screen.dart';
@@ -29,6 +33,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           "El paso más importante que un hombre puede dar no es el primero, es el siguiente.",
       author: "Brandon Sanderson",
     ),
+    // ... (rest of quotes kept same for brevity, but re-included in final file if I were rewriting whole file. Here I replace whole file content to be safe and cleaner)
     Quote(
       text:
           "Un lector vive mil vidas antes de morir. Aquel que nunca lee sólo vive una.",
@@ -102,12 +107,88 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     super.initState();
     _quote = (_quotes..shuffle()).first;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(authControllerProvider.notifier).checkAuth();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
         setState(() => _showText = true);
       }
+
+      // Check for backups before checking auth
+      await _checkAndRestoreBackup();
+
+      if (mounted) {
+        ref.read(authControllerProvider.notifier).checkAuth();
+      }
     });
+  }
+
+  Future<void> _checkAndRestoreBackup() async {
+    try {
+      final dbFolder = await getApplicationDocumentsDirectory();
+      final dbPath = p.join(dbFolder.path, 'book_sharing_v2.sqlite');
+      final dbFile = File(dbPath);
+
+      // Only check if DB does NOT exist
+      if (!await dbFile.exists()) {
+        final backupService = ref.read(autoBackupServiceProvider);
+        final backups = await backupService.getAvailableBackups();
+
+        if (backups.isNotEmpty && mounted) {
+          final latestBackup = backups.first;
+
+          final shouldRestore = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              title: const Text('Copia de seguridad encontrada'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                      'No se encontró base de datos local, pero hay una copia de seguridad disponible.'),
+                  const SizedBox(height: 12),
+                  Text('Archivo: ${latestBackup.path.split('/').last}'),
+                  const SizedBox(height: 12),
+                  const Text('¿Quieres restaurar tus datos ahora?'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Empezar de cero'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Restaurar Backup'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldRestore == true && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content:
+                    Text('Restaurando copia de seguridad... Por favor espera.'),
+                duration: Duration(
+                    seconds: 10), // Long duration as it might take time
+              ),
+            );
+
+            await backupService.restoreFromZip(latestBackup);
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('Restauración completada con éxito.')),
+              );
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error verifying backups: $e');
+    }
   }
 
   Future<void> _navigate(String routeName) async {

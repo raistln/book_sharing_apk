@@ -110,7 +110,10 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<void> checkAuth() async {
-    state = state.copyWith(status: AuthStatus.loading, failedAttempts: 0, lockUntil: AuthState._lockUntilSentinel);
+    state = state.copyWith(
+        status: AuthStatus.loading,
+        failedAttempts: 0,
+        lockUntil: AuthState._lockUntilSentinel);
     final hasPin = await _authService.hasConfiguredPin();
     if (!hasPin) {
       state = state.copyWith(
@@ -356,9 +359,11 @@ final authControllerProvider =
 });
 
 final inactivityManagerProvider = Provider<InactivityManager>((ref) {
-  final controller = ref.read(authControllerProvider.notifier);
   final manager = InactivityManager(
-    onTimeout: () => controller.lock(),
+    onTimeout: () {
+      // Desactivado por petición del usuario: Sesión Persistente (Cold Start Only)
+      // No bloqueamos por inactividad.
+    },
   );
 
   ref.listen<AuthState>(authControllerProvider, (previous, next) {

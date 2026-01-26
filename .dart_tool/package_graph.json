@@ -7,6 +7,7 @@
       "name": "book_sharing_app",
       "version": "1.0.1+2",
       "dependencies": [
+        "archive",
         "battery_plus",
         "collection",
         "connectivity_plus",
@@ -223,6 +224,15 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "archive",
+      "version": "4.0.7",
+      "dependencies": [
+        "crypto",
+        "path",
+        "posix"
       ]
     },
     {
@@ -1095,6 +1105,15 @@
       ]
     },
     {
+      "name": "posix",
+      "version": "6.0.3",
+      "dependencies": [
+        "ffi",
+        "meta",
+        "path"
+      ]
+    },
+    {
       "name": "web",
       "version": "1.1.1",
       "dependencies": []
@@ -1464,15 +1483,6 @@
       "dependencies": [
         "meta",
         "qr"
-      ]
-    },
-    {
-      "name": "archive",
-      "version": "4.0.7",
-      "dependencies": [
-        "crypto",
-        "path",
-        "posix"
       ]
     },
     {
@@ -1979,15 +1989,6 @@
         "http_parser",
         "meta",
         "web"
-      ]
-    },
-    {
-      "name": "posix",
-      "version": "6.0.3",
-      "dependencies": [
-        "ffi",
-        "meta",
-        "path"
       ]
     },
     {

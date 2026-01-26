@@ -1,6 +1,7 @@
-import 'dart:async';
-
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../../providers/auto_backup_providers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -1293,24 +1294,266 @@ class _BackupSectionState extends State<_BackupSection> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: SwitchListTile(
-        value: _isEnabled,
-        onChanged: _isLoading ? null : _toggleBackup,
-        title: const Text('Backup automático semanal'),
-        subtitle: const Text(
-          'Guarda una copia de tu biblioteca cada semana en segundo plano.',
+  Future<void> _manualBackup(WidgetRef ref) async {
+    try {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Creando copia de seguridad...')),
+        );
+      }
+
+      // Use provider to get service instance
+      final backupService = ref.read(autoBackupServiceProvider);
+      final activeUser = ref.read(activeUserProvider).value;
+
+      final path =
+          await backupService.performBackup(ownerUserId: activeUser?.id);
+
+      if (!mounted) return;
+
+      if (path != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Backup guardado en: $path'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                const Text('No se pudo crear el backup. Intenta de nuevo.'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al crear backup: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreLatestAutoBackup(WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Restaurar último backup automático?'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('⚠️ Atención:', style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Text(
+                'Esta acción reemplazará TODOS tus datos actuales con la copia de seguridad más reciente.'),
+            SizedBox(height: 8),
+            Text('La aplicación se reiniciará al finalizar.'),
+          ],
         ),
-        secondary: _isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.backup_outlined),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Restaurar'),
+          ),
+        ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    try {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Buscando backups...')),
+        );
+      }
+
+      final backupService = ref.read(autoBackupServiceProvider);
+      final backups = await backupService.getAvailableBackups();
+
+      if (backups.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('No se encontraron backups automáticos.')),
+          );
+        }
+        return;
+      }
+
+      final latestBackup = backups.first;
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('Restaurando ${latestBackup.path.split('/').last}...')),
+        );
+      }
+
+      await backupService.restoreFromZip(latestBackup);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Restauración completada. Reiniciando...')),
+        );
+        // Wait a bit and restart
+        await Future.delayed(const Duration(seconds: 2));
+        SystemNavigator.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al restaurar: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreManualBackup(WidgetRef ref) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['zip'],
+        initialDirectory:
+            '/storage/emulated/0/Download', // Try to open in Downloads
+      );
+
+      if (result != null && result.files.single.path != null) {
+        if (!mounted) return;
+
+        final file = File(result.files.single.path!);
+
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('¿Restaurar este backup?'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Archivo: ${file.path.split('/').last}'),
+                const SizedBox(height: 16),
+                const Text(
+                    'Esta acción reemplazará TODOS tus datos actuales con el contenido del backup.'),
+                const SizedBox(height: 8),
+                const Text('La aplicación se reiniciará al finalizar.'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+                child: const Text('Restaurar'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed != true) return;
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Restaurando backup...')),
+          );
+        }
+
+        final backupService = ref.read(autoBackupServiceProvider);
+        await backupService.restoreFromZip(file);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Restauración completada. Reiniciando...')),
+          );
+          await Future.delayed(const Duration(seconds: 2));
+          SystemNavigator.pop();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al seleccionar backup: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Need Consumer to access providers inside this widget
+    return Consumer(builder: (context, ref, child) {
+      return Card(
+        child: Column(
+          children: [
+            SwitchListTile(
+              value: _isEnabled,
+              onChanged: _isLoading ? null : _toggleBackup,
+              title: const Text('Backup automático semanal'),
+              subtitle: const Text(
+                'Guarda una copia completa (base de datos y portadas) cada semana.',
+              ),
+              secondary: _isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.backup_outlined),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.save_alt),
+              title: const Text('Hacer backup ahora'),
+              subtitle:
+                  const Text('Crea manualmnete una copia ZIP en Descargas'),
+              onTap: _isLoading ? null : () => _manualBackup(ref),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.restore),
+              title: const Text('Importar backup automático'),
+              subtitle: const Text(
+                  'Restaurar desde la copia automática más reciente'),
+              onTap: _isLoading ? null : () => _restoreLatestAutoBackup(ref),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.folder_open),
+              title: const Text('Cargar backup manual'),
+              subtitle: const Text('Buscar archivo ZIP en el dispositivo'),
+              onTap: _isLoading ? null : () => _restoreManualBackup(ref),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

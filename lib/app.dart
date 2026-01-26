@@ -27,7 +27,8 @@ class BookSharingApp extends ConsumerStatefulWidget {
   ConsumerState<BookSharingApp> createState() => _BookSharingAppState();
 }
 
-class _BookSharingAppState extends ConsumerState<BookSharingApp> with WidgetsBindingObserver {
+class _BookSharingAppState extends ConsumerState<BookSharingApp>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -46,15 +47,18 @@ class _BookSharingAppState extends ConsumerState<BookSharingApp> with WidgetsBin
     if (kDebugMode) {
       debugPrint('[AppLifecycle] State changed to: $state');
     }
-    
+
     if (state == AppLifecycleState.resumed) {
       // Sync when app comes back to foreground
       final authState = ref.read(authControllerProvider);
       if (authState.status == AuthStatus.unlocked) {
-        if (kDebugMode) debugPrint('[AppLifecycle] App resumed & unlocked -> Syncing & Resuming AutoSync');
+        if (kDebugMode) {
+          debugPrint(
+              '[AppLifecycle] App resumed & unlocked -> Syncing & Resuming AutoSync');
+        }
         final coordinator = ref.read(unifiedSyncCoordinatorProvider);
-        coordinator.syncNow(); 
-        
+        coordinator.syncNow();
+
         // Check for upcoming or expired loans and notify
         ref.read(loanControllerProvider.notifier).checkUpcomingLoans();
 
@@ -62,11 +66,17 @@ class _BookSharingAppState extends ConsumerState<BookSharingApp> with WidgetsBin
           coordinator.resumeAutoSync();
         }
       } else {
-        if (kDebugMode) debugPrint('[AppLifecycle] App resumed but auth status is ${authState.status} -> No action');
+        if (kDebugMode) {
+          debugPrint(
+              '[AppLifecycle] App resumed but auth status is ${authState.status} -> No action');
+        }
       }
     } else if (state == AppLifecycleState.paused) {
       // No necesitamos detener el auto-sync, el coordinador lo maneja inteligentemente
-      if (kDebugMode) debugPrint('[AppLifecycle] App paused -> Coordinator will adapt intervals');
+      if (kDebugMode) {
+        debugPrint(
+            '[AppLifecycle] App paused -> Coordinator will adapt intervals');
+      }
     }
   }
 
@@ -74,23 +84,31 @@ class _BookSharingAppState extends ConsumerState<BookSharingApp> with WidgetsBin
   Widget build(BuildContext context) {
     // Ensure notification intent notifier is instantiated.
     ref.watch(notificationIntentProvider);
-    
+
     // Listen to auth changes to start/stop auto-sync (must be in build)
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
       if (kDebugMode) {
-        debugPrint('[AuthListener] Auth status changed: ${previous?.status} -> ${next.status}');
+        debugPrint(
+            '[AuthListener] Auth status changed: ${previous?.status} -> ${next.status}');
       }
-      
-      if (next.status == AuthStatus.unlocked && previous?.status != AuthStatus.unlocked) {
-        if (kDebugMode) debugPrint('[AuthListener] Auth unlocked -> Starting AutoSync');
+
+      if (next.status == AuthStatus.unlocked &&
+          previous?.status != AuthStatus.unlocked) {
+        if (kDebugMode) {
+          debugPrint('[AuthListener] Auth unlocked -> Starting AutoSync');
+        }
         ref.read(unifiedSyncCoordinatorProvider).startAutoSync();
-      } else if (next.status != AuthStatus.unlocked && previous?.status == AuthStatus.unlocked) {
-        if (kDebugMode) debugPrint('[AuthListener] Auth locked/other -> Stopping AutoSync');
+      } else if (next.status != AuthStatus.unlocked &&
+          previous?.status == AuthStatus.unlocked) {
+        if (kDebugMode) {
+          debugPrint('[AuthListener] Auth locked/other -> Stopping AutoSync');
+        }
         ref.read(unifiedSyncCoordinatorProvider).stopAutoSync();
       }
     });
 
-    ref.listen<NotificationIntent?>(notificationIntentProvider, (previous, next) {
+    ref.listen<NotificationIntent?>(notificationIntentProvider,
+        (previous, next) {
       if (next == null) {
         return;
       }
@@ -106,7 +124,8 @@ class _BookSharingAppState extends ConsumerState<BookSharingApp> with WidgetsBin
           return;
         }
 
-        navigator.pushNamedAndRemoveUntil(HomeShell.routeName, (route) => false);
+        navigator.pushNamedAndRemoveUntil(
+            HomeShell.routeName, (route) => false);
       });
     });
 
@@ -115,6 +134,7 @@ class _BookSharingAppState extends ConsumerState<BookSharingApp> with WidgetsBin
     final mode = ref.watch(themeModeProvider);
 
     return MaterialApp(
+      restorationScopeId: 'app',
       navigatorKey: navigatorKey,
       title: 'Book Sharing App',
       debugShowCheckedModeBanner: false,
@@ -139,8 +159,10 @@ class _BookSharingAppState extends ConsumerState<BookSharingApp> with WidgetsBin
         PinSetupScreen.routeName: (context) => const PinSetupScreen(),
         ExistingAccountLoginScreen.routeName: (context) =>
             const ExistingAccountLoginScreen(),
-        OnboardingIntroScreen.routeName: (context) => const OnboardingIntroScreen(),
-        OnboardingWizardScreen.routeName: (context) => const OnboardingWizardScreen(),
+        OnboardingIntroScreen.routeName: (context) =>
+            const OnboardingIntroScreen(),
+        OnboardingWizardScreen.routeName: (context) =>
+            const OnboardingWizardScreen(),
         HomeShell.routeName: (context) =>
             const InactivityListener(child: HomeShell()),
       },

@@ -80,8 +80,9 @@ class _ReadingTimelineWidgetState extends ConsumerState<ReadingTimelineWidget> {
                     loading: () => const SizedBox.shrink(),
                     error: (_, __) => const SizedBox.shrink(),
                   ),
-                  // Add progress button - ONLY if reading or paused
+                  // Add progress button - ONLY if reading, rereading or paused
                   if (widget.book.readingStatus == 'reading' ||
+                      widget.book.readingStatus == 'rereading' ||
                       widget.book.readingStatus == 'paused')
                     SizedBox(
                       width: double.infinity,

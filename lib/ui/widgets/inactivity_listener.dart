@@ -34,13 +34,13 @@ class _InactivityListenerState extends ConsumerState<InactivityListener>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    final controller = ref.read(authControllerProvider.notifier);
     switch (state) {
       case AppLifecycleState.paused:
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
-        controller.lock();
+        // No bloqueamos automáticamente al salir al segundo plano.
+        // El PIN solo se pedirá en un inicio desde cero (Cold Start).
         break;
       case AppLifecycleState.resumed:
         _registerActivity();

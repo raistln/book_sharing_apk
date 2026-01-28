@@ -9,6 +9,7 @@ import '../../../providers/book_providers.dart';
 import '../../../providers/auth_providers.dart';
 import '../../../services/notification_service.dart';
 import '../../../providers/notification_providers.dart';
+import '../../../providers/user_profile_provider.dart';
 import '../../widgets/sync_banner.dart';
 import '../../widgets/textured_background.dart';
 import '../auth/pin_setup_screen.dart';
@@ -22,6 +23,9 @@ import '../../widgets/library/book_form_sheet.dart';
 import '../../widgets/profile/user_profile_sheet.dart';
 import '../../../services/release_notes_service.dart';
 import '../../widgets/release_notes_dialog.dart';
+import '../../widgets/bulletin/bulletin_sheet.dart';
+import '../../../providers/bulletin_providers.dart';
+import '../../../models/bulletin.dart';
 
 enum _BookFormResult {
   saved,
@@ -86,6 +90,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 children: [
                   NotificationBell(
                     onPressed: () => _showNotificationsSheet(context, ref),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => _handleBulletinAction(context, ref),
+                    icon: const Icon(Icons.newspaper_outlined),
+                    tooltip: 'Boletín Provincial',
                   ),
                   const SizedBox(width: 8),
                   IconButton(
@@ -280,6 +290,102 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       useSafeArea: true,
       isScrollControlled: true,
       builder: (context) => const UserProfileSheet(),
+    );
+  }
+
+  Future<void> _handleBulletinAction(
+      BuildContext context, WidgetRef ref) async {
+    final userProfile = ref.read(userProfileProvider).value;
+    final province = userProfile?.residence;
+
+    if (province == null || province.isEmpty) {
+      _showResidenceWarning(context);
+      return;
+    }
+
+    _showLoadingDialog(context);
+
+    try {
+      final bulletin = await ref.read(latestBulletinProvider.future);
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // Close loading
+
+      if (bulletin == null) {
+        _showComingSoonBulletin(context, province);
+      } else {
+        _showBulletinSheet(context, bulletin);
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // Close loading
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Error al cargar el boletín: $e',
+        isError: true,
+      );
+    }
+  }
+
+  void _showResidenceWarning(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Lugar de residencia necesario'),
+        content: const Text(
+          'Para recibir boletines literarios de tu zona, por favor rellena tu lugar de residencia en tu perfil.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Ahora no'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showProfileSheet(context);
+            },
+            child: const Text('Ir al Perfil'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showComingSoonBulletin(BuildContext context, String province) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Boletín de $province'),
+        content: const Text(
+          'Estamos trabajando en la función de Boletines para tu provincia. ¡Estará disponible próximamente!',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLoadingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  void _showBulletinSheet(BuildContext context, Bulletin bulletin) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => BulletinSheet(bulletin: bulletin),
     );
   }
 }

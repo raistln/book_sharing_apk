@@ -2,32 +2,54 @@ import 'dart:convert';
 
 class Bulletin {
   final int id;
-  final String narrativa;
-  final List<BulletinEvent> contenido;
-  final int totalEventos;
-  final String periodo;
-  final String provincia;
+  final String province;
+  final String period;
+  final int month;
+  final int year;
+  final String? monthName;
+  final String narrative;
+  final List<BulletinEvent> events;
+  final int totalEvents;
+  final DateTime generatedAt;
 
   Bulletin({
     required this.id,
-    required this.narrativa,
-    required this.contenido,
-    required this.totalEventos,
-    required this.periodo,
-    required this.provincia,
+    required this.province,
+    required this.period,
+    required this.month,
+    required this.year,
+    this.monthName,
+    required this.narrative,
+    required this.events,
+    required this.totalEvents,
+    required this.generatedAt,
   });
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'province': province,
+      'period': period,
+      'month': month,
+      'year': year,
+      'month_name': monthName,
+      'narrative': narrative,
+      'events': events.map((e) => e.toJson()).toList(),
+      'total_events': totalEvents,
+      'generated_at': generatedAt.toIso8601String(),
+    };
+  }
+
   factory Bulletin.fromJson(Map<String, dynamic> json) {
-    var contenidoJson = json['contenido'];
+    var eventsJson = json['events'];
     List<BulletinEvent> eventsList = [];
 
-    if (contenidoJson != null) {
-      if (contenidoJson is String) {
-        // In case it's stored as a string in Supabase
-        contenidoJson = jsonDecode(contenidoJson);
+    if (eventsJson != null) {
+      if (eventsJson is String) {
+        eventsJson = jsonDecode(eventsJson);
       }
-      if (contenidoJson is List) {
-        eventsList = contenidoJson
+      if (eventsJson is List) {
+        eventsList = eventsJson
             .map((e) => BulletinEvent.fromJson(e as Map<String, dynamic>))
             .toList();
       }
@@ -35,11 +57,16 @@ class Bulletin {
 
     return Bulletin(
       id: json['id'] as int? ?? 0,
-      narrativa: json['narrativa'] as String? ?? '',
-      contenido: eventsList,
-      totalEventos: json['total_eventos'] as int? ?? 0,
-      periodo: json['periodo'] as String? ?? '',
-      provincia: json['provincia'] as String? ?? '',
+      province: json['province'] as String? ?? '',
+      period: json['period'] as String? ?? '',
+      month: json['month'] as int? ?? 0,
+      year: json['year'] as int? ?? 0,
+      monthName: json['month_name'] as String?,
+      narrative: json['narrative'] as String? ?? '',
+      events: eventsList,
+      totalEvents: json['total_events'] as int? ?? 0,
+      generatedAt: DateTime.tryParse(json['generated_at'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 }
@@ -60,6 +87,17 @@ class BulletinEvent {
     required this.descripcion,
     required this.fecha,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'titulo': titulo,
+      'autor': autor,
+      'hora': hora,
+      'lugar': lugar,
+      'descripcion': descripcion,
+      'fecha': fecha,
+    };
+  }
 
   factory BulletinEvent.fromJson(Map<String, dynamic> json) {
     return BulletinEvent(

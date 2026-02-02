@@ -86,16 +86,15 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  NotificationBell(
-                    onPressed: () => _showNotificationsSheet(context, ref),
-                  ),
-                  const SizedBox(width: 8),
                   IconButton(
                     onPressed: () => _handleBulletinAction(context, ref),
                     icon: const Icon(Icons.newspaper_outlined),
                     tooltip: 'Boletín Provincial',
+                  ),
+                  const Spacer(),
+                  NotificationBell(
+                    onPressed: () => _showNotificationsSheet(context, ref),
                   ),
                   const SizedBox(width: 8),
                   IconButton(

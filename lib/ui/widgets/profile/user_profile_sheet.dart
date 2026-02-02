@@ -23,6 +23,61 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
   int _selectedTabIndex = 0; // 0 = Calendar, 1 = Rhythm
   final _formKey = GlobalKey<FormState>();
 
+  static const List<String> _provinces = [
+    'Álava',
+    'Albacete',
+    'Alicante',
+    'Almería',
+    'Asturias',
+    'Ávila',
+    'Badajoz',
+    'Baleares',
+    'Barcelona',
+    'Burgos',
+    'Cáceres',
+    'Cádiz',
+    'Cantabria',
+    'Castellón',
+    'Ciudad Real',
+    'Córdoba',
+    'Cuenca',
+    'Gerona',
+    'Granada',
+    'Guadalajara',
+    'Guipúzcoa',
+    'Huelva',
+    'Huesca',
+    'Jaén',
+    'La Coruña',
+    'La Rioja',
+    'Las Palmas',
+    'León',
+    'Lérida',
+    'Lugo',
+    'Madrid',
+    'Málaga',
+    'Murcia',
+    'Navarra',
+    'Orense',
+    'Palencia',
+    'Pontevedra',
+    'Salamanca',
+    'Santa Cruz de Tenerife',
+    'Segovia',
+    'Sevilla',
+    'Soria',
+    'Tarragona',
+    'Teruel',
+    'Toledo',
+    'Valencia',
+    'Valladolid',
+    'Vizcaya',
+    'Zamora',
+    'Zaragoza',
+    'Ceuta',
+    'Melilla',
+  ];
+
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _residenceController;
@@ -251,11 +306,85 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
                                 border: OutlineInputBorder()),
                           ),
                           const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _residenceController,
-                            decoration: const InputDecoration(
-                                labelText: 'Lugar de residencia',
-                                border: OutlineInputBorder()),
+                          Autocomplete<String>(
+                            initialValue: TextEditingValue(
+                                text: _residenceController.text),
+                            optionsBuilder:
+                                (TextEditingValue textEditingValue) {
+                              if (textEditingValue.text.isEmpty) {
+                                return const Iterable<String>.empty();
+                              }
+                              return _provinces.where((String option) {
+                                return option.toLowerCase().contains(
+                                    textEditingValue.text.toLowerCase());
+                              });
+                            },
+                            onSelected: (String selection) {
+                              _residenceController.text = selection;
+                            },
+                            fieldViewBuilder: (context, controller, focusNode,
+                                onFieldSubmitted) {
+                              // Sync controllers
+                              if (controller.text !=
+                                      _residenceController.text &&
+                                  _residenceController.text.isNotEmpty &&
+                                  controller.text.isEmpty) {
+                                controller.text = _residenceController.text;
+                              }
+
+                              return TextFormField(
+                                controller: controller,
+                                focusNode: focusNode,
+                                decoration: const InputDecoration(
+                                  labelText: 'Lugar de residencia (Provincia)',
+                                  border: OutlineInputBorder(),
+                                  suffixIcon: Icon(Icons.search, size: 20),
+                                ),
+                                onFieldSubmitted: (value) {
+                                  onFieldSubmitted();
+                                },
+                                onChanged: (value) {
+                                  _residenceController.text = value;
+                                },
+                              );
+                            },
+                            optionsViewBuilder: (context, onSelected, options) {
+                              return Align(
+                                alignment: Alignment.topLeft,
+                                child: Material(
+                                  elevation: 4.0,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    width:
+                                        MediaQuery.of(context).size.width - 48,
+                                    margin: const EdgeInsets.only(top: 4),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.surface,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    constraints:
+                                        const BoxConstraints(maxHeight: 250),
+                                    child: ListView.builder(
+                                      padding: const EdgeInsets.all(8.0),
+                                      shrinkWrap: true,
+                                      itemCount: options.length,
+                                      itemBuilder:
+                                          (BuildContext context, int index) {
+                                        final String option =
+                                            options.elementAt(index);
+                                        return ListTile(
+                                          title: Text(option),
+                                          onTap: () => onSelected(option),
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8)),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                           const SizedBox(height: 12),
                           TextFormField(

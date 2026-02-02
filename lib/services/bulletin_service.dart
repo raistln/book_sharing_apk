@@ -16,19 +16,17 @@ class BulletinService {
   Future<Bulletin?> fetchLatestBulletin(String province) async {
     final config = await _configService.loadConfig();
 
-    // We search by provincia, descending order by periodo to get the latest one
-    final uri = Uri.parse('${config.url}/rest/v1/boletines_literarios').replace(
+    final uri = Uri.parse('${config.url}/rest/v1/literary_bulletins').replace(
       queryParameters: {
-        'provincia': 'eq.$province',
-        'order': 'periodo.desc',
+        'province': 'eq.$province',
+        'order': 'period.desc',
         'limit': '1',
       },
     );
 
     final headers = {
       'apikey': config.anonKey,
-      'Authorization':
-          'Bearer ${config.anonKey}', // Using anonKey as basic auth
+      'Authorization': 'Bearer ${config.anonKey}',
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };

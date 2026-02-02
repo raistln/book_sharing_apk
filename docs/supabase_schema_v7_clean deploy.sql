@@ -359,7 +359,63 @@ CREATE TABLE IF NOT EXISTS public.system_metrics (
   UNIQUE (metric_name, metric_hour)
 );
 
+CREATE TABLE public.literary_bulletins (
+    id BIGSERIAL PRIMARY KEY,
+    
+    -- Identification
+    province TEXT NOT NULL,
+    period TEXT NOT NULL, -- "2026-02"
+    month INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    month_name TEXT,
+    
+    -- Content
+    narrative TEXT NOT NULL,
+    events JSONB NOT NULL DEFAULT '[]'::jsonb,
+    
+    -- Stats
+    total_events INTEGER DEFAULT 0,
+    event_types JSONB DEFAULT '{}'::jsonb,
+    sources_used TEXT[] DEFAULT ARRAY[]::TEXT[],
+    
+    -- Metadata
+    generated_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    -- Unique constraint
+    UNIQUE(province, month, year)
+);
 
+-- Indices
+CREATE INDEX idx_bulletins_province ON public.literary_bulletins(province);
+CREATE INDEX idx_bulletins_period ON public.literary_bulletins(month, year);
+CREATE INDEX idx_bulletins_narrative_search ON public.literary_bulletins USING GIN (to_tsvector('spanish', narrative));
+CREATE INDEX idx_bulletins_events ON public.literary_bulletins USING GIN (events);
+
+-- RLS
+ALTER TABLE public.literary_bulletins ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read access"
+    ON public.literary_bulletins
+    FOR SELECT
+    USING (true);
+
+CREATE POLICY "Service role insert"
+    ON public.literary_bulletins
+    FOR INSERT
+    WITH CHECK ((SELECT auth.role()) = 'service_role');
+
+CREATE POLICY "Service role update"
+    ON public.literary_bulletins
+    FOR UPDATE
+    USING ((SELECT auth.role()) = 'service_role');
+
+CREATE POLICY "Service role delete"
+    ON public.literary_bulletins
+    FOR DELETE
+    USING ((SELECT auth.role()) = 'service_role');
+    
 -- ============================================================================
 -- STEP 8: CREATE INDEXES
 -- ============================================================================

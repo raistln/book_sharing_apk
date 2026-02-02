@@ -48,14 +48,14 @@ class BulletinSheet extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Boletín de ${bulletin.provincia}',
+                                'Boletín de ${bulletin.province}',
                                 style: theme.textTheme.headlineSmall?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'serif',
                                 ),
                               ),
                               Text(
-                                'Periodo: ${bulletin.periodo}',
+                                'Periodo: ${bulletin.period}',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
@@ -98,7 +98,7 @@ class BulletinSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            bulletin.narrativa,
+                            bulletin.narrative,
                             style: theme.textTheme.bodyLarge?.copyWith(
                               height: 1.6,
                               fontStyle: FontStyle.italic,
@@ -119,7 +119,7 @@ class BulletinSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    if (bulletin.contenido.isEmpty)
+                    if (bulletin.events.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 32),
                         child: Center(
@@ -132,7 +132,7 @@ class BulletinSheet extends StatelessWidget {
                         ),
                       )
                     else
-                      ...bulletin.contenido
+                      ...bulletin.events
                           .map((event) => _EventCard(event: event)),
 
                     const SizedBox(height: 48),

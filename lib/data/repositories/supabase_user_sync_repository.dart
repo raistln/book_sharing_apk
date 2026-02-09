@@ -37,13 +37,14 @@ class SupabaseUserSyncRepository {
     await db.transaction(() async {
       for (final remote in remoteUsers) {
         final existingById = await _userDao.findByRemoteId(remote.id);
-        final existing = existingById ?? await _userDao.findByUsername(remote.username);
+        final existing =
+            existingById ?? await _userDao.findByUsername(remote.username);
 
         if (existing != null) {
           if (existing.isDirty) {
-            await _userDao.updateUserFields(
-              userId: existing.id,
-              entry: LocalUsersCompanion(
+            await _userDao.updateUser(
+              LocalUsersCompanion(
+                id: Value(existing.id),
                 remoteId: existing.remoteId == null
                     ? Value(remote.id)
                     : const Value<String?>.absent(),
@@ -57,9 +58,9 @@ class SupabaseUserSyncRepository {
             continue;
           }
 
-          await _userDao.updateUserFields(
-            userId: existing.id,
-            entry: LocalUsersCompanion(
+          await _userDao.updateUser(
+            LocalUsersCompanion(
+              id: Value(existing.id),
               remoteId: Value(remote.id),
               username: Value(remote.username),
               isDeleted: Value(remote.isDeleted),
@@ -178,9 +179,9 @@ class SupabaseUserSyncRepository {
           }
         }
 
-        await _userDao.updateUserFields(
-          userId: user.id,
-          entry: LocalUsersCompanion(
+        await _userDao.updateUser(
+          LocalUsersCompanion(
+            id: Value(user.id),
             remoteId: Value(ensuredRemoteId),
             isDirty: const Value(false),
             syncedAt: Value(syncTime),

@@ -10,48 +10,55 @@ class UserDao extends DatabaseAccessor<AppDatabase> with _$UserDaoMixin {
 
   Stream<LocalUser?> watchActiveUser() {
     final query = (select(localUsers)
-          ..where((tbl) => tbl.isDeleted.equals(false))
-          ..limit(1));
+      ..where((tbl) => tbl.isDeleted.equals(false))
+      ..limit(1));
 
     return query.watchSingleOrNull();
   }
 
   Future<LocalUser?> getActiveUser() {
     final query = (select(localUsers)
-          ..where((tbl) => tbl.isDeleted.equals(false))
-          ..limit(1));
+      ..where((tbl) => tbl.isDeleted.equals(false))
+      ..limit(1));
 
     return query.getSingleOrNull();
   }
 
   Future<LocalUser?> getById(int id) {
-    return (select(localUsers)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+    return (select(localUsers)..where((tbl) => tbl.id.equals(id)))
+        .getSingleOrNull();
   }
 
-  Future<int> insertUser(LocalUsersCompanion entry) => into(localUsers).insert(entry);
+  Future<int> insertUser(LocalUsersCompanion entry) =>
+      into(localUsers).insert(entry);
 
   Future<LocalUser?> findByRemoteId(String remoteId) {
-    return (select(localUsers)..where((tbl) => tbl.remoteId.equals(remoteId))).getSingleOrNull();
+    return (select(localUsers)..where((tbl) => tbl.remoteId.equals(remoteId)))
+        .getSingleOrNull();
   }
 
   Future<LocalUser?> findByUsername(String username) {
-    return (select(localUsers)..where((tbl) => tbl.username.equals(username))).getSingleOrNull();
+    return (select(localUsers)..where((tbl) => tbl.username.equals(username)))
+        .getSingleOrNull();
   }
 
   Future<List<LocalUser>> getActiveUsers() {
-    return (select(localUsers)..where((tbl) => tbl.isDeleted.equals(false))).get();
+    return (select(localUsers)..where((tbl) => tbl.isDeleted.equals(false)))
+        .get();
   }
 
   Future<List<LocalUser>> getDirtyUsers() {
     return (select(localUsers)..where((tbl) => tbl.isDirty.equals(true))).get();
   }
 
-  Future<int> updateUserFields({required int userId, required LocalUsersCompanion entry}) {
-    return (update(localUsers)..where((tbl) => tbl.id.equals(userId))).write(entry);
+  Future<int> updateUser(LocalUsersCompanion entry) {
+    return (update(localUsers)..where((tbl) => tbl.id.equals(entry.id.value)))
+        .write(entry);
   }
 
   Future<void> markAllDeleted({required DateTime timestamp}) {
-    return (update(localUsers)..where((tbl) => tbl.isDeleted.equals(false))).write(
+    return (update(localUsers)..where((tbl) => tbl.isDeleted.equals(false)))
+        .write(
       LocalUsersCompanion(
         isDeleted: const Value(true),
         updatedAt: Value(timestamp),

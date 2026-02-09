@@ -846,13 +846,11 @@ class SupabaseGroupSyncRepository {
       if (username != null &&
           (localUser.username.startsWith('miembro_') ||
               localUser.username.isEmpty)) {
-        await _userDao.updateUserFields(
-          userId: localUser.id,
-          entry: LocalUsersCompanion(
-            username: Value(username),
-            updatedAt: Value(DateTime.now()),
-          ),
-        );
+        await _userDao.updateUser(LocalUsersCompanion(
+          id: Value(localUser.id),
+          username: Value(username),
+          updatedAt: Value(DateTime.now()),
+        ));
         return _userDao.getById(localUser.id);
       }
       return localUser;

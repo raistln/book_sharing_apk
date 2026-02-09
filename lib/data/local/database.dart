@@ -290,6 +290,286 @@ class ReadingTimelineEntries extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+class ReadingClubs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  TextColumn get name => text().withLength(min: 1, max: 128)();
+  TextColumn get description => text().withLength(min: 1, max: 512)();
+  TextColumn get city => text().withLength(min: 1, max: 128)();
+  TextColumn get meetingPlace => text().nullable().withLength(max: 256)();
+
+  // Frequency configuration
+  TextColumn get frequency => text().withLength(
+      min: 1, max: 32)(); // 'semanal', 'quincenal', 'mensual', 'personalizada'
+  IntColumn get frequencyDays => integer().nullable()();
+
+  // Visibility
+  TextColumn get visibility => text()
+      .withDefault(const Constant('privado'))
+      .withLength(min: 1, max: 32)(); // 'privado', 'publico'
+
+  // UI configuration
+  IntColumn get nextBooksVisible => integer().withDefault(const Constant(1))();
+
+  // Relationships
+  IntColumn get ownerUserId => integer().references(LocalUsers, #id)();
+  TextColumn get ownerRemoteId => text().nullable()();
+
+  IntColumn get currentBookId =>
+      integer().nullable()(); // Will reference ClubBooks, added after
+  TextColumn get currentBookUuid => text().nullable()();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class ClubMembers extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get clubId =>
+      integer().references(ReadingClubs, #id, onDelete: KeyAction.cascade)();
+  TextColumn get clubUuid => text().withLength(min: 1, max: 36)();
+
+  @ReferenceName('clubMemberships')
+  IntColumn get memberUserId => integer().references(LocalUsers, #id)();
+  TextColumn get memberRemoteId => text().nullable()();
+
+  TextColumn get role => text()
+      .withDefault(const Constant('miembro'))
+      .withLength(min: 1, max: 32)(); // 'dueño', 'admin', 'miembro'
+  TextColumn get status => text()
+      .withDefault(const Constant('activo'))
+      .withLength(min: 1, max: 32)(); // 'activo', 'inactivo'
+
+  DateTimeColumn get joinedAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get lastActivity =>
+      dateTime().withDefault(currentDateAndTime)();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column<Object>>>? get uniqueKeys => [
+        {clubId, memberUserId},
+      ];
+}
+
+class ClubBooks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get clubId =>
+      integer().references(ReadingClubs, #id, onDelete: KeyAction.cascade)();
+  TextColumn get clubUuid => text().withLength(min: 1, max: 36)();
+
+  // Book reference (UUID from Books table)
+  TextColumn get bookUuid => text().withLength(min: 1, max: 36)();
+
+  // Order and status
+  IntColumn get orderPosition => integer().withDefault(const Constant(0))();
+  TextColumn get status => text()
+      .withDefault(const Constant('propuesto'))
+      .withLength(min: 1, max: 32)();
+  // Status: 'propuesto', 'votando', 'proximo', 'activo', 'completado'
+
+  // Section configuration
+  TextColumn get sectionMode => text()
+      .withDefault(const Constant('automatico'))
+      .withLength(min: 1, max: 32)(); // 'automatico', 'manual'
+  IntColumn get totalChapters => integer()();
+  TextColumn get sections => text()(); // JSON array of sections
+
+  DateTimeColumn get startDate => dateTime().nullable()();
+  DateTimeColumn get endDate => dateTime().nullable()();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class ClubReadingProgress extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+
+  IntColumn get clubId =>
+      integer().references(ReadingClubs, #id, onDelete: KeyAction.cascade)();
+  TextColumn get clubUuid => text().withLength(min: 1, max: 36)();
+
+  IntColumn get bookId =>
+      integer().references(ClubBooks, #id, onDelete: KeyAction.cascade)();
+  TextColumn get bookUuid => text().withLength(min: 1, max: 36)();
+
+  @ReferenceName('clubProgressUser')
+  IntColumn get userId => integer().references(LocalUsers, #id)();
+  TextColumn get userRemoteId => text().nullable()();
+  TextColumn get remoteId => text().nullable()();
+
+  TextColumn get status => text()
+      .withDefault(const Constant('no_empezado'))
+      .withLength(min: 1, max: 32)();
+  // Status: 'no_empezado', 'al_dia', 'atrasado', 'terminado'
+
+  IntColumn get currentChapter => integer().withDefault(const Constant(0))();
+  IntColumn get currentSection => integer().withDefault(const Constant(0))();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column<Object>>>? get uniqueKeys => [
+        {clubId, bookId, userId},
+      ];
+}
+
+class BookProposals extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get clubId =>
+      integer().references(ReadingClubs, #id, onDelete: KeyAction.cascade)();
+  TextColumn get clubUuid => text().withLength(min: 1, max: 36)();
+
+  TextColumn get bookUuid => text().withLength(min: 1, max: 36)();
+
+  @ReferenceName('proposalAuthor')
+  IntColumn get proposedByUserId => integer().references(LocalUsers, #id)();
+  TextColumn get proposedByRemoteId => text().nullable()();
+
+  // Book metadata for the proposal
+  TextColumn get title => text().nullable()();
+  TextColumn get author => text().nullable()();
+  TextColumn get isbn => text().nullable()();
+  TextColumn get coverUrl => text().nullable()();
+  DateTimeColumn get closingDate => dateTime().nullable()();
+
+  IntColumn get totalChapters => integer()();
+
+  // Voting (stored as comma-separated UUIDs)
+  TextColumn get votes =>
+      text().withDefault(const Constant(''))(); // CSV of user UUIDs
+  IntColumn get voteCount => integer().withDefault(const Constant(0))();
+
+  TextColumn get status => text()
+      .withDefault(const Constant('abierta'))
+      .withLength(min: 1, max: 32)();
+  // Status: 'abierta', 'cerrada', 'ganadora', 'descartada'
+
+  DateTimeColumn get closeDate => dateTime().nullable()();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class SectionComments extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get clubId =>
+      integer().references(ReadingClubs, #id, onDelete: KeyAction.cascade)();
+  TextColumn get clubUuid => text().withLength(min: 1, max: 36)();
+
+  IntColumn get bookId =>
+      integer().references(ClubBooks, #id, onDelete: KeyAction.cascade)();
+  TextColumn get bookUuid => text().withLength(min: 1, max: 36)();
+
+  IntColumn get sectionNumber => integer()();
+
+  @ReferenceName('commentAuthor')
+  IntColumn get userId => integer().references(LocalUsers, #id)();
+  TextColumn get userRemoteId => text().nullable()();
+  TextColumn get authorRemoteId =>
+      text().nullable()(); // Alias for userRemoteId for consistency
+
+  TextColumn get content => text()();
+
+  IntColumn get reportsCount => integer().withDefault(const Constant(0))();
+  BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class CommentReports extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get commentId =>
+      integer().references(SectionComments, #id, onDelete: KeyAction.cascade)();
+  TextColumn get commentUuid => text().withLength(min: 1, max: 36)();
+
+  @ReferenceName('reportAuthor')
+  IntColumn get reportedByUserId => integer().references(LocalUsers, #id)();
+  TextColumn get reportedByRemoteId => text().nullable()();
+
+  TextColumn get reason => text().nullable()();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column<Object>>>? get uniqueKeys => [
+        {commentId, reportedByUserId},
+      ];
+}
+
+class ModerationLogs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get clubId =>
+      integer().references(ReadingClubs, #id, onDelete: KeyAction.cascade)();
+  TextColumn get clubUuid => text().withLength(min: 1, max: 36)();
+
+  TextColumn get action => text().withLength(min: 1, max: 64)();
+  // Actions: 'borrar_comentario', 'expulsar_miembro', 'cerrar_votacion', 'ocultar_comentario'
+
+  @ReferenceName('moderationPerformer')
+  IntColumn get performedByUserId => integer().references(LocalUsers, #id)();
+  TextColumn get performedByRemoteId => text().nullable()();
+
+  TextColumn get targetId => text()
+      .withLength(min: 1, max: 36)(); // UUID of target (comment, member, etc.)
+  TextColumn get reason => text().nullable()();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 class WishlistItems extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
@@ -371,6 +651,14 @@ class Loans extends Table {
     Loans,
     InAppNotifications,
     WishlistItems,
+    ReadingClubs,
+    ClubMembers,
+    ClubBooks,
+    ClubReadingProgress,
+    BookProposals,
+    SectionComments,
+    CommentReports,
+    ModerationLogs,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -379,7 +667,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -544,6 +832,18 @@ class AppDatabase extends _$AppDatabase {
           if (from < 20) {
             await m.createTable(wishlistItems);
           }
+
+          if (from < 21) {
+            // Migration to v21: Book Clubs feature
+            await m.createTable(readingClubs);
+            await m.createTable(clubMembers);
+            await m.createTable(clubBooks);
+            await m.createTable(clubReadingProgress);
+            await m.createTable(bookProposals);
+            await m.createTable(sectionComments);
+            await m.createTable(commentReports);
+            await m.createTable(moderationLogs);
+          }
         },
       );
 
@@ -552,6 +852,14 @@ class AppDatabase extends _$AppDatabase {
     await transaction(() async {
       // Delete in reverse order of dependencies
       await delete(inAppNotifications).go();
+      await delete(moderationLogs).go();
+      await delete(commentReports).go();
+      await delete(sectionComments).go();
+      await delete(bookProposals).go();
+      await delete(clubReadingProgress).go();
+      await delete(clubBooks).go();
+      await delete(clubMembers).go();
+      await delete(readingClubs).go();
       await delete(loans).go();
       await delete(groupInvitations).go();
       await delete(sharedBooks).go();

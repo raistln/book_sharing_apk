@@ -26,9 +26,9 @@ class UserRepository {
       await _dao.markAllDeleted(timestamp: now);
 
       if (existing != null) {
-        await _dao.updateUserFields(
-          userId: existing.id,
-          entry: LocalUsersCompanion(
+        await _dao.updateUser(
+          LocalUsersCompanion(
+            id: Value(existing.id),
             uuid: Value(existing.uuid),
             username: Value(username),
             remoteId: const Value<String?>(null),
@@ -57,11 +57,12 @@ class UserRepository {
     });
   }
 
-  Future<void> updateDisplayName({required int userId, required String displayName}) async {
+  Future<void> updateDisplayName(
+      {required int userId, required String displayName}) async {
     final now = DateTime.now();
-    await _dao.updateUserFields(
-      userId: userId,
-      entry: LocalUsersCompanion(
+    await _dao.updateUser(
+      LocalUsersCompanion(
+        id: Value(userId),
         username: Value(displayName),
         updatedAt: Value(now),
         isDirty: const Value(true),
@@ -77,25 +78,25 @@ class UserRepository {
     required DateTime pinUpdatedAt,
     bool markDirty = false,
   }) async {
-    await _dao.updateUserFields(
-      userId: userId,
-      entry: LocalUsersCompanion(
+    await _dao.updateUser(
+      LocalUsersCompanion(
+        id: Value(userId),
         pinHash: Value(pinHash),
         pinSalt: Value(pinSalt),
         pinUpdatedAt: Value(pinUpdatedAt),
         updatedAt: Value(pinUpdatedAt),
-        isDirty:
-            markDirty ? const Value(true) : const Value.absent(),
-        syncedAt: markDirty ? const Value<DateTime?>(null) : const Value.absent(),
+        isDirty: markDirty ? const Value(true) : const Value.absent(),
+        syncedAt:
+            markDirty ? const Value<DateTime?>(null) : const Value.absent(),
       ),
     );
   }
 
   Future<void> clearPinData({required int userId}) async {
     final now = DateTime.now();
-    await _dao.updateUserFields(
-      userId: userId,
-      entry: LocalUsersCompanion(
+    await _dao.updateUser(
+      LocalUsersCompanion(
+        id: Value(userId),
         pinHash: const Value(null),
         pinSalt: const Value(null),
         pinUpdatedAt: const Value(null),
@@ -114,12 +115,13 @@ class UserRepository {
       await _dao.markAllDeleted(timestamp: now);
 
       final existingByRemote = await _dao.findByRemoteId(record.id);
-      final existing = existingByRemote ?? await _dao.findByUsername(record.username);
+      final existing =
+          existingByRemote ?? await _dao.findByUsername(record.username);
 
       if (existing != null) {
-        await _dao.updateUserFields(
-          userId: existing.id,
-          entry: LocalUsersCompanion(
+        await _dao.updateUser(
+          LocalUsersCompanion(
+            id: Value(existing.id),
             remoteId: Value(record.id),
             username: Value(record.username),
             isDeleted: Value(record.isDeleted),

@@ -67,7 +67,8 @@ class GroupPushRepository {
   Future<Map<String, String>> _headers({String? accessToken}) async {
     final config = await _loadConfig();
     final useServiceRole = accessToken == null;
-    final token = accessToken ?? await _requireAccessToken(useServiceRole: true);
+    final token =
+        accessToken ?? await _requireAccessToken(useServiceRole: true);
     final apiKey = useServiceRole
         ? config.authToken(useServiceRole: true)
         : config.anonKey;
@@ -94,7 +95,8 @@ class GroupPushRepository {
 
     final ownerRecord = await _userDao.getById(owner.id);
     if (ownerRecord == null || ownerRecord.remoteId == null) {
-      throw GroupPushException('El usuario debe tener remoteId antes de crear un grupo.');
+      throw GroupPushException(
+          'El usuario debe tener remoteId antes de crear un grupo.');
     }
 
     final groupUuid = _uuid.v4();
@@ -251,7 +253,8 @@ class GroupPushRepository {
 
     final localUser = await _userDao.getById(user.id);
     if (localUser == null || localUser.remoteId == null) {
-      throw GroupPushException('El usuario debe estar sincronizado antes de unirse al grupo.');
+      throw GroupPushException(
+          'El usuario debe estar sincronizado antes de unirse al grupo.');
     }
 
     final memberRemoteUuid = _uuid.v4();
@@ -436,9 +439,11 @@ class GroupPushRepository {
     );
 
     await _patch(
-      path: '/rest/v1/group_invitations?id=eq.${invitation.remoteId ?? invitation.uuid}',
+      path:
+          '/rest/v1/group_invitations?id=eq.${invitation.remoteId ?? invitation.uuid}',
       body: {
-        'status': 'expired', // Schema allows: pending, accepted, rejected, expired
+        'status':
+            'expired', // Schema allows: pending, accepted, rejected, expired
         'responded_at': now.toIso8601String(),
         'updated_at': now.toIso8601String(),
       },
@@ -462,10 +467,9 @@ class GroupPushRepository {
           status: Value(newStatus),
           acceptedUserId:
               newStatus == 'accepted' ? Value(user.id) : const Value.absent(),
-          acceptedUserRemoteId:
-              newStatus == 'accepted' && user.remoteId != null
-                  ? Value(user.remoteId)
-                  : const Value.absent(),
+          acceptedUserRemoteId: newStatus == 'accepted' && user.remoteId != null
+              ? Value(user.remoteId)
+              : const Value.absent(),
           respondedAt: Value(now),
           isDirty: const Value(false),
           syncedAt: Value(now),
@@ -562,9 +566,7 @@ class GroupPushRepository {
       }
       if (value is String) {
         final normalized = value.toLowerCase();
-        return normalized == 'true' ||
-            normalized == 't' ||
-            normalized == '1';
+        return normalized == 'true' || normalized == 't' || normalized == '1';
       }
       return false;
     }
@@ -574,8 +576,7 @@ class GroupPushRepository {
       {
         'code': 'eq.$code',
         'limit': '1',
-        'select':
-            'id,group_id,inviter_id,accepted_user_id,role,code,status,expires_at,responded_at,created_at,updated_at,'
+        'select': 'id,group_id,inviter_id,accepted_user_id,role,code,status,expires_at,responded_at,created_at,updated_at,'
             'group:groups(id,name,description,owner_id,created_at,updated_at),'
             'inviter:profiles!group_invitations_inviter_id_fkey(id,username,created_at,updated_at)',
       },
@@ -673,9 +674,9 @@ class GroupPushRepository {
         );
         inviter = (await _userDao.getById(userId))!;
       } else if (!inviter.isDirty) {
-        await _userDao.updateUserFields(
-          userId: inviter.id,
-          entry: LocalUsersCompanion(
+        await _userDao.updateUser(
+          LocalUsersCompanion(
+            id: Value(inviter.id),
             username: Value(inviterUsername),
             remoteId: Value(inviterRemoteId),
             isDeleted: Value(inviterIsDeleted),
@@ -693,9 +694,8 @@ class GroupPushRepository {
         ownerUserId = owner?.id;
       }
 
-      final ownerUserIdValue = ownerUserId != null
-          ? Value(ownerUserId)
-          : const Value<int?>.absent();
+      final ownerUserIdValue =
+          ownerUserId != null ? Value(ownerUserId) : const Value<int?>.absent();
       final ownerRemoteValue = groupOwnerRemoteId != null
           ? Value(groupOwnerRemoteId)
           : const Value<String?>.absent();

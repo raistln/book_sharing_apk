@@ -97,6 +97,20 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
     );
   }
 
+  /// Search books by title or author
+  Future<List<Book>> searchBooks(String query, {int? ownerUserId}) {
+    final q = select(books)
+      ..where((tbl) =>
+          (tbl.title.like('%$query%') | tbl.author.like('%$query%')) &
+          (tbl.isDeleted.equals(false) | tbl.isDeleted.isNull()));
+
+    if (ownerUserId != null) {
+      q.where((tbl) => tbl.ownerUserId.equals(ownerUserId));
+    }
+
+    return q.get();
+  }
+
   /// Find a book by ISBN (excluding deleted books)
   Future<Book?> findByIsbn(String isbn, {int? ownerUserId}) {
     final query = select(books)

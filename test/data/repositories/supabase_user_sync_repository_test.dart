@@ -63,19 +63,18 @@ void main() {
           updatedAt: any(named: 'updatedAt'),
           accessToken: any(named: 'accessToken'),
         ));
-    verifyNever(() => userDao.updateUserFields(
-          userId: any(named: 'userId'),
-          entry: any(named: 'entry'),
+    verifyNever(() => userDao.updateUser(
+          any(),
         ));
   });
 
-  test('creates remote user when missing remoteId and updates local record', () async {
+  test('creates remote user when missing remoteId and updates local record',
+      () async {
     final user = buildUser();
 
     when(() => userDao.getDirtyUsers()).thenAnswer((_) async => [user]);
-    when(() => userDao.updateUserFields(
-          userId: user.id,
-          entry: any(named: 'entry'),
+    when(() => userDao.updateUser(
+          any(),
         )).thenAnswer((_) async => 1);
     when(() => userService.createUser(
           id: user.uuid,
@@ -97,9 +96,8 @@ void main() {
           accessToken: any(named: 'accessToken'),
         )).called(1);
 
-    final capturedEntry = verify(() => userDao.updateUserFields(
-          userId: user.id,
-          entry: captureAny(named: 'entry'),
+    final capturedEntry = verify(() => userDao.updateUser(
+          captureAny(),
         )).captured.single as LocalUsersCompanion;
 
     expect(capturedEntry.remoteId.present, isTrue);
@@ -121,9 +119,8 @@ void main() {
           updatedAt: user.updatedAt,
           accessToken: any(named: 'accessToken'),
         )).thenAnswer((_) async => true);
-    when(() => userDao.updateUserFields(
-          userId: user.id,
-          entry: any(named: 'entry'),
+    when(() => userDao.updateUser(
+          any(),
         )).thenAnswer((_) async => 1);
 
     await repository.pushLocalChanges();
@@ -164,9 +161,8 @@ void main() {
           updatedAt: user.updatedAt,
           accessToken: any(named: 'accessToken'),
         )).thenAnswer((_) async => 'remote-new');
-    when(() => userDao.updateUserFields(
-          userId: user.id,
-          entry: any(named: 'entry'),
+    when(() => userDao.updateUser(
+          any(),
         )).thenAnswer((_) async => 1);
 
     await repository.pushLocalChanges();

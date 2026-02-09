@@ -125,6 +125,9 @@ class BookRepository {
   Stream<List<ReviewWithAuthor>> watchReviews(int bookId) =>
       _bookDao.watchReviewsWithAuthor(bookId);
 
+  Future<List<Book>> searchBooks(String query, {int? ownerUserId}) =>
+      _bookDao.searchBooks(query, ownerUserId: ownerUserId);
+
   Future<int> addBook({
     required String title,
     String? author,

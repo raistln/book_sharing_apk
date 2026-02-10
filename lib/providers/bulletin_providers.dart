@@ -25,8 +25,10 @@ final latestBulletinProvider =
   final now = DateTime.now();
   final currentPeriod = DateFormat('yyyy-MM').format(now);
 
-  // 2. If cached and period matches current month, return cached
-  if (cached != null && cached.period == currentPeriod) {
+  // 2. If cached and period matches current month AND province matches, return cached immediately
+  if (cached != null &&
+      cached.period == currentPeriod &&
+      cached.province == province) {
     return cached;
   }
 
@@ -40,14 +42,11 @@ final latestBulletinProvider =
     }
 
     // If remote is null (no bulletin for this month yet)
-    // We could return null or the old cached one if preferred.
-    // Given the user wants "1 de cada mes se descargue la nueva versión",
-    // we should return null if the current month's version isn't ready.
-    return null;
+    // We return the cached one if it exists, even if it's from a previous month,
+    // assuming it's the most recent data we have.
+    return cached;
   } catch (e) {
-    // If fetch fails (network issue), return cached as fallback even if old?
-    // User might prefer seeing something or nothing.
-    // I'll return cached if it exists as a fallback.
+    // If fetch fails (network issue), return cached as fallback
     return cached;
   }
 });

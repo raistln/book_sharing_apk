@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../data/local/database.dart';
 import '../../../providers/book_providers.dart';
@@ -294,23 +295,44 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   Future<void> _handleBulletinAction(
       BuildContext context, WidgetRef ref) async {
-    final userProfile = ref.read(userProfileProvider).value;
-    final province = userProfile?.residence;
-
-    if (province == null || province.isEmpty) {
-      _showResidenceWarning(context);
-      return;
-    }
-
     _showLoadingDialog(context);
 
     try {
+      // 1. Wait for user profile to be loaded
+      await ref.read(userProfileProvider.notifier).load();
+      final userProfile = ref.read(userProfileProvider).value;
+
+      if (!context.mounted) return;
+
+      if (userProfile == null || userProfile.residence.isEmpty) {
+        Navigator.of(context).pop(); // Close loading
+        _showResidenceWarning(context);
+        return;
+      }
+
+      final province = userProfile.residence;
+
+      // 2. Fetch the bulletin
       final bulletin = await ref.read(latestBulletinProvider.future);
       if (!context.mounted) return;
       Navigator.of(context).pop(); // Close loading
 
       if (bulletin == null) {
-        _showComingSoonBulletin(context, province);
+        final now = DateTime.now();
+        // Generar un boletín genérico informativo si no hay datos en Supabase
+        final placeholder = Bulletin(
+          id: -1,
+          province: province,
+          period: DateFormat('yyyy-MM').format(now),
+          month: now.month,
+          year: now.year,
+          narrative:
+              'No se han registrado eventos literarios destacados en la provincia de $province para este mes. ¡Suscríbete a nuestras notificaciones para enterarte de las novedades!',
+          events: [],
+          totalEvents: 0,
+          generatedAt: now,
+        );
+        _showBulletinSheet(context, placeholder);
       } else {
         _showBulletinSheet(context, bulletin);
       }
@@ -344,24 +366,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               _showProfileSheet(context);
             },
             child: const Text('Ir al Perfil'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showComingSoonBulletin(BuildContext context, String province) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Boletín de $province'),
-        content: const Text(
-          'Estamos trabajando en la función de Boletines para tu provincia. ¡Estará disponible próximamente!',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Entendido'),
           ),
         ],
       ),

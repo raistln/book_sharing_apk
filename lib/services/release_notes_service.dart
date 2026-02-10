@@ -8,9 +8,23 @@ class ReleaseNotesService {
   static const _seenVersionKey = 'last_seen_release_version';
 
   // La versión actual de la aplicación que queremos destacar
-  static const currentVersion = '1.1.0';
+  static const currentVersion = '1.3.0';
 
   final List<ReleaseNote> _releaseNotes = [
+    ReleaseNote(
+      version: '1.3.0',
+      date: DateTime(2026, 2, 9),
+      changes: [
+        'Copia de seguridad en la nube: Tus libros digitales y personales ahora se respaldan en Supabase.',
+        'Sincronización automática: Recupera tu biblioteca al instalar la app o tras una reinstalación.',
+        'Backup manual y rotativo: Control total sobre tus copias de seguridad con rotación semanal.',
+        'Boletín Literario: Consulta las noticias y eventos culturales de tu provincia cada mes.',
+        'Clubes de Lectura: Únete o crea comunidades para compartir lecturas con otros miembros.',
+        'Mejoras de estabilidad y corrección de errores reportados por la comunidad.',
+      ],
+      thankYouMessage:
+          'Quiero dar las gracias a mis primeros testers: Pili, David y Pablo. Sin ellos esto no hubiese sido posible. Sus ideas y entusiasmo están haciendo que esta aplicación sea verdaderamente por y para lectores. Espero que sigáis así. ¡Gracias!',
+    ),
     ReleaseNote(
       version: '1.1.0',
       date: DateTime(2026, 1, 21),

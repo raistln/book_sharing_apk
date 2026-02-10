@@ -68,6 +68,9 @@ class SupabaseBookSyncRepository {
 
     await db.transaction(() async {
       for (final remote in remoteBooks) {
+        // Skip books that belong to a group (handled by GroupSyncController)
+        if (remote.groupId != null) continue;
+
         final existingByRemote = await _bookDao.findByRemoteId(remote.id);
         final existing =
             existingByRemote ?? await _bookDao.findByUuid(remote.id);
@@ -171,6 +174,7 @@ class SupabaseBookSyncRepository {
                 genre: Value(remote.genre),
                 pageCount: Value(remote.pageCount),
                 publicationYear: Value(remote.publicationYear),
+                isPhysical: Value(remote.isPhysical),
                 isDirty: const Value(false),
                 createdAt: Value(remote.createdAt),
                 updatedAt: Value(remote.updatedAt ?? remote.createdAt),
@@ -292,22 +296,112 @@ class SupabaseBookSyncRepository {
     // Books are handled by GroupSyncController, but Reviews are handled here.
 
     final dirtyReviews = await _bookDao.getDirtyReviews();
-    if (dirtyReviews.isEmpty) {
+    final dirtyBooks = await _bookDao.getDirtyBooks();
+
+    if (dirtyReviews.isEmpty && dirtyBooks.isEmpty) {
       return;
     }
-
-    developer.log(
-      'Pushing ${dirtyReviews.length} dirty reviews...',
-      name: 'SupabaseBookSyncRepository',
-    );
 
     final ownerRemoteId = owner.remoteId;
     if (ownerRemoteId == null) {
       developer.log(
-        'Cannot push reviews: User has no remote ID.',
+        'Cannot push changes: User has no remote ID.',
         name: 'SupabaseBookSyncRepository',
       );
       return;
+    }
+
+    // 1. Push Books
+    if (dirtyBooks.isNotEmpty) {
+      developer.log(
+        'Pushing ${dirtyBooks.length} dirty books...',
+        name: 'SupabaseBookSyncRepository',
+      );
+
+      for (final book in dirtyBooks) {
+        try {
+          // If book has a remoteId, it's an update. If not, check if it exists by UUID just in case.
+          // But usually we trust remoteId.
+
+          if (book.remoteId == null) {
+            // CREATE
+            final remoteId = await _bookService.createBook(
+              id: book
+                  .uuid, // Use local UUID as ID if possible, or let Supabase generate (but we pass id here)
+              // Note: Supabase shared_books id is UUID. We can try to use the book UUID.
+              // However, if we have duplicate UUIDs for different users...
+              // Ideally we let Supabase generate, or we use a random UUID.
+              // The createBook method takes 'id'. Let's use book.uuid.
+              ownerId: ownerRemoteId,
+              bookUuid: book.uuid,
+              title: book.title,
+              author: book.author,
+              isbn: book.isbn,
+              coverUrl: book.coverPath,
+              visibility: 'private', // Always private for personal backup
+              isAvailable: book.status == 'available',
+              isPhysical: book.isPhysical,
+              isDeleted: book.isDeleted == true,
+              genre: book.genre,
+              pageCount: book.pageCount,
+              publicationYear: book.publicationYear,
+              createdAt: book.createdAt,
+              updatedAt: book.updatedAt,
+              accessToken: accessToken,
+            );
+
+            await _bookDao.updateBookFields(
+              bookId: book.id,
+              entry: BooksCompanion(
+                remoteId: Value(remoteId),
+                ownerRemoteId: Value(ownerRemoteId),
+                syncedAt: Value(DateTime.now()),
+                isDirty: const Value(false),
+              ),
+            );
+          } else {
+            // UPDATE
+            await _bookService.updateBook(
+              id: book.remoteId!,
+              title: book.title,
+              author: book.author,
+              isbn: book.isbn,
+              coverUrl: book.coverPath,
+              isAvailable: book.status == 'available',
+              isPhysical: book.isPhysical,
+              isDeleted: book.isDeleted == true,
+              genre: book.genre,
+              pageCount: book.pageCount,
+              publicationYear: book.publicationYear,
+              updatedAt: book.updatedAt,
+              accessToken: accessToken,
+            );
+
+            await _bookDao.updateBookFields(
+              bookId: book.id,
+              entry: BooksCompanion(
+                syncedAt: Value(DateTime.now()),
+                isDirty: const Value(false),
+              ),
+            );
+          }
+        } catch (e, st) {
+          developer.log(
+            'Error syncing book ${book.id}',
+            name: 'SupabaseBookSyncRepository',
+            error: e,
+            stackTrace: st,
+          );
+        }
+      }
+    }
+
+    // 2. Push Reviews
+    if (dirtyReviews.isNotEmpty) {
+      developer.log(
+        'Pushing ${dirtyReviews.length} dirty reviews...',
+        name: 'SupabaseBookSyncRepository',
+      );
     }
 
     for (final review in dirtyReviews) {

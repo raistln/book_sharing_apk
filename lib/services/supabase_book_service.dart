@@ -48,7 +48,7 @@ class SupabaseBookService {
     final config = await _loadConfig();
     final query = <String, String>{
       'select':
-          'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_read,is_deleted,genre,created_at,updated_at',
+          'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_physical,is_read,is_deleted,genre,page_count,publication_year,created_at,updated_at',
       'owner_id': 'eq.$ownerId',
       'order': 'updated_at.asc',
     };
@@ -91,7 +91,7 @@ class SupabaseBookService {
     final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
       queryParameters: {
         'select':
-            'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_read,is_deleted,genre,created_at,updated_at',
+            'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_physical,is_read,is_deleted,genre,page_count,publication_year,created_at,updated_at',
         'id': 'eq.$id',
         'limit': '1',
       },
@@ -170,7 +170,136 @@ class SupabaseBookService {
     );
   }
 
-  // ... createBook and updateBook are skipped here as they are unchanged ...
+  Future<String> createBook({
+    required String id,
+    String? groupId,
+    required String ownerId,
+    required String? bookUuid,
+    required String title,
+    String? author,
+    String? isbn,
+    String? coverUrl,
+    String visibility = 'private',
+    bool isAvailable = true,
+    bool isPhysical = true,
+    bool isDeleted = false,
+    String? genre,
+    int? pageCount,
+    int? publicationYear,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/shared_books');
+
+    final payload = {
+      'id': id,
+      'group_id': groupId,
+      'owner_id': ownerId,
+      'book_uuid': bookUuid,
+      'title': title,
+      'author': author,
+      'isbn': isbn,
+      'cover_url': coverUrl,
+      'visibility': visibility,
+      'is_available': isAvailable,
+      'is_physical': isPhysical,
+      'is_deleted': isDeleted,
+      'genre': genre,
+      'page_count': pageCount,
+      'publication_year': publicationYear,
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+    };
+
+    developer.log(
+      'POST ${uri.path} → crear libro ${payload['id']}',
+      name: 'SupabaseBookService',
+      error: jsonEncode(payload),
+    );
+
+    final response = await _client.post(
+      uri,
+      headers: _buildHeaders(
+        config,
+        accessToken: accessToken,
+        preferRepresentation: true,
+      ),
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) return id;
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return (decoded['id'] as String?) ?? id;
+      }
+      return id;
+    }
+
+    throw SupabaseBookServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+      response.statusCode,
+    );
+  }
+
+  Future<bool> updateBook({
+    required String id,
+    String? groupId,
+    String? title,
+    String? author,
+    String? isbn,
+    String? coverUrl,
+    String? visibility,
+    bool? isAvailable,
+    bool? isPhysical,
+    bool? isDeleted,
+    String? genre,
+    int? pageCount,
+    int? publicationYear,
+    required DateTime updatedAt,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
+      queryParameters: {'id': 'eq.$id'},
+    );
+
+    final payload = {
+      if (groupId != null) 'group_id': groupId,
+      if (title != null) 'title': title,
+      if (author != null) 'author': author,
+      if (isbn != null) 'isbn': isbn,
+      if (coverUrl != null) 'cover_url': coverUrl,
+      if (visibility != null) 'visibility': visibility,
+      if (isAvailable != null) 'is_available': isAvailable,
+      if (isPhysical != null) 'is_physical': isPhysical,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (genre != null) 'genre': genre,
+      if (pageCount != null) 'page_count': pageCount,
+      if (publicationYear != null) 'publication_year': publicationYear,
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+    };
+
+    final response = await _client.patch(
+      uri,
+      headers: _buildHeaders(
+        config,
+        accessToken: accessToken,
+      ),
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return true;
+    }
+
+    throw SupabaseBookServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+      response.statusCode,
+    );
+  }
 
   Future<String> createReview({
     required String id,
@@ -295,6 +424,7 @@ class SupabaseBookRecord {
     this.coverUrl,
     this.visibility,
     this.isAvailable,
+    this.isPhysical = true,
     this.isRead = false,
     required this.isDeleted,
     this.genre,
@@ -314,6 +444,7 @@ class SupabaseBookRecord {
   final String? coverUrl;
   final String? visibility;
   final bool? isAvailable;
+  final bool isPhysical;
   final bool isRead;
   final bool isDeleted;
   final String? genre;
@@ -341,9 +472,12 @@ class SupabaseBookRecord {
       coverUrl: json['cover_url'] as String?,
       visibility: json['visibility'] as String?,
       isAvailable: json['is_available'] as bool?,
+      isPhysical: (json['is_physical'] as bool?) ?? true,
       isRead: (json['is_read'] as bool?) ?? false,
       isDeleted: (json['is_deleted'] as bool?) ?? false,
       genre: json['genre'] as String?,
+      pageCount: json['page_count'] as int?,
+      publicationYear: json['publication_year'] as int?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: parseDate(json['updated_at']),
     );

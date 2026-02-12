@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../providers/user_profile_provider.dart';
 import '../../../providers/book_providers.dart';
-import 'package:intl/intl.dart';
 import '../../screens/read_books_screen.dart';
 import '../../screens/wishlist_screen.dart';
 import '../library/book_details_page.dart';
 import '../../../providers/stats_providers.dart';
-import '../../widgets/profile/reading_rhythm_chart.dart'; // Import chart
+import '../../widgets/profile/reading_rhythm_chart.dart';
+import '../../widgets/profile/reading_calendar.dart';
 
 class UserProfileSheet extends ConsumerStatefulWidget {
   const UserProfileSheet({super.key});
@@ -619,7 +619,7 @@ class _UserProfileSheetState extends ConsumerState<UserProfileSheet> {
                             Text('Libros leídos el último año',
                                 style: theme.textTheme.titleMedium),
                             const SizedBox(height: 16),
-                            _ReadingCalendar(
+                            ReadingCalendar(
                                 readBooks:
                                     readBooksHistoryAsync.asData?.value ?? []),
                           ] else ...[
@@ -733,83 +733,6 @@ class _StatCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ReadingCalendar extends StatelessWidget {
-  const _ReadingCalendar({required this.readBooks});
-
-  final List<dynamic> readBooks; // List<Book>
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final months = <DateTime>[];
-    for (int i = 11; i >= 0; i--) {
-      months.add(DateTime(now.year, now.month - i, 1));
-    }
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        childAspectRatio: 1.0,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-      ),
-      itemCount: 12,
-      itemBuilder: (context, index) {
-        final monthDate = months[index];
-        final count = readBooks.where((b) {
-          // Check if readAt matches month and year
-          // Note: Dynamic cast because Book type might not be fully visible here without import
-          // but we know it has readAt from our migration.
-          // Actually, we need to handle the case where readAt is null (though we filtered by isRead, old books have readAt=null)
-          final date = (b.readAt as DateTime?);
-          if (date == null) return false;
-          return date.year == monthDate.year && date.month == monthDate.month;
-        }).length;
-
-        final isCurrentMonth =
-            monthDate.month == now.month && monthDate.year == now.year;
-
-        return Tooltip(
-          message:
-              '${DateFormat('MMMM yyyy', 'es').format(monthDate)}: $count libros',
-          child: Container(
-            decoration: BoxDecoration(
-              color: count > 0
-                  ? Colors.green
-                      .withValues(alpha: (0.2 + (count * 0.1)).clamp(0.2, 1.0))
-                  : Colors.grey.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: isCurrentMonth
-                  ? Border.all(
-                      color: Theme.of(context).colorScheme.primary, width: 2)
-                  : null,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  DateFormat('MMM', 'es').format(monthDate).toUpperCase(),
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelSmall
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  count.toString(),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

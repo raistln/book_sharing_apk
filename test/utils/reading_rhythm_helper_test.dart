@@ -34,6 +34,8 @@ void main() {
         ownerUserId: 1,
         eventType: type,
         eventDate: date,
+        isDirty: false,
+        isDeleted: false,
         createdAt: date,
         updatedAt: date,
       );

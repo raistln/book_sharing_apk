@@ -1,6 +1,8 @@
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../../providers/auto_backup_providers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1259,7 +1261,71 @@ class _BackupSectionState extends State<_BackupSection> {
     }
   }
 
+  Future<bool> _requestStoragePermission() async {
+    if (!Platform.isAndroid) return true;
+
+    // Check for Android 11+ (API 30+)
+    final androidInfo = await DeviceInfoPlugin().androidInfo;
+    if (androidInfo.version.sdkInt >= 30) {
+      if (await Permission.manageExternalStorage.isGranted) {
+        return true;
+      }
+
+      if (mounted) {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Permiso necesario'),
+            content: const Text(
+                'Para guardar y restaurar backups en la carpeta de Descargas, '
+                'necesitamos acceso a todos los archivos.\n\n'
+                'Por favor, concede el permiso en la siguiente pantalla.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Permission.manageExternalStorage.request();
+                },
+                child: const Text('Continuar'),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return await Permission.manageExternalStorage.status.isGranted;
+    }
+
+    // Older Android versions
+    var status = await Permission.storage.status;
+    if (status.isGranted) {
+      return true;
+    }
+
+    status = await Permission.storage.request();
+    return status.isGranted;
+  }
+
   Future<void> _toggleBackup(bool value) async {
+    if (value) {
+      final hasPermission = await _requestStoragePermission();
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Se requiere permiso de almacenamiento para guardar el backup.'),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     setState(() => _isLoading = true);
     try {
       if (value) {
@@ -1295,6 +1361,19 @@ class _BackupSectionState extends State<_BackupSection> {
   }
 
   Future<void> _manualBackup(WidgetRef ref) async {
+    final hasPermission = await _requestStoragePermission();
+    if (!hasPermission) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Se requiere permiso de almacenamiento para guardar el backup.'),
+          ),
+        );
+      }
+      return;
+    }
+
     try {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

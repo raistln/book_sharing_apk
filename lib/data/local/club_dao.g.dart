@@ -11,6 +11,7 @@ mixin _$ClubDaoMixin on DatabaseAccessor<AppDatabase> {
   $ClubReadingProgressTable get clubReadingProgress =>
       attachedDatabase.clubReadingProgress;
   $BookProposalsTable get bookProposals => attachedDatabase.bookProposals;
+  $BooksTable get books => attachedDatabase.books;
   $SectionCommentsTable get sectionComments => attachedDatabase.sectionComments;
   $CommentReportsTable get commentReports => attachedDatabase.commentReports;
   $ModerationLogsTable get moderationLogs => attachedDatabase.moderationLogs;
@@ -33,6 +34,8 @@ class ClubDaoManager {
           _db.attachedDatabase, _db.clubReadingProgress);
   $$BookProposalsTableTableManager get bookProposals =>
       $$BookProposalsTableTableManager(_db.attachedDatabase, _db.bookProposals);
+  $$BooksTableTableManager get books =>
+      $$BooksTableTableManager(_db.attachedDatabase, _db.books);
   $$SectionCommentsTableTableManager get sectionComments =>
       $$SectionCommentsTableTableManager(
           _db.attachedDatabase, _db.sectionComments);

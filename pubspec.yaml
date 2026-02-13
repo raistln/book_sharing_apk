@@ -46,6 +46,7 @@ dependencies:
   battery_plus: ^6.0.0
   supabase_flutter: ^2.12.0
   archive: ^4.0.7
+  device_info_plus: ^12.3.0
 
 dev_dependencies:
   flutter_test:

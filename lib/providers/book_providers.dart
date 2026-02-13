@@ -43,6 +43,11 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
   return db;
 });
 
+final timelineEntryDaoProvider = Provider<TimelineEntryDao>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return TimelineEntryDao(db);
+});
+
 final bookDaoProvider = Provider<BookDao>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return BookDao(db);
@@ -83,11 +88,6 @@ final groupDaoProvider = Provider<GroupDao>((ref) {
 final wishlistDaoProvider = Provider<WishlistDao>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return WishlistDao(db);
-});
-
-final timelineEntryDaoProvider = Provider<TimelineEntryDao>((ref) {
-  final db = ref.watch(appDatabaseProvider);
-  return TimelineEntryDao(db);
 });
 
 final readingTimelineServiceProvider = Provider<ReadingTimelineService>((ref) {
@@ -420,9 +420,11 @@ final supabaseBookSyncRepositoryProvider =
     Provider<SupabaseBookSyncRepository>((ref) {
   final bookDao = ref.watch(bookDaoProvider);
   final bookService = ref.watch(supabaseBookServiceProvider);
+  final timelineDao = ref.watch(timelineEntryDaoProvider);
   return SupabaseBookSyncRepository(
     bookDao: bookDao,
     bookService: bookService,
+    timelineDao: timelineDao,
   );
 });
 

@@ -2501,6 +2501,12 @@ class $ReadingTimelineEntriesTable extends ReadingTimelineEntries
       type: DriftSqlType.string,
       requiredDuringInsert: true,
       defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _remoteIdMeta =
+      const VerificationMeta('remoteId');
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+      'remote_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
   @override
   late final GeneratedColumn<int> bookId = GeneratedColumn<int>(
@@ -2509,6 +2515,15 @@ class $ReadingTimelineEntriesTable extends ReadingTimelineEntries
       requiredDuringInsert: true,
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'REFERENCES books (id) ON DELETE CASCADE'));
+  static const VerificationMeta _bookUuidMeta =
+      const VerificationMeta('bookUuid');
+  @override
+  late final GeneratedColumn<String> bookUuid = GeneratedColumn<String>(
+      'book_uuid', aliasedName, true,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: false);
   static const VerificationMeta _ownerUserIdMeta =
       const VerificationMeta('ownerUserId');
   @override
@@ -2552,6 +2567,32 @@ class $ReadingTimelineEntriesTable extends ReadingTimelineEntries
       type: DriftSqlType.dateTime,
       requiredDuringInsert: false,
       defaultValue: currentDateAndTime);
+  static const VerificationMeta _isDirtyMeta =
+      const VerificationMeta('isDirty');
+  @override
+  late final GeneratedColumn<bool> isDirty = GeneratedColumn<bool>(
+      'is_dirty', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_dirty" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _isDeletedMeta =
+      const VerificationMeta('isDeleted');
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+      'is_deleted', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_deleted" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _syncedAtMeta =
+      const VerificationMeta('syncedAt');
+  @override
+  late final GeneratedColumn<DateTime> syncedAt = GeneratedColumn<DateTime>(
+      'synced_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -2572,13 +2613,18 @@ class $ReadingTimelineEntriesTable extends ReadingTimelineEntries
   List<GeneratedColumn> get $columns => [
         id,
         uuid,
+        remoteId,
         bookId,
+        bookUuid,
         ownerUserId,
         currentPage,
         percentageRead,
         eventType,
         note,
         eventDate,
+        isDirty,
+        isDeleted,
+        syncedAt,
         createdAt,
         updatedAt
       ];
@@ -2602,11 +2648,19 @@ class $ReadingTimelineEntriesTable extends ReadingTimelineEntries
     } else if (isInserting) {
       context.missing(_uuidMeta);
     }
+    if (data.containsKey('remote_id')) {
+      context.handle(_remoteIdMeta,
+          remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta));
+    }
     if (data.containsKey('book_id')) {
       context.handle(_bookIdMeta,
           bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta));
     } else if (isInserting) {
       context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('book_uuid')) {
+      context.handle(_bookUuidMeta,
+          bookUuid.isAcceptableOrUnknown(data['book_uuid']!, _bookUuidMeta));
     }
     if (data.containsKey('owner_user_id')) {
       context.handle(
@@ -2642,6 +2696,18 @@ class $ReadingTimelineEntriesTable extends ReadingTimelineEntries
       context.handle(_eventDateMeta,
           eventDate.isAcceptableOrUnknown(data['event_date']!, _eventDateMeta));
     }
+    if (data.containsKey('is_dirty')) {
+      context.handle(_isDirtyMeta,
+          isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(_isDeletedMeta,
+          isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta));
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(_syncedAtMeta,
+          syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -2663,8 +2729,12 @@ class $ReadingTimelineEntriesTable extends ReadingTimelineEntries
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       uuid: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
+      remoteId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}remote_id']),
       bookId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}book_id'])!,
+      bookUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}book_uuid']),
       ownerUserId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}owner_user_id'])!,
       currentPage: attachedDatabase.typeMapping
@@ -2677,6 +2747,12 @@ class $ReadingTimelineEntriesTable extends ReadingTimelineEntries
           .read(DriftSqlType.string, data['${effectivePrefix}note']),
       eventDate: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}event_date'])!,
+      isDirty: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
+      isDeleted: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_deleted'])!,
+      syncedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}synced_at']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -2694,25 +2770,35 @@ class ReadingTimelineEntry extends DataClass
     implements Insertable<ReadingTimelineEntry> {
   final int id;
   final String uuid;
+  final String? remoteId;
   final int bookId;
+  final String? bookUuid;
   final int ownerUserId;
   final int? currentPage;
   final int? percentageRead;
   final String eventType;
   final String? note;
   final DateTime eventDate;
+  final bool isDirty;
+  final bool isDeleted;
+  final DateTime? syncedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
   const ReadingTimelineEntry(
       {required this.id,
       required this.uuid,
+      this.remoteId,
       required this.bookId,
+      this.bookUuid,
       required this.ownerUserId,
       this.currentPage,
       this.percentageRead,
       required this.eventType,
       this.note,
       required this.eventDate,
+      required this.isDirty,
+      required this.isDeleted,
+      this.syncedAt,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -2720,7 +2806,13 @@ class ReadingTimelineEntry extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['uuid'] = Variable<String>(uuid);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
     map['book_id'] = Variable<int>(bookId);
+    if (!nullToAbsent || bookUuid != null) {
+      map['book_uuid'] = Variable<String>(bookUuid);
+    }
     map['owner_user_id'] = Variable<int>(ownerUserId);
     if (!nullToAbsent || currentPage != null) {
       map['current_page'] = Variable<int>(currentPage);
@@ -2733,6 +2825,11 @@ class ReadingTimelineEntry extends DataClass
       map['note'] = Variable<String>(note);
     }
     map['event_date'] = Variable<DateTime>(eventDate);
+    map['is_dirty'] = Variable<bool>(isDirty);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<DateTime>(syncedAt);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -2742,7 +2839,13 @@ class ReadingTimelineEntry extends DataClass
     return ReadingTimelineEntriesCompanion(
       id: Value(id),
       uuid: Value(uuid),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
       bookId: Value(bookId),
+      bookUuid: bookUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bookUuid),
       ownerUserId: Value(ownerUserId),
       currentPage: currentPage == null && nullToAbsent
           ? const Value.absent()
@@ -2753,6 +2856,11 @@ class ReadingTimelineEntry extends DataClass
       eventType: Value(eventType),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       eventDate: Value(eventDate),
+      isDirty: Value(isDirty),
+      isDeleted: Value(isDeleted),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -2764,13 +2872,18 @@ class ReadingTimelineEntry extends DataClass
     return ReadingTimelineEntry(
       id: serializer.fromJson<int>(json['id']),
       uuid: serializer.fromJson<String>(json['uuid']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
       bookId: serializer.fromJson<int>(json['bookId']),
+      bookUuid: serializer.fromJson<String?>(json['bookUuid']),
       ownerUserId: serializer.fromJson<int>(json['ownerUserId']),
       currentPage: serializer.fromJson<int?>(json['currentPage']),
       percentageRead: serializer.fromJson<int?>(json['percentageRead']),
       eventType: serializer.fromJson<String>(json['eventType']),
       note: serializer.fromJson<String?>(json['note']),
       eventDate: serializer.fromJson<DateTime>(json['eventDate']),
+      isDirty: serializer.fromJson<bool>(json['isDirty']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -2781,13 +2894,18 @@ class ReadingTimelineEntry extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'uuid': serializer.toJson<String>(uuid),
+      'remoteId': serializer.toJson<String?>(remoteId),
       'bookId': serializer.toJson<int>(bookId),
+      'bookUuid': serializer.toJson<String?>(bookUuid),
       'ownerUserId': serializer.toJson<int>(ownerUserId),
       'currentPage': serializer.toJson<int?>(currentPage),
       'percentageRead': serializer.toJson<int?>(percentageRead),
       'eventType': serializer.toJson<String>(eventType),
       'note': serializer.toJson<String?>(note),
       'eventDate': serializer.toJson<DateTime>(eventDate),
+      'isDirty': serializer.toJson<bool>(isDirty),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'syncedAt': serializer.toJson<DateTime?>(syncedAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -2796,19 +2914,26 @@ class ReadingTimelineEntry extends DataClass
   ReadingTimelineEntry copyWith(
           {int? id,
           String? uuid,
+          Value<String?> remoteId = const Value.absent(),
           int? bookId,
+          Value<String?> bookUuid = const Value.absent(),
           int? ownerUserId,
           Value<int?> currentPage = const Value.absent(),
           Value<int?> percentageRead = const Value.absent(),
           String? eventType,
           Value<String?> note = const Value.absent(),
           DateTime? eventDate,
+          bool? isDirty,
+          bool? isDeleted,
+          Value<DateTime?> syncedAt = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       ReadingTimelineEntry(
         id: id ?? this.id,
         uuid: uuid ?? this.uuid,
+        remoteId: remoteId.present ? remoteId.value : this.remoteId,
         bookId: bookId ?? this.bookId,
+        bookUuid: bookUuid.present ? bookUuid.value : this.bookUuid,
         ownerUserId: ownerUserId ?? this.ownerUserId,
         currentPage: currentPage.present ? currentPage.value : this.currentPage,
         percentageRead:
@@ -2816,6 +2941,9 @@ class ReadingTimelineEntry extends DataClass
         eventType: eventType ?? this.eventType,
         note: note.present ? note.value : this.note,
         eventDate: eventDate ?? this.eventDate,
+        isDirty: isDirty ?? this.isDirty,
+        isDeleted: isDeleted ?? this.isDeleted,
+        syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -2823,7 +2951,9 @@ class ReadingTimelineEntry extends DataClass
     return ReadingTimelineEntry(
       id: data.id.present ? data.id.value : this.id,
       uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
       bookId: data.bookId.present ? data.bookId.value : this.bookId,
+      bookUuid: data.bookUuid.present ? data.bookUuid.value : this.bookUuid,
       ownerUserId:
           data.ownerUserId.present ? data.ownerUserId.value : this.ownerUserId,
       currentPage:
@@ -2834,6 +2964,9 @@ class ReadingTimelineEntry extends DataClass
       eventType: data.eventType.present ? data.eventType.value : this.eventType,
       note: data.note.present ? data.note.value : this.note,
       eventDate: data.eventDate.present ? data.eventDate.value : this.eventDate,
+      isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -2844,13 +2977,18 @@ class ReadingTimelineEntry extends DataClass
     return (StringBuffer('ReadingTimelineEntry(')
           ..write('id: $id, ')
           ..write('uuid: $uuid, ')
+          ..write('remoteId: $remoteId, ')
           ..write('bookId: $bookId, ')
+          ..write('bookUuid: $bookUuid, ')
           ..write('ownerUserId: $ownerUserId, ')
           ..write('currentPage: $currentPage, ')
           ..write('percentageRead: $percentageRead, ')
           ..write('eventType: $eventType, ')
           ..write('note: $note, ')
           ..write('eventDate: $eventDate, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -2858,21 +2996,41 @@ class ReadingTimelineEntry extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(id, uuid, bookId, ownerUserId, currentPage,
-      percentageRead, eventType, note, eventDate, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+      id,
+      uuid,
+      remoteId,
+      bookId,
+      bookUuid,
+      ownerUserId,
+      currentPage,
+      percentageRead,
+      eventType,
+      note,
+      eventDate,
+      isDirty,
+      isDeleted,
+      syncedAt,
+      createdAt,
+      updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is ReadingTimelineEntry &&
           other.id == this.id &&
           other.uuid == this.uuid &&
+          other.remoteId == this.remoteId &&
           other.bookId == this.bookId &&
+          other.bookUuid == this.bookUuid &&
           other.ownerUserId == this.ownerUserId &&
           other.currentPage == this.currentPage &&
           other.percentageRead == this.percentageRead &&
           other.eventType == this.eventType &&
           other.note == this.note &&
           other.eventDate == this.eventDate &&
+          other.isDirty == this.isDirty &&
+          other.isDeleted == this.isDeleted &&
+          other.syncedAt == this.syncedAt &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -2881,38 +3039,53 @@ class ReadingTimelineEntriesCompanion
     extends UpdateCompanion<ReadingTimelineEntry> {
   final Value<int> id;
   final Value<String> uuid;
+  final Value<String?> remoteId;
   final Value<int> bookId;
+  final Value<String?> bookUuid;
   final Value<int> ownerUserId;
   final Value<int?> currentPage;
   final Value<int?> percentageRead;
   final Value<String> eventType;
   final Value<String?> note;
   final Value<DateTime> eventDate;
+  final Value<bool> isDirty;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> syncedAt;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const ReadingTimelineEntriesCompanion({
     this.id = const Value.absent(),
     this.uuid = const Value.absent(),
+    this.remoteId = const Value.absent(),
     this.bookId = const Value.absent(),
+    this.bookUuid = const Value.absent(),
     this.ownerUserId = const Value.absent(),
     this.currentPage = const Value.absent(),
     this.percentageRead = const Value.absent(),
     this.eventType = const Value.absent(),
     this.note = const Value.absent(),
     this.eventDate = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
   ReadingTimelineEntriesCompanion.insert({
     this.id = const Value.absent(),
     required String uuid,
+    this.remoteId = const Value.absent(),
     required int bookId,
+    this.bookUuid = const Value.absent(),
     required int ownerUserId,
     this.currentPage = const Value.absent(),
     this.percentageRead = const Value.absent(),
     required String eventType,
     this.note = const Value.absent(),
     this.eventDate = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   })  : uuid = Value(uuid),
@@ -2922,26 +3095,36 @@ class ReadingTimelineEntriesCompanion
   static Insertable<ReadingTimelineEntry> custom({
     Expression<int>? id,
     Expression<String>? uuid,
+    Expression<String>? remoteId,
     Expression<int>? bookId,
+    Expression<String>? bookUuid,
     Expression<int>? ownerUserId,
     Expression<int>? currentPage,
     Expression<int>? percentageRead,
     Expression<String>? eventType,
     Expression<String>? note,
     Expression<DateTime>? eventDate,
+    Expression<bool>? isDirty,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? syncedAt,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (uuid != null) 'uuid': uuid,
+      if (remoteId != null) 'remote_id': remoteId,
       if (bookId != null) 'book_id': bookId,
+      if (bookUuid != null) 'book_uuid': bookUuid,
       if (ownerUserId != null) 'owner_user_id': ownerUserId,
       if (currentPage != null) 'current_page': currentPage,
       if (percentageRead != null) 'percentage_read': percentageRead,
       if (eventType != null) 'event_type': eventType,
       if (note != null) 'note': note,
       if (eventDate != null) 'event_date': eventDate,
+      if (isDirty != null) 'is_dirty': isDirty,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (syncedAt != null) 'synced_at': syncedAt,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -2950,25 +3133,35 @@ class ReadingTimelineEntriesCompanion
   ReadingTimelineEntriesCompanion copyWith(
       {Value<int>? id,
       Value<String>? uuid,
+      Value<String?>? remoteId,
       Value<int>? bookId,
+      Value<String?>? bookUuid,
       Value<int>? ownerUserId,
       Value<int?>? currentPage,
       Value<int?>? percentageRead,
       Value<String>? eventType,
       Value<String?>? note,
       Value<DateTime>? eventDate,
+      Value<bool>? isDirty,
+      Value<bool>? isDeleted,
+      Value<DateTime?>? syncedAt,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt}) {
     return ReadingTimelineEntriesCompanion(
       id: id ?? this.id,
       uuid: uuid ?? this.uuid,
+      remoteId: remoteId ?? this.remoteId,
       bookId: bookId ?? this.bookId,
+      bookUuid: bookUuid ?? this.bookUuid,
       ownerUserId: ownerUserId ?? this.ownerUserId,
       currentPage: currentPage ?? this.currentPage,
       percentageRead: percentageRead ?? this.percentageRead,
       eventType: eventType ?? this.eventType,
       note: note ?? this.note,
       eventDate: eventDate ?? this.eventDate,
+      isDirty: isDirty ?? this.isDirty,
+      isDeleted: isDeleted ?? this.isDeleted,
+      syncedAt: syncedAt ?? this.syncedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -2983,8 +3176,14 @@ class ReadingTimelineEntriesCompanion
     if (uuid.present) {
       map['uuid'] = Variable<String>(uuid.value);
     }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
     if (bookId.present) {
       map['book_id'] = Variable<int>(bookId.value);
+    }
+    if (bookUuid.present) {
+      map['book_uuid'] = Variable<String>(bookUuid.value);
     }
     if (ownerUserId.present) {
       map['owner_user_id'] = Variable<int>(ownerUserId.value);
@@ -3004,6 +3203,15 @@ class ReadingTimelineEntriesCompanion
     if (eventDate.present) {
       map['event_date'] = Variable<DateTime>(eventDate.value);
     }
+    if (isDirty.present) {
+      map['is_dirty'] = Variable<bool>(isDirty.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<DateTime>(syncedAt.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3018,13 +3226,18 @@ class ReadingTimelineEntriesCompanion
     return (StringBuffer('ReadingTimelineEntriesCompanion(')
           ..write('id: $id, ')
           ..write('uuid: $uuid, ')
+          ..write('remoteId: $remoteId, ')
           ..write('bookId: $bookId, ')
+          ..write('bookUuid: $bookUuid, ')
           ..write('ownerUserId: $ownerUserId, ')
           ..write('currentPage: $currentPage, ')
           ..write('percentageRead: $percentageRead, ')
           ..write('eventType: $eventType, ')
           ..write('note: $note, ')
           ..write('eventDate: $eventDate, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -18274,13 +18487,18 @@ typedef $$ReadingTimelineEntriesTableCreateCompanionBuilder
     = ReadingTimelineEntriesCompanion Function({
   Value<int> id,
   required String uuid,
+  Value<String?> remoteId,
   required int bookId,
+  Value<String?> bookUuid,
   required int ownerUserId,
   Value<int?> currentPage,
   Value<int?> percentageRead,
   required String eventType,
   Value<String?> note,
   Value<DateTime> eventDate,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -18288,13 +18506,18 @@ typedef $$ReadingTimelineEntriesTableUpdateCompanionBuilder
     = ReadingTimelineEntriesCompanion Function({
   Value<int> id,
   Value<String> uuid,
+  Value<String?> remoteId,
   Value<int> bookId,
+  Value<String?> bookUuid,
   Value<int> ownerUserId,
   Value<int?> currentPage,
   Value<int?> percentageRead,
   Value<String> eventType,
   Value<String?> note,
   Value<DateTime> eventDate,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -18349,6 +18572,12 @@ class $$ReadingTimelineEntriesTableFilterComposer
   ColumnFilters<String> get uuid => $composableBuilder(
       column: $table.uuid, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get bookUuid => $composableBuilder(
+      column: $table.bookUuid, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<int> get currentPage => $composableBuilder(
       column: $table.currentPage, builder: (column) => ColumnFilters(column));
 
@@ -18364,6 +18593,15 @@ class $$ReadingTimelineEntriesTableFilterComposer
 
   ColumnFilters<DateTime> get eventDate => $composableBuilder(
       column: $table.eventDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -18427,6 +18665,12 @@ class $$ReadingTimelineEntriesTableOrderingComposer
   ColumnOrderings<String> get uuid => $composableBuilder(
       column: $table.uuid, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get bookUuid => $composableBuilder(
+      column: $table.bookUuid, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get currentPage => $composableBuilder(
       column: $table.currentPage, builder: (column) => ColumnOrderings(column));
 
@@ -18442,6 +18686,15 @@ class $$ReadingTimelineEntriesTableOrderingComposer
 
   ColumnOrderings<DateTime> get eventDate => $composableBuilder(
       column: $table.eventDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
@@ -18505,6 +18758,12 @@ class $$ReadingTimelineEntriesTableAnnotationComposer
   GeneratedColumn<String> get uuid =>
       $composableBuilder(column: $table.uuid, builder: (column) => column);
 
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get bookUuid =>
+      $composableBuilder(column: $table.bookUuid, builder: (column) => column);
+
   GeneratedColumn<int> get currentPage => $composableBuilder(
       column: $table.currentPage, builder: (column) => column);
 
@@ -18519,6 +18778,15 @@ class $$ReadingTimelineEntriesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get eventDate =>
       $composableBuilder(column: $table.eventDate, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDirty =>
+      $composableBuilder(column: $table.isDirty, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -18596,52 +18864,72 @@ class $$ReadingTimelineEntriesTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> uuid = const Value.absent(),
+            Value<String?> remoteId = const Value.absent(),
             Value<int> bookId = const Value.absent(),
+            Value<String?> bookUuid = const Value.absent(),
             Value<int> ownerUserId = const Value.absent(),
             Value<int?> currentPage = const Value.absent(),
             Value<int?> percentageRead = const Value.absent(),
             Value<String> eventType = const Value.absent(),
             Value<String?> note = const Value.absent(),
             Value<DateTime> eventDate = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
           }) =>
               ReadingTimelineEntriesCompanion(
             id: id,
             uuid: uuid,
+            remoteId: remoteId,
             bookId: bookId,
+            bookUuid: bookUuid,
             ownerUserId: ownerUserId,
             currentPage: currentPage,
             percentageRead: percentageRead,
             eventType: eventType,
             note: note,
             eventDate: eventDate,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
             createdAt: createdAt,
             updatedAt: updatedAt,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             required String uuid,
+            Value<String?> remoteId = const Value.absent(),
             required int bookId,
+            Value<String?> bookUuid = const Value.absent(),
             required int ownerUserId,
             Value<int?> currentPage = const Value.absent(),
             Value<int?> percentageRead = const Value.absent(),
             required String eventType,
             Value<String?> note = const Value.absent(),
             Value<DateTime> eventDate = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
           }) =>
               ReadingTimelineEntriesCompanion.insert(
             id: id,
             uuid: uuid,
+            remoteId: remoteId,
             bookId: bookId,
+            bookUuid: bookUuid,
             ownerUserId: ownerUserId,
             currentPage: currentPage,
             percentageRead: percentageRead,
             eventType: eventType,
             note: note,
             eventDate: eventDate,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
             createdAt: createdAt,
             updatedAt: updatedAt,
           ),

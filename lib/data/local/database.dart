@@ -271,9 +271,12 @@ class ReadingTimelineEntries extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
 
   IntColumn get bookId =>
       integer().references(Books, #id, onDelete: KeyAction.cascade)();
+  TextColumn get bookUuid => text().withLength(min: 1, max: 36).nullable()();
+
   IntColumn get ownerUserId => integer().references(LocalUsers, #id)();
 
   // Progress tracking
@@ -286,6 +289,11 @@ class ReadingTimelineEntries extends Table {
   TextColumn get note => text().nullable()(); // Optional reader comment
 
   DateTimeColumn get eventDate => dateTime().withDefault(currentDateAndTime)();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
@@ -667,7 +675,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -798,21 +806,21 @@ class AppDatabase extends _$AppDatabase {
             // Migration to v18: Reading Timeline feature
             // 1. Create ReadingTimelineEntries table
             await m.createTable(readingTimelineEntries);
-
             // 2. Add readingStatus column to Books
             await m.addColumn(books, books.readingStatus);
-
             // 3. Migrate existing data: if isRead = true, set readingStatus = 'finished'
             await customStatement(
               "UPDATE books SET reading_status = 'finished' WHERE is_read = 1",
             );
-
-            // 4. Rename notes to description (SQLite doesn't support RENAME COLUMN directly)
-            // We'll handle this in the app layer by treating 'notes' as 'description'
-            // The column name in the schema is already 'description' now
           }
 
           if (from < 19) {
+            // Migration to v19: Add remoteId to ReadingTimelineEntries
+            await m.addColumn(
+                readingTimelineEntries, readingTimelineEntries.remoteId);
+            await m.addColumn(
+                readingTimelineEntries, readingTimelineEntries.bookUuid);
+
             // Migration to v19: Change rating system from 5 stars to 4 levels
             // Map existing ratings: 1-2 -> 1, 3 -> 2, 4 -> 3, 5 -> 4
             await customStatement(
@@ -823,14 +831,30 @@ class AppDatabase extends _$AppDatabase {
                 "UPDATE book_reviews SET rating = 3 WHERE rating = 4");
             await customStatement(
                 "UPDATE book_reviews SET rating = 4 WHERE rating = 5");
-
-            // No easy way to update CHECK constraint in SQLite without recreate.
-            // But customConstraint affects onCreate. For onUpgrade, we'd need to recreate
-            // but given it's a small change, updating data is the priority.
           }
 
           if (from < 20) {
+            // Migration to v20: Add sync fields to ReadingTimelineEntries
+            await m.addColumn(
+                readingTimelineEntries, readingTimelineEntries.isDirty);
+            await m.addColumn(
+                readingTimelineEntries, readingTimelineEntries.isDeleted);
+            await m.addColumn(
+                readingTimelineEntries, readingTimelineEntries.syncedAt);
+
             await m.createTable(wishlistItems);
+          }
+
+          if (from < 21) {
+            // Migration to v21: Book Clubs feature
+            await m.createTable(readingClubs);
+            await m.createTable(clubMembers);
+            await m.createTable(clubBooks);
+            await m.createTable(clubReadingProgress);
+            await m.createTable(bookProposals);
+            await m.createTable(sectionComments);
+            await m.createTable(commentReports);
+            await m.createTable(moderationLogs);
           }
 
           if (from < 21) {

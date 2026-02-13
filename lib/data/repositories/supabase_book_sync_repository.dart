@@ -2,18 +2,22 @@ import 'dart:developer' as developer;
 
 import 'package:drift/drift.dart';
 
-import '../local/book_dao.dart';
 import '../local/database.dart';
+import '../local/book_dao.dart';
+import '../local/timeline_entry_dao.dart';
 import '../../services/supabase_book_service.dart';
 
 class SupabaseBookSyncRepository {
   SupabaseBookSyncRepository({
     required BookDao bookDao,
+    required TimelineEntryDao timelineDao,
     SupabaseBookService? bookService,
   })  : _bookDao = bookDao,
+        _timelineDao = timelineDao,
         _bookService = bookService ?? SupabaseBookService();
 
   final BookDao _bookDao;
+  final TimelineEntryDao _timelineDao;
   final SupabaseBookService _bookService;
 
   /// Mapea visibility y isAvailable de Supabase al status local
@@ -60,6 +64,10 @@ class SupabaseBookSyncRepository {
       accessToken: accessToken,
     );
     final remoteReviews = await _bookService.fetchReviews(
+      accessToken: accessToken,
+    );
+    final remoteTimeline = await _bookService.fetchTimelineEntries(
+      ownerId: ownerRemoteId,
       accessToken: accessToken,
     );
 
@@ -110,8 +118,12 @@ class SupabaseBookSyncRepository {
               coverPath: Value(remote.coverUrl),
               status: Value(_mapVisibilityToStatus(
                   remote.visibility, remote.isAvailable)),
-              description:
-                  const Value(null), // Description not stored in shared_books
+              readingStatus: Value(remote.readingStatus ?? 'pending'),
+              description: Value(remote.description),
+              barcode: Value(remote.barcode),
+              readAt: Value(remote.readAt),
+              isBorrowedExternal: Value(remote.isBorrowedExternal),
+              externalLenderName: Value(remote.externalLenderName),
               isRead: Value(remote.isRead),
               isDeleted: Value(remote.isDeleted),
               genre: Value(remote.genre),
@@ -167,8 +179,12 @@ class SupabaseBookSyncRepository {
                 coverPath: Value(remote.coverUrl),
                 status: Value(_mapVisibilityToStatus(
                     remote.visibility, remote.isAvailable)),
-                description:
-                    const Value(null), // Notes not stored in shared_books
+                readingStatus: Value(remote.readingStatus ?? 'pending'),
+                description: Value(remote.description),
+                barcode: Value(remote.barcode),
+                readAt: Value(remote.readAt),
+                isBorrowedExternal: Value(remote.isBorrowedExternal),
+                externalLenderName: Value(remote.externalLenderName),
                 isRead: Value(remote.isRead),
                 isDeleted: Value(remote.isDeleted),
                 genre: Value(remote.genre),
@@ -286,6 +302,50 @@ class SupabaseBookSyncRepository {
           );
         }
       }
+
+      // Sync Timeline Entries
+      for (final remote in remoteTimeline) {
+        // Find local book by UUID (timeline entries are linked by book_uuid)
+        final book = await _bookDao.findByUuid(remote.bookUuid);
+        if (book == null) {
+          developer.log(
+            'Timeline entry ${remote.id} ignorada: libro UUID ${remote.bookUuid} no encontrado.',
+            name: 'SupabaseBookSyncRepository',
+            level: 800,
+          );
+          continue;
+        }
+
+        final existing = await _timelineDao.findByRemoteId(remote.id);
+
+        if (existing != null) {
+          // Update existing if not dirty
+          await _timelineDao.updateEntryFields(
+              existing.id,
+              ReadingTimelineEntriesCompanion(
+                remoteId: Value(remote.id),
+                currentPage: Value(remote.currentPage),
+                percentageRead: Value(remote.percentageRead),
+                eventType: Value(remote.eventType),
+                note: Value(remote.note),
+                eventDate: Value(remote.eventDate),
+                isDeleted: Value(remote.isDeleted),
+                syncedAt: Value(now),
+              ));
+        } else {
+          // Insert new
+          await _timelineDao.createEntry(
+            bookId: book.id,
+            ownerUserId: owner.id,
+            eventType: remote.eventType,
+            currentPage: remote.currentPage,
+            percentageRead: remote.percentageRead,
+            note: remote.note,
+            eventDate: remote.eventDate,
+            remoteId: remote.id,
+          );
+        }
+      }
     });
   }
 
@@ -293,12 +353,13 @@ class SupabaseBookSyncRepository {
     required LocalUser owner,
     String? accessToken,
   }) async {
-    // Books are handled by GroupSyncController, but Reviews are handled here.
+    // Books are handled by GroupSyncController, but Reviews and Timeline are handled here.
 
     final dirtyReviews = await _bookDao.getDirtyReviews();
     final dirtyBooks = await _bookDao.getDirtyBooks();
+    final dirtyTimeline = await _timelineDao.getDirtyEntries();
 
-    if (dirtyReviews.isEmpty && dirtyBooks.isEmpty) {
+    if (dirtyReviews.isEmpty && dirtyBooks.isEmpty && dirtyTimeline.isEmpty) {
       return;
     }
 
@@ -345,6 +406,12 @@ class SupabaseBookSyncRepository {
               genre: book.genre,
               pageCount: book.pageCount,
               publicationYear: book.publicationYear,
+              readingStatus: book.readingStatus,
+              description: book.description,
+              barcode: book.barcode,
+              readAt: book.readAt,
+              isBorrowedExternal: book.isBorrowedExternal,
+              externalLenderName: book.externalLenderName,
               createdAt: book.createdAt,
               updatedAt: book.updatedAt,
               accessToken: accessToken,
@@ -373,6 +440,12 @@ class SupabaseBookSyncRepository {
               genre: book.genre,
               pageCount: book.pageCount,
               publicationYear: book.publicationYear,
+              readingStatus: book.readingStatus,
+              description: book.description,
+              barcode: book.barcode,
+              readAt: book.readAt,
+              isBorrowedExternal: book.isBorrowedExternal,
+              externalLenderName: book.externalLenderName,
               updatedAt: book.updatedAt,
               accessToken: accessToken,
             );
@@ -402,70 +475,150 @@ class SupabaseBookSyncRepository {
         'Pushing ${dirtyReviews.length} dirty reviews...',
         name: 'SupabaseBookSyncRepository',
       );
-    }
 
-    for (final review in dirtyReviews) {
-      // Ensure we have a remote book ID
-      final book = await _bookDao.findById(review.bookId);
-      final bookRemoteId = book?.remoteId;
+      for (final review in dirtyReviews) {
+        // Ensure we have a remote book ID
+        final book = await _bookDao.findById(review.bookId);
+        final bookRemoteId = book?.remoteId;
 
-      if (book == null || bookRemoteId == null) {
-        developer.log(
-          'Skipping review ${review.id}: Associated book not synced/found.',
-          name: 'SupabaseBookSyncRepository',
-        );
-        continue;
-      }
-
-      try {
-        if (review.remoteId == null) {
-          // CREATE
-          final remoteId = await _bookService.createReview(
-            id: review.uuid,
-            bookId: bookRemoteId,
-            authorId: ownerRemoteId,
-            rating: review.rating,
-            review: review.review,
-            isDeleted: review.isDeleted == true,
-            createdAt: review.createdAt,
-            updatedAt: review.updatedAt,
-            accessToken: accessToken,
+        if (book == null || bookRemoteId == null) {
+          developer.log(
+            'Skipping review ${review.id}: Associated book not synced/found.',
+            name: 'SupabaseBookSyncRepository',
           );
+          continue;
+        }
 
-          await _bookDao.updateReviewFields(
-            reviewId: review.id,
-            entry: BookReviewsCompanion(
-              remoteId: Value(remoteId),
-              syncedAt: Value(DateTime.now()),
-              isDirty: const Value(false),
-            ),
-          );
-        } else {
-          // UPDATE
-          await _bookService.updateReview(
-            id: review.remoteId!,
-            rating: review.rating,
-            review: review.review,
-            isDeleted: review.isDeleted == true,
-            updatedAt: review.updatedAt,
-            accessToken: accessToken,
-          );
+        try {
+          if (review.remoteId == null) {
+            // CREATE
+            final remoteId = await _bookService.createReview(
+              id: review.uuid,
+              bookId: bookRemoteId,
+              authorId: ownerRemoteId,
+              rating: review.rating,
+              review: review.review,
+              isDeleted: review.isDeleted == true,
+              createdAt: review.createdAt,
+              updatedAt: review.updatedAt,
+              accessToken: accessToken,
+            );
 
-          await _bookDao.updateReviewFields(
-            reviewId: review.id,
-            entry: BookReviewsCompanion(
-              syncedAt: Value(DateTime.now()),
-              isDirty: const Value(false),
-            ),
+            await _bookDao.updateReviewFields(
+              reviewId: review.id,
+              entry: BookReviewsCompanion(
+                remoteId: Value(remoteId),
+                syncedAt: Value(DateTime.now()),
+                isDirty: const Value(false),
+              ),
+            );
+          } else {
+            // UPDATE
+            await _bookService.updateReview(
+              id: review.remoteId!,
+              rating: review.rating,
+              review: review.review,
+              isDeleted: review.isDeleted == true,
+              updatedAt: review.updatedAt,
+              accessToken: accessToken,
+            );
+
+            await _bookDao.updateReviewFields(
+              reviewId: review.id,
+              entry: BookReviewsCompanion(
+                syncedAt: Value(DateTime.now()),
+                isDirty: const Value(false),
+              ),
+            );
+          }
+        } catch (e, st) {
+          developer.log(
+            'Error syncing review ${review.id}',
+            name: 'SupabaseBookSyncRepository',
+            error: e,
+            stackTrace: st,
           );
         }
-      } catch (e, st) {
-        developer.log(
-          'Error syncing review ${review.id}',
-          name: 'SupabaseBookSyncRepository',
-          error: e,
-          stackTrace: st,
-        );
+      }
+    }
+
+    // 3. Push Timeline Entries
+    if (dirtyTimeline.isNotEmpty) {
+      developer.log(
+        'Pushing ${dirtyTimeline.length} dirty timeline entries...',
+        name: 'SupabaseBookSyncRepository',
+      );
+
+      for (final entry in dirtyTimeline) {
+        final book = await _bookDao.findById(entry.bookId);
+        final bookRemoteId = book?.remoteId;
+        final bookUuid = book?.uuid;
+
+        if (book == null || bookRemoteId == null || bookUuid == null) {
+          developer.log(
+            'Skipping timeline entry ${entry.id}: Associated book not synced/found.',
+            name: 'SupabaseBookSyncRepository',
+          );
+          continue;
+        }
+
+        try {
+          if (entry.remoteId == null) {
+            // CREATE
+            final remoteId = await _bookService.createTimelineEntry(
+              id: entry.uuid,
+              bookUuid:
+                  bookUuid, // Timeline entries are linked by UUID in Supabase
+              ownerId: ownerRemoteId,
+              currentPage: entry.currentPage,
+              percentageRead: entry.percentageRead,
+              eventType: entry.eventType,
+              note: entry.note,
+              eventDate: entry.eventDate,
+              isDeleted: entry.isDeleted == true,
+              createdAt: entry.createdAt,
+              updatedAt: entry.updatedAt,
+              accessToken: accessToken,
+            );
+
+            await _timelineDao.updateEntryFields(
+              entry.id,
+              ReadingTimelineEntriesCompanion(
+                remoteId: Value(remoteId),
+                syncedAt: Value(DateTime.now()),
+                isDirty: const Value(false),
+              ),
+            );
+          } else {
+            // UPDATE
+            await _bookService.updateTimelineEntry(
+              id: entry.remoteId!,
+              currentPage: entry.currentPage,
+              percentageRead: entry.percentageRead,
+              eventType: entry.eventType,
+              note: entry.note,
+              eventDate: entry.eventDate,
+              isDeleted: entry.isDeleted == true,
+              updatedAt: entry.updatedAt,
+              accessToken: accessToken,
+            );
+
+            await _timelineDao.updateEntryFields(
+              entry.id,
+              ReadingTimelineEntriesCompanion(
+                syncedAt: Value(DateTime.now()),
+                isDirty: const Value(false),
+              ),
+            );
+          }
+        } catch (e, st) {
+          developer.log(
+            'Error syncing timeline entry ${entry.id}',
+            name: 'SupabaseBookSyncRepository',
+            error: e,
+            stackTrace: st,
+          );
+        }
       }
     }
   }

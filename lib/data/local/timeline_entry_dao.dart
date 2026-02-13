@@ -45,7 +45,9 @@ class TimelineEntryDao {
     int? percentageRead,
     String? note,
     DateTime? eventDate,
+    String? remoteId,
   }) async {
+    final now = DateTime.now();
     final entry = ReadingTimelineEntriesCompanion.insert(
       uuid: _uuid.v4(),
       bookId: bookId,
@@ -54,7 +56,12 @@ class TimelineEntryDao {
       currentPage: Value(currentPage),
       percentageRead: Value(percentageRead),
       note: Value(note),
-      eventDate: Value(eventDate ?? DateTime.now()),
+      eventDate: Value(eventDate ?? now),
+      remoteId: Value(remoteId),
+      syncedAt: Value(remoteId != null ? now : null),
+      isDirty: Value(remoteId == null),
+      createdAt: Value(now),
+      updatedAt: Value(now),
     );
 
     final id = await db.into(db.readingTimelineEntries).insert(entry);
@@ -145,5 +152,26 @@ class TimelineEntryDao {
 
     final result = await query.getSingle();
     return result.read(db.readingTimelineEntries.id.count()) ?? 0;
+  }
+
+  /// Find entry by remote ID
+  Future<ReadingTimelineEntry?> findByRemoteId(String remoteId) {
+    return (db.select(db.readingTimelineEntries)
+          ..where((t) => t.remoteId.equals(remoteId)))
+        .getSingleOrNull();
+  }
+
+  /// Get all dirty entries (not synced)
+  Future<List<ReadingTimelineEntry>> getDirtyEntries() {
+    return (db.select(db.readingTimelineEntries)
+          ..where((t) => t.isDirty.equals(true)))
+        .get();
+  }
+
+  /// Update entry fields
+  Future<void> updateEntryFields(
+      int id, ReadingTimelineEntriesCompanion entry) async {
+    await (db.update(db.readingTimelineEntries)..where((t) => t.id.equals(id)))
+        .write(entry);
   }
 }

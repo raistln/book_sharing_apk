@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AutoBackupService {
@@ -164,7 +165,21 @@ class AutoBackupService {
 
   /// Gets or creates the backup directory in Downloads
   Future<Directory> _getBackupDirectory() async {
-    final downloadsDir = await getDownloadsDirectory();
+    Directory? downloadsDir;
+
+    if (Platform.isAndroid) {
+      // Check for MANAGE_EXTERNAL_STORAGE permission (Android 11+)
+      if (await Permission.manageExternalStorage.isGranted) {
+        downloadsDir = Directory('/storage/emulated/0/Download');
+      } else if (await Permission.storage.isGranted) {
+        // Fallback for older Android versions with WRITE_EXTERNAL_STORAGE
+        downloadsDir = Directory('/storage/emulated/0/Download');
+      }
+    }
+
+    // Fallback to standard path_provider (usually scoped storage on newer Android if permission denied)
+    downloadsDir ??= await getDownloadsDirectory();
+
     if (downloadsDir == null) {
       throw Exception('Downloads directory not available');
     }

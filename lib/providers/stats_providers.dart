@@ -119,8 +119,19 @@ final readingRhythmProvider =
   final timelineDao = ref.watch(timelineEntryDaoProvider);
   final entriesMap = <int, List<ReadingTimelineEntry>>{};
 
-  for (var book in topCandidates) {
-    entriesMap[book.id] = await timelineDao.getEntriesForBook(book.id);
+  try {
+    for (var book in topCandidates) {
+      entriesMap[book.id] = await timelineDao.getEntriesForBook(book.id);
+    }
+  } catch (_) {
+    // Defensive: if timeline queries fail (e.g. migration issue),
+    // return empty state instead of crashing.
+    return ReadingRhythmData(
+      rows: [],
+      startDate: DateTime.now().subtract(const Duration(days: 30)),
+      endDate: DateTime.now(),
+      insight: "No se pudo cargar el ritmo de lectura.",
+    );
   }
 
   // 4. Process

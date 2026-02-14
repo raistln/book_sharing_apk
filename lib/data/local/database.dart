@@ -675,7 +675,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 22;
+  int get schemaVersion => 23;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -816,10 +816,20 @@ class AppDatabase extends _$AppDatabase {
 
           if (from < 19) {
             // Migration to v19: Add remoteId to ReadingTimelineEntries
-            await m.addColumn(
-                readingTimelineEntries, readingTimelineEntries.remoteId);
-            await m.addColumn(
-                readingTimelineEntries, readingTimelineEntries.bookUuid);
+            // Wrapped in try-catch because m.createTable at v18 may have
+            // already created these columns using the current schema definition.
+            try {
+              await m.addColumn(
+                  readingTimelineEntries, readingTimelineEntries.remoteId);
+            } catch (_) {
+              // Column already exists from createTable
+            }
+            try {
+              await m.addColumn(
+                  readingTimelineEntries, readingTimelineEntries.bookUuid);
+            } catch (_) {
+              // Column already exists from createTable
+            }
 
             // Migration to v19: Change rating system from 5 stars to 4 levels
             // Map existing ratings: 1-2 -> 1, 3 -> 2, 4 -> 3, 5 -> 4
@@ -835,12 +845,19 @@ class AppDatabase extends _$AppDatabase {
 
           if (from < 20) {
             // Migration to v20: Add sync fields to ReadingTimelineEntries
-            await m.addColumn(
-                readingTimelineEntries, readingTimelineEntries.isDirty);
-            await m.addColumn(
-                readingTimelineEntries, readingTimelineEntries.isDeleted);
-            await m.addColumn(
-                readingTimelineEntries, readingTimelineEntries.syncedAt);
+            // Wrapped in try-catch: columns may already exist from createTable at v18.
+            try {
+              await m.addColumn(
+                  readingTimelineEntries, readingTimelineEntries.isDirty);
+            } catch (_) {}
+            try {
+              await m.addColumn(
+                  readingTimelineEntries, readingTimelineEntries.isDeleted);
+            } catch (_) {}
+            try {
+              await m.addColumn(
+                  readingTimelineEntries, readingTimelineEntries.syncedAt);
+            } catch (_) {}
 
             await m.createTable(wishlistItems);
           }
@@ -857,16 +874,27 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(moderationLogs);
           }
 
-          if (from < 21) {
-            // Migration to v21: Book Clubs feature
-            await m.createTable(readingClubs);
-            await m.createTable(clubMembers);
-            await m.createTable(clubBooks);
-            await m.createTable(clubReadingProgress);
-            await m.createTable(bookProposals);
-            await m.createTable(sectionComments);
-            await m.createTable(commentReports);
-            await m.createTable(moderationLogs);
+          // Duplicate from < 21 block removed (was identical to the one above)
+
+          if (from < 23) {
+            // Repair migration: retroactively add columns that may be missing
+            // due to m.createTable at v18 using current schema, then v19/v20
+            // failing with "duplicate column" for users who upgraded through v18.
+            await customStatement(
+              'ALTER TABLE reading_timeline_entries ADD COLUMN remote_id TEXT',
+            ).catchError((_) {});
+            await customStatement(
+              'ALTER TABLE reading_timeline_entries ADD COLUMN book_uuid TEXT',
+            ).catchError((_) {});
+            await customStatement(
+              'ALTER TABLE reading_timeline_entries ADD COLUMN is_dirty INTEGER NOT NULL DEFAULT 1',
+            ).catchError((_) {});
+            await customStatement(
+              'ALTER TABLE reading_timeline_entries ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+            ).catchError((_) {});
+            await customStatement(
+              'ALTER TABLE reading_timeline_entries ADD COLUMN synced_at INTEGER',
+            ).catchError((_) {});
           }
         },
       );

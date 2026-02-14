@@ -41,6 +41,7 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 - **Lista de Deseos (Wishlist):** Guarda libros que te interesan para el futuro y pásalos a tu biblioteca personal con un solo toque cuando los consigas
 - **Interfaz Literaria:** Diseño cuidado con tipografías clásicas (Georgia), géneros visualmente organizados y scroll optimizado para lectura de reseñas
 - **Filtros Avanzados:** Busca y filtra por título, autor, ISBN, estado de disponibilidad y más
+- **Boletín Literario Provincial:** Descubre eventos literarios en tu provincia mediante informes narrativos generados por IA, con integración de datos en tiempo real y persistencia local inteligente.
 
 ### 👥 Comunidad y Grupos
 - **Grupos Privados:** Crea comunidades de lectura cerradas (familia, amigos, clubes de lectura)
@@ -48,6 +49,14 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 - **Descubrimiento Inteligente:** Explora libros compartidos por otros miembros sin comprometer tu privacidad
 - **Gestión de Miembros:** Administra roles, permisos y membresías de tus grupos
 - **Grupo Personal Automático:** Sistema de préstamos manuales para personas fuera de la plataforma
+
+### 📖 Clubes de Lectura (Beta)
+- **Lectura por Secciones:** Divide los libros en partes y fomenta la discusión organizada por capítulos
+- **Hilos de Discusión:** Espacios dedicados para debatir y comentar cada sección del libro sin spoilers
+- **Propuestas y Votaciones:** Sistema democrático para elegir la próxima lectura del club
+- **Seguimiento de Progreso:** Visualiza el avance de todos los miembros y mantén el ritmo de lectura
+- **Configuración Versátil:** Gestión de periodicidad personalizada (días entre secciones), lugares de reunión y descripciones
+- **Integración con Biblioteca:** Pasa fácilmente los libros del club a tu biblioteca personal una vez finalizados
 
 ### 🔄 Sistema Profesional de Préstamos
 - **Flujo Digital Completo:** Solicita, aprueba y gestiona préstamos directamente desde la app
@@ -60,19 +69,18 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 - **Fechas de Vencimiento:** Establece y rastrea fechas límite para devoluciones
 
 ### 🔒 Seguridad y Privacidad
-- **Autenticación Biométrica:** Protege tu biblioteca con huella dactilar o Face ID
 - **Bloqueo por PIN:** Código de seguridad adicional para acceso a la aplicación
-- **Control de Inactividad:** Cierre de sesión automático tras periodos configurables de inactividad
 - **Visibilidad Granular:** Controla qué libros son visibles en cada grupo (disponible, privado, archivado)
 - **Datos Locales:** Base de datos SQLite local con sincronización opcional a la nube
 
 ### 📊 Estadísticas e Insights
 - **Dashboard Visual:** Gráficos interactivos sobre tu progreso de lectura y estado de la colección
 - **Métricas de Préstamo:** Descubre qué libros son los más solicitados en tus grupos
-- **Calendario de Lectura:** Visualiza tu actividad de lectura a lo largo del tiempo
+- **Calendario y Ritmo de Lectura:** Nuevo diseño visual para el gráfico de ritmo de lectura y calendario de actividad para un seguimiento intuitivo de tus hábitos.
 - **Estadísticas de Grupo:** Analiza la actividad y popularidad de libros en cada comunidad
 
 ### 💾 Herramientas y Exportación
+- **Backups Progresivos:** Sistema de copias de seguridad mejorado con soporte completo para tablas de Supabase y exportación a la carpeta de descargas del dispositivo.
 - **Backups Automáticos:** Copias de seguridad programadas de tu base de datos local
 - **Importación CSV:** Compatible con exportaciones de Goodreads y otros servicios
 - **Exportación JSON:** Exporta tu biblioteca completa en formato estructurado
@@ -167,7 +175,8 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 ### Configuración de Supabase
 
 La aplicación requiere las siguientes tablas y funciones en Supabase. Puedes encontrar el esquema completo en:
-- `docs/supabase_schema_v7_clean deploy.sql` - Esquema inicial de base de datos
+- `docs/supabase_schema_v8_COMPLETE.sql` - Versión más reciente del esquema de base de datos
+- `docs/supabase_manual_alterations_v8.sql` - Ajustes manuales para la versión 8
 - `docs/supabase_loan_hardening_COMPLETE.sql` - Funciones y triggers para préstamos
 - *Nota: La base de datos local utiliza la versión de esquema 20 con soporte para Wishlist y Reading Timeline.*
 

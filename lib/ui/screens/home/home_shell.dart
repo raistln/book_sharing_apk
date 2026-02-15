@@ -25,6 +25,7 @@ import '../../widgets/profile/user_profile_sheet.dart';
 import '../../../services/release_notes_service.dart';
 import '../../widgets/release_notes_dialog.dart';
 import '../../widgets/bulletin/bulletin_sheet.dart';
+import '../../widgets/bookshelf/virtual_bookshelf_sheet.dart';
 import '../../../providers/bulletin_providers.dart';
 import '../../../models/bulletin.dart';
 
@@ -92,6 +93,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                     onPressed: () => _handleBulletinAction(context, ref),
                     icon: const Icon(Icons.newspaper_outlined),
                     tooltip: 'Boletín Provincial',
+                  ),
+                  IconButton(
+                    onPressed: () => _showBookshelfSheet(context),
+                    icon: const Icon(Icons.auto_stories_outlined),
+                    tooltip: 'Mi Estantería',
                   ),
                   const Spacer(),
                   NotificationBell(
@@ -281,6 +287,16 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         elevation: 4,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       ),
+    );
+  }
+
+  void _showBookshelfSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const VirtualBookshelfSheet(),
     );
   }
 

@@ -298,6 +298,39 @@ class ReadingTimelineEntries extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+class ReadingSessions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  // Reference to the book being read
+  IntColumn get bookId =>
+      integer().references(Books, #id, onDelete: KeyAction.cascade)();
+  TextColumn get bookUuid => text().withLength(min: 1, max: 36)();
+
+  // Session metrics
+  DateTimeColumn get startTime => dateTime()();
+  DateTimeColumn get endTime => dateTime().nullable()();
+  IntColumn get durationSeconds => integer().nullable()();
+
+  // Progress during session
+  IntColumn get startPage => integer().nullable()();
+  IntColumn get endPage => integer().nullable()();
+  IntColumn get pagesRead => integer().nullable()();
+
+  // User feedback
+  TextColumn get notes => text().nullable()();
+  TextColumn get mood =>
+      text().nullable().withLength(max: 32)(); // 'focused', 'distracted', etc.
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 class ReadingClubs extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
@@ -667,6 +700,7 @@ class Loans extends Table {
     SectionComments,
     CommentReports,
     ModerationLogs,
+    ReadingSessions,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -675,7 +709,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -896,6 +930,10 @@ class AppDatabase extends _$AppDatabase {
               'ALTER TABLE reading_timeline_entries ADD COLUMN synced_at INTEGER',
             ).catchError((_) {});
           }
+
+          if (from < 24) {
+            await m.createTable(readingSessions);
+          }
         },
       );
 
@@ -912,6 +950,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(clubBooks).go();
       await delete(clubMembers).go();
       await delete(readingClubs).go();
+      await delete(readingSessions).go();
       await delete(loans).go();
       await delete(groupInvitations).go();
       await delete(sharedBooks).go();

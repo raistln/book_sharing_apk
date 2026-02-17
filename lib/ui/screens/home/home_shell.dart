@@ -14,11 +14,11 @@ import '../../../providers/user_profile_provider.dart';
 import '../../widgets/sync_banner.dart';
 import '../../widgets/textured_background.dart';
 import '../auth/pin_setup_screen.dart';
+import 'tabs/reading_tab.dart';
 import 'tabs/community_tab.dart';
 import 'tabs/settings_tab.dart';
 import 'tabs/library_tab.dart';
 import 'tabs/loans_tab.dart';
-import '../../widgets/notifications/notification_bell.dart';
 import '../../widgets/notifications/notifications_sheet.dart';
 import '../../widgets/library/book_form_sheet.dart';
 import '../../widgets/profile/user_profile_sheet.dart';
@@ -86,28 +86,43 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           children: [
             const SyncBanner(),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 40, 16, 8),
               child: Row(
                 children: [
+                  // Izquierda: Boletín y Estantería Virtual
                   IconButton(
                     onPressed: () => _handleBulletinAction(context, ref),
                     icon: const Icon(Icons.newspaper_outlined),
-                    tooltip: 'Boletín Provincial',
+                    tooltip: 'Boletín Literario',
                   ),
                   IconButton(
                     onPressed: () => _showBookshelfSheet(context),
-                    icon: const Icon(Icons.auto_stories_outlined),
-                    tooltip: 'Mi Estantería',
+                    icon: const Icon(Icons.shelves),
+                    tooltip: 'Estantería Virtual',
                   ),
+                  
                   const Spacer(),
-                  NotificationBell(
+                  
+                  // Derecha: Notificaciones, Usuario, Ajustes
+                  IconButton(
                     onPressed: () => _showNotificationsSheet(context, ref),
+                    icon: const Icon(Icons.notifications_outlined),
+                    tooltip: 'Notificaciones',
                   ),
-                  const SizedBox(width: 8),
                   IconButton(
                     onPressed: () => _showProfileSheet(context),
-                    icon: const Icon(Icons.account_circle_outlined),
-                    tooltip: 'Mi Perfil',
+                    icon: const Icon(Icons.person_outline),
+                    tooltip: 'Perfil',
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SettingsTab()),
+                      );
+                    },
+                    icon: const Icon(Icons.settings_outlined),
+                    tooltip: 'Ajustes',
                   ),
                 ],
               ),
@@ -116,12 +131,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               child: IndexedStack(
                 index: currentIndex,
                 children: [
+                  const ReadingTab(),
                   LibraryTab(
                       onOpenForm: ({Book? book}) =>
                           _showBookFormSheet(context, ref, book: book)),
                   const LoansTab(),
                   const CommunityTab(),
-                  const SettingsTab(),
                 ],
               ),
             ),
@@ -134,6 +149,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           NavigationDestination(
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book),
+            label: 'Leyendo',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.library_books_outlined),
+            selectedIcon: Icon(Icons.library_books),
             label: 'Biblioteca',
           ),
           NavigationDestination(
@@ -146,11 +166,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             selectedIcon: Icon(Icons.groups),
             label: 'Grupos',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Ajustes',
-          ),
         ],
         onDestinationSelected: (value) {
           ref.read(_currentTabProvider.notifier).state = value;
@@ -161,16 +176,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   Widget? _buildFab(BuildContext context, WidgetRef ref, int currentIndex) {
-    if (currentIndex == 0) {
+    // Library tab is now index 1
+    if (currentIndex == 1) {
       return FloatingActionButton.extended(
         onPressed: () => _showBookFormSheet(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Añadir libro'),
       );
     }
-
-    // Loans tab (index 1) has its own FAB in LoansTab scaffold
-    if (currentIndex == 1) return null;
 
     if (kDebugMode) {
       return FloatingActionButton.extended(

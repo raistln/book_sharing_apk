@@ -10,6 +10,18 @@ class TimelineEntryDao {
   final AppDatabase db;
   final _uuid = const Uuid();
 
+  /// Count books finished in a period
+  Future<int> countFinishedBooksInPeriod(DateTime start, DateTime end) async {
+    final query = db.selectOnly(db.readingTimelineEntries)
+      ..where(db.readingTimelineEntries.eventType.equals('finish') &
+          db.readingTimelineEntries.eventDate.isBiggerOrEqualValue(start) &
+          db.readingTimelineEntries.eventDate.isSmallerOrEqualValue(end))
+      ..addColumns([db.readingTimelineEntries.id.count()]);
+
+    final result = await query.getSingle();
+    return result.read(db.readingTimelineEntries.id.count()) ?? 0;
+  }
+
   /// Get all timeline entries for a specific book, ordered by event date (most recent first)
   Stream<List<ReadingTimelineEntry>> watchEntriesForBook(int bookId) {
     return (db.select(db.readingTimelineEntries)

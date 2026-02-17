@@ -15145,6 +15145,842 @@ class ModerationLogsCompanion extends UpdateCompanion<ModerationLog> {
   }
 }
 
+class $ReadingSessionsTable extends ReadingSessions
+    with TableInfo<$ReadingSessionsTable, ReadingSession> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReadingSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+      'uuid', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _remoteIdMeta =
+      const VerificationMeta('remoteId');
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+      'remote_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<int> bookId = GeneratedColumn<int>(
+      'book_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES books (id) ON DELETE CASCADE'));
+  static const VerificationMeta _bookUuidMeta =
+      const VerificationMeta('bookUuid');
+  @override
+  late final GeneratedColumn<String> bookUuid = GeneratedColumn<String>(
+      'book_uuid', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _startTimeMeta =
+      const VerificationMeta('startTime');
+  @override
+  late final GeneratedColumn<DateTime> startTime = GeneratedColumn<DateTime>(
+      'start_time', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _endTimeMeta =
+      const VerificationMeta('endTime');
+  @override
+  late final GeneratedColumn<DateTime> endTime = GeneratedColumn<DateTime>(
+      'end_time', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _durationSecondsMeta =
+      const VerificationMeta('durationSeconds');
+  @override
+  late final GeneratedColumn<int> durationSeconds = GeneratedColumn<int>(
+      'duration_seconds', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _startPageMeta =
+      const VerificationMeta('startPage');
+  @override
+  late final GeneratedColumn<int> startPage = GeneratedColumn<int>(
+      'start_page', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _endPageMeta =
+      const VerificationMeta('endPage');
+  @override
+  late final GeneratedColumn<int> endPage = GeneratedColumn<int>(
+      'end_page', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _pagesReadMeta =
+      const VerificationMeta('pagesRead');
+  @override
+  late final GeneratedColumn<int> pagesRead = GeneratedColumn<int>(
+      'pages_read', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+      'notes', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _moodMeta = const VerificationMeta('mood');
+  @override
+  late final GeneratedColumn<String> mood = GeneratedColumn<String>(
+      'mood', aliasedName, true,
+      additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 32),
+      type: DriftSqlType.string,
+      requiredDuringInsert: false);
+  static const VerificationMeta _isDirtyMeta =
+      const VerificationMeta('isDirty');
+  @override
+  late final GeneratedColumn<bool> isDirty = GeneratedColumn<bool>(
+      'is_dirty', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_dirty" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _isDeletedMeta =
+      const VerificationMeta('isDeleted');
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+      'is_deleted', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_deleted" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _syncedAtMeta =
+      const VerificationMeta('syncedAt');
+  @override
+  late final GeneratedColumn<DateTime> syncedAt = GeneratedColumn<DateTime>(
+      'synced_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        uuid,
+        remoteId,
+        bookId,
+        bookUuid,
+        startTime,
+        endTime,
+        durationSeconds,
+        startPage,
+        endPage,
+        pagesRead,
+        notes,
+        mood,
+        isDirty,
+        isDeleted,
+        syncedAt,
+        createdAt,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reading_sessions';
+  @override
+  VerificationContext validateIntegrity(Insertable<ReadingSession> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+          _uuidMeta, uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta));
+    } else if (isInserting) {
+      context.missing(_uuidMeta);
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(_remoteIdMeta,
+          remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta));
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(_bookIdMeta,
+          bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta));
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('book_uuid')) {
+      context.handle(_bookUuidMeta,
+          bookUuid.isAcceptableOrUnknown(data['book_uuid']!, _bookUuidMeta));
+    } else if (isInserting) {
+      context.missing(_bookUuidMeta);
+    }
+    if (data.containsKey('start_time')) {
+      context.handle(_startTimeMeta,
+          startTime.isAcceptableOrUnknown(data['start_time']!, _startTimeMeta));
+    } else if (isInserting) {
+      context.missing(_startTimeMeta);
+    }
+    if (data.containsKey('end_time')) {
+      context.handle(_endTimeMeta,
+          endTime.isAcceptableOrUnknown(data['end_time']!, _endTimeMeta));
+    }
+    if (data.containsKey('duration_seconds')) {
+      context.handle(
+          _durationSecondsMeta,
+          durationSeconds.isAcceptableOrUnknown(
+              data['duration_seconds']!, _durationSecondsMeta));
+    }
+    if (data.containsKey('start_page')) {
+      context.handle(_startPageMeta,
+          startPage.isAcceptableOrUnknown(data['start_page']!, _startPageMeta));
+    }
+    if (data.containsKey('end_page')) {
+      context.handle(_endPageMeta,
+          endPage.isAcceptableOrUnknown(data['end_page']!, _endPageMeta));
+    }
+    if (data.containsKey('pages_read')) {
+      context.handle(_pagesReadMeta,
+          pagesRead.isAcceptableOrUnknown(data['pages_read']!, _pagesReadMeta));
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+          _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
+    }
+    if (data.containsKey('mood')) {
+      context.handle(
+          _moodMeta, mood.isAcceptableOrUnknown(data['mood']!, _moodMeta));
+    }
+    if (data.containsKey('is_dirty')) {
+      context.handle(_isDirtyMeta,
+          isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(_isDeletedMeta,
+          isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta));
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(_syncedAtMeta,
+          syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReadingSession map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReadingSession(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      uuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
+      remoteId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}remote_id']),
+      bookId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}book_id'])!,
+      bookUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}book_uuid'])!,
+      startTime: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}start_time'])!,
+      endTime: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}end_time']),
+      durationSeconds: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}duration_seconds']),
+      startPage: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}start_page']),
+      endPage: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}end_page']),
+      pagesRead: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}pages_read']),
+      notes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}notes']),
+      mood: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}mood']),
+      isDirty: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
+      isDeleted: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_deleted'])!,
+      syncedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}synced_at']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $ReadingSessionsTable createAlias(String alias) {
+    return $ReadingSessionsTable(attachedDatabase, alias);
+  }
+}
+
+class ReadingSession extends DataClass implements Insertable<ReadingSession> {
+  final int id;
+  final String uuid;
+  final String? remoteId;
+  final int bookId;
+  final String bookUuid;
+  final DateTime startTime;
+  final DateTime? endTime;
+  final int? durationSeconds;
+  final int? startPage;
+  final int? endPage;
+  final int? pagesRead;
+  final String? notes;
+  final String? mood;
+  final bool isDirty;
+  final bool isDeleted;
+  final DateTime? syncedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ReadingSession(
+      {required this.id,
+      required this.uuid,
+      this.remoteId,
+      required this.bookId,
+      required this.bookUuid,
+      required this.startTime,
+      this.endTime,
+      this.durationSeconds,
+      this.startPage,
+      this.endPage,
+      this.pagesRead,
+      this.notes,
+      this.mood,
+      required this.isDirty,
+      required this.isDeleted,
+      this.syncedAt,
+      required this.createdAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    map['book_id'] = Variable<int>(bookId);
+    map['book_uuid'] = Variable<String>(bookUuid);
+    map['start_time'] = Variable<DateTime>(startTime);
+    if (!nullToAbsent || endTime != null) {
+      map['end_time'] = Variable<DateTime>(endTime);
+    }
+    if (!nullToAbsent || durationSeconds != null) {
+      map['duration_seconds'] = Variable<int>(durationSeconds);
+    }
+    if (!nullToAbsent || startPage != null) {
+      map['start_page'] = Variable<int>(startPage);
+    }
+    if (!nullToAbsent || endPage != null) {
+      map['end_page'] = Variable<int>(endPage);
+    }
+    if (!nullToAbsent || pagesRead != null) {
+      map['pages_read'] = Variable<int>(pagesRead);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || mood != null) {
+      map['mood'] = Variable<String>(mood);
+    }
+    map['is_dirty'] = Variable<bool>(isDirty);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<DateTime>(syncedAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ReadingSessionsCompanion toCompanion(bool nullToAbsent) {
+    return ReadingSessionsCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+      bookId: Value(bookId),
+      bookUuid: Value(bookUuid),
+      startTime: Value(startTime),
+      endTime: endTime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endTime),
+      durationSeconds: durationSeconds == null && nullToAbsent
+          ? const Value.absent()
+          : Value(durationSeconds),
+      startPage: startPage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(startPage),
+      endPage: endPage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endPage),
+      pagesRead: pagesRead == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pagesRead),
+      notes:
+          notes == null && nullToAbsent ? const Value.absent() : Value(notes),
+      mood: mood == null && nullToAbsent ? const Value.absent() : Value(mood),
+      isDirty: Value(isDirty),
+      isDeleted: Value(isDeleted),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ReadingSession.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReadingSession(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+      bookId: serializer.fromJson<int>(json['bookId']),
+      bookUuid: serializer.fromJson<String>(json['bookUuid']),
+      startTime: serializer.fromJson<DateTime>(json['startTime']),
+      endTime: serializer.fromJson<DateTime?>(json['endTime']),
+      durationSeconds: serializer.fromJson<int?>(json['durationSeconds']),
+      startPage: serializer.fromJson<int?>(json['startPage']),
+      endPage: serializer.fromJson<int?>(json['endPage']),
+      pagesRead: serializer.fromJson<int?>(json['pagesRead']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      mood: serializer.fromJson<String?>(json['mood']),
+      isDirty: serializer.fromJson<bool>(json['isDirty']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'remoteId': serializer.toJson<String?>(remoteId),
+      'bookId': serializer.toJson<int>(bookId),
+      'bookUuid': serializer.toJson<String>(bookUuid),
+      'startTime': serializer.toJson<DateTime>(startTime),
+      'endTime': serializer.toJson<DateTime?>(endTime),
+      'durationSeconds': serializer.toJson<int?>(durationSeconds),
+      'startPage': serializer.toJson<int?>(startPage),
+      'endPage': serializer.toJson<int?>(endPage),
+      'pagesRead': serializer.toJson<int?>(pagesRead),
+      'notes': serializer.toJson<String?>(notes),
+      'mood': serializer.toJson<String?>(mood),
+      'isDirty': serializer.toJson<bool>(isDirty),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'syncedAt': serializer.toJson<DateTime?>(syncedAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ReadingSession copyWith(
+          {int? id,
+          String? uuid,
+          Value<String?> remoteId = const Value.absent(),
+          int? bookId,
+          String? bookUuid,
+          DateTime? startTime,
+          Value<DateTime?> endTime = const Value.absent(),
+          Value<int?> durationSeconds = const Value.absent(),
+          Value<int?> startPage = const Value.absent(),
+          Value<int?> endPage = const Value.absent(),
+          Value<int?> pagesRead = const Value.absent(),
+          Value<String?> notes = const Value.absent(),
+          Value<String?> mood = const Value.absent(),
+          bool? isDirty,
+          bool? isDeleted,
+          Value<DateTime?> syncedAt = const Value.absent(),
+          DateTime? createdAt,
+          DateTime? updatedAt}) =>
+      ReadingSession(
+        id: id ?? this.id,
+        uuid: uuid ?? this.uuid,
+        remoteId: remoteId.present ? remoteId.value : this.remoteId,
+        bookId: bookId ?? this.bookId,
+        bookUuid: bookUuid ?? this.bookUuid,
+        startTime: startTime ?? this.startTime,
+        endTime: endTime.present ? endTime.value : this.endTime,
+        durationSeconds: durationSeconds.present
+            ? durationSeconds.value
+            : this.durationSeconds,
+        startPage: startPage.present ? startPage.value : this.startPage,
+        endPage: endPage.present ? endPage.value : this.endPage,
+        pagesRead: pagesRead.present ? pagesRead.value : this.pagesRead,
+        notes: notes.present ? notes.value : this.notes,
+        mood: mood.present ? mood.value : this.mood,
+        isDirty: isDirty ?? this.isDirty,
+        isDeleted: isDeleted ?? this.isDeleted,
+        syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  ReadingSession copyWithCompanion(ReadingSessionsCompanion data) {
+    return ReadingSession(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
+      bookUuid: data.bookUuid.present ? data.bookUuid.value : this.bookUuid,
+      startTime: data.startTime.present ? data.startTime.value : this.startTime,
+      endTime: data.endTime.present ? data.endTime.value : this.endTime,
+      durationSeconds: data.durationSeconds.present
+          ? data.durationSeconds.value
+          : this.durationSeconds,
+      startPage: data.startPage.present ? data.startPage.value : this.startPage,
+      endPage: data.endPage.present ? data.endPage.value : this.endPage,
+      pagesRead: data.pagesRead.present ? data.pagesRead.value : this.pagesRead,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      mood: data.mood.present ? data.mood.value : this.mood,
+      isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReadingSession(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('bookId: $bookId, ')
+          ..write('bookUuid: $bookUuid, ')
+          ..write('startTime: $startTime, ')
+          ..write('endTime: $endTime, ')
+          ..write('durationSeconds: $durationSeconds, ')
+          ..write('startPage: $startPage, ')
+          ..write('endPage: $endPage, ')
+          ..write('pagesRead: $pagesRead, ')
+          ..write('notes: $notes, ')
+          ..write('mood: $mood, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      uuid,
+      remoteId,
+      bookId,
+      bookUuid,
+      startTime,
+      endTime,
+      durationSeconds,
+      startPage,
+      endPage,
+      pagesRead,
+      notes,
+      mood,
+      isDirty,
+      isDeleted,
+      syncedAt,
+      createdAt,
+      updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReadingSession &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.remoteId == this.remoteId &&
+          other.bookId == this.bookId &&
+          other.bookUuid == this.bookUuid &&
+          other.startTime == this.startTime &&
+          other.endTime == this.endTime &&
+          other.durationSeconds == this.durationSeconds &&
+          other.startPage == this.startPage &&
+          other.endPage == this.endPage &&
+          other.pagesRead == this.pagesRead &&
+          other.notes == this.notes &&
+          other.mood == this.mood &&
+          other.isDirty == this.isDirty &&
+          other.isDeleted == this.isDeleted &&
+          other.syncedAt == this.syncedAt &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ReadingSessionsCompanion extends UpdateCompanion<ReadingSession> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<String?> remoteId;
+  final Value<int> bookId;
+  final Value<String> bookUuid;
+  final Value<DateTime> startTime;
+  final Value<DateTime?> endTime;
+  final Value<int?> durationSeconds;
+  final Value<int?> startPage;
+  final Value<int?> endPage;
+  final Value<int?> pagesRead;
+  final Value<String?> notes;
+  final Value<String?> mood;
+  final Value<bool> isDirty;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> syncedAt;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const ReadingSessionsCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.bookId = const Value.absent(),
+    this.bookUuid = const Value.absent(),
+    this.startTime = const Value.absent(),
+    this.endTime = const Value.absent(),
+    this.durationSeconds = const Value.absent(),
+    this.startPage = const Value.absent(),
+    this.endPage = const Value.absent(),
+    this.pagesRead = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.mood = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  ReadingSessionsCompanion.insert({
+    this.id = const Value.absent(),
+    required String uuid,
+    this.remoteId = const Value.absent(),
+    required int bookId,
+    required String bookUuid,
+    required DateTime startTime,
+    this.endTime = const Value.absent(),
+    this.durationSeconds = const Value.absent(),
+    this.startPage = const Value.absent(),
+    this.endPage = const Value.absent(),
+    this.pagesRead = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.mood = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  })  : uuid = Value(uuid),
+        bookId = Value(bookId),
+        bookUuid = Value(bookUuid),
+        startTime = Value(startTime);
+  static Insertable<ReadingSession> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<String>? remoteId,
+    Expression<int>? bookId,
+    Expression<String>? bookUuid,
+    Expression<DateTime>? startTime,
+    Expression<DateTime>? endTime,
+    Expression<int>? durationSeconds,
+    Expression<int>? startPage,
+    Expression<int>? endPage,
+    Expression<int>? pagesRead,
+    Expression<String>? notes,
+    Expression<String>? mood,
+    Expression<bool>? isDirty,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? syncedAt,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (bookId != null) 'book_id': bookId,
+      if (bookUuid != null) 'book_uuid': bookUuid,
+      if (startTime != null) 'start_time': startTime,
+      if (endTime != null) 'end_time': endTime,
+      if (durationSeconds != null) 'duration_seconds': durationSeconds,
+      if (startPage != null) 'start_page': startPage,
+      if (endPage != null) 'end_page': endPage,
+      if (pagesRead != null) 'pages_read': pagesRead,
+      if (notes != null) 'notes': notes,
+      if (mood != null) 'mood': mood,
+      if (isDirty != null) 'is_dirty': isDirty,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  ReadingSessionsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? uuid,
+      Value<String?>? remoteId,
+      Value<int>? bookId,
+      Value<String>? bookUuid,
+      Value<DateTime>? startTime,
+      Value<DateTime?>? endTime,
+      Value<int?>? durationSeconds,
+      Value<int?>? startPage,
+      Value<int?>? endPage,
+      Value<int?>? pagesRead,
+      Value<String?>? notes,
+      Value<String?>? mood,
+      Value<bool>? isDirty,
+      Value<bool>? isDeleted,
+      Value<DateTime?>? syncedAt,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt}) {
+    return ReadingSessionsCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      remoteId: remoteId ?? this.remoteId,
+      bookId: bookId ?? this.bookId,
+      bookUuid: bookUuid ?? this.bookUuid,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      durationSeconds: durationSeconds ?? this.durationSeconds,
+      startPage: startPage ?? this.startPage,
+      endPage: endPage ?? this.endPage,
+      pagesRead: pagesRead ?? this.pagesRead,
+      notes: notes ?? this.notes,
+      mood: mood ?? this.mood,
+      isDirty: isDirty ?? this.isDirty,
+      isDeleted: isDeleted ?? this.isDeleted,
+      syncedAt: syncedAt ?? this.syncedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<int>(bookId.value);
+    }
+    if (bookUuid.present) {
+      map['book_uuid'] = Variable<String>(bookUuid.value);
+    }
+    if (startTime.present) {
+      map['start_time'] = Variable<DateTime>(startTime.value);
+    }
+    if (endTime.present) {
+      map['end_time'] = Variable<DateTime>(endTime.value);
+    }
+    if (durationSeconds.present) {
+      map['duration_seconds'] = Variable<int>(durationSeconds.value);
+    }
+    if (startPage.present) {
+      map['start_page'] = Variable<int>(startPage.value);
+    }
+    if (endPage.present) {
+      map['end_page'] = Variable<int>(endPage.value);
+    }
+    if (pagesRead.present) {
+      map['pages_read'] = Variable<int>(pagesRead.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (mood.present) {
+      map['mood'] = Variable<String>(mood.value);
+    }
+    if (isDirty.present) {
+      map['is_dirty'] = Variable<bool>(isDirty.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<DateTime>(syncedAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReadingSessionsCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('bookId: $bookId, ')
+          ..write('bookUuid: $bookUuid, ')
+          ..write('startTime: $startTime, ')
+          ..write('endTime: $endTime, ')
+          ..write('durationSeconds: $durationSeconds, ')
+          ..write('startPage: $startPage, ')
+          ..write('endPage: $endPage, ')
+          ..write('pagesRead: $pagesRead, ')
+          ..write('notes: $notes, ')
+          ..write('mood: $mood, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -15172,6 +16008,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $SectionCommentsTable(this);
   late final $CommentReportsTable commentReports = $CommentReportsTable(this);
   late final $ModerationLogsTable moderationLogs = $ModerationLogsTable(this);
+  late final $ReadingSessionsTable readingSessions =
+      $ReadingSessionsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -15195,7 +16033,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         bookProposals,
         sectionComments,
         commentReports,
-        moderationLogs
+        moderationLogs,
+        readingSessions
       ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
@@ -15317,6 +16156,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
                 limitUpdateKind: UpdateKind.delete),
             result: [
               TableUpdate('moderation_logs', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('books',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('reading_sessions', kind: UpdateKind.delete),
             ],
           ),
         ],
@@ -17249,6 +18095,23 @@ final class $$BooksTableReferences
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
+
+  static MultiTypedResultKey<$ReadingSessionsTable, List<ReadingSession>>
+      _readingSessionsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.readingSessions,
+              aliasName:
+                  $_aliasNameGenerator(db.books.id, db.readingSessions.bookId));
+
+  $$ReadingSessionsTableProcessedTableManager get readingSessionsRefs {
+    final manager =
+        $$ReadingSessionsTableTableManager($_db, $_db.readingSessions)
+            .filter((f) => f.bookId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_readingSessionsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
 }
 
 class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
@@ -17435,6 +18298,27 @@ class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
             $$LoansTableFilterComposer(
               $db: $db,
               $table: $db.loans,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> readingSessionsRefs(
+      Expression<bool> Function($$ReadingSessionsTableFilterComposer f) f) {
+    final $$ReadingSessionsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.readingSessions,
+        getReferencedColumn: (t) => t.bookId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ReadingSessionsTableFilterComposer(
+              $db: $db,
+              $table: $db.readingSessions,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -17743,6 +18627,27 @@ class $$BooksTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> readingSessionsRefs<T extends Object>(
+      Expression<T> Function($$ReadingSessionsTableAnnotationComposer a) f) {
+    final $$ReadingSessionsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.readingSessions,
+        getReferencedColumn: (t) => t.bookId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ReadingSessionsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.readingSessions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$BooksTableTableManager extends RootTableManager<
@@ -17761,7 +18666,8 @@ class $$BooksTableTableManager extends RootTableManager<
         bool bookReviewsRefs,
         bool readingTimelineEntriesRefs,
         bool sharedBooksRefs,
-        bool loansRefs})> {
+        bool loansRefs,
+        bool readingSessionsRefs})> {
   $$BooksTableTableManager(_$AppDatabase db, $BooksTable table)
       : super(TableManagerState(
           db: db,
@@ -17893,14 +18799,16 @@ class $$BooksTableTableManager extends RootTableManager<
               bookReviewsRefs = false,
               readingTimelineEntriesRefs = false,
               sharedBooksRefs = false,
-              loansRefs = false}) {
+              loansRefs = false,
+              readingSessionsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
                 if (bookReviewsRefs) db.bookReviews,
                 if (readingTimelineEntriesRefs) db.readingTimelineEntries,
                 if (sharedBooksRefs) db.sharedBooks,
-                if (loansRefs) db.loans
+                if (loansRefs) db.loans,
+                if (readingSessionsRefs) db.readingSessions
               ],
               addJoins: <
                   T extends TableManagerState<
@@ -17977,6 +18885,19 @@ class $$BooksTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem: (item,
                                 referencedItems) =>
                             referencedItems.where((e) => e.bookId == item.id),
+                        typedResults: items),
+                  if (readingSessionsRefs)
+                    await $_getPrefetchedData<Book, $BooksTable,
+                            ReadingSession>(
+                        currentTable: table,
+                        referencedTable: $$BooksTableReferences
+                            ._readingSessionsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$BooksTableReferences(db, table, p0)
+                                .readingSessionsRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.bookId == item.id),
                         typedResults: items)
                 ];
               },
@@ -18001,7 +18922,8 @@ typedef $$BooksTableProcessedTableManager = ProcessedTableManager<
         bool bookReviewsRefs,
         bool readingTimelineEntriesRefs,
         bool sharedBooksRefs,
-        bool loansRefs})>;
+        bool loansRefs,
+        bool readingSessionsRefs})>;
 typedef $$BookReviewsTableCreateCompanionBuilder = BookReviewsCompanion
     Function({
   Value<int> id,
@@ -28309,6 +29231,473 @@ typedef $$ModerationLogsTableProcessedTableManager = ProcessedTableManager<
     (ModerationLog, $$ModerationLogsTableReferences),
     ModerationLog,
     PrefetchHooks Function({bool clubId, bool performedByUserId})>;
+typedef $$ReadingSessionsTableCreateCompanionBuilder = ReadingSessionsCompanion
+    Function({
+  Value<int> id,
+  required String uuid,
+  Value<String?> remoteId,
+  required int bookId,
+  required String bookUuid,
+  required DateTime startTime,
+  Value<DateTime?> endTime,
+  Value<int?> durationSeconds,
+  Value<int?> startPage,
+  Value<int?> endPage,
+  Value<int?> pagesRead,
+  Value<String?> notes,
+  Value<String?> mood,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+typedef $$ReadingSessionsTableUpdateCompanionBuilder = ReadingSessionsCompanion
+    Function({
+  Value<int> id,
+  Value<String> uuid,
+  Value<String?> remoteId,
+  Value<int> bookId,
+  Value<String> bookUuid,
+  Value<DateTime> startTime,
+  Value<DateTime?> endTime,
+  Value<int?> durationSeconds,
+  Value<int?> startPage,
+  Value<int?> endPage,
+  Value<int?> pagesRead,
+  Value<String?> notes,
+  Value<String?> mood,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+
+final class $$ReadingSessionsTableReferences extends BaseReferences<
+    _$AppDatabase, $ReadingSessionsTable, ReadingSession> {
+  $$ReadingSessionsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $BooksTable _bookIdTable(_$AppDatabase db) => db.books.createAlias(
+      $_aliasNameGenerator(db.readingSessions.bookId, db.books.id));
+
+  $$BooksTableProcessedTableManager get bookId {
+    final $_column = $_itemColumn<int>('book_id')!;
+
+    final manager = $$BooksTableTableManager($_db, $_db.books)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$ReadingSessionsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReadingSessionsTable> {
+  $$ReadingSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get bookUuid => $composableBuilder(
+      column: $table.bookUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get startTime => $composableBuilder(
+      column: $table.startTime, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get endTime => $composableBuilder(
+      column: $table.endTime, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get durationSeconds => $composableBuilder(
+      column: $table.durationSeconds,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get startPage => $composableBuilder(
+      column: $table.startPage, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get endPage => $composableBuilder(
+      column: $table.endPage, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get pagesRead => $composableBuilder(
+      column: $table.pagesRead, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get mood => $composableBuilder(
+      column: $table.mood, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  $$BooksTableFilterComposer get bookId {
+    final $$BooksTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.bookId,
+        referencedTable: $db.books,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BooksTableFilterComposer(
+              $db: $db,
+              $table: $db.books,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ReadingSessionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReadingSessionsTable> {
+  $$ReadingSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get bookUuid => $composableBuilder(
+      column: $table.bookUuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get startTime => $composableBuilder(
+      column: $table.startTime, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get endTime => $composableBuilder(
+      column: $table.endTime, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get durationSeconds => $composableBuilder(
+      column: $table.durationSeconds,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get startPage => $composableBuilder(
+      column: $table.startPage, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get endPage => $composableBuilder(
+      column: $table.endPage, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get pagesRead => $composableBuilder(
+      column: $table.pagesRead, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get mood => $composableBuilder(
+      column: $table.mood, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  $$BooksTableOrderingComposer get bookId {
+    final $$BooksTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.bookId,
+        referencedTable: $db.books,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BooksTableOrderingComposer(
+              $db: $db,
+              $table: $db.books,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ReadingSessionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReadingSessionsTable> {
+  $$ReadingSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get bookUuid =>
+      $composableBuilder(column: $table.bookUuid, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startTime =>
+      $composableBuilder(column: $table.startTime, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endTime =>
+      $composableBuilder(column: $table.endTime, builder: (column) => column);
+
+  GeneratedColumn<int> get durationSeconds => $composableBuilder(
+      column: $table.durationSeconds, builder: (column) => column);
+
+  GeneratedColumn<int> get startPage =>
+      $composableBuilder(column: $table.startPage, builder: (column) => column);
+
+  GeneratedColumn<int> get endPage =>
+      $composableBuilder(column: $table.endPage, builder: (column) => column);
+
+  GeneratedColumn<int> get pagesRead =>
+      $composableBuilder(column: $table.pagesRead, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get mood =>
+      $composableBuilder(column: $table.mood, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDirty =>
+      $composableBuilder(column: $table.isDirty, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$BooksTableAnnotationComposer get bookId {
+    final $$BooksTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.bookId,
+        referencedTable: $db.books,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BooksTableAnnotationComposer(
+              $db: $db,
+              $table: $db.books,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ReadingSessionsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ReadingSessionsTable,
+    ReadingSession,
+    $$ReadingSessionsTableFilterComposer,
+    $$ReadingSessionsTableOrderingComposer,
+    $$ReadingSessionsTableAnnotationComposer,
+    $$ReadingSessionsTableCreateCompanionBuilder,
+    $$ReadingSessionsTableUpdateCompanionBuilder,
+    (ReadingSession, $$ReadingSessionsTableReferences),
+    ReadingSession,
+    PrefetchHooks Function({bool bookId})> {
+  $$ReadingSessionsTableTableManager(
+      _$AppDatabase db, $ReadingSessionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReadingSessionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReadingSessionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReadingSessionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> uuid = const Value.absent(),
+            Value<String?> remoteId = const Value.absent(),
+            Value<int> bookId = const Value.absent(),
+            Value<String> bookUuid = const Value.absent(),
+            Value<DateTime> startTime = const Value.absent(),
+            Value<DateTime?> endTime = const Value.absent(),
+            Value<int?> durationSeconds = const Value.absent(),
+            Value<int?> startPage = const Value.absent(),
+            Value<int?> endPage = const Value.absent(),
+            Value<int?> pagesRead = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            Value<String?> mood = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              ReadingSessionsCompanion(
+            id: id,
+            uuid: uuid,
+            remoteId: remoteId,
+            bookId: bookId,
+            bookUuid: bookUuid,
+            startTime: startTime,
+            endTime: endTime,
+            durationSeconds: durationSeconds,
+            startPage: startPage,
+            endPage: endPage,
+            pagesRead: pagesRead,
+            notes: notes,
+            mood: mood,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String uuid,
+            Value<String?> remoteId = const Value.absent(),
+            required int bookId,
+            required String bookUuid,
+            required DateTime startTime,
+            Value<DateTime?> endTime = const Value.absent(),
+            Value<int?> durationSeconds = const Value.absent(),
+            Value<int?> startPage = const Value.absent(),
+            Value<int?> endPage = const Value.absent(),
+            Value<int?> pagesRead = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            Value<String?> mood = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              ReadingSessionsCompanion.insert(
+            id: id,
+            uuid: uuid,
+            remoteId: remoteId,
+            bookId: bookId,
+            bookUuid: bookUuid,
+            startTime: startTime,
+            endTime: endTime,
+            durationSeconds: durationSeconds,
+            startPage: startPage,
+            endPage: endPage,
+            pagesRead: pagesRead,
+            notes: notes,
+            mood: mood,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$ReadingSessionsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({bookId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (bookId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.bookId,
+                    referencedTable:
+                        $$ReadingSessionsTableReferences._bookIdTable(db),
+                    referencedColumn:
+                        $$ReadingSessionsTableReferences._bookIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$ReadingSessionsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $ReadingSessionsTable,
+    ReadingSession,
+    $$ReadingSessionsTableFilterComposer,
+    $$ReadingSessionsTableOrderingComposer,
+    $$ReadingSessionsTableAnnotationComposer,
+    $$ReadingSessionsTableCreateCompanionBuilder,
+    $$ReadingSessionsTableUpdateCompanionBuilder,
+    (ReadingSession, $$ReadingSessionsTableReferences),
+    ReadingSession,
+    PrefetchHooks Function({bool bookId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -28352,4 +29741,6 @@ class $AppDatabaseManager {
       $$CommentReportsTableTableManager(_db, _db.commentReports);
   $$ModerationLogsTableTableManager get moderationLogs =>
       $$ModerationLogsTableTableManager(_db, _db.moderationLogs);
+  $$ReadingSessionsTableTableManager get readingSessions =>
+      $$ReadingSessionsTableTableManager(_db, _db.readingSessions);
 }

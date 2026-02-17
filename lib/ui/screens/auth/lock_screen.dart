@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/auth_providers.dart';
+import '../../../providers/reading_providers.dart';
 import '../../utils/library_transition.dart';
 import '../../widgets/textured_background.dart';
 import '../../widgets/auth/literary_pin_input.dart';
@@ -67,6 +68,11 @@ class _LockScreenState extends ConsumerState<LockScreen>
         .read(authControllerProvider.notifier)
         .unlockWithPin(_pinController.text);
 
+    // Zombie Killer: Close any open reading sessions to ensure clean state
+    if (result.success) {
+      ref.read(readingRepositoryProvider).closeAllActiveSessions();
+    }
+
     if (mounted) {
       if (result.success) {
         if (!_navigated) {
@@ -90,6 +96,11 @@ class _LockScreenState extends ConsumerState<LockScreen>
 
     final success =
         await ref.read(authControllerProvider.notifier).unlockWithBiometrics();
+
+    // Zombie Killer: Close any open reading sessions to ensure clean state
+    if (success) {
+      ref.read(readingRepositoryProvider).closeAllActiveSessions();
+    }
 
     if (mounted) {
       if (success) {

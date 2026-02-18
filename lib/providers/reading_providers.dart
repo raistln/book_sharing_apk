@@ -35,9 +35,16 @@ final activeSessionProvider =
   return repository.getActiveSession(bookId);
 });
 
-final readingStatsProvider = FutureProvider<ReadingStats>((ref) async {
+/// Estadísticas semanales (Tiempo / Páginas totales / Páginas por día)
+final weeklyStatsProvider = FutureProvider<WeeklyReadingStats>((ref) async {
   final repository = ref.watch(readingRepositoryProvider);
   return repository.getWeeklyStats();
+});
+
+/// Estadísticas mensuales (Tiempo / Páginas totales / Libros terminados)
+final monthlyStatsProvider = FutureProvider<MonthlyReadingStats>((ref) async {
+  final repository = ref.watch(readingRepositoryProvider);
+  return repository.getMonthlyStats();
 });
 
 final bookProgressProvider =
@@ -46,7 +53,7 @@ final bookProgressProvider =
   return repository.watchLatestProgress(bookId);
 });
 
-/// Controller for managing the current reading session state
+/// Controller para manejar el estado de la sesión de lectura activa
 class ReadingSessionController
     extends StateNotifier<AsyncValue<ReadingSession?>> {
   ReadingSessionController(this._repository, this._ref)
@@ -63,35 +70,34 @@ class ReadingSessionController
   }
 
   Future<void> initializeSession(int bookId, String bookUuid) async {
-    // 1. Cancel previous subscription if any
     await _sessionSubscription?.cancel();
     state = const AsyncValue.loading();
 
+    print('[SessionController] 🎬 initializeSession: bookId=$bookId');
+
     try {
-      // 1. Check for existing session
       final existingSession = await _repository.getActiveSession(bookId);
 
       if (existingSession != null) {
-        // 2. Check if stale (> 12 hours)
         final sessionAge = DateTime.now().difference(existingSession.startTime);
-        if (sessionAge.inHours > 12) {
-          // Stale: Close it (repository handles logic to set end time = start time if needed,
-          // but we can just use deleteSession or endSession here to be sure)
-          // For safety, let's just close it as 'abandoned'/zombie
-          await _repository.deleteSession(existingSession.id);
+        print(
+            '[SessionController] 📌 Sesión existente encontrada: id=${existingSession.id}, edad=${sessionAge.inHours}h');
 
-          // Start fresh
+        if (sessionAge.inHours > 12) {
+          print(
+              '[SessionController] 🧟 Sesión zombie detectada, eliminando...');
+          await _repository.deleteSession(existingSession.id);
           final newSession = await _repository.startSession(
             bookId: bookId,
             bookUuid: bookUuid,
           );
           state = AsyncValue.data(newSession);
         } else {
-          // Resume
+          print('[SessionController] ▶️  Reanudando sesión existente');
           state = AsyncValue.data(existingSession);
         }
       } else {
-        // 3. Start new session
+        print('[SessionController] ➕ No hay sesión activa, creando nueva...');
         final newSession = await _repository.startSession(
           bookId: bookId,
           bookUuid: bookUuid,
@@ -99,19 +105,22 @@ class ReadingSessionController
         state = AsyncValue.data(newSession);
       }
     } catch (e, st) {
+      print('[SessionController] ❌ ERROR en initializeSession: $e');
       state = AsyncValue.error(e, st);
       return;
     }
 
-    // 3. Subscribe to the stream for updates (The Truth)
     _sessionSubscription = _repository.watchActiveSession(bookId).listen(
       (session) {
         if (mounted) {
+          print(
+              '[SessionController] 🔄 Stream update: session=${session?.id}, endTime=${session?.endTime}');
           state = AsyncValue.data(session);
         }
       },
       onError: (e, st) {
         if (mounted) {
+          print('[SessionController] ❌ Stream error: $e');
           state = AsyncValue.error(e, st);
         }
       },
@@ -120,17 +129,26 @@ class ReadingSessionController
 
   Future<void> endSession(int endPage, {String? notes, String? mood}) async {
     final currentSession = state.value;
-    if (currentSession == null) return;
+    if (currentSession == null) {
+      print('[SessionController] ⚠️  endSession: No hay sesión activa');
+      return;
+    }
 
     final activeUser = _ref.read(activeUserProvider).value;
     if (activeUser == null) {
+      print('[SessionController] ❌ endSession: No hay usuario activo');
       state = AsyncValue.error('No active user', StackTrace.current);
       return;
     }
 
-    state = const AsyncValue.loading();
+    print('[SessionController] 💾 endSession INICIO:');
+    print('  sessionId = ${currentSession.id}');
+    print('  endPage = $endPage');
+    print('  notes = "$notes"');
+    print('  mood = "$mood"');
+    print('  userId = ${activeUser.id}');
+
     try {
-      // Use the improved endSessionWithContext method
       await _repository.endSessionWithContext(
         session: currentSession,
         endPage: endPage,
@@ -138,46 +156,72 @@ class ReadingSessionController
         mood: mood,
         userId: activeUser.id,
       );
+
+      print('[SessionController] ✅ endSession: Guardado exitoso');
+
       state = const AsyncValue.data(null);
-      _ref.invalidate(readingStatsProvider);
+
+      // Invalidar ambos providers de estadísticas
+      _ref.invalidate(weeklyStatsProvider);
+      _ref.invalidate(monthlyStatsProvider);
       _ref.invalidate(readingBooksProvider);
-      // Invalidate timeline so UI updates
       _ref.invalidate(readingTimelineProvider(currentSession.bookId));
+
+      print('[SessionController] 🔄 Providers invalidados');
     } catch (e, st) {
+      print('[SessionController] ❌ ERROR en endSession:');
+      print('  Error: $e');
+      print('  StackTrace: $st');
       state = AsyncValue.error(e, st);
     }
   }
 
-  /// Cancels the current session (deletes it)
   Future<void> cancelSession() async {
     final currentSession = state.value;
     if (currentSession == null) return;
 
-    state = const AsyncValue.loading();
+    print(
+        '[SessionController] 🗑️  cancelSession: Eliminando sesión ${currentSession.id}');
+
     try {
-      // We need a method in repository to delete/cancel
       await _repository.deleteSession(currentSession.id);
       state = const AsyncValue.data(null);
+      print('[SessionController] ✅ Sesión cancelada y eliminada');
     } catch (e, st) {
+      print('[SessionController] ❌ ERROR en cancelSession: $e');
       state = AsyncValue.error(e, st);
     }
   }
 
   Future<void> finishBook(int endPage, {String? notes}) async {
     final currentSession = state.value;
-    // We can finish a book even without an active session (e.g. just updating progress),
-    // but here we likely have one. If we have one, let's end it first.
 
     final activeUser = _ref.read(activeUserProvider).value;
     if (activeUser == null) {
+      print('[SessionController] ❌ finishBook: No hay usuario activo');
       state = AsyncValue.error('No active user', StackTrace.current);
       return;
     }
 
-    state = const AsyncValue.loading();
+    final bookId = currentSession?.bookId;
+    if (bookId == null) {
+      print('[SessionController] ❌ finishBook: No se pudo determinar el libro');
+      state = AsyncValue.error(
+        'No se pudo determinar el libro activo.',
+        StackTrace.current,
+      );
+      return;
+    }
+
+    print('[SessionController] 🏁 finishBook INICIO:');
+    print('  bookId = $bookId');
+    print('  endPage = $endPage');
+    print('  notes = "$notes"');
+
     try {
       if (currentSession != null) {
-        // End current session first
+        print(
+            '[SessionController] 💾 Cerrando sesión antes de marcar como terminado...');
         await _repository.endSessionWithContext(
           session: currentSession,
           endPage: endPage,
@@ -186,19 +230,29 @@ class ReadingSessionController
         );
       }
 
-      // Then mark book as finished
+      print('[SessionController] 🏁 Marcando libro como terminado...');
       await _repository.finishBook(
-        bookId: currentSession?.bookId ??
-            -1, // Fallback or handle error? Ideally we need bookId
+        bookId: bookId,
         userId: activeUser.id,
         finalPage: endPage,
         notes: notes,
       );
 
+      print('[SessionController] ✅ finishBook: Libro terminado exitosamente');
+
       state = const AsyncValue.data(null);
-      _ref.invalidate(readingStatsProvider);
+
+      // Invalidar ambos providers de estadísticas
+      _ref.invalidate(weeklyStatsProvider);
+      _ref.invalidate(monthlyStatsProvider);
       _ref.invalidate(readingBooksProvider);
+      _ref.invalidate(readingTimelineProvider(bookId));
+
+      print('[SessionController] 🔄 Providers invalidados');
     } catch (e, st) {
+      print('[SessionController] ❌ ERROR en finishBook:');
+      print('  Error: $e');
+      print('  StackTrace: $st');
       state = AsyncValue.error(e, st);
     }
   }
@@ -212,10 +266,8 @@ class ReadingSessionController
         sessionId: currentSession.id,
         currentPage: currentPage,
       );
-      // Optimistically update state or fetch fresh?
-      // For now, assume success and keep current session but maybe update page count in memory if needed
     } catch (e) {
-      // Handle error silently or log
+      print('[SessionController] ⚠️  ERROR en updateProgress: $e');
     }
   }
 

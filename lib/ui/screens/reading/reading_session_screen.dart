@@ -18,7 +18,8 @@ class ReadingSessionScreen extends ConsumerStatefulWidget {
     super.key,
     required this.book,
     this.targetDuration,
-    this.initialZenMode = false,
+    this.initialZenMode =
+        false, // ← Este parámetro controla si viene en modo zen desde antes
   });
 
   final Book book;
@@ -35,81 +36,90 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
   Duration _elapsed = Duration.zero;
   DateTime? _startTime;
 
-  bool _isZenMode = false;
+  bool _isNightMode = false; // Modo visual (colores oscuros)
+  bool _isZenMode = false; // Modo descanso (DND + brillo bajo)
   int _lastKnownPage = 0;
 
   @override
   void initState() {
     super.initState();
-    _isZenMode = widget.initialZenMode;
-    // Keep screen on while reading
-    WakelockPlus.enable();
-    _initBrightness();
 
-    // Defer session initialization to controller
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref
+    // CAMBIO 3: Modo zen solo se activa si se pasó el parámetro initialZenMode
+    _isZenMode = widget.initialZenMode;
+    _isNightMode = widget
+        .initialZenMode; // Si viene en zen, también activa modo noche visual
+
+    WakelockPlus.enable();
+
+    // Solo aplicar configuración de zen (DND + brillo) si se pasó como parámetro inicial
+    if (_isZenMode) {
+      _initZenMode();
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref
           .read(readingSessionControllerProvider.notifier)
           .initializeSession(widget.book.id, widget.book.uuid);
+
+      if (mounted) {
+        final initialSession = ref.read(readingSessionControllerProvider).value;
+        if (initialSession != null) {
+          _startTimer(initialSession.startTime);
+        }
+      }
     });
   }
 
-  Future<void> _initBrightness() async {
+  /// Inicializa modo zen (solo si se activó antes de entrar)
+  Future<void> _initZenMode() async {
     try {
-      if (_isZenMode) {
-        await ScreenBrightness().setScreenBrightness(0.05);
-      }
-    } catch (e) {
-      debugPrint('Error getting brightness: $e');
-    }
-  }
-
-  Future<void> _toggleZenMode() async {
-    final newZenMode = !_isZenMode;
-
-    // If enabling Zen Mode, check/request DND permission
-    if (newZenMode) {
+      // Activar DND si es Android
       if (Platform.isAndroid) {
         final status = await Permission.accessNotificationPolicy.status;
         if (!status.isGranted) {
           await Permission.accessNotificationPolicy.request();
         }
       }
-    }
 
+      // Bajar brillo
+      await ScreenBrightness().setScreenBrightness(0.05);
+    } catch (e) {
+      debugPrint('Error inicializando zen mode: $e');
+    }
+  }
+
+  /// CAMBIO 2: Modo noche ahora solo cambia los colores (sin DND ni brillo)
+  /// El modo zen (DND + brillo) solo se activa si se pasó initialZenMode = true
+  Future<void> _toggleNightMode() async {
     setState(() {
-      _isZenMode = newZenMode;
+      _isNightMode = !_isNightMode;
     });
 
-    try {
-      if (_isZenMode) {
-        await ScreenBrightness().setScreenBrightness(0.05); // Very low
-      } else {
-        await ScreenBrightness().resetScreenBrightness();
-      }
-    } catch (e) {
-      debugPrint('Error setting brightness: $e');
-    }
+    // No cambiamos el brillo ni activamos DND
+    // Solo es un toggle visual de colores
   }
 
   void _startTimer(DateTime startTime) {
     _startTime = startTime;
+
+    if (_timer != null && _timer!.isActive) {
+      setState(() {
+        _elapsed = DateTime.now().difference(_startTime!);
+      });
+      return;
+    }
+
     _elapsed = DateTime.now().difference(_startTime!);
 
-    if (_timer != null && _timer!.isActive) return;
-
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          _elapsed = DateTime.now().difference(_startTime!);
-        });
+      if (!mounted) return;
+      setState(() {
+        _elapsed = DateTime.now().difference(_startTime!);
+      });
 
-        // Strict Timer Check
-        if (widget.targetDuration != null &&
-            _elapsed >= widget.targetDuration!) {
-          timer.cancel();
-          _showTimeIsUpDialog();
-        }
+      if (widget.targetDuration != null && _elapsed >= widget.targetDuration!) {
+        timer.cancel();
+        _showTimeIsUpDialog();
       }
     });
   }
@@ -123,11 +133,7 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
         content: const Text('Has alcanzado tu objetivo de lectura.'),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Optionally continue reading or end session?
-              // For now, just let them stay on screen or end manually.
-            },
+            onPressed: () => Navigator.pop(context),
             child: const Text('Continuar leyendo'),
           ),
           FilledButton(
@@ -146,7 +152,12 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
   void dispose() {
     _timer?.cancel();
     WakelockPlus.disable();
-    ScreenBrightness().resetScreenBrightness();
+
+    // Restaurar brillo solo si estaba en modo zen
+    if (_isZenMode) {
+      ScreenBrightness().resetScreenBrightness();
+    }
+
     super.dispose();
   }
 
@@ -163,7 +174,6 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
   Future<void> _endSession() async {
     final controller = ref.read(readingSessionControllerProvider.notifier);
 
-    // Show dialog to get end page
     final result = await showDialog<_EndSessionResult>(
       context: context,
       barrierDismissible: false,
@@ -176,26 +186,22 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
 
     if (result != null && mounted) {
       if (result.cancelSession) {
-        // Cancel logic: Delete the session
         await controller.cancelSession();
       } else if (result.finishBook) {
-        // Mark as finished
         await controller.finishBook(
           result.page,
           notes: result.notes,
         );
 
         if (mounted) {
-          // Show review dialog
           await showAddReviewDialog(context, ref, widget.book);
         }
       } else {
-        // Just end session
         await controller.endSession(result.page, notes: result.notes);
       }
 
       if (mounted) {
-        Navigator.pop(context); // Close session screen
+        Navigator.pop(context);
 
         if (!result.cancelSession && result.viewBook) {
           Navigator.push(
@@ -209,20 +215,73 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
     }
   }
 
+  /// CAMBIO 1: Al presionar la X, cancelar sesión y parar el timer
+  Future<void> _closeSessionWithoutSaving() async {
+    // Mostrar confirmación
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Cerrar sin guardar?'),
+        content: const Text(
+          'Se perderá el progreso de esta sesión de lectura.\n'
+          '¿Estás seguro?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Cerrar sin guardar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      // Cancelar la sesión en el controller (la elimina de DB)
+      await ref.read(readingSessionControllerProvider.notifier).cancelSession();
+
+      // Parar el timer
+      _timer?.cancel();
+
+      // Resetear el elapsed a cero (opcional, porque vamos a cerrar la pantalla)
+      setState(() {
+        _elapsed = Duration.zero;
+      });
+
+      // Cerrar la pantalla
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sessionState = ref.watch(readingSessionControllerProvider);
 
-    // Listen to state changes to start timer when data is available
     ref.listen(readingSessionControllerProvider, (previous, next) {
-      if (next.value != null) {
-        _startTimer(next.value!.startTime);
+      final previousSession = previous?.value;
+      final nextSession = next.value;
+
+      if (nextSession != null && nextSession.id != previousSession?.id) {
+        _startTimer(nextSession.startTime);
+      }
+
+      if (nextSession == null && previousSession != null) {
+        _timer?.cancel();
       }
     });
 
     final remaining = widget.targetDuration != null
         ? widget.targetDuration! - _elapsed
         : _elapsed;
+
     double progress = 0.0;
     if (widget.targetDuration != null && widget.targetDuration!.inSeconds > 0) {
       progress = (_elapsed.inSeconds / widget.targetDuration!.inSeconds)
@@ -230,28 +289,28 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
     }
 
     return ColorFiltered(
-      colorFilter: _isZenMode
+      colorFilter: _isNightMode
           ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
           : const ColorFilter.mode(Colors.transparent, BlendMode.saturation),
       child: Scaffold(
-        backgroundColor: _isZenMode ? Colors.black : null,
+        backgroundColor: _isNightMode ? Colors.black : null,
         appBar: AppBar(
           title: Text(widget.book.title),
-          backgroundColor: _isZenMode ? Colors.black : null,
-          foregroundColor: _isZenMode ? Colors.white54 : null,
+          backgroundColor: _isNightMode ? Colors.black : null,
+          foregroundColor: _isNightMode ? Colors.white54 : null,
           actions: [
+            // CAMBIO 2: Botón solo cambia modo visual noche/día
             IconButton(
-              icon: Icon(_isZenMode ? Icons.nightlight_round : Icons.wb_sunny),
-              onPressed: _toggleZenMode,
-              tooltip: _isZenMode ? 'Modo Normal' : 'Modo Lectura Nocturna',
+              icon:
+                  Icon(_isNightMode ? Icons.nightlight_round : Icons.wb_sunny),
+              onPressed: _toggleNightMode,
+              tooltip: _isNightMode ? 'Modo Día' : 'Modo Noche',
             ),
           ],
           leading: IconButton(
             icon: const Icon(Icons.close),
-            onPressed: () {
-              // Just close screen, session continues in background
-              Navigator.pop(context);
-            },
+            onPressed:
+                _closeSessionWithoutSaving, // ← CAMBIO 1: Usar nuevo método
           ),
         ),
         body: sessionState.when(
@@ -283,8 +342,11 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
           ),
           data: (session) {
             if (session == null) {
-              // Should essentially be loading or initial state
               return const Center(child: CircularProgressIndicator());
+            }
+
+            if (session.startPage != null && session.startPage! > 0) {
+              _lastKnownPage = session.startPage!;
             }
 
             return SafeArea(
@@ -295,9 +357,9 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const Spacer(),
-                    // Book Cover (Opaque)
+                    // Portada del libro
                     Opacity(
-                      opacity: _isZenMode ? 0.6 : 1.0,
+                      opacity: _isNightMode ? 0.6 : 1.0,
                       child: Container(
                         height: 200,
                         width: 130,
@@ -329,7 +391,7 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
                     ),
                     const SizedBox(height: 60),
 
-                    // Circular Timer
+                    // Temporizador circular
                     Stack(
                       alignment: Alignment.center,
                       children: [
@@ -344,7 +406,7 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
                                 .dividerColor
                                 .withValues(alpha: 0.1),
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              _isZenMode
+                              _isNightMode
                                   ? Colors.grey.shade700
                                   : Theme.of(context).colorScheme.primary,
                             ),
@@ -362,7 +424,7 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
                                 fontFeatures: [
                                   const FontFeature.tabularFigures()
                                 ],
-                                color: _isZenMode ? Colors.grey : null,
+                                color: _isNightMode ? Colors.grey : null,
                               ),
                             ),
                             if (widget.targetDuration != null)
@@ -372,7 +434,7 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
                                     .textTheme
                                     .labelMedium
                                     ?.copyWith(
-                                      color: _isZenMode ? Colors.grey : null,
+                                      color: _isNightMode ? Colors.grey : null,
                                     ),
                               ),
                           ],
@@ -382,19 +444,19 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
 
                     const Spacer(),
 
-                    // End Session Button
+                    // Botón terminar
                     TextButton.icon(
                       onPressed: () => _endSession(),
                       icon: Icon(
                         Icons.stop,
-                        color: _isZenMode
+                        color: _isNightMode
                             ? Colors.grey
                             : Theme.of(context).colorScheme.error,
                       ),
                       label: Text(
                         'TERMINAR SESIÓN',
                         style: TextStyle(
-                          color: _isZenMode
+                          color: _isNightMode
                               ? Colors.grey
                               : Theme.of(context).colorScheme.error,
                           fontWeight: FontWeight.bold,
@@ -413,6 +475,10 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Clases auxiliares del diálogo (sin cambios)
+// ---------------------------------------------------------------------------
 
 class _EndSessionResult {
   final int page;
@@ -538,7 +604,6 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
               child: OutlinedButton(
                 onPressed: () {
                   final page = int.tryParse(_pageController.text) ?? 0;
-                  // NO GUARDAR -> Returns false for viewBook, and imply cancel/delete
                   Navigator.pop(
                     context,
                     _EndSessionResult(
@@ -546,7 +611,7 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
                       _notesController.text,
                       false,
                       finishBook: _finishBook,
-                      cancelSession: true, // New flag to signal cancellation
+                      cancelSession: true,
                     ),
                   );
                 },
@@ -567,7 +632,7 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
                     _EndSessionResult(
                       page,
                       _notesController.text,
-                      true, // Default to viewing book or just saving
+                      true,
                       finishBook: _finishBook,
                     ),
                   );

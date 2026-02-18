@@ -84,8 +84,20 @@ class ReadingSessionDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Update an existing session
-  Future<bool> updateSession(ReadingSessionsCompanion session) {
-    return update(readingSessions).replace(session);
+  ///
+  /// FIX CRÍTICO: Cambiar de replace() a write()
+  /// - replace() requiere TODOS los campos (uuid, bookId, bookUuid, startTime, etc.)
+  /// - write() solo actualiza los campos presentes en el Companion
+  Future<bool> updateSession(ReadingSessionsCompanion session) async {
+    // Validar que el ID esté presente
+    if (session.id.present) {
+      final rowsAffected = await (update(readingSessions)
+            ..where((t) => t.id.equals(session.id.value)))
+          .write(session); // ← CAMBIO: replace() → write()
+
+      return rowsAffected > 0;
+    }
+    return false;
   }
 
   /// Delete a session

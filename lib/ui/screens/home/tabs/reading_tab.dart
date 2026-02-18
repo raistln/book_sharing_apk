@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/local/database.dart';
-import '../../../../data/repositories/reading_repository.dart';
+
 import '../../../../providers/reading_list_provider.dart';
 import '../../../../providers/reading_providers.dart';
 import '../../reading/start_session_sheet.dart';
+import 'package:book_sharing_app/ui/widgets/reading/reading_stats_card.dart';
 
 class ReadingTab extends ConsumerWidget {
   const ReadingTab({super.key});
@@ -14,7 +15,6 @@ class ReadingTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final readingBooksAsync = ref.watch(readingBooksProvider);
-    final statsAsync = ref.watch(readingStatsProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -77,12 +77,7 @@ class ReadingTab extends ConsumerWidget {
               const SizedBox(height: 16),
 
               // 4. Activity Card
-              statsAsync.when(
-                data: (stats) => _ActivityCard(stats: stats),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) =>
-                    Text('Error cargando estadísticas: $err'),
-              ),
+              const ReadingStatsCard(),
 
               const SizedBox(height: 80), // Bottom padding for FAB
             ],
@@ -319,119 +314,6 @@ class _ReadingBookItem extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({required this.stats});
-
-  final ReadingStats stats;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Theme.of(context)
-              .colorScheme
-              .outlineVariant
-              .withValues(alpha: 0.5),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Esta semana',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildStatItem(
-                context,
-                icon: Icons.timer_outlined,
-                value:
-                    '${stats.weeklyDuration.inHours}h ${stats.weeklyDuration.inMinutes.remainder(60)}m',
-                label: 'Tiempo',
-                color: Colors.blue,
-              ),
-              _buildVerticalDivider(context),
-              _buildStatItem(
-                context,
-                icon: Icons.menu_book_outlined,
-                value: '${stats.weeklyPages}',
-                label: 'Páginas',
-                color: Colors.orange,
-              ),
-              _buildVerticalDivider(context),
-              _buildStatItem(
-                context,
-                icon: Icons.check_circle_outline,
-                value: '${stats.weeklyBooksFinished}',
-                label: 'Terminados',
-                color: Colors.green,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVerticalDivider(BuildContext context) {
-    return Container(
-      height: 40,
-      width: 1,
-      color: Theme.of(context).colorScheme.outlineVariant,
-    );
-  }
-
-  Widget _buildStatItem(
-    BuildContext context, {
-    required IconData icon,
-    required String value,
-    required String label,
-    required Color color,
-  }) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-      ],
     );
   }
 }

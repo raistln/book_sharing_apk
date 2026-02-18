@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/local/database.dart';
 import '../../../providers/book_providers.dart';
+import '../../../providers/reading_providers.dart';
 
 /// Bottom sheet for adding or editing timeline entries
 class AddTimelineEntrySheet extends ConsumerStatefulWidget {
@@ -196,7 +197,7 @@ class _AddTimelineEntrySheetState extends ConsumerState<AddTimelineEntrySheet> {
     }
 
     try {
-      final timelineService = ref.read(readingTimelineServiceProvider);
+      final repository = ref.read(readingRepositoryProvider);
       final dao = ref.read(timelineEntryDaoProvider);
 
       if (widget.existingEntry != null) {
@@ -208,11 +209,11 @@ class _AddTimelineEntrySheetState extends ConsumerState<AddTimelineEntrySheet> {
           eventDate: _selectedDate,
         );
       } else {
-        // Create new entry
-        await timelineService.addProgressUpdate(
+        // Create new entry via repository to include session for stats
+        await repository.recordManualProgress(
           book: widget.book,
           userId: widget.userId,
-          currentPage: currentPage,
+          currentPage: currentPage ?? 0,
           note: note.isEmpty ? null : note,
           eventDate: _selectedDate,
         );
@@ -221,6 +222,10 @@ class _AddTimelineEntrySheetState extends ConsumerState<AddTimelineEntrySheet> {
       // Refresh data
       ref.invalidate(readingTimelineProvider(widget.book.id));
       ref.invalidate(readingInsightProvider(widget.book.id));
+
+      // NEW: Invalidate stats providers to show updated numbers in Reading tab
+      ref.invalidate(weeklyStatsProvider);
+      ref.invalidate(monthlyStatsProvider);
 
       if (!mounted) return;
       Navigator.of(context).pop();

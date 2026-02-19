@@ -19,7 +19,10 @@ class LoanSyncController extends SyncController {
           pushLocalChanges: () async {
             final user = _ref.read(activeUserProvider).value;
             final repository = _ref.read(supabaseLoanSyncRepositoryProvider);
-            if (user != null) await repository.syncLoans(user.id.toString()); // This actually does both in current repo implementation, but that's fine.
+            if (user != null) {
+              await repository.syncLoans(user.id
+                  .toString()); // This actually does both in current repo implementation, but that's fine.
+            }
           },
           fetchRemoteChanges: () async {
             // Handled by syncLoans above, but provided to satisfy interface if needed
@@ -36,19 +39,19 @@ class LoanSyncController extends SyncController {
       return;
     }
 
-    // Reuse base class state management by calling super methods if possible, 
+    // Reuse base class state management by calling super methods if possible,
     // OR just use our repository directly while updating state.
     // The base SyncController.sync() does a lot of good state management (isSyncing, error handling).
     // Let's try to use it.
-    
+
     // We can just call super.sync() and let it call our callbacks.
     // BUT our repository.syncLoans() does BOTH push and pull.
     // So let's override sync to call repository directly but use super's state logic if we can access it,
     // OR just duplicate the state logic (safest given the single-method repo).
-    // The base class methods _updateStateSafely are private. 
-    // Actually, looking at the code, we can just pass the same repo method to pushLocalChanges 
+    // The base class methods _updateStateSafely are private.
+    // Actually, looking at the code, we can just pass the same repo method to pushLocalChanges
     // and empty to fetchRemoteChanges (or vice versa) since syncLoans does both.
-    
+
     await super.sync();
   }
 }

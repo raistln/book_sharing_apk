@@ -13,7 +13,7 @@ class DatabaseReset {
 
       // Get all possible database locations
       final directories = await _getAllDatabaseDirectories();
-      
+
       for (final dir in directories) {
         await _deleteDatabaseInDirectory(dir);
       }
@@ -35,20 +35,20 @@ class DatabaseReset {
   /// Get all possible database directories
   static Future<List<Directory>> _getAllDatabaseDirectories() async {
     final directories = <Directory>[];
-    
+
     try {
       // Application documents directory (primary location)
       final appDocumentsDir = await getApplicationDocumentsDirectory();
       directories.add(appDocumentsDir);
-      
+
       // Application support directory
       final appSupportDir = await getApplicationSupportDirectory();
       directories.add(appSupportDir);
-      
+
       // Temporary directory
       final tempDir = await getTemporaryDirectory();
       directories.add(tempDir);
-      
+
       // External storage (if available)
       if (Platform.isAndroid) {
         final externalDir = await getExternalStorageDirectory();
@@ -61,7 +61,7 @@ class DatabaseReset {
         debugPrint('[DatabaseReset] Error getting directories: $e');
       }
     }
-    
+
     return directories;
   }
 
@@ -108,10 +108,10 @@ class DatabaseReset {
 
       // Also check for any .db files in the directory
       await _deleteAllDbFiles(dir);
-      
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[DatabaseReset] Error deleting in directory ${dir.path}: $e');
+        debugPrint(
+            '[DatabaseReset] Error deleting in directory ${dir.path}: $e');
       }
     }
   }
@@ -123,8 +123,8 @@ class DatabaseReset {
       for (final file in files) {
         if (file is File) {
           final fileName = file.path.split('/').last;
-          if (fileName.endsWith('.db') || 
-              fileName.endsWith('.sqlite') || 
+          if (fileName.endsWith('.db') ||
+              fileName.endsWith('.sqlite') ||
               fileName.endsWith('.sqlite3')) {
             await file.delete();
             if (kDebugMode) {
@@ -150,7 +150,7 @@ class DatabaseReset {
           '/data/data/app_databases',
           '/data/data/app_flutter/databases',
         ];
-        
+
         for (final path in paths) {
           final dir = Directory(path);
           if (await dir.exists()) {
@@ -174,13 +174,13 @@ class DatabaseReset {
 
       // First try to delete normally
       await deleteDatabaseFile();
-      
+
       // Wait a moment to ensure file handles are released
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       // Try again to be sure
       await deleteDatabaseFile();
-      
+
       if (kDebugMode) {
         debugPrint('[DatabaseReset] Force reset completed');
       }
@@ -196,12 +196,13 @@ class DatabaseReset {
   static Future<bool> hasOldDatabase() async {
     try {
       final directories = await _getAllDatabaseDirectories();
-      
+
       for (final dir in directories) {
         final dbFile = File('${dir.path}/book_sharing.db');
         if (await dbFile.exists()) {
           final fileSize = await dbFile.length();
-          if (fileSize > 1024) { // Larger than 1KB
+          if (fileSize > 1024) {
+            // Larger than 1KB
             if (kDebugMode) {
               debugPrint('[DatabaseReset] Found database at: ${dbFile.path}');
             }
@@ -209,7 +210,7 @@ class DatabaseReset {
           }
         }
       }
-      
+
       return false;
     } catch (error) {
       if (kDebugMode) {
@@ -226,7 +227,7 @@ class DatabaseReset {
         debugPrint('[DatabaseReset] Old database detected, force deleting...');
       }
       await forceResetDatabase();
-      
+
       if (kDebugMode) {
         debugPrint('[DatabaseReset] Please restart the app to continue');
       }

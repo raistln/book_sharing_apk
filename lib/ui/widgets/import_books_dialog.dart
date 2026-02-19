@@ -61,7 +61,8 @@ class _ImportBooksDialogState extends ConsumerState<ImportBooksDialog> {
 
       setState(() {
         if (importResult.successCount > 0) {
-          var message = 'Se importaron ${importResult.successCount} libros correctamente';
+          var message =
+              'Se importaron ${importResult.successCount} libros correctamente';
           if (importResult.failureCount > 0) {
             message = '$message (${importResult.failureCount} fallidos)';
           }
@@ -70,7 +71,9 @@ class _ImportBooksDialogState extends ConsumerState<ImportBooksDialog> {
           var error = 'No se pudo importar ningún libro';
           if (importResult.errors.isNotEmpty) {
             final errorMsg = importResult.errors.first;
-            final moreErrors = importResult.errors.length > 1 ? ' (y ${importResult.errors.length - 1} más...)' : '';
+            final moreErrors = importResult.errors.length > 1
+                ? ' (y ${importResult.errors.length - 1} más...)'
+                : '';
             error = '$errorMsg$moreErrors';
           }
           _error = error;
@@ -96,7 +99,8 @@ class _ImportBooksDialogState extends ConsumerState<ImportBooksDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Selecciona un archivo CSV o JSON para importar tus libros.'),
+            const Text(
+                'Selecciona un archivo CSV o JSON para importar tus libros.'),
             const SizedBox(height: 16),
             if (_error != null)
               Padding(

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 /// Widget for scanning barcodes (ISBN codes)
-/// 
+///
 /// Displays a camera view with barcode detection and overlay frame.
 /// Returns the scanned barcode value when detected.
 class BarcodeScannerSheet extends StatefulWidget {
@@ -47,13 +47,13 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
       if (value != null && value.trim().isNotEmpty) {
         _handled = true;
         _controller.stop();
-        
+
         // Haptic feedback
         HapticFeedback.lightImpact();
-        
+
         // Call callback first
         widget.onScanned(value.trim());
-        
+
         // Then close dialog with the scanned value
         if (mounted) {
           Navigator.of(context).pop(value.trim());
@@ -144,7 +144,9 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
                     if (!hasTorch) {
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Este dispositivo no tiene linterna.')),
+                        const SnackBar(
+                            content:
+                                Text('Este dispositivo no tiene linterna.')),
                       );
                       return;
                     }

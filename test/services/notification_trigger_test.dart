@@ -16,12 +16,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockLoanRepository extends Mock implements LoanRepository {}
-class MockNotificationRepository extends Mock implements NotificationRepository {}
+
+class MockNotificationRepository extends Mock
+    implements NotificationRepository {}
+
 class MockNotificationClient extends Mock implements NotificationClient {}
+
 class MockSyncCoordinator extends Mock implements UnifiedSyncCoordinator {}
+
 class MockGroupPushRepository extends Mock implements GroupPushRepository {}
+
 class MockGroupSyncController extends Mock implements GroupSyncController {}
+
 class MockBookRepository extends Mock implements BookRepository {}
+
 class MockGroupDao extends Mock implements GroupDao {}
 
 class FakeLoan extends Fake implements Loan {
@@ -118,11 +126,13 @@ void main() {
     mockGroupDao = MockGroupDao();
 
     // Stubs for sync and other dependencies
-    when(() => mockSyncCoord.syncOnCriticalEvent(any())).thenAnswer((_) async {});
+    when(() => mockSyncCoord.syncOnCriticalEvent(any()))
+        .thenAnswer((_) async {});
     when(() => mockNotifClient.cancelMany(any())).thenAnswer((_) async {});
     when(() => mockNotifClient.cancel(any())).thenAnswer((_) async {});
     when(() => mockLoanRepo.findBookById(any())).thenAnswer((_) async => null);
-    when(() => mockLoanRepo.findSharedBookById(any())).thenAnswer((_) async => null);
+    when(() => mockLoanRepo.findSharedBookById(any()))
+        .thenAnswer((_) async => null);
 
     loanController = LoanController(
       loanRepository: mockLoanRepo,
@@ -153,17 +163,18 @@ void main() {
             borrower: any(named: 'borrower'),
             dueDate: any(named: 'dueDate'),
           )).thenAnswer((_) async => loan);
-      
-      when(() => mockNotifRepo.createLoanNotification(
-        type: any(named: 'type'),
-        loan: any(named: 'loan'),
-        targetUserId: any(named: 'targetUserId'),
-        actorUserId: any(named: 'actorUserId'),
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).thenAnswer((_) async => 1);
 
-      await loanController.requestLoan(sharedBook: sharedBook, borrower: borrower);
+      when(() => mockNotifRepo.createLoanNotification(
+            type: any(named: 'type'),
+            loan: any(named: 'loan'),
+            targetUserId: any(named: 'targetUserId'),
+            actorUserId: any(named: 'actorUserId'),
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).thenAnswer((_) async => 1);
+
+      await loanController.requestLoan(
+          sharedBook: sharedBook, borrower: borrower);
 
       verify(() => mockNotifRepo.createLoanNotification(
             type: InAppNotificationType.loanRequested,
@@ -184,20 +195,20 @@ void main() {
             owner: any(named: 'owner'),
             dueDate: any(named: 'dueDate'),
           )).thenAnswer((_) async => loan);
-      
+
       when(() => mockNotifRepo.markLoanNotifications(
-        loanId: any(named: 'loanId'),
-        status: any(named: 'status'),
-      )).thenAnswer((_) async {});
+            loanId: any(named: 'loanId'),
+            status: any(named: 'status'),
+          )).thenAnswer((_) async {});
 
       when(() => mockNotifRepo.createLoanNotification(
-        type: any(named: 'type'),
-        loan: any(named: 'loan'),
-        targetUserId: any(named: 'targetUserId'),
-        actorUserId: any(named: 'actorUserId'),
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).thenAnswer((_) async => 1);
+            type: any(named: 'type'),
+            loan: any(named: 'loan'),
+            targetUserId: any(named: 'targetUserId'),
+            actorUserId: any(named: 'actorUserId'),
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).thenAnswer((_) async => 1);
 
       await loanController.acceptLoan(loan: loan, owner: owner);
 
@@ -219,20 +230,20 @@ void main() {
             loan: any(named: 'loan'),
             owner: any(named: 'owner'),
           )).thenAnswer((_) async => loan);
-      
+
       when(() => mockNotifRepo.markLoanNotifications(
-        loanId: any(named: 'loanId'),
-        status: any(named: 'status'),
-      )).thenAnswer((_) async {});
+            loanId: any(named: 'loanId'),
+            status: any(named: 'status'),
+          )).thenAnswer((_) async {});
 
       when(() => mockNotifRepo.createLoanNotification(
-        type: any(named: 'type'),
-        loan: any(named: 'loan'),
-        targetUserId: any(named: 'targetUserId'),
-        actorUserId: any(named: 'actorUserId'),
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).thenAnswer((_) async => 1);
+            type: any(named: 'type'),
+            loan: any(named: 'loan'),
+            targetUserId: any(named: 'targetUserId'),
+            actorUserId: any(named: 'actorUserId'),
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).thenAnswer((_) async => 1);
 
       await loanController.rejectLoan(loan: loan, owner: owner);
 
@@ -254,20 +265,20 @@ void main() {
             loan: any(named: 'loan'),
             borrower: any(named: 'borrower'),
           )).thenAnswer((_) async => loan);
-      
+
       when(() => mockNotifRepo.markLoanNotifications(
-        loanId: any(named: 'loanId'),
-        status: any(named: 'status'),
-      )).thenAnswer((_) async {});
+            loanId: any(named: 'loanId'),
+            status: any(named: 'status'),
+          )).thenAnswer((_) async {});
 
       when(() => mockNotifRepo.createLoanNotification(
-        type: any(named: 'type'),
-        loan: any(named: 'loan'),
-        targetUserId: any(named: 'targetUserId'),
-        actorUserId: any(named: 'actorUserId'),
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).thenAnswer((_) async => 1);
+            type: any(named: 'type'),
+            loan: any(named: 'loan'),
+            targetUserId: any(named: 'targetUserId'),
+            actorUserId: any(named: 'actorUserId'),
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).thenAnswer((_) async => 1);
 
       await loanController.cancelLoan(loan: loan, borrower: borrower);
 
@@ -289,20 +300,20 @@ void main() {
             loan: any(named: 'loan'),
             actor: any(named: 'actor'),
           )).thenAnswer((_) async => loan);
-      
+
       when(() => mockNotifRepo.markLoanNotifications(
-        loanId: any(named: 'loanId'),
-        status: any(named: 'status'),
-      )).thenAnswer((_) async {});
+            loanId: any(named: 'loanId'),
+            status: any(named: 'status'),
+          )).thenAnswer((_) async {});
 
       when(() => mockNotifRepo.createLoanNotification(
-        type: any(named: 'type'),
-        loan: any(named: 'loan'),
-        targetUserId: any(named: 'targetUserId'),
-        actorUserId: any(named: 'actorUserId'),
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).thenAnswer((_) async => 1);
+            type: any(named: 'type'),
+            loan: any(named: 'loan'),
+            targetUserId: any(named: 'targetUserId'),
+            actorUserId: any(named: 'actorUserId'),
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).thenAnswer((_) async => 1);
 
       await loanController.markReturned(loan: loan, actor: borrower);
 
@@ -318,145 +329,155 @@ void main() {
   });
 
   group('Group Notification Triggers', () {
-    test('updateGroup triggers groupUpdated notifications for all members', () async {
+    test('updateGroup triggers groupUpdated notifications for all members',
+        () async {
       final group = FakeGroup();
       final member1 = FakeGroupMember(102);
       final member2 = FakeGroupMember(103);
 
       when(() => mockGroupPushRepo.updateGroup(
-        group: any(named: 'group'),
-        name: any(named: 'name'),
-        description: any(named: 'description'),
-        accessToken: any(named: 'accessToken'),
-      )).thenAnswer((_) async {});
+            group: any(named: 'group'),
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            accessToken: any(named: 'accessToken'),
+          )).thenAnswer((_) async {});
 
       when(() => mockGroupSyncCont.markPendingChanges()).thenReturn(null);
-      when(() => mockGroupDao.getMembersByGroupId(any())).thenAnswer((_) async => [member1, member2]);
+      when(() => mockGroupDao.getMembersByGroupId(any()))
+          .thenAnswer((_) async => [member1, member2]);
 
       when(() => mockNotifRepo.createNotification(
-        type: any(named: 'type'),
-        targetUserId: any(named: 'targetUserId'),
-        actorUserId: any(named: 'actorUserId'),
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).thenAnswer((_) async => 1);
+            type: any(named: 'type'),
+            targetUserId: any(named: 'targetUserId'),
+            actorUserId: any(named: 'actorUserId'),
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).thenAnswer((_) async => 1);
 
       await groupPushController.updateGroup(group: group, name: 'New Name');
 
       verify(() => mockNotifRepo.createNotification(
-        type: InAppNotificationType.groupUpdated,
-        targetUserId: member1.memberUserId,
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).called(1);
+            type: InAppNotificationType.groupUpdated,
+            targetUserId: member1.memberUserId,
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).called(1);
 
       verify(() => mockNotifRepo.createNotification(
-        type: InAppNotificationType.groupUpdated,
-        targetUserId: member2.memberUserId,
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).called(1);
+            type: InAppNotificationType.groupUpdated,
+            targetUserId: member2.memberUserId,
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).called(1);
     });
 
-    test('addMember triggers groupMemberJoined notification for owner', () async {
+    test('addMember triggers groupMemberJoined notification for owner',
+        () async {
       final group = FakeGroup();
       final user = FakeLocalUser();
 
       when(() => mockGroupPushRepo.addMember(
-        group: any(named: 'group'),
-        user: any(named: 'user'),
-        role: any(named: 'role'),
-      )).thenAnswer((_) async => FakeGroupMember(102));
+            group: any(named: 'group'),
+            user: any(named: 'user'),
+            role: any(named: 'role'),
+          )).thenAnswer((_) async => FakeGroupMember(102));
 
       when(() => mockGroupSyncCont.markPendingChanges()).thenReturn(null);
 
       when(() => mockNotifRepo.createNotification(
-        type: any(named: 'type'),
-        targetUserId: any(named: 'targetUserId'),
-        actorUserId: any(named: 'actorUserId'),
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).thenAnswer((_) async => 1);
+            type: any(named: 'type'),
+            targetUserId: any(named: 'targetUserId'),
+            actorUserId: any(named: 'actorUserId'),
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).thenAnswer((_) async => 1);
 
-      await groupPushController.addMember(group: group, user: user, role: 'member');
+      await groupPushController.addMember(
+          group: group, user: user, role: 'member');
 
       verify(() => mockNotifRepo.createNotification(
-        type: InAppNotificationType.groupMemberJoined,
-        targetUserId: group.ownerUserId,
-        actorUserId: user.id,
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).called(1);
+            type: InAppNotificationType.groupMemberJoined,
+            targetUserId: group.ownerUserId,
+            actorUserId: user.id,
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).called(1);
     });
-    
-    test('deleteGroup triggers groupDeleted notifications for all members except owner', () async {
+
+    test(
+        'deleteGroup triggers groupDeleted notifications for all members except owner',
+        () async {
       final group = FakeGroup();
       final ownerMember = FakeGroupMember(group.ownerUserId);
       final member1 = FakeGroupMember(102);
 
       when(() => mockGroupPushRepo.deleteGroup(
-        group: any(named: 'group'),
-        accessToken: any(named: 'accessToken'),
-      )).thenAnswer((_) async {});
+            group: any(named: 'group'),
+            accessToken: any(named: 'accessToken'),
+          )).thenAnswer((_) async {});
 
-      when(() => mockGroupDao.getMembersByGroupId(any())).thenAnswer((_) async => [ownerMember, member1]);
+      when(() => mockGroupDao.getMembersByGroupId(any()))
+          .thenAnswer((_) async => [ownerMember, member1]);
 
       when(() => mockNotifRepo.createNotification(
-        type: any(named: 'type'),
-        targetUserId: any(named: 'targetUserId'),
-        actorUserId: any(named: 'actorUserId'),
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).thenAnswer((_) async => 1);
+            type: any(named: 'type'),
+            targetUserId: any(named: 'targetUserId'),
+            actorUserId: any(named: 'actorUserId'),
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).thenAnswer((_) async => 1);
 
       await groupPushController.deleteGroup(group: group);
 
       verify(() => mockNotifRepo.createNotification(
-        type: InAppNotificationType.groupDeleted,
-        targetUserId: member1.memberUserId,
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).called(1);
+            type: InAppNotificationType.groupDeleted,
+            targetUserId: member1.memberUserId,
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).called(1);
 
       // Should NOT notify the owner
       verifyNever(() => mockNotifRepo.createNotification(
-        type: InAppNotificationType.groupDeleted,
-        targetUserId: group.ownerUserId,
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      ));
+            type: InAppNotificationType.groupDeleted,
+            targetUserId: group.ownerUserId,
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          ));
     });
 
-    test('removeMember triggers groupMemberLeft notification for owner', () async {
+    test('removeMember triggers groupMemberLeft notification for owner',
+        () async {
       final group = FakeGroup();
       final member = FakeGroupMember(102);
       final user = FakeLocalUser();
 
       when(() => mockGroupPushRepo.removeMember(
-        member: any(named: 'member'),
-        accessToken: any(named: 'accessToken'),
-      )).thenAnswer((_) async {});
+            member: any(named: 'member'),
+            accessToken: any(named: 'accessToken'),
+          )).thenAnswer((_) async {});
 
-      when(() => mockGroupDao.findGroupById(any())).thenAnswer((_) async => group);
-      when(() => mockGroupDao.findUserById(any())).thenAnswer((_) async => user);
+      when(() => mockGroupDao.findGroupById(any()))
+          .thenAnswer((_) async => group);
+      when(() => mockGroupDao.findUserById(any()))
+          .thenAnswer((_) async => user);
 
       when(() => mockNotifRepo.createNotification(
-        type: any(named: 'type'),
-        targetUserId: any(named: 'targetUserId'),
-        actorUserId: any(named: 'actorUserId'),
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).thenAnswer((_) async => 1);
+            type: any(named: 'type'),
+            targetUserId: any(named: 'targetUserId'),
+            actorUserId: any(named: 'actorUserId'),
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).thenAnswer((_) async => 1);
 
       await groupPushController.removeMember(member: member);
 
       verify(() => mockNotifRepo.createNotification(
-        type: InAppNotificationType.groupMemberLeft,
-        targetUserId: group.ownerUserId,
-        actorUserId: user.id,
-        title: any(named: 'title'),
-        message: any(named: 'message'),
-      )).called(1);
+            type: InAppNotificationType.groupMemberLeft,
+            targetUserId: group.ownerUserId,
+            actorUserId: user.id,
+            title: any(named: 'title'),
+            message: any(named: 'message'),
+          )).called(1);
     });
   });
 }

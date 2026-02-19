@@ -36,7 +36,8 @@ Future<void> main() async {
   } catch (error, stackTrace) {
     const message =
         'No se pudo limpiar FlutterSecureStorage automáticamente. Limpia la credencial manualmente.';
-    developer.log(message, name: 'ResetScript', error: error, stackTrace: stackTrace);
+    developer.log(message,
+        name: 'ResetScript', error: error, stackTrace: stackTrace);
     warnings.add('$message\n$error');
   }
 
@@ -56,7 +57,8 @@ Future<void> main() async {
     } catch (error, stackTrace) {
       const message =
           'No se pudo eliminar el directorio completo. Puedes borrarlo manualmente.';
-      developer.log(message, name: 'ResetScript', error: error, stackTrace: stackTrace);
+      developer.log(message,
+          name: 'ResetScript', error: error, stackTrace: stackTrace);
       warnings.add('$message\n$error');
     }
   }
@@ -97,7 +99,8 @@ class _ResetSummaryApp extends StatelessWidget {
                         'Avisos:',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      ...warnings.map((w) => _MessageTile(message: w, isWarning: true)),
+                      ...warnings.map(
+                          (w) => _MessageTile(message: w, isWarning: true)),
                     ],
                   ],
                 ),

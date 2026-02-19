@@ -113,8 +113,8 @@ class SupabaseNotificationService {
     SupabaseConfigService? configService,
     Future<SupabaseConfig> Function()? configLoader,
   })  : _client = client ?? http.Client(),
-        _loadConfig =
-            configLoader ?? ((configService ?? const SupabaseConfigService()).loadConfig);
+        _loadConfig = configLoader ??
+            ((configService ?? const SupabaseConfigService()).loadConfig);
 
   final http.Client _client;
   final Future<SupabaseConfig> Function() _loadConfig;
@@ -138,7 +138,8 @@ class SupabaseNotificationService {
     };
 
     final preferValues = <String>[];
-    preferValues.add(preferRepresentation ? 'return=representation' : 'return=minimal');
+    preferValues
+        .add(preferRepresentation ? 'return=representation' : 'return=minimal');
     if (mergeDuplicates) {
       preferValues.add('resolution=merge-duplicates');
     }

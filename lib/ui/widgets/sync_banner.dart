@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/book_providers.dart';
 
 /// Banner that shows the sync status of groups
-/// 
+///
 /// Displays different states:
 /// - Syncing: Shows progress indicator
 /// - Error: Shows error message with retry button
@@ -71,7 +71,8 @@ class SyncBanner extends ConsumerWidget {
             style: TextButton.styleFrom(foregroundColor: foreground),
           ),
           IconButton(
-            onPressed: () => ref.read(groupSyncControllerProvider.notifier).clearError(),
+            onPressed: () =>
+                ref.read(groupSyncControllerProvider.notifier).clearError(),
             icon: Icon(Icons.close, color: foreground),
             tooltip: 'Descartar',
           ),
@@ -116,7 +117,8 @@ class SyncBanner extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         message,
-                        style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: foreground),
                       ),
                     ),
                     if (isSyncing) ...[

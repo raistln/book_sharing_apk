@@ -46,7 +46,8 @@ class CoachMarksService {
     }
   }
 
-  Future<List<CoachMarkId>> pendingMarksForSequence(CoachMarkSequence sequence) async {
+  Future<List<CoachMarkId>> pendingMarksForSequence(
+      CoachMarkSequence sequence) async {
     final marks = coachMarkSequences[sequence];
     if (marks == null) {
       return const [];

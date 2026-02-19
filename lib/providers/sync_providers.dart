@@ -17,23 +17,25 @@ final supabaseLoanServiceProvider = Provider<SupabaseLoanService>((ref) {
   return SupabaseLoanService(client);
 });
 
-final supabaseLoanSyncRepositoryProvider = Provider<SupabaseLoanSyncRepository>((ref) {
+final supabaseLoanSyncRepositoryProvider =
+    Provider<SupabaseLoanSyncRepository>((ref) {
   final db = ref.watch(appDatabaseProvider);
   final api = ref.watch(supabaseLoanServiceProvider);
   return SupabaseLoanSyncRepository(db, api);
 });
 
-final loanSyncControllerProvider = StateNotifierProvider<LoanSyncController, void>((ref) {
+final loanSyncControllerProvider =
+    StateNotifierProvider<LoanSyncController, void>((ref) {
   return LoanSyncController(ref);
 });
-
 
 /// Provider del coordinador unificado de sincronización.
 final unifiedSyncCoordinatorProvider = Provider<UnifiedSyncCoordinator>((ref) {
   final userSync = ref.watch(userSyncControllerProvider.notifier);
   final bookSync = ref.watch(bookSyncControllerProvider.notifier);
   final groupSync = ref.watch(groupSyncControllerProvider.notifier);
-  final notificationSync = ref.watch(notificationSyncControllerProvider.notifier);
+  final notificationSync =
+      ref.watch(notificationSyncControllerProvider.notifier);
   final loanSync = ref.watch(loanSyncControllerProvider.notifier); // NEW
 
   // Callback para notificar actividad de usuario

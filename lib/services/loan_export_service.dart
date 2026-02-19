@@ -62,7 +62,8 @@ class LoanExportService {
 
     // Add section header for loans as borrower
     if (asBorrower.isNotEmpty) {
-      rows.add(['=== PRÉSTAMOS QUE HE RECIBIDO ===', '', '', '', '', '', '', '']);
+      rows.add(
+          ['=== PRÉSTAMOS QUE HE RECIBIDO ===', '', '', '', '', '', '', '']);
       for (final detail in asBorrower) {
         rows.add(_loanToRow(detail));
       }
@@ -70,7 +71,7 @@ class LoanExportService {
 
     const csvConverter = ListToCsvConverter();
     final csvString = csvConverter.convert([headers, ...rows]);
-    
+
     return LoanExportResult(
       bytes: Uint8List.fromList(utf8.encode(csvString)),
       mimeType: 'text/csv',
@@ -81,9 +82,8 @@ class LoanExportService {
   List<dynamic> _loanToRow(LoanDetail detail) {
     final loan = detail.loan;
     final bookTitle = detail.book?.title ?? 'Libro desconocido';
-    final borrowerName = loan.externalBorrowerName ?? 
-                        detail.borrower?.username ?? 
-                        'Desconocido';
+    final borrowerName =
+        loan.externalBorrowerName ?? detail.borrower?.username ?? 'Desconocido';
     final requestedAt = DateFormat.yMd().add_Hm().format(loan.requestedAt);
     final approvedAt = loan.approvedAt != null
         ? DateFormat.yMd().add_Hm().format(loan.approvedAt!)

@@ -23,7 +23,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   final _usernameController = material.TextEditingController();
   final _pinController = material.TextEditingController();
   final _confirmController = material.TextEditingController();
-  
+
   final _usernameFocusNode = material.FocusNode();
   final _pinFocusNode = material.FocusNode();
   final _confirmFocusNode = material.FocusNode();

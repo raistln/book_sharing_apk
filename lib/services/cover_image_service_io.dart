@@ -8,7 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'cover_image_service_base.dart';
 
 class _CoverImageServiceIo implements CoverImageService {
-  _CoverImageServiceIo({ImagePicker? picker}) : _picker = picker ?? ImagePicker();
+  _CoverImageServiceIo({ImagePicker? picker})
+      : _picker = picker ?? ImagePicker();
 
   final ImagePicker _picker;
 
@@ -40,7 +41,8 @@ class _CoverImageServiceIo implements CoverImageService {
       if (extension.isEmpty) {
         extension = '.jpg';
       }
-      final filename = 'cover_${DateTime.now().millisecondsSinceEpoch}$extension';
+      final filename =
+          'cover_${DateTime.now().millisecondsSinceEpoch}$extension';
       final target = File(p.join(directory.path, filename));
 
       final bytes = await result.readAsBytes();
@@ -74,7 +76,8 @@ class _CoverImageServiceIo implements CoverImageService {
       if (extension.isEmpty) {
         extension = '.jpg';
       }
-      final filename = 'cover_remote_${DateTime.now().millisecondsSinceEpoch}$extension';
+      final filename =
+          'cover_remote_${DateTime.now().millisecondsSinceEpoch}$extension';
       final target = File(p.join(directory.path, filename));
 
       await target.writeAsBytes(response.bodyBytes, flush: true);

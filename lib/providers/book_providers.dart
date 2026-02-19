@@ -619,8 +619,10 @@ final loanStatisticsProvider =
 
   if (user == null) {
     return {
-      'loansLast30Days': 0,
-      'loansLastYear': 0,
+      'loansMade30Days': 0,
+      'loansMadeYear': 0,
+      'loansRequested30Days': 0,
+      'loansRequestedYear': 0,
       'mostLoanedBook': null,
       'mostLoanedBookCount': 0,
     };

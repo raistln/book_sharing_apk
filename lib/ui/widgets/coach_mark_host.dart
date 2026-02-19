@@ -9,7 +9,8 @@ class CoachMarkOverlayHost extends ConsumerStatefulWidget {
   final Widget child;
 
   @override
-  ConsumerState<CoachMarkOverlayHost> createState() => _CoachMarkOverlayHostState();
+  ConsumerState<CoachMarkOverlayHost> createState() =>
+      _CoachMarkOverlayHostState();
 }
 
 class _CoachMarkOverlayHostState extends ConsumerState<CoachMarkOverlayHost> {

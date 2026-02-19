@@ -24,7 +24,7 @@ void main() {
       bookDao = BookDao(db);
       userDao = UserDao(db);
       groupDao = GroupDao(db);
-      
+
       bookRepository = BookRepository(
         bookDao,
         groupDao: groupDao,
@@ -108,7 +108,7 @@ void main() {
                             author: 'New Author',
                             owner: testUser,
                           );
-                          
+
                           // Refresh the book list
                           books = await bookRepository.fetchActiveBooks();
                           setState(() {});
@@ -128,7 +128,8 @@ void main() {
                                   final book = books[index];
                                   return ListTile(
                                     title: Text(book.title),
-                                    subtitle: Text(book.author ?? 'Unknown Author'),
+                                    subtitle:
+                                        Text(book.author ?? 'Unknown Author'),
                                   );
                                 },
                               ),
@@ -182,7 +183,7 @@ void main() {
                             author: 'Author Two',
                             owner: testUser,
                           );
-                          
+
                           // Refresh the book list
                           books = await bookRepository.fetchActiveBooks();
                           setState(() {});
@@ -195,7 +196,7 @@ void main() {
                           for (final book in books) {
                             await bookRepository.deleteBook(book);
                           }
-                          
+
                           // Refresh the book list
                           books = await bookRepository.fetchActiveBooks();
                           setState(() {});
@@ -215,7 +216,8 @@ void main() {
                                   final book = books[index];
                                   return ListTile(
                                     title: Text(book.title),
-                                    subtitle: Text(book.author ?? 'Unknown Author'),
+                                    subtitle:
+                                        Text(book.author ?? 'Unknown Author'),
                                   );
                                 },
                               ),
@@ -276,10 +278,16 @@ void main() {
                         ),
                         onChanged: (query) {
                           searchQuery = query.toLowerCase();
-                          filteredBooks = allBooks.where((book) =>
-                            book.title.toLowerCase().contains(searchQuery) ||
-                            (book.author?.toLowerCase().contains(searchQuery) ?? false)
-                          ).toList();
+                          filteredBooks = allBooks
+                              .where((book) =>
+                                  book.title
+                                      .toLowerCase()
+                                      .contains(searchQuery) ||
+                                  (book.author
+                                          ?.toLowerCase()
+                                          .contains(searchQuery) ??
+                                      false))
+                              .toList();
                           setState(() {});
                         },
                       ),
@@ -296,7 +304,7 @@ void main() {
                             author: 'J.R.R. Tolkien',
                             owner: testUser,
                           );
-                          
+
                           // Refresh the book list
                           allBooks = await bookRepository.fetchActiveBooks();
                           filteredBooks = allBooks;
@@ -317,7 +325,8 @@ void main() {
                                   final book = filteredBooks[index];
                                   return ListTile(
                                     title: Text(book.title),
-                                    subtitle: Text(book.author ?? 'Unknown Author'),
+                                    subtitle:
+                                        Text(book.author ?? 'Unknown Author'),
                                   );
                                 },
                               ),

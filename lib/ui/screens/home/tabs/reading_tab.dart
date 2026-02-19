@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/local/database.dart';
-
 import '../../../../providers/reading_list_provider.dart';
 import '../../../../providers/reading_providers.dart';
+import '../../../../providers/stats_providers.dart';
+import '../../../widgets/library/book_details_page.dart';
 import '../../reading/start_session_sheet.dart';
 import 'package:book_sharing_app/ui/widgets/reading/reading_stats_card.dart';
+import '../../../widgets/profile/reading_rhythm_chart.dart';
+import '../../../widgets/profile/reading_calendar.dart';
 
 class ReadingTab extends ConsumerWidget {
   const ReadingTab({super.key});
@@ -78,6 +81,76 @@ class ReadingTab extends ConsumerWidget {
 
               // 4. Activity Card
               const ReadingStatsCard(),
+              const SizedBox(height: 32),
+
+              // 5. Activity Charts (Tabbed)
+              DefaultTabController(
+                length: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const TabBar(
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      dividerColor: Colors.transparent,
+                      indicatorSize: TabBarIndicatorSize.label,
+                      tabs: [
+                        Tab(text: 'Ritmo de lectura'),
+                        Tab(text: 'Libros del año'),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 380, // Fixed height for constraints
+                      child: TabBarView(
+                        children: [
+                          // Tab 1: Reading Rhythm
+                          Consumer(
+                            builder: (context, ref, child) {
+                              final rhythmAsync =
+                                  ref.watch(readingRhythmProvider);
+                              return rhythmAsync.when(
+                                data: (data) => ReadingRhythmChart(
+                                  data: data,
+                                  onBookTap: (book) {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => BookDetailsPage(
+                                          bookId: book.id,
+                                          scrollToTimeline: true,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                loading: () => const Center(
+                                    child: CircularProgressIndicator()),
+                                error: (e, st) =>
+                                    Text('No se pudo cargar el ritmo: $e'),
+                              );
+                            },
+                          ),
+                          // Tab 2: Reading Heatmap/Calendar
+                          Consumer(
+                            builder: (context, ref, child) {
+                              final readBooksAsync =
+                                  ref.watch(readBooksProvider);
+                              return readBooksAsync.when(
+                                data: (books) =>
+                                    ReadingCalendar(readBooks: books),
+                                loading: () => const Center(
+                                    child: CircularProgressIndicator()),
+                                error: (e, st) =>
+                                    Text('No se pudo cargar el calendario: $e'),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
               const SizedBox(height: 80), // Bottom padding for FAB
             ],

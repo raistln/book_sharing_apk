@@ -100,9 +100,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                     icon: const Icon(Icons.shelves),
                     tooltip: 'Estantería Virtual',
                   ),
-                  
+
                   const Spacer(),
-                  
+
                   // Derecha: Notificaciones, Usuario, Ajustes
                   IconButton(
                     onPressed: () => _showNotificationsSheet(context, ref),
@@ -118,7 +118,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const SettingsTab()),
+                        MaterialPageRoute(
+                            builder: (context) => const SettingsTab()),
                       );
                     },
                     icon: const Icon(Icons.settings_outlined),

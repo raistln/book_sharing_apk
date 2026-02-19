@@ -35,7 +35,9 @@ class _CoachMarkTargetState extends ConsumerState<CoachMarkTarget> {
   @override
   void didUpdateWidget(CoachMarkTarget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.id != oldWidget.id || widget.config != oldWidget.config || widget.enabled != oldWidget.enabled) {
+    if (widget.id != oldWidget.id ||
+        widget.config != oldWidget.config ||
+        widget.enabled != oldWidget.enabled) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _registerTarget());
     }
   }

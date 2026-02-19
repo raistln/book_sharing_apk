@@ -49,7 +49,8 @@ class GroupSyncController extends StateNotifier<SyncState> {
     try {
       final user = await _userRepository.getActiveUser();
       if (user == null || user.isDeleted) {
-        throw const SyncException('Crea o selecciona un usuario antes de sincronizar.');
+        throw const SyncException(
+            'Crea o selecciona un usuario antes de sincronizar.');
       }
 
       final config = await _configService.loadConfig();
@@ -73,7 +74,7 @@ class GroupSyncController extends StateNotifier<SyncState> {
         hasPendingChanges: false,
         lastSyncedAt: DateTime.now(),
       );
-      
+
       if (kDebugMode) {
         debugPrint('[GroupSync] ✓ Sync completed successfully');
       }
@@ -83,11 +84,11 @@ class GroupSyncController extends StateNotifier<SyncState> {
         isSyncing: false,
         lastError: () => message,
       );
-      
+
       if (kDebugMode) {
         debugPrint('[GroupSync] ✗ Sync failed: $message');
       }
-      
+
       rethrow; // Re-throw para que el coordinador maneje los reintentos
     }
   }

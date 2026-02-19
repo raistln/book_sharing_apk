@@ -44,7 +44,8 @@ class SyncState {
   }
 
   @override
-  int get hashCode => Object.hash(isSyncing, hasPendingChanges, lastSyncedAt, lastError);
+  int get hashCode =>
+      Object.hash(isSyncing, hasPendingChanges, lastSyncedAt, lastError);
 }
 
 class SyncException implements Exception {
@@ -171,7 +172,8 @@ class SyncController extends StateNotifier<SyncState> {
         rethrow;
       }
       if (kDebugMode) {
-        debugPrint('SyncController state update skipped after dispose — $error');
+        debugPrint(
+            'SyncController state update skipped after dispose — $error');
         debugPrint(stackTrace.toString());
       }
     }

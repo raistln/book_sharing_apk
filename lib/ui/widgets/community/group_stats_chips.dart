@@ -23,7 +23,7 @@ class GroupStatsChips extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeUser = ref.watch(activeUserProvider).value;
-    
+
     return Wrap(
       spacing: 16,
       runSpacing: 8,
@@ -43,7 +43,8 @@ class GroupStatsChips extends ConsumerWidget {
           sharedBooksAsync.when(
             data: (books) {
               final myBooks = (books as List<SharedBookDetail>)
-                  .where((detail) => detail.sharedBook.ownerUserId == activeUser.id)
+                  .where((detail) =>
+                      detail.sharedBook.ownerUserId == activeUser.id)
                   .length;
               return Chip(
                 avatar: const Icon(Icons.person_outline, size: 18),
@@ -67,29 +68,29 @@ class GroupStatsChips extends ConsumerWidget {
         loansAsync.when(
           data: (loans) {
             final activeLoans = (loans as List<LoanDetail>)
-                .where((detail) => 
-                    detail.loan.status == 'requested' || 
+                .where((detail) =>
+                    detail.loan.status == 'requested' ||
                     detail.loan.status == 'active')
                 .toList();
-            
+
             // Get IDs of books with active loans
             final loanedBookIds = activeLoans
                 .map((detail) => detail.sharedBook?.id)
                 .where((id) => id != null)
                 .cast<int>()
                 .toSet();
-            
+
             return sharedBooksAsync.when(
               data: (books) {
                 final sharedBooks = books as List<SharedBookDetail>;
-                
+
                 // Count available books (exclude those with active loans)
                 final available = sharedBooks
-                    .where((detail) => 
-                        detail.sharedBook.isAvailable && 
+                    .where((detail) =>
+                        detail.sharedBook.isAvailable &&
                         !loanedBookIds.contains(detail.sharedBook.id))
                     .length;
-                    
+
                 return Chip(
                   avatar: const Icon(Icons.check_circle_outline, size: 18),
                   label: Text('Disponibles: $available'),
@@ -126,12 +127,11 @@ class GroupStatsChips extends ConsumerWidget {
         loansAsync.when(
           data: (loans) {
             final active = (loans as List<LoanDetail>)
-                .where((detail) => 
-                    detail.loan.status == 'requested' || 
+                .where((detail) =>
+                    detail.loan.status == 'requested' ||
                     detail.loan.status == 'active')
                 .length;
-            
-            
+
             return Chip(
               avatar: const Icon(Icons.swap_horiz_outlined, size: 18),
               label: Text('Préstamos activos: $active'),

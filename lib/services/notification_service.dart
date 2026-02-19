@@ -76,7 +76,8 @@ class NotificationService implements NotificationClient {
   bool _timezoneInitialized = false;
   bool _platformAvailable = true;
 
-  final _responseController = StreamController<NotificationResponse>.broadcast();
+  final _responseController =
+      StreamController<NotificationResponse>.broadcast();
 
   Stream<NotificationResponse> get responses => _responseController.stream;
 
@@ -117,8 +118,10 @@ class NotificationService implements NotificationClient {
       return;
     }
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
-    const initializationSettings = InitializationSettings(android: androidSettings);
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/launcher_icon');
+    const initializationSettings =
+        InitializationSettings(android: androidSettings);
 
     await _plugin.initialize(
       initializationSettings,
@@ -139,7 +142,8 @@ class NotificationService implements NotificationClient {
     );
 
     await _plugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(androidChannel);
 
     _initialized = true;
@@ -150,8 +154,8 @@ class NotificationService implements NotificationClient {
     if (!_platformAvailable) {
       return false;
     }
-    final androidImpl = _plugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final androidImpl = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     if (androidImpl == null) {
       return false;
     }
@@ -208,7 +212,8 @@ class NotificationService implements NotificationClient {
       return;
     }
 
-    final scheduledInstant = scheduledAt.isUtc ? scheduledAt : scheduledAt.toUtc();
+    final scheduledInstant =
+        scheduledAt.isUtc ? scheduledAt : scheduledAt.toUtc();
     final tzDateTime = tz.TZDateTime.from(scheduledInstant, tz.UTC);
 
     const details = NotificationDetails(
@@ -277,7 +282,8 @@ class NotificationService implements NotificationClient {
     }
   }
 
-  Future<List<PendingNotificationRequest>> getPendingNotificationRequests() async {
+  Future<List<PendingNotificationRequest>>
+      getPendingNotificationRequests() async {
     await init();
     if (!_platformAvailable) {
       return const [];

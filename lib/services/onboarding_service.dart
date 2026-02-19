@@ -21,7 +21,8 @@ class OnboardingProgress {
   final bool detailCoachSeen;
 
   bool get shouldShowWizard => introSeen && !completed;
-  bool get shouldShowDiscoverCoach => discoverCoachPending && !discoverCoachSeen;
+  bool get shouldShowDiscoverCoach =>
+      discoverCoachPending && !discoverCoachSeen;
   bool get shouldShowDetailCoach => detailCoachPending && !detailCoachSeen;
 }
 

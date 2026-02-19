@@ -49,9 +49,6 @@ class ReadingRepository {
     final activeSessions = await _readingSessionDao.getAllActiveSessions();
     final now = DateTime.now();
 
-    print(
-        '[ReadingRepository] 🧟 Zombie Killer: Cerrando ${activeSessions.length} sesiones activas');
-
     for (final session in activeSessions) {
       await _readingSessionDao.updateSession(
         ReadingSessionsCompanion(
@@ -64,8 +61,6 @@ class ReadingRepository {
         ),
       );
     }
-
-    print('[ReadingRepository] 🧟 Zombie Killer: Sesiones cerradas');
   }
 
   /// Inicia una nueva sesión de lectura para un libro.
@@ -76,15 +71,9 @@ class ReadingRepository {
   }) async {
     final now = DateTime.now();
 
-    print(
-        '[ReadingRepository] ▶️  startSession: bookId=$bookId, startPage=$startPage');
-
     // Cerrar sesión zombie si existe
     final existing = await _readingSessionDao.findActiveSessionForBook(bookId);
     if (existing != null) {
-      print(
-          '[ReadingRepository] 🧟 startSession: Cerrando sesión zombie ${existing.id}');
-
       final endTime = now.difference(existing.startTime).inHours > 12
           ? existing.startTime
           : now;
@@ -116,8 +105,6 @@ class ReadingRepository {
     if (initialPage == null) {
       final lastProgress = await getLatestProgress(bookId);
       initialPage = lastProgress?.currentPage ?? 0;
-      print(
-          '[ReadingRepository] 📖 startSession: Página inicial desde timeline: $initialPage');
     }
 
     final session = ReadingSessionsCompanion.insert(
@@ -133,16 +120,12 @@ class ReadingRepository {
 
     final id = await _readingSessionDao.insertSession(session);
 
-    print('[ReadingRepository] ✅ startSession: Sesión creada con id=$id');
-
     return (await _readingSessionDao.getSessionsForBook(bookId))
         .firstWhere((s) => s.id == id);
   }
 
   /// Elimina una sesión (cancelada por el usuario).
   Future<void> deleteSession(int sessionId) async {
-    print(
-        '[ReadingRepository] 🗑️  deleteSession: Eliminando sesión $sessionId');
     await _readingSessionDao.deleteSession(sessionId);
   }
 
@@ -161,18 +144,6 @@ class ReadingRepository {
     final startPage = session.startPage ?? 0;
     final pagesRead = (endPage - startPage).clamp(0, 99999);
 
-    print('[ReadingRepository] 💾 endSessionWithContext INICIO:');
-    print('  session.id = ${session.id}');
-    print('  bookId = ${session.bookId}');
-    print('  startPage = $startPage');
-    print('  endPage = $endPage');
-    print('  pagesRead = $pagesRead');
-    print(
-        '  duration = ${duration.inMinutes} minutos (${duration.inSeconds} segundos)');
-    print('  notes = "$notes"');
-    print('  mood = "$mood"');
-    print('  userId = $userId');
-
     // 1. Actualizar sesión en DB
     try {
       await _readingSessionDao.updateSession(
@@ -188,10 +159,7 @@ class ReadingRepository {
           updatedAt: drift.Value(now),
         ),
       );
-      print('[ReadingRepository] ✅ Sesión actualizada en DB correctamente');
-    } catch (e, st) {
-      print('[ReadingRepository] ❌ ERROR al actualizar sesión: $e');
-      print('[ReadingRepository] StackTrace: $st');
+    } catch (e) {
       rethrow;
     }
 
@@ -202,20 +170,9 @@ class ReadingRepository {
       percentage = ((endPage / book.pageCount!) * 100).clamp(0, 100).round();
     }
 
-    print(
-        '[ReadingRepository] 📊 book.pageCount = ${book?.pageCount}, percentage = $percentage');
-
     // 3. Crear entrada en Timeline
     try {
-      print('[ReadingRepository] 📝 Intentando crear timeline entry...');
-      print('  → bookId: ${session.bookId}');
-      print('  → ownerUserId: $userId');
-      print('  → eventType: "progress"');
-      print('  → currentPage: $endPage');
-      print('  → percentageRead: $percentage');
-      print('  → note: "$notes"');
-
-      final timelineEntry = await _timelineEntryDao.createEntry(
+      await _timelineEntryDao.createEntry(
         bookId: session.bookId,
         ownerUserId: userId,
         eventType: 'progress',
@@ -224,19 +181,8 @@ class ReadingRepository {
         note: notes,
         eventDate: now,
       );
-
-      print('[ReadingRepository] ✅ Timeline entry creada exitosamente:');
-      print('  → id: ${timelineEntry.id}');
-      print('  → uuid: ${timelineEntry.uuid}');
-      print('  → currentPage: ${timelineEntry.currentPage}');
-      print('  → note: "${timelineEntry.note}"');
-      print('  → eventDate: ${timelineEntry.eventDate}');
-    } catch (e, st) {
-      print('[ReadingRepository] ❌ ERROR CRÍTICO al crear timeline entry:');
-      print('  Error: $e');
-      print('  StackTrace: $st');
-      print('  → ¿El userId=$userId existe en local_users?');
-      print('  → ¿El bookId=${session.bookId} existe en books?');
+    } catch (e) {
+      // Entrada en timeline es opcional, no bloqueamos el cierre de sesión
     }
 
     // 4. Actualizar libro
@@ -249,13 +195,9 @@ class ReadingRepository {
           isDirty: const drift.Value(true),
         ),
       );
-      print('[ReadingRepository] ✅ Libro actualizado');
-    } catch (e, st) {
-      print('[ReadingRepository] ❌ ERROR al actualizar libro: $e');
-      print('[ReadingRepository] StackTrace: $st');
+    } catch (e) {
+      // Actualización de campos del libro falló, se reintentará en la próxima sync
     }
-
-    print('[ReadingRepository] 💾 endSessionWithContext COMPLETO\n');
   }
 
   /// Marca un libro como terminado.
@@ -267,28 +209,17 @@ class ReadingRepository {
   }) async {
     final now = DateTime.now();
 
-    print('[ReadingRepository] 🏁 finishBook INICIO:');
-    print('  bookId = $bookId');
-    print('  finalPage = $finalPage');
-    print('  notes = "$notes"');
-    print('  userId = $userId');
-
     // 1. Actualizar estado del libro
     try {
       await _bookDao.updateReadingStatus(bookId, 'finished');
       await _bookDao.toggleReadStatus(bookId, true);
-      print('[ReadingRepository] ✅ Estado del libro actualizado a "finished"');
-    } catch (e, st) {
-      print('[ReadingRepository] ❌ ERROR al actualizar estado: $e');
-      print('[ReadingRepository] StackTrace: $st');
+    } catch (e) {
+      // Fallo al actualizar estado a finished, se reintentará
     }
 
     // 2. Crear entrada 'finish' en timeline
     try {
-      print(
-          '[ReadingRepository] 📝 Intentando crear timeline entry "finish"...');
-
-      final timelineEntry = await _timelineEntryDao.createEntry(
+      await _timelineEntryDao.createEntry(
         bookId: bookId,
         ownerUserId: userId,
         eventType: 'finish',
@@ -297,18 +228,9 @@ class ReadingRepository {
         note: notes,
         eventDate: now,
       );
-
-      print('[ReadingRepository] ✅ Timeline entry "finish" creada:');
-      print('  → id: ${timelineEntry.id}');
-      print('  → uuid: ${timelineEntry.uuid}');
-      print('  → note: "${timelineEntry.note}"');
-    } catch (e, st) {
-      print('[ReadingRepository] ❌ ERROR al crear timeline entry "finish":');
-      print('  Error: $e');
-      print('  StackTrace: $st');
+    } catch (e) {
+      // Entrada en timeline de finalización es opcional
     }
-
-    print('[ReadingRepository] 🏁 finishBook COMPLETO\n');
   }
 
   /// Registra progreso manual desde la timeline sin usar cronómetro.
@@ -322,17 +244,10 @@ class ReadingRepository {
   }) async {
     final now = eventDate ?? DateTime.now();
 
-    print('[ReadingRepository] 📝 recordManualProgress:');
-    print('  bookId = ${book.id}');
-    print('  currentPage = $currentPage');
-    print('  userId = $userId');
-
     // 1. Obtener último progreso para calcular páginas leídas
     final lastProgress = await _timelineEntryDao.getLatestEntry(book.id);
     final previousPage = lastProgress?.currentPage ?? 0;
     final pagesRead = (currentPage - previousPage).clamp(0, 99999);
-
-    print('  previousPage = $previousPage, pagesRead = $pagesRead');
 
     // 2. Crear sesión de 0 segundos para stats
     await _readingSessionDao.insertSession(
@@ -379,8 +294,6 @@ class ReadingRepository {
         isDirty: const drift.Value(true),
       ),
     );
-
-    print('[ReadingRepository] ✅ recordManualProgress COMPLETO\n');
   }
 
   /// Actualiza la página actual de una sesión activa.
@@ -441,9 +354,6 @@ class ReadingRepository {
       startOfWeek.day,
     );
 
-    print(
-        '[ReadingRepository] 📊 getWeeklyStats: Calculando desde $startOfPeriod hasta $now');
-
     final sessions = await _readingSessionDao.getSessionsInPeriod(
       startOfPeriod,
       now,
@@ -467,9 +377,6 @@ class ReadingRepository {
     // Calcular promedio de páginas por día (dividir entre 7 días de la semana)
     final pagesPerDay = totalPages / 7.0;
 
-    print('[ReadingRepository] 📊 Weekly Stats: ${sessions.length} sesiones, '
-        '${totalDuration.inMinutes}min, $totalPages páginas, ${pagesPerDay.toStringAsFixed(1)} páginas/día');
-
     return WeeklyReadingStats(
       totalDuration: totalDuration,
       totalPages: totalPages,
@@ -486,9 +393,6 @@ class ReadingRepository {
   Future<MonthlyReadingStats> getMonthlyStats() async {
     final now = DateTime.now();
     final startOfMonth = DateTime(now.year, now.month, 1);
-
-    print(
-        '[ReadingRepository] 📊 getMonthlyStats: Calculando desde $startOfMonth hasta $now');
 
     // 1. Sesiones del mes
     final sessions = await _readingSessionDao.getSessionsInPeriod(
@@ -516,9 +420,6 @@ class ReadingRepository {
       startOfMonth,
       now,
     );
-
-    print('[ReadingRepository] 📊 Monthly Stats: ${sessions.length} sesiones, '
-        '${totalDuration.inMinutes}min, $totalPages páginas, $booksFinished libros terminados');
 
     return MonthlyReadingStats(
       totalDuration: totalDuration,

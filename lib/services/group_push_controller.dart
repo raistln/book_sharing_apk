@@ -88,7 +88,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required LocalUser owner,
     String? accessToken,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final group = await _groupPushRepository.createGroup(
         name: name,
@@ -96,7 +97,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         owner: owner,
         accessToken: accessToken,
       );
-      
+
       // Automatically share existing books with the new group
       await _bookRepository.shareExistingBooksWithGroup(
         group: group,
@@ -105,7 +106,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
 
       // Trigger critical sync event for group creation
       await _syncCoordinator.syncOnCriticalEvent(SyncEvent.userJoinedGroup);
-      
+
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Grupo creado.',
@@ -126,7 +127,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     String? description,
     String? accessToken,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       await _groupPushRepository.updateGroup(
         group: group,
@@ -168,16 +170,17 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required Group group,
     String? accessToken,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       await _groupPushRepository.deleteGroup(
         group: group,
         accessToken: accessToken,
       );
-      
+
       // Trigger critical sync event for group deletion
       await _syncCoordinator.syncOnCriticalEvent(SyncEvent.userLeftGroup);
-      
+
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Grupo eliminado.',
@@ -185,12 +188,14 @@ class GroupPushController extends StateNotifier<GroupActionState> {
 
       // Notify members about group deletion
       // Note: We used to fetch members here, but it's better to fetch them BEFORE remote deletion
-      // However, for simplicity and since we are in a controller, we'll try to notify 
+      // However, for simplicity and since we are in a controller, we'll try to notify
       // based on the ID we have, assuming the local DB still has them cached or repository handles it.
       await _runNotificationTask(() async {
         final members = await _groupDao.getMembersByGroupId(group.id);
         for (final member in members) {
-          if (member.memberUserId == group.ownerUserId) continue; // Don't notify owner of their own deletion
+          if (member.memberUserId == group.ownerUserId) {
+            continue; // Don't notify owner of their own deletion
+          }
           await _notificationRepository.createNotification(
             type: InAppNotificationType.groupDeleted,
             targetUserId: member.memberUserId,
@@ -213,7 +218,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required LocalUser newOwner,
     String? accessToken,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       await _groupPushRepository.transferOwnership(
         group: group,
@@ -240,7 +246,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required String role,
     String? accessToken,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final member = await _groupPushRepository.addMember(
         group: group,
@@ -253,7 +260,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         isLoading: false,
         lastSuccess: () => 'Miembro añadido.',
       );
-      
+
       // Notify owner about new member
       await _runNotificationTask(() async {
         await _notificationRepository.createNotification(
@@ -280,7 +287,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required String role,
     String? accessToken,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       await _groupPushRepository.updateMemberRole(
         member: member,
@@ -305,7 +313,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required GroupMember member,
     String? accessToken,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       await _groupPushRepository.removeMember(
         member: member,
@@ -350,7 +359,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     DateTime? expiresAt,
     String? accessToken,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final invitation = await _groupPushRepository.createInvitation(
         group: group,
@@ -359,15 +369,16 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         expiresAt: expiresAt,
         accessToken: accessToken,
       );
-      
+
       // Trigger critical sync event for invitation creation
-      await _syncCoordinator.syncOnCriticalEvent(SyncEvent.groupInvitationAccepted);
-      
+      await _syncCoordinator
+          .syncOnCriticalEvent(SyncEvent.groupInvitationAccepted);
+
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Invitación creada.',
       );
-      
+
       // Removed self-notification - user will share via share button
       return invitation;
     } catch (error) {
@@ -383,7 +394,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required GroupInvitation invitation,
     String? accessToken,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       await _groupPushRepository.cancelInvitation(
         invitation: invitation,
@@ -411,7 +423,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required String newStatus,
     String? accessToken,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final updated = await _groupPushRepository.respondInvitation(
         invitation: invitation,
@@ -420,7 +433,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         newStatus: newStatus,
         accessToken: accessToken,
       );
-      
+
       // If invitation was accepted, share existing books with the group
       if (newStatus == 'accepted') {
         await _bookRepository.shareExistingBooksWithGroup(
@@ -428,19 +441,23 @@ class GroupPushController extends StateNotifier<GroupActionState> {
           owner: user,
         );
         // Evento crítico: invitación aceptada → sync inmediata
-        await _syncCoordinator.syncOnCriticalEvent(SyncEvent.groupInvitationAccepted);
+        await _syncCoordinator
+            .syncOnCriticalEvent(SyncEvent.groupInvitationAccepted);
       } else if (newStatus == 'rejected') {
         // Evento crítico: invitación rechazada → sync inmediata
-        await _syncCoordinator.syncOnCriticalEvent(SyncEvent.groupInvitationRejected);
+        await _syncCoordinator
+            .syncOnCriticalEvent(SyncEvent.groupInvitationRejected);
       } else {
         // Otros estados usan debouncing normal
-        _syncCoordinator.markPendingChanges(SyncEntity.groups, priority: SyncPriority.medium);
+        _syncCoordinator.markPendingChanges(SyncEntity.groups,
+            priority: SyncPriority.medium);
       }
-      
+
       state = state.copyWith(
         isLoading: false,
-        lastSuccess: () =>
-            newStatus == 'accepted' ? 'Invitación aceptada.' : 'Invitación actualizada.',
+        lastSuccess: () => newStatus == 'accepted'
+            ? 'Invitación aceptada.'
+            : 'Invitación actualizada.',
       );
       await _cancelGroupInvitationNotification(updated);
       return updated;
@@ -458,14 +475,15 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required LocalUser user,
     String? accessToken,
   }) async {
-    state = state.copyWith(isLoading: true, lastError: () => null, lastSuccess: () => null);
+    state = state.copyWith(
+        isLoading: true, lastError: () => null, lastSuccess: () => null);
     try {
       final invitation = await _groupPushRepository.acceptInvitationByCode(
         code: code,
         user: user,
         accessToken: accessToken,
       );
-      
+
       // Share existing books with the newly joined group
       final group = await _groupDao.findGroupById(invitation.groupId);
       if (group != null) {
@@ -474,10 +492,10 @@ class GroupPushController extends StateNotifier<GroupActionState> {
           owner: user,
         );
       }
-      
+
       // Evento crítico: usuario se unió al grupo → sync inmediata
       await _syncCoordinator.syncOnCriticalEvent(SyncEvent.userJoinedGroup);
-      
+
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => 'Te uniste al grupo.',
@@ -507,14 +525,16 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     }
   }
 
-  Future<void> _cancelGroupInvitationNotification(GroupInvitation invitation) async {
+  Future<void> _cancelGroupInvitationNotification(
+      GroupInvitation invitation) async {
     final invitationUuid = invitation.uuid;
     if (invitationUuid.isEmpty) {
       return;
     }
 
     try {
-      await _notificationClient.cancel(NotificationIds.groupInvitation(invitationUuid));
+      await _notificationClient
+          .cancel(NotificationIds.groupInvitation(invitationUuid));
     } catch (error, stackTrace) {
       if (kDebugMode) {
         debugPrint('Error cancelling group invitation notification: $error');

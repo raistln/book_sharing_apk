@@ -39,7 +39,8 @@ class CoachMarkOverlay extends StatelessWidget {
         .clamp(16.0, size.width - 16.0 - cardMaxWidth);
 
     final availableTop = clampedRect.top - safeInsets.top;
-    final availableBottom = size.height - safeInsets.bottom - clampedRect.bottom;
+    final availableBottom =
+        size.height - safeInsets.bottom - clampedRect.bottom;
     const estimatedCardHeight = 200.0;
 
     bool placeAbove;
@@ -51,7 +52,8 @@ class CoachMarkOverlay extends StatelessWidget {
         placeAbove = false;
         break;
       case CoachMarkContentPosition.auto:
-        if (availableBottom >= estimatedCardHeight || availableBottom >= availableTop) {
+        if (availableBottom >= estimatedCardHeight ||
+            availableBottom >= availableTop) {
           placeAbove = false;
         } else {
           placeAbove = true;
@@ -62,7 +64,8 @@ class CoachMarkOverlay extends StatelessWidget {
     final card = Positioned(
       left: cardLeft,
       width: cardMaxWidth,
-      top: placeAbove ? null : max(clampedRect.bottom + 16, safeInsets.top + 16),
+      top:
+          placeAbove ? null : max(clampedRect.bottom + 16, safeInsets.top + 16),
       bottom: placeAbove
           ? max(size.height - clampedRect.top + 16, safeInsets.bottom + 16)
           : null,
@@ -93,7 +96,8 @@ class CoachMarkOverlay extends StatelessWidget {
               ignoring: true,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.all(Radius.circular(display.config.cornerRadius)),
+                  borderRadius: BorderRadius.all(
+                      Radius.circular(display.config.cornerRadius)),
                   border: Border.all(
                     color: Colors.white.withValues(alpha: 0.8),
                     width: 2,

@@ -21,7 +21,8 @@ enum InAppNotificationType {
   static InAppNotificationType? fromValue(String value) {
     final normalized = _normalize(value);
     for (final type in values) {
-      if (_normalize(type.value) == normalized || _normalize(type.name) == normalized) {
+      if (_normalize(type.value) == normalized ||
+          _normalize(type.name) == normalized) {
         return type;
       }
     }

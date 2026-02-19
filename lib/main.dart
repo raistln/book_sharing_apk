@@ -32,7 +32,7 @@ Future<void> main() async {
         debugPrint('[Main] Supabase URL or Key missing in .env');
       }
       // Fallback or skip? Supabase.initialize is required for Supabase.instance usage.
-       // We might use defaults if available, but for now just log warning.
+      // We might use defaults if available, but for now just log warning.
     }
   } catch (e) {
     if (kDebugMode) {
@@ -66,7 +66,7 @@ Future<void> main() async {
       debugPrint('Failed to ensure notification permissions: $e');
     }
   }
-  
+
   try {
     await notificationService.requestPermissions();
   } catch (e) {

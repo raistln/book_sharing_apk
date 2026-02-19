@@ -20,7 +20,8 @@ class AuthService {
   })  : _userRepository = userRepository,
         _localAuth = localAuth ?? LocalAuthentication(),
         _storage = storageAdapter ??
-            _SecurePluginStorageAdapter(storage ?? const FlutterSecureStorage()),
+            _SecurePluginStorageAdapter(
+                storage ?? const FlutterSecureStorage()),
         _random = random ?? Random.secure();
 
   final UserRepository _userRepository;

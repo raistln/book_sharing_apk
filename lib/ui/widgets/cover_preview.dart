@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'cover_preview_stub.dart'
-    if (dart.library.io) 'cover_preview_io.dart';
+import 'cover_preview_stub.dart' if (dart.library.io) 'cover_preview_io.dart';
 
 Widget buildCoverPreview(
   String? path, {

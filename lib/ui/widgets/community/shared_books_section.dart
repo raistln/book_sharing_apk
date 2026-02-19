@@ -15,10 +15,11 @@ class SharedBooksSection extends StatelessWidget {
         if (books.isEmpty) {
           return const SizedBox.shrink(); // No mostrar nada si está vacío
         }
-        
+
         final totalBooks = books.length;
-        final availableBooks = books.where((b) => b.sharedBook.isAvailable == true).length;
-        
+        final availableBooks =
+            books.where((b) => b.sharedBook.isAvailable == true).length;
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -53,7 +54,8 @@ class SharedBooksSection extends StatelessWidget {
         child: LinearProgressIndicator(),
       ),
       error: (error, _) => Text('Error cargando libros compartidos: $error',
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.error)),
     );
   }
 }

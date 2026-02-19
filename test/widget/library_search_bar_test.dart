@@ -28,10 +28,10 @@ void main() {
 
       // Verify search field is present
       expect(find.byType(TextField), findsOneWidget);
-      
+
       // Verify search hint text
       expect(find.text('Buscar por título o autor...'), findsOneWidget);
-      
+
       // Verify search icon
       expect(find.byIcon(Icons.search), findsOneWidget);
     });
@@ -188,7 +188,7 @@ void main() {
       // Enter text and then clear it
       await tester.enterText(find.byType(TextField), 'test');
       await tester.pump();
-      
+
       expect(changedQuery, 'test');
 
       // Clear the text

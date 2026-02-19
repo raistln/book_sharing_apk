@@ -107,7 +107,8 @@ class GlobalSyncState {
       !isSyncing && pendingChangesCount == 0 && lastError == null;
 
   /// Retorna true si hay errores de sincronización.
-  bool get hasErrors => lastError != null || entityStates.values.any((e) => e.error != null);
+  bool get hasErrors =>
+      lastError != null || entityStates.values.any((e) => e.error != null);
 
   /// Cuenta total de cambios pendientes en todas las entidades.
   int get pendingChangesCount =>

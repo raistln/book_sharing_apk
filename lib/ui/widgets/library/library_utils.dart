@@ -6,7 +6,6 @@ import '../empty_state.dart';
 /// Export action enum for library export
 enum ExportAction { share, download }
 
-
 /// Shows a feedback snackbar with the given message
 void showFeedbackSnackBar({
   required BuildContext context,

@@ -18,7 +18,8 @@ class SupabaseNotificationSyncRepository {
   })  : _notificationDao = notificationDao,
         _userDao = userDao,
         _groupDao = groupDao,
-        _notificationService = notificationService ?? SupabaseNotificationService();
+        _notificationService =
+            notificationService ?? SupabaseNotificationService();
 
   final NotificationDao _notificationDao;
   final UserDao _userDao;
@@ -149,7 +150,8 @@ class SupabaseNotificationSyncRepository {
 
     for (final local in dirtyNotifications) {
       try {
-        final loanRemoteId = await _resolveLoanRemoteId(local.loanId, local.loanUuid);
+        final loanRemoteId =
+            await _resolveLoanRemoteId(local.loanId, local.loanUuid);
 
         final targetUser = await _userDao.getById(local.targetUserId);
         final targetUserRemoteId = targetUser?.remoteId;
@@ -217,7 +219,6 @@ class SupabaseNotificationSyncRepository {
     }
   }
 
-  
   Future<_LoanResolution?> _resolveLoan(String? remoteIdOrUuid) async {
     if (remoteIdOrUuid == null || remoteIdOrUuid.isEmpty) {
       return null;
@@ -225,12 +226,14 @@ class SupabaseNotificationSyncRepository {
 
     final byRemote = await _groupDao.findLoanByRemoteId(remoteIdOrUuid);
     if (byRemote != null) {
-      return _LoanResolution(id: byRemote.id, uuid: byRemote.uuid, remoteId: byRemote.remoteId);
+      return _LoanResolution(
+          id: byRemote.id, uuid: byRemote.uuid, remoteId: byRemote.remoteId);
     }
 
     final byUuid = await _groupDao.findLoanByUuid(remoteIdOrUuid);
     if (byUuid != null) {
-      return _LoanResolution(id: byUuid.id, uuid: byUuid.uuid, remoteId: byUuid.remoteId);
+      return _LoanResolution(
+          id: byUuid.id, uuid: byUuid.uuid, remoteId: byUuid.remoteId);
     }
 
     developer.log(

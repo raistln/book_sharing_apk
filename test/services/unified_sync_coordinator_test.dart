@@ -69,7 +69,7 @@ void main() {
 
     tearDown(() {
       coordinator.dispose();
-      
+
       // Clean up any remaining mock state
       reset(mockUserSync);
       reset(mockBookSync);
@@ -109,7 +109,8 @@ void main() {
       });
 
       test('syncNow sincroniza solo entidades especificadas', () async {
-        await coordinator.syncNow(entities: [SyncEntity.users, SyncEntity.books]);
+        await coordinator
+            .syncNow(entities: [SyncEntity.users, SyncEntity.books]);
 
         verify(() => mockUserSync.sync()).called(1);
         verify(() => mockBookSync.sync()).called(1);
@@ -200,14 +201,14 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
-        
+
         // Reset all mocks
         reset(mockUserSyncForTest);
         reset(mockBookSyncForTest);
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
-        
+
         // Setup mock responses
         when(() => mockUserSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockUserSyncForTest.state).thenReturn(const SyncState());
@@ -219,7 +220,8 @@ void main() {
         when(() => mockGroupSyncForTest.state).thenReturn(const SyncState());
         when(() => mockGroupSyncForTest.mounted).thenReturn(true);
         when(() => mockNotificationSyncForTest.sync()).thenAnswer((_) async {});
-        when(() => mockNotificationSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockNotificationSyncForTest.state)
+            .thenReturn(const SyncState());
         when(() => mockNotificationSyncForTest.mounted).thenReturn(true);
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
@@ -239,7 +241,8 @@ void main() {
           await coordinatorForTest.syncOnCriticalEvent(SyncEvent.loanCreated);
 
           // Debe sincronizar inmediatamente - loanCreated triggers loans, groups, and books
-          verify(() => mockGroupSyncForTest.syncGroups()).called(greaterThan(0));
+          verify(() => mockGroupSyncForTest.syncGroups())
+              .called(greaterThan(0));
           verify(() => mockBookSyncForTest.sync()).called(greaterThan(0));
           verify(() => mockLoanSyncForTest.sync()).called(greaterThan(0));
         } finally {
@@ -254,14 +257,14 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
-        
+
         // Reset all mocks
         reset(mockUserSyncForTest);
         reset(mockBookSyncForTest);
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
-        
+
         // Setup mock responses
         when(() => mockUserSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockUserSyncForTest.state).thenReturn(const SyncState());
@@ -273,7 +276,8 @@ void main() {
         when(() => mockGroupSyncForTest.state).thenReturn(const SyncState());
         when(() => mockGroupSyncForTest.mounted).thenReturn(true);
         when(() => mockNotificationSyncForTest.sync()).thenAnswer((_) async {});
-        when(() => mockNotificationSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockNotificationSyncForTest.state)
+            .thenReturn(const SyncState());
         when(() => mockNotificationSyncForTest.mounted).thenReturn(true);
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
@@ -295,7 +299,8 @@ void main() {
           );
 
           verify(() => mockUserSyncForTest.sync()).called(greaterThan(0));
-          verify(() => mockGroupSyncForTest.syncGroups()).called(greaterThan(0));
+          verify(() => mockGroupSyncForTest.syncGroups())
+              .called(greaterThan(0));
         } finally {
           coordinatorForTest.dispose();
         }
@@ -308,14 +313,14 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
-        
+
         // Reset all mocks
         reset(mockUserSyncForTest);
         reset(mockBookSyncForTest);
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
-        
+
         // Setup mock responses
         when(() => mockUserSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockUserSyncForTest.state).thenReturn(const SyncState());
@@ -327,7 +332,8 @@ void main() {
         when(() => mockGroupSyncForTest.state).thenReturn(const SyncState());
         when(() => mockGroupSyncForTest.mounted).thenReturn(true);
         when(() => mockNotificationSyncForTest.sync()).thenAnswer((_) async {});
-        when(() => mockNotificationSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockNotificationSyncForTest.state)
+            .thenReturn(const SyncState());
         when(() => mockNotificationSyncForTest.mounted).thenReturn(true);
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
@@ -348,7 +354,8 @@ void main() {
           await coordinatorForTest.syncOnCriticalEvent(SyncEvent.loanCreated);
 
           // Verify that critical event sync was triggered
-          verify(() => mockGroupSyncForTest.syncGroups()).called(greaterThan(0));
+          verify(() => mockGroupSyncForTest.syncGroups())
+              .called(greaterThan(0));
           verify(() => mockBookSyncForTest.sync()).called(greaterThan(0));
           verify(() => mockLoanSyncForTest.sync()).called(greaterThan(0));
         } finally {
@@ -365,15 +372,16 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
-        
+
         // Reset all mocks
         reset(mockBookSyncForTest);
         reset(mockUserSyncForTest);
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
-        
-        when(() => mockBookSyncForTest.sync()).thenThrow(Exception('Error de sincronización'));
+
+        when(() => mockBookSyncForTest.sync())
+            .thenThrow(Exception('Error de sincronización'));
         when(() => mockBookSyncForTest.state).thenReturn(const SyncState());
         when(() => mockBookSyncForTest.mounted).thenReturn(true);
         when(() => mockUserSyncForTest.sync()).thenAnswer((_) async {});
@@ -383,7 +391,8 @@ void main() {
         when(() => mockGroupSyncForTest.state).thenReturn(const SyncState());
         when(() => mockGroupSyncForTest.mounted).thenReturn(true);
         when(() => mockNotificationSyncForTest.sync()).thenAnswer((_) async {});
-        when(() => mockNotificationSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockNotificationSyncForTest.state)
+            .thenReturn(const SyncState());
         when(() => mockNotificationSyncForTest.mounted).thenReturn(true);
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
@@ -422,14 +431,14 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
-        
+
         // Reset all mocks
         reset(mockBookSyncForTest);
         reset(mockUserSyncForTest);
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
-        
+
         var callCount = 0;
         when(() => mockBookSyncForTest.sync()).thenAnswer((_) async {
           callCount++;
@@ -446,7 +455,8 @@ void main() {
         when(() => mockGroupSyncForTest.state).thenReturn(const SyncState());
         when(() => mockGroupSyncForTest.mounted).thenReturn(true);
         when(() => mockNotificationSyncForTest.sync()).thenAnswer((_) async {});
-        when(() => mockNotificationSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockNotificationSyncForTest.state)
+            .thenReturn(const SyncState());
         when(() => mockNotificationSyncForTest.mounted).thenReturn(true);
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
@@ -487,14 +497,14 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
-        
+
         // Reset all mocks
         reset(mockBookSyncForTest);
         reset(mockUserSyncForTest);
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
-        
+
         when(() => mockBookSyncForTest.sync())
             .thenThrow(Exception('Error persistente'));
         when(() => mockBookSyncForTest.state).thenReturn(const SyncState());
@@ -506,7 +516,8 @@ void main() {
         when(() => mockGroupSyncForTest.state).thenReturn(const SyncState());
         when(() => mockGroupSyncForTest.mounted).thenReturn(true);
         when(() => mockNotificationSyncForTest.sync()).thenAnswer((_) async {});
-        when(() => mockNotificationSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockNotificationSyncForTest.state)
+            .thenReturn(const SyncState());
         when(() => mockNotificationSyncForTest.mounted).thenReturn(true);
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
@@ -545,14 +556,14 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
-        
+
         // Reset all mocks
         reset(mockBookSyncForTest);
         reset(mockUserSyncForTest);
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
-        
+
         var callCount = 0;
         when(() => mockBookSyncForTest.sync()).thenAnswer((_) async {
           callCount++;
@@ -569,7 +580,8 @@ void main() {
         when(() => mockGroupSyncForTest.state).thenReturn(const SyncState());
         when(() => mockGroupSyncForTest.mounted).thenReturn(true);
         when(() => mockNotificationSyncForTest.sync()).thenAnswer((_) async {});
-        when(() => mockNotificationSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockNotificationSyncForTest.state)
+            .thenReturn(const SyncState());
         when(() => mockNotificationSyncForTest.mounted).thenReturn(true);
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
@@ -660,14 +672,14 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
-        
+
         // Reset all mocks
         reset(mockUserSyncForTest);
         reset(mockBookSyncForTest);
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
-        
+
         when(() => mockUserSyncForTest.sync()).thenAnswer(
           (_) => Future.delayed(const Duration(milliseconds: 500)),
         );
@@ -680,7 +692,8 @@ void main() {
         when(() => mockGroupSyncForTest.state).thenReturn(const SyncState());
         when(() => mockGroupSyncForTest.mounted).thenReturn(true);
         when(() => mockNotificationSyncForTest.sync()).thenAnswer((_) async {});
-        when(() => mockNotificationSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockNotificationSyncForTest.state)
+            .thenReturn(const SyncState());
         when(() => mockNotificationSyncForTest.mounted).thenReturn(true);
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
@@ -698,9 +711,11 @@ void main() {
 
         try {
           final states = <GlobalSyncState>[];
-          final subscription = coordinatorForTest.syncStateStream.listen(states.add);
+          final subscription =
+              coordinatorForTest.syncStateStream.listen(states.add);
 
-          final syncFuture = coordinatorForTest.syncNow(entities: [SyncEntity.users]);
+          final syncFuture =
+              coordinatorForTest.syncNow(entities: [SyncEntity.users]);
 
           // Esperar un poco para capturar el estado "isSyncing"
           await Future.delayed(const Duration(milliseconds: 100));

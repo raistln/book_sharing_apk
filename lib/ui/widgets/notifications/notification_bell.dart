@@ -17,11 +17,14 @@ class NotificationBell extends ConsumerWidget {
       data: (count) {
         final displayCount = count > 999 ? 999 : count;
         final icon = Icon(
-          count > 0 ? Icons.notifications_active_outlined : Icons.notifications_none_outlined,
+          count > 0
+              ? Icons.notifications_active_outlined
+              : Icons.notifications_none_outlined,
         );
 
         return Tooltip(
-          message: count > 0 ? 'Tienes $count notificaciones' : 'Notificaciones',
+          message:
+              count > 0 ? 'Tienes $count notificaciones' : 'Notificaciones',
           child: IconButton(
             onPressed: onPressed,
             icon: count > 0

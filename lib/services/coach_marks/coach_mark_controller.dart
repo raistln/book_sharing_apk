@@ -31,7 +31,8 @@ class CoachMarkController extends StateNotifier<CoachMarkState> {
   OverlayState? _overlayState;
   OverlayEntry? _overlayEntry;
 
-  CoachMarkRegistrationHandle registerTarget(CoachMarkTargetRegistration registration) {
+  CoachMarkRegistrationHandle registerTarget(
+      CoachMarkTargetRegistration registration) {
     _targets[registration.config.id] = registration;
     scheduleMicrotask(_showNext);
     return () => _targets.remove(registration.config.id);
@@ -86,7 +87,8 @@ class CoachMarkController extends StateNotifier<CoachMarkState> {
     await _showNext();
   }
 
-  Future<void> queueMarks(List<CoachMarkId> marks, {CoachMarkSequence? sequence}) async {
+  Future<void> queueMarks(List<CoachMarkId> marks,
+      {CoachMarkSequence? sequence}) async {
     final queue = List<CoachMarkId>.from(state.queue)..addAll(marks);
     state = state.copyWith(queue: queue, sequence: sequence ?? state.sequence);
     if (!state.isVisible) {

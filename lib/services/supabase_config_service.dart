@@ -13,7 +13,8 @@ class SupabaseConfig {
   final String anonKey;
   final String? serviceRoleKey;
 
-  SupabaseConfig copyWith({String? url, String? anonKey, String? serviceRoleKey}) =>
+  SupabaseConfig copyWith(
+          {String? url, String? anonKey, String? serviceRoleKey}) =>
       SupabaseConfig(
         url: url ?? this.url,
         anonKey: anonKey ?? this.anonKey,
@@ -21,7 +22,9 @@ class SupabaseConfig {
       );
 
   String authToken({bool useServiceRole = false}) {
-    if (useServiceRole && serviceRoleKey != null && serviceRoleKey!.isNotEmpty) {
+    if (useServiceRole &&
+        serviceRoleKey != null &&
+        serviceRoleKey!.isNotEmpty) {
       return serviceRoleKey!;
     }
     return anonKey;
@@ -38,8 +41,9 @@ class SupabaseConfigService {
 
     return SupabaseConfig(
       url: (envUrl != null && envUrl.isNotEmpty) ? envUrl : kSupabaseDefaultUrl,
-      anonKey:
-          (envAnon != null && envAnon.isNotEmpty) ? envAnon : kSupabaseDefaultAnonKey,
+      anonKey: (envAnon != null && envAnon.isNotEmpty)
+          ? envAnon
+          : kSupabaseDefaultAnonKey,
       serviceRoleKey: envService,
     );
   }

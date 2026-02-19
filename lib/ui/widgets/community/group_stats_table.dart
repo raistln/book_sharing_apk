@@ -22,9 +22,8 @@ class GroupStatsTable extends StatelessWidget {
     final myBooksCount = sharedBooks
         .where((sb) => sb.sharedBook.ownerUserId == currentUserId)
         .length;
-    final availableBooksCount = sharedBooks
-        .where((sb) => sb.sharedBook.isAvailable)
-        .length;
+    final availableBooksCount =
+        sharedBooks.where((sb) => sb.sharedBook.isAvailable).length;
     final activeLoansCount = loansAsync.asData?.value
             .where((l) => l.loan.status == 'active') // FIXED: active
             .length ??
@@ -45,7 +44,7 @@ class GroupStatsTable extends StatelessWidget {
           TableRow(
             children: [
               _buildCell(context, 'Miembros', '${members.length}'),
-              _buildCell(context, 'Libros', '${sharedBooks.length}'), 
+              _buildCell(context, 'Libros', '${sharedBooks.length}'),
               _buildCell(context, 'Mis Libros', '$myBooksCount'),
             ],
           ),

@@ -26,7 +26,9 @@ class IsbnUtils {
 
   static bool isIsbn13(String? value) {
     final normalized = normalize(value);
-    return normalized != null && normalized.length == 13 && int.tryParse(normalized) != null;
+    return normalized != null &&
+        normalized.length == 13 &&
+        int.tryParse(normalized) != null;
   }
 
   static bool isIsbn10(String? value) {
@@ -42,7 +44,9 @@ class IsbnUtils {
   /// Returns null when the input cannot be converted.
   static String? toIsbn10(String? raw) {
     final normalized = normalize(raw);
-    if (normalized == null || normalized.length != 13 || !normalized.startsWith('978')) {
+    if (normalized == null ||
+        normalized.length != 13 ||
+        !normalized.startsWith('978')) {
       return null;
     }
 
@@ -71,21 +75,24 @@ class IsbnUtils {
   /// Validates an ISBN-10 checksum
   static bool isValidIsbn10(String isbn) {
     if (isbn.length != 10) return false;
-    
+
     var sum = 0;
     for (var i = 0; i < 9; i++) {
       final char = isbn[i];
-      if (char == 'X' || char == 'x') return false; // X only allowed in last position
+      if (char == 'X' || char == 'x') {
+        return false; // X only allowed in last position
+      }
       final digit = int.tryParse(char);
       if (digit == null) return false;
       sum += digit * (10 - i);
     }
-    
+
     // Handle check digit
     final checkChar = isbn[9];
-    final checkValue = (checkChar == 'X' || checkChar == 'x') ? 10 : int.tryParse(checkChar);
+    final checkValue =
+        (checkChar == 'X' || checkChar == 'x') ? 10 : int.tryParse(checkChar);
     if (checkValue == null) return false;
-    
+
     return (sum + checkValue) % 11 == 0;
   }
 }

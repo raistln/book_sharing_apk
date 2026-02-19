@@ -1,5 +1,4 @@
-const String kSupabaseDefaultUrl =
-    'https://zeautindvdwfvawjtkit.supabase.co';
+const String kSupabaseDefaultUrl = 'https://zeautindvdwfvawjtkit.supabase.co';
 
 const String kSupabaseDefaultAnonKey =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplYXV0aW5kdmR3ZnZhd2p0a2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNTExNjQsImV4cCI6MjA3NzkyNzE2NH0.WB7_SCkoPNgmZyy7jKnKXmB9eMSQh0yCWOVdXgdhGck';

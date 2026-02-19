@@ -17,7 +17,7 @@ String _normalizeString(String input) {
 }
 
 /// Checks if a group name represents the personal loans group
-/// 
+///
 /// This function normalizes both strings (removes accents, converts to lowercase)
 /// and checks if the group name contains both "prestamos" and "personales".
 /// This handles variations in encoding, capitalization, and accents.

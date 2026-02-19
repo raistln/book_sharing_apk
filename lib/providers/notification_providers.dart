@@ -125,7 +125,8 @@ class NotificationIntentNotifier extends StateNotifier<NotificationIntent?> {
 }
 
 final notificationIntentProvider =
-    StateNotifierProvider<NotificationIntentNotifier, NotificationIntent?>((ref) {
+    StateNotifierProvider<NotificationIntentNotifier, NotificationIntent?>(
+        (ref) {
   final service = ref.watch(notificationServiceProvider);
   return NotificationIntentNotifier(service);
 });

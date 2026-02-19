@@ -132,7 +132,8 @@ class CoachMarkState {
       active: activeSetter != null ? activeSetter() : active ?? this.active,
       queue: queue ?? this.queue,
       isVisible: isVisible ?? this.isVisible,
-      sequence: sequenceSetter != null ? sequenceSetter() : sequence ?? this.sequence,
+      sequence:
+          sequenceSetter != null ? sequenceSetter() : sequence ?? this.sequence,
       isProcessing: isProcessing ?? this.isProcessing,
     );
   }
@@ -153,25 +154,29 @@ const Map<CoachMarkId, CoachMarkConfig> defaultCoachMarkConfigs = {
   CoachMarkId.discoverShareBook: CoachMarkConfig(
     id: CoachMarkId.discoverShareBook,
     title: 'Comparte tus libros',
-    description: 'Publica ejemplares para que tu grupo pueda solicitarlos rápidamente.',
+    description:
+        'Publica ejemplares para que tu grupo pueda solicitarlos rápidamente.',
     primaryActionLabel: 'Siguiente',
   ),
   CoachMarkId.discoverFilterChips: CoachMarkConfig(
     id: CoachMarkId.discoverFilterChips,
     title: 'Filtra resultados',
-    description: 'Usa estos filtros para ver libros de grupos o propietarios concretos.',
+    description:
+        'Usa estos filtros para ver libros de grupos o propietarios concretos.',
     primaryActionLabel: 'Siguiente',
   ),
   CoachMarkId.bookDetailRequestLoan: CoachMarkConfig(
     id: CoachMarkId.bookDetailRequestLoan,
     title: 'Solicita un préstamo',
-    description: 'Desde aquí puedes pedir prestar el libro y coordinar la entrega.',
+    description:
+        'Desde aquí puedes pedir prestar el libro y coordinar la entrega.',
     primaryActionLabel: 'Siguiente',
   ),
   CoachMarkId.groupManageInvitations: CoachMarkConfig(
     id: CoachMarkId.groupManageInvitations,
     title: 'Gestiona invitaciones',
-    description: 'Invita a nuevas personas o revisa solicitudes pendientes de tu grupo.',
+    description:
+        'Invita a nuevas personas o revisa solicitudes pendientes de tu grupo.',
     primaryActionLabel: 'Listo',
   ),
 };

@@ -17,7 +17,8 @@ class ExportHandler {
       final exportService = ref.read(bookExportServiceProvider);
 
       final activeUser = ref.read(activeUserProvider).value;
-      final books = await repository.fetchActiveBooks(ownerUserId: activeUser?.id);
+      final books =
+          await repository.fetchActiveBooks(ownerUserId: activeUser?.id);
       if (books.isEmpty) {
         if (!ctx.mounted) return;
         showFeedbackSnackBar(
@@ -40,17 +41,20 @@ class ExportHandler {
               ListTile(
                 leading: const Icon(Icons.table_rows_outlined),
                 title: const Text('Exportar como CSV'),
-                onTap: () => Navigator.of(sheetContext).pop(BookExportFormat.csv),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(BookExportFormat.csv),
               ),
               ListTile(
                 leading: const Icon(Icons.code),
                 title: const Text('Exportar como JSON'),
-                onTap: () => Navigator.of(sheetContext).pop(BookExportFormat.json),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(BookExportFormat.json),
               ),
               ListTile(
                 leading: const Icon(Icons.picture_as_pdf_outlined),
                 title: const Text('Exportar como PDF'),
-                onTap: () => Navigator.of(sheetContext).pop(BookExportFormat.pdf),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(BookExportFormat.pdf),
               ),
             ],
           ),
@@ -62,7 +66,7 @@ class ExportHandler {
       }
 
       if (!ctx.mounted) return;
-      
+
       final action = await FileExportHelper.showExportActionSheet(ctx);
       if (action == null) return;
 
@@ -73,7 +77,7 @@ class ExportHandler {
       );
 
       if (!ctx.mounted) return;
-      
+
       await FileExportHelper.handleFileExport(
         context: ctx,
         bytes: result.bytes,
@@ -81,14 +85,13 @@ class ExportHandler {
         mimeType: result.mimeType,
         action: action,
         onFeedback: (message, isError) {
-           showFeedbackSnackBar(
+          showFeedbackSnackBar(
             context: ctx,
             message: message,
             isError: isError,
           );
         },
       );
-      
     } catch (err) {
       if (!ctx.mounted) return;
       showFeedbackSnackBar(

@@ -7,7 +7,7 @@ import 'package:book_sharing_app/utils/isbn_utils.dart';
 /// Controller for Google Books API operations
 class GoogleBooksApiController {
   static const String _baseUrl = 'https://www.googleapis.com/books/v1/volumes';
-  
+
   /// Search for books by title, author, or ISBN
   static Future<List<GoogleBook>> searchBooks({
     required String query,
@@ -66,7 +66,7 @@ class GoogleBooksApiController {
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
         final items = data['items'] as List<dynamic>?;
-        
+
         if (items == null) {
           if (kDebugMode) {
             debugPrint('[GoogleBooksAPI] No results found');
@@ -85,7 +85,8 @@ class GoogleBooksApiController {
         return books;
       } else {
         if (kDebugMode) {
-          debugPrint('[GoogleBooksAPI] Error ${response.statusCode}: ${response.body}');
+          debugPrint(
+              '[GoogleBooksAPI] Error ${response.statusCode}: ${response.body}');
         }
         throw GoogleBooksApiException(
           'Error searching books: ${response.statusCode}',
@@ -96,11 +97,11 @@ class GoogleBooksApiController {
       if (kDebugMode) {
         debugPrint('[GoogleBooksAPI] Search failed: $e');
       }
-      
+
       if (e is GoogleBooksApiException) {
         rethrow;
       }
-      
+
       throw GoogleBooksApiException(
         'Failed to search books: $e',
         null,
@@ -133,7 +134,8 @@ class GoogleBooksApiController {
         return GoogleBook.fromJson(data);
       } else {
         if (kDebugMode) {
-          debugPrint('[GoogleBooksAPI] Error getting book ${response.statusCode}: ${response.body}');
+          debugPrint(
+              '[GoogleBooksAPI] Error getting book ${response.statusCode}: ${response.body}');
         }
         return null;
       }
@@ -158,7 +160,7 @@ class GoogleBooksApiController {
         apiKey: apiKey,
         maxResults: 1,
       );
-      
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -211,17 +213,18 @@ class GoogleBook {
 
   factory GoogleBook.fromJson(Map<String, dynamic> json) {
     final volumeInfo = json['volumeInfo'] as Map<String, dynamic>? ?? {};
-    
+
     // Extract ISBNs from industry identifiers
     String? isbn;
     String? isbn13;
-    final industryIdentifiers = volumeInfo['industryIdentifiers'] as List<dynamic>?;
+    final industryIdentifiers =
+        volumeInfo['industryIdentifiers'] as List<dynamic>?;
     if (industryIdentifiers != null) {
       for (final identifier in industryIdentifiers) {
         final idMap = identifier as Map<String, dynamic>;
         final type = idMap['type'] as String?;
         final idValue = idMap['identifier'] as String?;
-        
+
         if (type == 'ISBN_10' && idValue != null) {
           isbn = idValue;
         } else if (type == 'ISBN_13' && idValue != null) {
@@ -232,11 +235,14 @@ class GoogleBook {
 
     // Extract authors
     final authorsList = volumeInfo['authors'] as List<dynamic>?;
-    final authors = authorsList?.map((author) => author.toString()).toList() ?? <String>[];
+    final authors =
+        authorsList?.map((author) => author.toString()).toList() ?? <String>[];
 
     // Extract categories
     final categoriesList = volumeInfo['categories'] as List<dynamic>?;
-    final categories = categoriesList?.map((category) => category.toString()).toList() ?? <String>[];
+    final categories =
+        categoriesList?.map((category) => category.toString()).toList() ??
+            <String>[];
 
     // Extract image links
     final imageLinks = volumeInfo['imageLinks'] as Map<String, dynamic>?;
@@ -268,10 +274,12 @@ class GoogleBook {
   String? get primaryIsbn => isbn13 ?? isbn;
 
   /// Get formatted author names as a single string
-  String get authorsText => authors.isNotEmpty ? authors.join(', ') : 'Unknown Author';
+  String get authorsText =>
+      authors.isNotEmpty ? authors.join(', ') : 'Unknown Author';
 
   /// Get a formatted category string
-  String get categoriesText => categories.isNotEmpty ? categories.join(', ') : '';
+  String get categoriesText =>
+      categories.isNotEmpty ? categories.join(', ') : '';
 
   /// Check if the book has basic required information
   bool get isValid => title.isNotEmpty && (isbn != null || isbn13 != null);
@@ -302,5 +310,6 @@ class GoogleBooksApiException implements Exception {
   const GoogleBooksApiException(this.message, this.statusCode);
 
   @override
-  String toString() => 'GoogleBooksApiException: $message${statusCode != null ? ' (Status: $statusCode)' : ''}';
+  String toString() =>
+      'GoogleBooksApiException: $message${statusCode != null ? ' (Status: $statusCode)' : ''}';
 }

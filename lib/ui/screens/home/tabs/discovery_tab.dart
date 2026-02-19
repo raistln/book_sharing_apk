@@ -29,7 +29,7 @@ Future<void> _performSync(BuildContext context, WidgetRef ref) async {
 }
 
 /// Discovery tab - shows groups and allows browsing shared books
-/// 
+///
 /// Displays a list of groups the user belongs to. Tapping a group
 /// navigates to DiscoverGroupPage to browse shared books.
 class DiscoverTab extends ConsumerWidget {
@@ -60,7 +60,7 @@ class DiscoverTab extends ConsumerWidget {
                   final discoverableGroups = groups
                       .where((group) => !isPersonalLoansGroup(group.name))
                       .toList();
-                  
+
                   if (discoverableGroups.isEmpty) {
                     return EmptyState(
                       icon: Icons.groups_outlined,
@@ -88,13 +88,15 @@ class DiscoverTab extends ConsumerWidget {
                           child: ListTile(
                             leading: const Icon(Icons.groups_2_outlined),
                             title: Text(group.name),
-                            subtitle:
-                                subtitle != null && subtitle.isNotEmpty ? Text(subtitle) : null,
+                            subtitle: subtitle != null && subtitle.isNotEmpty
+                                ? Text(subtitle)
+                                : null,
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => DiscoverGroupPage(group: group),
+                                  builder: (_) =>
+                                      DiscoverGroupPage(group: group),
                                 ),
                               );
                             },

@@ -24,7 +24,8 @@ class FakeCoachMarksService extends CoachMarksService {
   }
 
   @override
-  Future<List<CoachMarkId>> pendingMarksForSequence(CoachMarkSequence sequence) async {
+  Future<List<CoachMarkId>> pendingMarksForSequence(
+      CoachMarkSequence sequence) async {
     final marks = coachMarkSequences[sequence] ?? const [];
     return marks
         .where((mark) => _pending[mark] ?? false || !(_seen[mark] ?? false))
@@ -103,7 +104,8 @@ void main() {
       controller = container.read(coachMarkControllerProvider.notifier);
     });
 
-    testWidgets('discover sequence displays both marks in order', (tester) async {
+    testWidgets('discover sequence displays both marks in order',
+        (tester) async {
       service.seedSequence(CoachMarkSequence.discover);
 
       await _pumpHarness(
@@ -136,7 +138,8 @@ void main() {
       final displayed = <CoachMarkId>[];
       void observer(CoachMarkState state) {
         final active = state.active;
-        if (active != null && (displayed.isEmpty || displayed.last != active.id)) {
+        if (active != null &&
+            (displayed.isEmpty || displayed.last != active.id)) {
           displayed.add(active.id);
         }
       }
@@ -161,10 +164,12 @@ void main() {
 
       expect(find.text('Filtra resultados'), findsNothing);
       expect(service.completedSequences, contains(CoachMarkSequence.discover));
-      expect(displayed, equals(const [
-        CoachMarkId.discoverShareBook,
-        CoachMarkId.discoverFilterChips,
-      ]));
+      expect(
+          displayed,
+          equals(const [
+            CoachMarkId.discoverShareBook,
+            CoachMarkId.discoverFilterChips,
+          ]));
     });
 
     testWidgets('detail sequence finishes after both marks', (tester) async {
@@ -197,7 +202,8 @@ void main() {
       final displayed = <CoachMarkId>[];
       void observer(CoachMarkState state) {
         final active = state.active;
-        if (active != null && (displayed.isEmpty || displayed.last != active.id)) {
+        if (active != null &&
+            (displayed.isEmpty || displayed.last != active.id)) {
           displayed.add(active.id);
         }
       }
@@ -222,11 +228,12 @@ void main() {
 
       expect(find.text('Gestiona invitaciones'), findsNothing);
       expect(service.completedSequences, contains(CoachMarkSequence.detail));
-      expect(displayed, equals(const [
-        CoachMarkId.bookDetailRequestLoan,
-        CoachMarkId.groupManageInvitations,
-      ]));
+      expect(
+          displayed,
+          equals(const [
+            CoachMarkId.bookDetailRequestLoan,
+            CoachMarkId.groupManageInvitations,
+          ]));
     });
   });
 }
- 

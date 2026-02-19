@@ -15,11 +15,18 @@ import 'package:mocktail/mocktail.dart';
 
 // Mock classes
 class MockGroupPushRepository extends Mock implements GroupPushRepository {}
+
 class MockGroupSyncController extends Mock implements GroupSyncController {}
+
 class MockNotificationClient extends Mock implements NotificationClient {}
+
 class MockBookRepository extends Mock implements BookRepository {}
-class MockUnifiedSyncCoordinator extends Mock implements UnifiedSyncCoordinator {}
-class MockNotificationRepository extends Mock implements NotificationRepository {}
+
+class MockUnifiedSyncCoordinator extends Mock
+    implements UnifiedSyncCoordinator {}
+
+class MockNotificationRepository extends Mock
+    implements NotificationRepository {}
 
 class FakeGroup extends Fake implements Group {}
 
@@ -57,25 +64,27 @@ void main() {
       mockNotificationRepository = MockNotificationRepository();
 
       // Stub sync methods
-      when(() => mockGroupSyncController.markPendingChanges()).thenAnswer((_) async {});
+      when(() => mockGroupSyncController.markPendingChanges())
+          .thenAnswer((_) async {});
       when(() => mockGroupSyncController.mounted).thenReturn(true);
 
       // Stub sync coordinator methods
       when(() => mockSyncCoordinator.syncOnCriticalEvent(any()))
           .thenAnswer((_) async {});
-      when(() => mockSyncCoordinator.markPendingChanges(any(), priority: any(named: 'priority')))
-          .thenReturn(null);
+      when(() => mockSyncCoordinator.markPendingChanges(any(),
+          priority: any(named: 'priority'))).thenReturn(null);
 
       // Stub notification methods
-      when(() => mockNotificationClient.cancel(any(that: isA<String>()))).thenAnswer((_) async {});
+      when(() => mockNotificationClient.cancel(any(that: isA<String>())))
+          .thenAnswer((_) async {});
       when(() => mockNotificationClient.showImmediate(
-        id: any(named: 'id'),
-        type: any(named: 'type'),
-        title: any(named: 'title'),
-        body: any(named: 'body'),
-        payload: any(named: 'payload'),
-        androidActions: any(named: 'androidActions'),
-      )).thenAnswer((_) async {});
+            id: any(named: 'id'),
+            type: any(named: 'type'),
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+            payload: any(named: 'payload'),
+            androidActions: any(named: 'androidActions'),
+          )).thenAnswer((_) async {});
 
       // Create controller
       groupPushController = GroupPushController(

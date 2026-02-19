@@ -20,7 +20,10 @@ class LoanBuckets {
   final List<LoanDetail> dueSoon;
 
   bool get isEmpty =>
-      incoming.isEmpty && outgoing.isEmpty && history.isEmpty && dueSoon.isEmpty;
+      incoming.isEmpty &&
+      outgoing.isEmpty &&
+      history.isEmpty &&
+      dueSoon.isEmpty;
 }
 
 final loanOverviewProvider = FutureProvider<LoanBuckets>((ref) async {

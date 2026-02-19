@@ -15,6 +15,7 @@ import '../../../widgets/empty_state.dart';
 import '../../../../design_system/evocative_texts.dart';
 import '../../../../design_system/literary_animations.dart';
 import '../../loan_history_screen.dart';
+import '../../../widgets/loans/loan_stats_card.dart';
 
 class LoansTab extends ConsumerWidget {
   const LoansTab({super.key});
@@ -86,6 +87,11 @@ class LoansTab extends ConsumerWidget {
                     ref.read(loanControllerProvider.notifier).dismissSuccess(),
               ),
             ),
+          // Global Loan Statistics (Always visible)
+          const SliverToBoxAdapter(
+            child: LoanStatsCard(),
+          ),
+
           if (isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,

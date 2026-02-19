@@ -18,9 +18,10 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _contactController = TextEditingController();
-  
+
   Book? _selectedBook;
-  DateTime _dueDate = DateTime.now().add(const Duration(days: 14)); // Default 2 weeks
+  DateTime _dueDate =
+      DateTime.now().add(const Duration(days: 14)); // Default 2 weeks
   bool _isIndefinite = false;
 
   @override
@@ -28,7 +29,6 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
     super.initState();
     _selectedBook = widget.initialBook;
   }
-
 
   @override
   void dispose() {
@@ -41,13 +41,16 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final loanState = ref.watch(loanControllerProvider);
-    final availableBooksAsync = ref.watch(bookListProvider); // Should filter by available later
+    final availableBooksAsync =
+        ref.watch(bookListProvider); // Should filter by available later
     final currentUser = ref.watch(activeUserProvider).value;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
       padding: EdgeInsets.only(
-        bottom: keyboardInset > 0 ? keyboardInset : 16, // Add padding if keyboard visible
+        bottom: keyboardInset > 0
+            ? keyboardInset
+            : 16, // Add padding if keyboard visible
         left: 16,
         right: 16,
         top: 16,
@@ -79,7 +82,8 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
           const Divider(),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 24), // Ensure scrolling space
+              padding:
+                  const EdgeInsets.only(bottom: 24), // Ensure scrolling space
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -91,8 +95,10 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                     availableBooksAsync.when(
                       data: (books) {
                         // Filter only available books
-                        final available = books.where((b) => b.status == 'available').toList();
-                        
+                        final available = books
+                            .where((b) => b.status == 'available')
+                            .toList();
+
                         if (available.isEmpty) {
                           return Container(
                             padding: const EdgeInsets.all(16),
@@ -102,12 +108,15 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.error_outline, color: theme.colorScheme.error),
+                                Icon(Icons.error_outline,
+                                    color: theme.colorScheme.error),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     'No tienes libros disponibles para prestar.',
-                                    style: TextStyle(color: theme.colorScheme.onErrorContainer),
+                                    style: TextStyle(
+                                        color:
+                                            theme.colorScheme.onErrorContainer),
                                   ),
                                 ),
                               ],
@@ -121,13 +130,14 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                             border: const OutlineInputBorder(),
                             hintText: 'Selecciona un libro',
                             filled: true,
-                            fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                            fillColor: theme.colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.3),
                           ),
                           items: available.map((book) {
                             return DropdownMenuItem(
                               value: book,
                               child: Text(
-                                book.title, 
+                                book.title,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             );
@@ -135,16 +145,18 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                           onChanged: (value) {
                             setState(() => _selectedBook = value);
                           },
-                          validator: (value) => value == null ? 'Selecciona un libro' : null,
+                          validator: (value) =>
+                              value == null ? 'Selecciona un libro' : null,
                           isExpanded: true,
                         );
                       },
                       loading: () => const LinearProgressIndicator(),
-                      error: (err, stack) => Text('Error cargando libros: $err'),
+                      error: (err, stack) =>
+                          Text('Error cargando libros: $err'),
                     ),
-
                     const SizedBox(height: 24),
-                    Text('Datos del prestatario', style: theme.textTheme.labelLarge),
+                    Text('Datos del prestatario',
+                        style: theme.textTheme.labelLarge),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _nameController,
@@ -172,25 +184,26 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                         prefixIcon: Icon(Icons.contact_phone_outlined),
                       ),
                     ),
-
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Fecha de devolución', style: theme.textTheme.labelLarge),
+                        Text('Fecha de devolución',
+                            style: theme.textTheme.labelLarge),
                         Row(
                           children: [
-                             Text('Indefinido', style: theme.textTheme.bodySmall),
-                             Switch(
-                              value: _isIndefinite, 
-                              onChanged: (val) => setState(() => _isIndefinite = val),
+                            Text('Indefinido',
+                                style: theme.textTheme.bodySmall),
+                            Switch(
+                              value: _isIndefinite,
+                              onChanged: (val) =>
+                                  setState(() => _isIndefinite = val),
                             ),
                           ],
                         )
                       ],
                     ),
                     const SizedBox(height: 8),
-                    
                     Opacity(
                       opacity: _isIndefinite ? 0.5 : 1.0,
                       child: IgnorePointer(
@@ -201,7 +214,8 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                               context: context,
                               initialDate: _dueDate,
                               firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
                             );
                             if (picked != null) {
                               setState(() => _dueDate = picked);
@@ -213,7 +227,9 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                               prefixIcon: Icon(Icons.calendar_today),
                             ),
                             child: Text(
-                              _isIndefinite ? 'Sin fecha límite' : DateFormat.yMMMd().format(_dueDate),
+                              _isIndefinite
+                                  ? 'Sin fecha límite'
+                                  : DateFormat.yMMMd().format(_dueDate),
                               style: theme.textTheme.bodyLarge,
                             ),
                           ),
@@ -221,7 +237,6 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
                     if (loanState.lastError != null)
                       Container(
                         padding: const EdgeInsets.all(8),
@@ -232,27 +247,26 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                         ),
                         child: Text(
                           loanState.lastError!,
-                          style: TextStyle(color: theme.colorScheme.onErrorContainer),
+                          style: TextStyle(
+                              color: theme.colorScheme.onErrorContainer),
                         ),
                       ),
-
                     FilledButton.icon(
-                      onPressed: (loanState.isLoading || currentUser == null) 
-                        ? null 
-                        : _submit,
+                      onPressed: (loanState.isLoading || currentUser == null)
+                          ? null
+                          : _submit,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.all(16),
                       ),
-                      icon: loanState.isLoading 
-                        ? const SizedBox(
-                            width: 20, 
-                            height: 20, 
-                            child: CircularProgressIndicator(strokeWidth: 2)
-                          )
-                        : const Icon(Icons.save),
-                      label: Text(
-                        loanState.isLoading ? 'Guardando...' : 'Registrar Préstamo'
-                      ),
+                      icon: loanState.isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.save),
+                      label: Text(loanState.isLoading
+                          ? 'Guardando...'
+                          : 'Registrar Préstamo'),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -267,28 +281,31 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedBook == null) return; 
+    if (_selectedBook == null) return;
 
     final currentUser = ref.read(activeUserProvider).value;
     if (currentUser == null) return;
 
     try {
       await ref.read(loanControllerProvider.notifier).createManualLoanDirect(
-        book: _selectedBook!,
-        owner: currentUser,
-        borrowerName: _nameController.text,
-        dueDate: _isIndefinite ? DateTime.now().add(const Duration(days: 365 * 10)) : _dueDate,
-        borrowerContact: _contactController.text.isNotEmpty 
-            ? _contactController.text 
-            : null,
-      );
+            book: _selectedBook!,
+            owner: currentUser,
+            borrowerName: _nameController.text,
+            dueDate: _isIndefinite
+                ? DateTime.now().add(const Duration(days: 365 * 10))
+                : _dueDate,
+            borrowerContact: _contactController.text.isNotEmpty
+                ? _contactController.text
+                : null,
+          );
 
       if (mounted) {
         Navigator.pop(context);
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            icon: const Icon(Icons.check_circle_outline, color: Colors.green, size: 48),
+            icon: const Icon(Icons.check_circle_outline,
+                color: Colors.green, size: 48),
             title: const Text('Préstamo registrado'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -299,10 +316,11 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                 _buildDetailRow(context, 'Prestatario:', _nameController.text),
                 const SizedBox(height: 8),
                 _buildDetailRow(
-                  context, 
-                  'Vence:', 
-                  _isIndefinite ? 'Indefinido' : DateFormat.yMMMd().format(_dueDate)
-                ),
+                    context,
+                    'Vence:',
+                    _isIndefinite
+                        ? 'Indefinido'
+                        : DateFormat.yMMMd().format(_dueDate)),
               ],
             ),
             actions: [
@@ -324,7 +342,9 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
       text: TextSpan(
         style: Theme.of(context).textTheme.bodyMedium,
         children: [
-          TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(
+              text: '$label ',
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           TextSpan(text: value),
         ],
       ),

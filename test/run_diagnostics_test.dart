@@ -6,11 +6,8 @@ import 'package:book_sharing_app/dev/reading_session_diagnostics.dart';
 
 void main() {
   test('Run Reading Session Diagnostics', () async {
-    print('Iniciando diagnóstico desde Flutter Test...');
-
     final dbFile = File('book_sharing.sqlite');
     if (!dbFile.existsSync()) {
-      print('Error: No se encontró el archivo book_sharing.sqlite');
       return;
     }
 
@@ -20,7 +17,7 @@ void main() {
       final diagnostics = ReadingSessionDiagnostics(db);
       await diagnostics.runFullDiagnostic();
     } catch (e) {
-      print('Error durante el diagnóstico: $e');
+      // Error silencioso en diagnóstico de test
     } finally {
       await db.close();
     }

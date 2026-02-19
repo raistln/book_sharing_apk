@@ -34,9 +34,8 @@ class SupabaseUserService {
       'Accept': 'application/json',
     };
 
-    headers['Prefer'] = preferRepresentation
-        ? 'return=representation'
-        : 'return=minimal';
+    headers['Prefer'] =
+        preferRepresentation ? 'return=representation' : 'return=minimal';
 
     return headers;
   }

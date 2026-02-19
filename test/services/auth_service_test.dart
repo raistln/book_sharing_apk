@@ -108,7 +108,8 @@ void main() {
       ).thenAnswer((invocation) async {
         capturedHash = invocation.namedArguments[#pinHash] as String;
         capturedSalt = invocation.namedArguments[#pinSalt] as String;
-        capturedUpdatedAt = invocation.namedArguments[#pinUpdatedAt] as DateTime;
+        capturedUpdatedAt =
+            invocation.namedArguments[#pinUpdatedAt] as DateTime;
         capturedMarkDirty = invocation.namedArguments[#markDirty] as bool;
       });
 
@@ -135,7 +136,8 @@ void main() {
     test('clearPin removes stored hash and locks the session', () async {
       final user = buildUser();
       when(() => userRepository.getActiveUser()).thenAnswer((_) async => user);
-      when(() => userRepository.clearPinData(userId: user.id)).thenAnswer((_) async {});
+      when(() => userRepository.clearPinData(userId: user.id))
+          .thenAnswer((_) async {});
 
       await authService.clearPin();
 
@@ -153,7 +155,8 @@ void main() {
       expect(await authService.hasConfiguredPin(), isFalse);
 
       final userWithPin = buildUser(pinHash: 'hash', pinSalt: 'salt');
-      when(() => userRepository.getActiveUser()).thenAnswer((_) async => userWithPin);
+      when(() => userRepository.getActiveUser())
+          .thenAnswer((_) async => userWithPin);
       expect(await authService.hasConfiguredPin(), isTrue);
     });
   });

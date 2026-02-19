@@ -215,7 +215,9 @@ void main() {
     expect(summary.returnedLoans, 1);
     expect(summary.expiredLoans, 1);
 
-    final activeLoanByUuid = {for (final loan in summary.activeLoanDetails) loan.loanUuid: loan};
+    final activeLoanByUuid = {
+      for (final loan in summary.activeLoanDetails) loan.loanUuid: loan
+    };
     final activeLoan = activeLoanByUuid['loan-active'];
     final requestedLoan = activeLoanByUuid['loan-requested'];
 
@@ -233,13 +235,16 @@ void main() {
     expect(requestedLoan.sharedBookId, sharedBookId);
 
     expect(summary.topBooks, hasLength(2));
-    final topByTitle = {for (final entry in summary.topBooks) entry.title: entry};
+    final topByTitle = {
+      for (final entry in summary.topBooks) entry.title: entry
+    };
     expect(topByTitle['Book Title']?.loanCount, 2);
     expect(topByTitle['Other Book']?.loanCount, 1);
   });
 
   test('loadSummary resolves unknown book title gracefully', () async {
-    await bookDao.softDeleteBook(bookId: bookId, timestamp: DateTime(2024, 1, 1));
+    await bookDao.softDeleteBook(
+        bookId: bookId, timestamp: DateTime(2024, 1, 1));
 
     await groupDao.insertLoan(
       LoansCompanion.insert(

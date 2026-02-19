@@ -78,13 +78,15 @@ class InAppNotificationBanner extends ConsumerWidget {
                     onPressed: markRead,
                     icon: const Icon(Icons.mark_email_read_outlined),
                     label: const Text('Marcar como leído'),
-                    style: TextButton.styleFrom(foregroundColor: visuals.textColor),
+                    style: TextButton.styleFrom(
+                        foregroundColor: visuals.textColor),
                   ),
                 TextButton.icon(
                   onPressed: dismiss,
                   icon: const Icon(Icons.close),
                   label: const Text('Descartar'),
-                  style: TextButton.styleFrom(foregroundColor: visuals.textColor),
+                  style:
+                      TextButton.styleFrom(foregroundColor: visuals.textColor),
                 ),
               ],
             ),

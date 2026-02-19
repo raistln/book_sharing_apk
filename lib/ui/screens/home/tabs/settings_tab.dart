@@ -44,260 +44,268 @@ class SettingsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Donation card at the top
-              _buildDonationCard(context, ref),
-              const SizedBox(height: 32),
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Donation card at the top
+                _buildDonationCard(context, ref),
+                const SizedBox(height: 32),
 
-              // Sección de importación de libros
-              Text(
-                'Biblioteca',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Importa o exporta tu biblioteca de libros.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.upload_file_outlined),
-                      title: const Text('Exportar biblioteca'),
-                      subtitle: const Text(
-                          'Guarda tu lista de libros en CSV, JSON o PDF'),
-                      onTap: () => ExportHandler.handle(context, ref),
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.history_edu_outlined),
-                      title: const Text('Exportar historial de préstamos'),
-                      subtitle: const Text(
-                          'Genera un informe de tus préstamos (CSV)'),
-                      onTap: () => _handleExportLoans(context, ref),
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.import_export),
-                      title: const Text('Importar libros'),
-                      subtitle: const Text(
-                          'Importa libros desde un archivo CSV o JSON'),
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => const ImportBooksDialog(),
-                        );
-                      },
-                    ),
-                  ],
+                // Sección de importación de libros
+                Text(
+                  'Biblioteca',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-              ),
-              const SizedBox(height: 32),
+                const SizedBox(height: 12),
+                Text(
+                  'Importa o exporta tu biblioteca de libros.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                Card(
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.upload_file_outlined),
+                        title: const Text('Exportar biblioteca'),
+                        subtitle: const Text(
+                            'Guarda tu lista de libros en CSV, JSON o PDF'),
+                        onTap: () => ExportHandler.handle(context, ref),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.history_edu_outlined),
+                        title: const Text('Exportar historial de préstamos'),
+                        subtitle: const Text(
+                            'Genera un informe de tus préstamos (CSV)'),
+                        onTap: () => _handleExportLoans(context, ref),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.import_export),
+                        title: const Text('Importar libros'),
+                        subtitle: const Text(
+                            'Importa libros desde un archivo CSV o JSON'),
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => const ImportBooksDialog(),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
 
-              // Sección de Almacenamiento
-              Text(
-                'Almacenamiento',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.broken_image_outlined),
-                  title: const Text('Borrar todas las portadas'),
-                  subtitle: const Text(
-                      'Libera espacio eliminando las imágenes descargadas.'),
-                  onTap: () => _handleDeleteCovers(context, ref),
+                // Sección de Almacenamiento
+                Text(
+                  'Almacenamiento',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-              ),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.delete_sweep_outlined,
-                      color: Colors.red),
-                  title: const Text('Resetear base de datos local'),
-                  subtitle: const Text(
-                      'Elimina todos los datos locales y comienza desde cero.',
-                      style: TextStyle(color: Colors.red)),
-                  onTap: () => _handleResetDatabase(context, ref),
+                const SizedBox(height: 12),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.broken_image_outlined),
+                    title: const Text('Borrar todas las portadas'),
+                    subtitle: const Text(
+                        'Libera espacio eliminando las imágenes descargadas.'),
+                    onTap: () => _handleDeleteCovers(context, ref),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 32),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.delete_sweep_outlined,
+                        color: Colors.red),
+                    title: const Text('Resetear base de datos local'),
+                    subtitle: const Text(
+                        'Elimina todos los datos locales y comienza desde cero.',
+                        style: TextStyle(color: Colors.red)),
+                    onTap: () => _handleResetDatabase(context, ref),
+                  ),
+                ),
+                const SizedBox(height: 32),
 
-              // Sección de Backup
-              Text(
-                'Copias de seguridad',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 12),
-              const _BackupSection(),
-              const SizedBox(height: 32),
-
-              // Sección de seguridad
-              Text(
-                'Ajustes de seguridad',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Gestiona tu PIN y controla el bloqueo automático por inactividad.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 24),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.password_outlined),
-                  title: const Text('Cambiar PIN'),
-                  subtitle: const Text('Vuelve a definir el código de acceso.'),
-                  onTap: () {
-                    Navigator.of(context).pushNamed(PinSetupScreen.routeName);
-                  },
+                // Sección de Backup
+                Text(
+                  'Copias de seguridad',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-              ),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.cancel_outlined),
-                  title: const Text('Eliminar PIN y cambiar de usuario'),
-                  subtitle: const Text(
-                      'Vuelve al inicio para configurar otra cuenta.'),
-                  onTap: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title:
-                            const Text('¿Eliminar PIN y salir de la cuenta?'),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.warning_amber,
-                                size: 48, color: Colors.orange),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Se eliminarán TODOS los datos locales (libros, grupos, préstamos) '
-                              'y tendrás que iniciar sesión o configurar un nuevo usuario.',
-                            ),
-                            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.blue.shade200),
+                const SizedBox(height: 12),
+                const _BackupSection(),
+                const SizedBox(height: 32),
+
+                // Sección de seguridad
+                Text(
+                  'Ajustes de seguridad',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Gestiona tu PIN y controla el bloqueo automático por inactividad.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 24),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.password_outlined),
+                    title: const Text('Cambiar PIN'),
+                    subtitle:
+                        const Text('Vuelve a definir el código de acceso.'),
+                    onTap: () {
+                      Navigator.of(context).pushNamed(PinSetupScreen.routeName);
+                    },
+                  ),
+                ),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.cancel_outlined),
+                    title: const Text('Eliminar PIN y cambiar de usuario'),
+                    subtitle: const Text(
+                        'Vuelve al inicio para configurar otra cuenta.'),
+                    onTap: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title:
+                              const Text('¿Eliminar PIN y salir de la cuenta?'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.warning_amber,
+                                  size: 48, color: Colors.orange),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Se eliminarán TODOS los datos locales (libros, grupos, préstamos) '
+                                'y tendrás que iniciar sesión o configurar un nuevo usuario.',
                               ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.lightbulb_outline,
-                                      color: Colors.blue.shade700),
-                                  const SizedBox(width: 12),
-                                  const Expanded(
-                                    child: Text(
-                                      '💡 Tip: Exporta tu biblioteca antes de continuar. '
-                                      'Si tienes backups automáticos, búscalos en Descargas/BookSharing/backups.',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black87,
+                              const SizedBox(height: 16),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border:
+                                      Border.all(color: Colors.blue.shade200),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.lightbulb_outline,
+                                        color: Colors.blue.shade700),
+                                    const SizedBox(width: 12),
+                                    const Expanded(
+                                      child: Text(
+                                        '💡 Tip: Exporta tu biblioteca antes de continuar. '
+                                        'Si tienes backups automáticos, búscalos en Descargas/BookSharing/backups.',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('Cancelar'),
+                            ),
+                            FilledButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              style: FilledButton.styleFrom(
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.error,
+                              ),
+                              child: const Text('Eliminar todo'),
                             ),
                           ],
                         ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Cancelar'),
-                          ),
-                          FilledButton(
-                            onPressed: () => Navigator.of(context).pop(true),
-                            style: FilledButton.styleFrom(
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.error,
-                            ),
-                            child: const Text('Eliminar todo'),
-                          ),
-                        ],
-                      ),
-                    );
+                      );
 
-                    if (confirmed != true) return;
+                      if (confirmed != true) return;
 
-                    // Clear PIN first
-                    await ref.read(authControllerProvider.notifier).clearPin();
+                      // Clear PIN first
+                      await ref
+                          .read(authControllerProvider.notifier)
+                          .clearPin();
 
-                    // Clear all local data
-                    final database = ref.read(appDatabaseProvider);
-                    await database.clearAllData();
+                      // Clear all local data
+                      final database = ref.read(appDatabaseProvider);
+                      await database.clearAllData();
 
-                    if (!context.mounted) return;
+                      if (!context.mounted) return;
 
-                    // Show message and close app so user can restart fresh
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                            'Datos eliminados. Reinicia la app para configurar un nuevo usuario.'),
-                        duration: Duration(seconds: 3),
-                      ),
-                    );
-
-                    // Wait a moment for the snackbar to show, then close app
-                    await Future.delayed(const Duration(milliseconds: 1500));
-                    SystemNavigator.pop();
-                  },
-                ),
-              ),
-              const SizedBox(height: 24),
-              _buildSyncStatusBanner(context, ref),
-              const SizedBox(height: 16),
-              Text(
-                'Apariencia',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 12),
-              const _ThemeSection(),
-
-              const SizedBox(height: 16),
-              Text(
-                'Integraciones externas',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 12),
-              _GoogleBooksApiCard(
-                onConfigure: () => _handleConfigureGoogleBooksKey(context, ref),
-                onClear: () => _handleClearGoogleBooksKey(context, ref),
-              ),
-              const SizedBox(height: 16),
-              _buildSyncActionsCard(context, ref),
-
-              const SizedBox(height: 24),
-              const _PlaceholderTab(
-                title: 'Más configuraciones próximamente',
-                description:
-                    'Pronto podrás gestionar copias de seguridad, sincronización y preferencias.',
-              ),
-              const SizedBox(height: 24),
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'Datos bibliográficos proporcionados por Open Library (Internet Archive). Contenido bajo licencia ODC-By.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      // Show message and close app so user can restart fresh
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'Datos eliminados. Reinicia la app para configurar un nuevo usuario.'),
+                          duration: Duration(seconds: 3),
                         ),
-                    textAlign: TextAlign.center,
+                      );
+
+                      // Wait a moment for the snackbar to show, then close app
+                      await Future.delayed(const Duration(milliseconds: 1500));
+                      SystemNavigator.pop();
+                    },
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 24),
+                _buildSyncStatusBanner(context, ref),
+                const SizedBox(height: 16),
+                Text(
+                  'Apariencia',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 12),
+                const _ThemeSection(),
+
+                const SizedBox(height: 16),
+                Text(
+                  'Integraciones externas',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 12),
+                _GoogleBooksApiCard(
+                  onConfigure: () =>
+                      _handleConfigureGoogleBooksKey(context, ref),
+                  onClear: () => _handleClearGoogleBooksKey(context, ref),
+                ),
+                const SizedBox(height: 16),
+                _buildSyncActionsCard(context, ref),
+
+                const SizedBox(height: 24),
+                const _PlaceholderTab(
+                  title: 'Más configuraciones próximamente',
+                  description:
+                      'Pronto podrás gestionar copias de seguridad, sincronización y preferencias.',
+                ),
+                const SizedBox(height: 24),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Datos bibliográficos proporcionados por Open Library (Internet Archive). Contenido bajo licencia ODC-By.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
@@ -1203,7 +1211,7 @@ class _PlaceholderTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,

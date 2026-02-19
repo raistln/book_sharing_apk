@@ -7,6 +7,8 @@ import '../data/local/group_dao.dart';
 import '../data/local/notification_dao.dart';
 import '../data/local/user_dao.dart';
 import '../data/local/timeline_entry_dao.dart';
+import '../data/local/reading_session_dao.dart';
+import '../data/local/wishlist_dao.dart';
 import '../data/repositories/book_repository.dart';
 import '../data/repositories/loan_repository.dart';
 import '../data/repositories/notification_repository.dart';
@@ -15,7 +17,6 @@ import '../data/repositories/supabase_group_repository.dart';
 import '../data/repositories/supabase_book_sync_repository.dart';
 import '../data/repositories/supabase_user_sync_repository.dart';
 import '../data/repositories/user_repository.dart';
-import '../data/local/wishlist_dao.dart';
 import '../data/repositories/wishlist_repository.dart';
 import '../services/book_export_service.dart';
 import '../services/loan_export_service.dart';
@@ -58,6 +59,16 @@ final notificationDaoProvider = Provider<NotificationDao>((ref) {
   return NotificationDao(db);
 });
 
+final readingSessionDaoProvider = Provider<ReadingSessionDao>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return ReadingSessionDao(db);
+});
+
+final wishlistDaoProvider = Provider<WishlistDao>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return WishlistDao(db);
+});
+
 final onboardingServiceProvider = Provider<OnboardingService>((ref) {
   return OnboardingService();
 });
@@ -83,11 +94,6 @@ final bookRepositoryProvider = Provider<BookRepository>((ref) {
 final groupDaoProvider = Provider<GroupDao>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return GroupDao(db);
-});
-
-final wishlistDaoProvider = Provider<WishlistDao>((ref) {
-  final db = ref.watch(appDatabaseProvider);
-  return WishlistDao(db);
 });
 
 final readingTimelineServiceProvider = Provider<ReadingTimelineService>((ref) {
@@ -421,10 +427,14 @@ final supabaseBookSyncRepositoryProvider =
   final bookDao = ref.watch(bookDaoProvider);
   final bookService = ref.watch(supabaseBookServiceProvider);
   final timelineDao = ref.watch(timelineEntryDaoProvider);
+  final sessionDao = ref.watch(readingSessionDaoProvider);
+  final wishlistDao = ref.watch(wishlistDaoProvider);
   return SupabaseBookSyncRepository(
     bookDao: bookDao,
     bookService: bookService,
     timelineDao: timelineDao,
+    sessionDao: sessionDao,
+    wishlistDao: wishlistDao,
   );
 });
 

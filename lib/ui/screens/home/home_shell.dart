@@ -21,7 +21,7 @@ import 'tabs/library_tab.dart';
 import 'tabs/loans_tab.dart';
 import '../../widgets/notifications/notifications_sheet.dart';
 import '../../widgets/library/book_form_sheet.dart';
-import '../../widgets/profile/user_profile_sheet.dart';
+import '../profile/user_profile_screen.dart';
 import '../../../services/release_notes_service.dart';
 import '../../widgets/release_notes_dialog.dart';
 import '../../widgets/bulletin/bulletin_sheet.dart';
@@ -110,7 +110,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                     tooltip: 'Notificaciones',
                   ),
                   IconButton(
-                    onPressed: () => _showProfileSheet(context),
+                    onPressed: () => _showProfileScreen(context),
                     icon: const Icon(Icons.person_outline),
                     tooltip: 'Perfil',
                   ),
@@ -314,12 +314,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     );
   }
 
-  Future<void> _showProfileSheet(BuildContext context) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      builder: (context) => const UserProfileSheet(),
+  Future<void> _showProfileScreen(BuildContext context) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const UserProfileScreen()),
     );
   }
 
@@ -393,7 +390,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
-              _showProfileSheet(context);
+              _showProfileScreen(context);
             },
             child: const Text('Ir al Perfil'),
           ),

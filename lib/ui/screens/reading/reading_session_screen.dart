@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:screen_brightness/screen_brightness.dart';
+import 'package:do_not_disturb/do_not_disturb.dart';
+import 'package:flutter/services.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 
@@ -38,6 +40,7 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
 
   bool _isNightMode = false; // Modo visual (colores oscuros)
   bool _isZenMode = false; // Modo descanso (DND + brillo bajo)
+  final _dndPlugin = DoNotDisturbPlugin();
   int _lastKnownPage = 0;
 
   @override
@@ -79,6 +82,9 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
         if (!status.isGranted) {
           await Permission.accessNotificationPolicy.request();
         }
+
+        // Activar DND (Modo PRIORIDAD)
+        await _dndPlugin.setInterruptionFilter(InterruptionFilter.priority);
       }
 
       // Bajar brillo
@@ -119,12 +125,16 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
 
       if (widget.targetDuration != null && _elapsed >= widget.targetDuration!) {
         timer.cancel();
+        HapticFeedback.lightImpact(); // Vibración ligera al terminar
         _showTimeIsUpDialog();
       }
     });
   }
 
   void _showTimeIsUpDialog() {
+    // Alarma visual acompañada de vibración si es posible
+    HapticFeedback.vibrate();
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -153,8 +163,11 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
     _timer?.cancel();
     WakelockPlus.disable();
 
-    // Restaurar brillo solo si estaba en modo zen
+    // Restaurar brillo y DND solo si estaba en modo zen
     if (_isZenMode) {
+      if (Platform.isAndroid) {
+        _dndPlugin.setInterruptionFilter(InterruptionFilter.all);
+      }
       ScreenBrightness().resetScreenBrightness();
     }
 

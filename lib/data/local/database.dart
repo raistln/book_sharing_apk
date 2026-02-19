@@ -623,6 +623,11 @@ class WishlistItems extends Table {
   TextColumn get isbn => text().withLength(min: 10, max: 20).nullable()();
   TextColumn get notes => text().nullable()();
 
+  TextColumn get remoteId => text().nullable()();
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
@@ -709,7 +714,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -933,6 +938,13 @@ class AppDatabase extends _$AppDatabase {
 
           if (from < 24) {
             await m.createTable(readingSessions);
+          }
+
+          if (from < 25) {
+            await m.addColumn(wishlistItems, wishlistItems.remoteId);
+            await m.addColumn(wishlistItems, wishlistItems.isDirty);
+            await m.addColumn(wishlistItems, wishlistItems.isDeleted);
+            await m.addColumn(wishlistItems, wishlistItems.syncedAt);
           }
         },
       );

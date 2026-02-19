@@ -8205,6 +8205,38 @@ class $WishlistItemsTable extends WishlistItems
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
       'notes', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _remoteIdMeta =
+      const VerificationMeta('remoteId');
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+      'remote_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isDirtyMeta =
+      const VerificationMeta('isDirty');
+  @override
+  late final GeneratedColumn<bool> isDirty = GeneratedColumn<bool>(
+      'is_dirty', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_dirty" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _isDeletedMeta =
+      const VerificationMeta('isDeleted');
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+      'is_deleted', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_deleted" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _syncedAtMeta =
+      const VerificationMeta('syncedAt');
+  @override
+  late final GeneratedColumn<DateTime> syncedAt = GeneratedColumn<DateTime>(
+      'synced_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -8222,8 +8254,21 @@ class $WishlistItemsTable extends WishlistItems
       requiredDuringInsert: false,
       defaultValue: currentDateAndTime);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, uuid, userId, title, author, isbn, notes, createdAt, updatedAt];
+  List<GeneratedColumn> get $columns => [
+        id,
+        uuid,
+        userId,
+        title,
+        author,
+        isbn,
+        notes,
+        remoteId,
+        isDirty,
+        isDeleted,
+        syncedAt,
+        createdAt,
+        updatedAt
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -8267,6 +8312,22 @@ class $WishlistItemsTable extends WishlistItems
       context.handle(
           _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
     }
+    if (data.containsKey('remote_id')) {
+      context.handle(_remoteIdMeta,
+          remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta));
+    }
+    if (data.containsKey('is_dirty')) {
+      context.handle(_isDirtyMeta,
+          isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(_isDeletedMeta,
+          isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta));
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(_syncedAtMeta,
+          syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -8298,6 +8359,14 @@ class $WishlistItemsTable extends WishlistItems
           .read(DriftSqlType.string, data['${effectivePrefix}isbn']),
       notes: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}notes']),
+      remoteId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}remote_id']),
+      isDirty: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
+      isDeleted: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_deleted'])!,
+      syncedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}synced_at']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -8319,6 +8388,10 @@ class WishlistItem extends DataClass implements Insertable<WishlistItem> {
   final String? author;
   final String? isbn;
   final String? notes;
+  final String? remoteId;
+  final bool isDirty;
+  final bool isDeleted;
+  final DateTime? syncedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
   const WishlistItem(
@@ -8329,6 +8402,10 @@ class WishlistItem extends DataClass implements Insertable<WishlistItem> {
       this.author,
       this.isbn,
       this.notes,
+      this.remoteId,
+      required this.isDirty,
+      required this.isDeleted,
+      this.syncedAt,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -8347,6 +8424,14 @@ class WishlistItem extends DataClass implements Insertable<WishlistItem> {
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    map['is_dirty'] = Variable<bool>(isDirty);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<DateTime>(syncedAt);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -8363,6 +8448,14 @@ class WishlistItem extends DataClass implements Insertable<WishlistItem> {
       isbn: isbn == null && nullToAbsent ? const Value.absent() : Value(isbn),
       notes:
           notes == null && nullToAbsent ? const Value.absent() : Value(notes),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+      isDirty: Value(isDirty),
+      isDeleted: Value(isDeleted),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -8379,6 +8472,10 @@ class WishlistItem extends DataClass implements Insertable<WishlistItem> {
       author: serializer.fromJson<String?>(json['author']),
       isbn: serializer.fromJson<String?>(json['isbn']),
       notes: serializer.fromJson<String?>(json['notes']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+      isDirty: serializer.fromJson<bool>(json['isDirty']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -8394,6 +8491,10 @@ class WishlistItem extends DataClass implements Insertable<WishlistItem> {
       'author': serializer.toJson<String?>(author),
       'isbn': serializer.toJson<String?>(isbn),
       'notes': serializer.toJson<String?>(notes),
+      'remoteId': serializer.toJson<String?>(remoteId),
+      'isDirty': serializer.toJson<bool>(isDirty),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'syncedAt': serializer.toJson<DateTime?>(syncedAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -8407,6 +8508,10 @@ class WishlistItem extends DataClass implements Insertable<WishlistItem> {
           Value<String?> author = const Value.absent(),
           Value<String?> isbn = const Value.absent(),
           Value<String?> notes = const Value.absent(),
+          Value<String?> remoteId = const Value.absent(),
+          bool? isDirty,
+          bool? isDeleted,
+          Value<DateTime?> syncedAt = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       WishlistItem(
@@ -8417,6 +8522,10 @@ class WishlistItem extends DataClass implements Insertable<WishlistItem> {
         author: author.present ? author.value : this.author,
         isbn: isbn.present ? isbn.value : this.isbn,
         notes: notes.present ? notes.value : this.notes,
+        remoteId: remoteId.present ? remoteId.value : this.remoteId,
+        isDirty: isDirty ?? this.isDirty,
+        isDeleted: isDeleted ?? this.isDeleted,
+        syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -8429,6 +8538,10 @@ class WishlistItem extends DataClass implements Insertable<WishlistItem> {
       author: data.author.present ? data.author.value : this.author,
       isbn: data.isbn.present ? data.isbn.value : this.isbn,
       notes: data.notes.present ? data.notes.value : this.notes,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -8444,6 +8557,10 @@ class WishlistItem extends DataClass implements Insertable<WishlistItem> {
           ..write('author: $author, ')
           ..write('isbn: $isbn, ')
           ..write('notes: $notes, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -8451,8 +8568,8 @@ class WishlistItem extends DataClass implements Insertable<WishlistItem> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, uuid, userId, title, author, isbn, notes, createdAt, updatedAt);
+  int get hashCode => Object.hash(id, uuid, userId, title, author, isbn, notes,
+      remoteId, isDirty, isDeleted, syncedAt, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -8464,6 +8581,10 @@ class WishlistItem extends DataClass implements Insertable<WishlistItem> {
           other.author == this.author &&
           other.isbn == this.isbn &&
           other.notes == this.notes &&
+          other.remoteId == this.remoteId &&
+          other.isDirty == this.isDirty &&
+          other.isDeleted == this.isDeleted &&
+          other.syncedAt == this.syncedAt &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -8476,6 +8597,10 @@ class WishlistItemsCompanion extends UpdateCompanion<WishlistItem> {
   final Value<String?> author;
   final Value<String?> isbn;
   final Value<String?> notes;
+  final Value<String?> remoteId;
+  final Value<bool> isDirty;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> syncedAt;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const WishlistItemsCompanion({
@@ -8486,6 +8611,10 @@ class WishlistItemsCompanion extends UpdateCompanion<WishlistItem> {
     this.author = const Value.absent(),
     this.isbn = const Value.absent(),
     this.notes = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -8497,6 +8626,10 @@ class WishlistItemsCompanion extends UpdateCompanion<WishlistItem> {
     this.author = const Value.absent(),
     this.isbn = const Value.absent(),
     this.notes = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   })  : uuid = Value(uuid),
@@ -8510,6 +8643,10 @@ class WishlistItemsCompanion extends UpdateCompanion<WishlistItem> {
     Expression<String>? author,
     Expression<String>? isbn,
     Expression<String>? notes,
+    Expression<String>? remoteId,
+    Expression<bool>? isDirty,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? syncedAt,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -8521,6 +8658,10 @@ class WishlistItemsCompanion extends UpdateCompanion<WishlistItem> {
       if (author != null) 'author': author,
       if (isbn != null) 'isbn': isbn,
       if (notes != null) 'notes': notes,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (isDirty != null) 'is_dirty': isDirty,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (syncedAt != null) 'synced_at': syncedAt,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -8534,6 +8675,10 @@ class WishlistItemsCompanion extends UpdateCompanion<WishlistItem> {
       Value<String?>? author,
       Value<String?>? isbn,
       Value<String?>? notes,
+      Value<String?>? remoteId,
+      Value<bool>? isDirty,
+      Value<bool>? isDeleted,
+      Value<DateTime?>? syncedAt,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt}) {
     return WishlistItemsCompanion(
@@ -8544,6 +8689,10 @@ class WishlistItemsCompanion extends UpdateCompanion<WishlistItem> {
       author: author ?? this.author,
       isbn: isbn ?? this.isbn,
       notes: notes ?? this.notes,
+      remoteId: remoteId ?? this.remoteId,
+      isDirty: isDirty ?? this.isDirty,
+      isDeleted: isDeleted ?? this.isDeleted,
+      syncedAt: syncedAt ?? this.syncedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -8573,6 +8722,18 @@ class WishlistItemsCompanion extends UpdateCompanion<WishlistItem> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    if (isDirty.present) {
+      map['is_dirty'] = Variable<bool>(isDirty.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<DateTime>(syncedAt.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -8592,6 +8753,10 @@ class WishlistItemsCompanion extends UpdateCompanion<WishlistItem> {
           ..write('author: $author, ')
           ..write('isbn: $isbn, ')
           ..write('notes: $notes, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -23954,6 +24119,10 @@ typedef $$WishlistItemsTableCreateCompanionBuilder = WishlistItemsCompanion
   Value<String?> author,
   Value<String?> isbn,
   Value<String?> notes,
+  Value<String?> remoteId,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -23966,6 +24135,10 @@ typedef $$WishlistItemsTableUpdateCompanionBuilder = WishlistItemsCompanion
   Value<String?> author,
   Value<String?> isbn,
   Value<String?> notes,
+  Value<String?> remoteId,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -24017,6 +24190,18 @@ class $$WishlistItemsTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
       column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -24072,6 +24257,18 @@ class $$WishlistItemsTableOrderingComposer
   ColumnOrderings<String> get notes => $composableBuilder(
       column: $table.notes, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -24125,6 +24322,18 @@ class $$WishlistItemsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDirty =>
+      $composableBuilder(column: $table.isDirty, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -24183,6 +24392,10 @@ class $$WishlistItemsTableTableManager extends RootTableManager<
             Value<String?> author = const Value.absent(),
             Value<String?> isbn = const Value.absent(),
             Value<String?> notes = const Value.absent(),
+            Value<String?> remoteId = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
           }) =>
@@ -24194,6 +24407,10 @@ class $$WishlistItemsTableTableManager extends RootTableManager<
             author: author,
             isbn: isbn,
             notes: notes,
+            remoteId: remoteId,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
             createdAt: createdAt,
             updatedAt: updatedAt,
           ),
@@ -24205,6 +24422,10 @@ class $$WishlistItemsTableTableManager extends RootTableManager<
             Value<String?> author = const Value.absent(),
             Value<String?> isbn = const Value.absent(),
             Value<String?> notes = const Value.absent(),
+            Value<String?> remoteId = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
           }) =>
@@ -24216,6 +24437,10 @@ class $$WishlistItemsTableTableManager extends RootTableManager<
             author: author,
             isbn: isbn,
             notes: notes,
+            remoteId: remoteId,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
             createdAt: createdAt,
             updatedAt: updatedAt,
           ),

@@ -104,4 +104,19 @@ class ReadingSessionDao extends DatabaseAccessor<AppDatabase>
   Future<int> deleteSession(int id) {
     return (delete(readingSessions)..where((t) => t.id.equals(id))).go();
   }
+
+  Future<List<ReadingSession>> getDirtySessions() {
+    return (select(readingSessions)..where((t) => t.isDirty.equals(true)))
+        .get();
+  }
+
+  Future<ReadingSession?> findByRemoteId(String remoteId) {
+    return (select(readingSessions)..where((t) => t.remoteId.equals(remoteId)))
+        .getSingleOrNull();
+  }
+
+  Future<ReadingSession?> findByUuid(String uuid) {
+    return (select(readingSessions)..where((t) => t.uuid.equals(uuid)))
+        .getSingleOrNull();
+  }
 }

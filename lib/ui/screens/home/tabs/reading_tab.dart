@@ -12,28 +12,37 @@ import 'package:book_sharing_app/ui/widgets/reading/reading_stats_card.dart';
 import '../../../widgets/profile/reading_rhythm_chart.dart';
 import '../../../widgets/profile/reading_calendar.dart';
 
-class ReadingTab extends ConsumerWidget {
+class ReadingTab extends ConsumerStatefulWidget {
   const ReadingTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ReadingTab> createState() => _ReadingTabState();
+}
+
+class _ReadingTabState extends ConsumerState<ReadingTab> {
+  int _activeChartIndex = 0; // 0: Rhythm, 1: Calendar
+
+  @override
+  Widget build(BuildContext context) {
     final readingBooksAsync = ref.watch(readingBooksProvider);
+    final rhythmAsync = ref.watch(readingRhythmProvider);
+    final readBooksAsync = ref.watch(readBooksProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Header: Leyendo
               Text(
                 'Leyendo',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Georgia',
-                    ),
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -72,10 +81,9 @@ class ReadingTab extends ConsumerWidget {
               // 3. Header: Actividad
               Text(
                 'Actividad',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Georgia',
-                    ),
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -83,73 +91,118 @@ class ReadingTab extends ConsumerWidget {
               const ReadingStatsCard(),
               const SizedBox(height: 32),
 
-              // 5. Activity Charts (Tabbed)
-              DefaultTabController(
-                length: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const TabBar(
-                      isScrollable: true,
-                      tabAlignment: TabAlignment.start,
-                      dividerColor: Colors.transparent,
-                      indicatorSize: TabBarIndicatorSize.label,
-                      tabs: [
-                        Tab(text: 'Ritmo de lectura'),
-                        Tab(text: 'Libros del año'),
+              // 5. Activity Charts (Centered Switch)
+              Center(
+                child: Container(
+                  width: 280,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _activeChartIndex = 0),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: _activeChartIndex == 0
+                                    ? theme.colorScheme.primary
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(21),
+                              ),
+                              child: Text(
+                                'Ritmo',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: _activeChartIndex == 0
+                                      ? theme.colorScheme.onPrimary
+                                      : theme.colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _activeChartIndex = 1),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: _activeChartIndex == 1
+                                    ? theme.colorScheme.primary
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(21),
+                              ),
+                              child: Text(
+                                'Calendario',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: _activeChartIndex == 1
+                                      ? theme.colorScheme.onPrimary
+                                      : theme.colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 380, // Fixed height for constraints
-                      child: TabBarView(
-                        children: [
-                          // Tab 1: Reading Rhythm
-                          Consumer(
-                            builder: (context, ref, child) {
-                              final rhythmAsync =
-                                  ref.watch(readingRhythmProvider);
-                              return rhythmAsync.when(
-                                data: (data) => ReadingRhythmChart(
-                                  data: data,
-                                  onBookTap: (book) {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => BookDetailsPage(
-                                          bookId: book.id,
-                                          scrollToTimeline: true,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                loading: () => const Center(
-                                    child: CircularProgressIndicator()),
-                                error: (e, st) =>
-                                    Text('No se pudo cargar el ritmo: $e'),
-                              );
-                            },
-                          ),
-                          // Tab 2: Reading Heatmap/Calendar
-                          Consumer(
-                            builder: (context, ref, child) {
-                              final readBooksAsync =
-                                  ref.watch(readBooksProvider);
-                              return readBooksAsync.when(
-                                data: (books) =>
-                                    ReadingCalendar(readBooks: books),
-                                loading: () => const Center(
-                                    child: CircularProgressIndicator()),
-                                error: (e, st) =>
-                                    Text('No se pudo cargar el calendario: $e'),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 420, // Increased height for zoom comfort
+                child: _activeChartIndex == 0
+                    ? Consumer(
+                        builder: (context, ref, child) {
+                          return rhythmAsync.when(
+                            data: (data) => ReadingRhythmChart(
+                              data: data,
+                              onBookTap: (book) {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => BookDetailsPage(
+                                      bookId: book.id,
+                                      scrollToTimeline: true,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            loading: () => const Center(
+                                child: CircularProgressIndicator()),
+                            error: (err, _) =>
+                                Center(child: Text('Error: $err')),
+                          );
+                        },
+                      )
+                    : Consumer(
+                        builder: (context, ref, child) {
+                          return readBooksAsync.when(
+                            data: (books) => Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: ReadingCalendar(
+                                readBooks: books,
+                              ),
+                            ),
+                            loading: () => const Center(
+                                child: CircularProgressIndicator()),
+                            error: (err, _) =>
+                                Center(child: Text('Error: $err')),
+                          );
+                        },
+                      ),
               ),
 
               const SizedBox(height: 80), // Bottom padding for FAB

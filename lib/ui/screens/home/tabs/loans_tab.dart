@@ -51,23 +51,33 @@ class LoansTab extends ConsumerWidget {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
-            title: const Text('Préstamos'),
-            floating: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.history),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const LoanHistoryScreen(),
-                    ),
-                  );
-                },
-                tooltip: 'Historial de préstamos',
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                children: [
+                  Text(
+                    'Préstamos',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.history),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LoanHistoryScreen(),
+                        ),
+                      );
+                    },
+                    tooltip: 'Historial de préstamos',
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           if (loanState.lastError != null)
             SliverToBoxAdapter(

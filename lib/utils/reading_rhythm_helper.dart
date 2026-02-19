@@ -52,14 +52,16 @@ class ReadingRhythmHelper {
       ));
     }
 
-    // Add some padding to the dates
-    if (minDate != null) minDate = minDate.subtract(const Duration(days: 2));
-    if (maxDate != null) maxDate = maxDate.add(const Duration(days: 2));
+    // 5. Adjust minDate to start of month and endDate to today
+    if (minDate != null) {
+      minDate = DateTime(minDate.year, minDate.month, 1);
+    }
+    final endDate = DateTime.now();
 
     return ReadingRhythmData(
       rows: rows,
-      startDate: minDate ?? DateTime.now().subtract(const Duration(days: 30)),
-      endDate: maxDate ?? DateTime.now(),
+      startDate: minDate ?? endDate.subtract(const Duration(days: 30)),
+      endDate: endDate,
       insight: _generateInsight(rows),
     );
   }

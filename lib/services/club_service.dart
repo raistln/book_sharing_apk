@@ -159,6 +159,37 @@ class ClubService {
     await dao.removeClubMember(clubUuid, userUuid);
   }
 
+  /// Join a club by its UUID
+  Future<void> joinClubByUuid({
+    required String clubUuid,
+    required int userId,
+    required String userRemoteId,
+  }) async {
+    // Check if club exists
+    final club = await dao.getClubByUuid(clubUuid);
+    if (club == null) {
+      throw Exception('El club con código "$clubUuid" no existe.');
+    }
+
+    // Check if user is already a member
+    final isMember = await isUserMember(clubUuid, userRemoteId);
+    if (isMember) {
+      throw Exception('Ya eres miembro de este club.');
+    }
+
+    // Add member
+    await dao.upsertClubMember(ClubMembersCompanion.insert(
+      uuid: _uuid.v4(),
+      clubId: 0, // Set on sync
+      clubUuid: clubUuid,
+      memberUserId: userId,
+      memberRemoteId: Value(userRemoteId),
+      role: const Value('miembro'),
+      status: const Value('activo'),
+      isDirty: const Value(true),
+    ));
+  }
+
   /// Kick a member (admin/owner only)
   Future<void> kickMember({
     required String clubUuid,

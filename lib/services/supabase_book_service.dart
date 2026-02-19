@@ -568,6 +568,259 @@ class SupabaseBookService {
       response.statusCode,
     );
   }
+
+  Future<List<SupabaseReadingSessionRecord>> fetchReadingSessions({
+    required String ownerId,
+    String? accessToken,
+    DateTime? updatedAfter,
+  }) async {
+    final config = await _loadConfig();
+    final query = <String, String>{
+      'select':
+          'id,owner_id,book_uuid,start_time,end_time,duration_seconds,start_page,end_page,pages_read,notes,mood,is_deleted,created_at,updated_at',
+      'owner_id': 'eq.$ownerId',
+      'order': 'updated_at.asc',
+    };
+
+    if (updatedAfter != null) {
+      query['updated_at'] = 'gte.${updatedAfter.toUtc().toIso8601String()}';
+    }
+
+    final uri = Uri.parse('${config.url}/rest/v1/reading_sessions')
+        .replace(queryParameters: query);
+
+    final response = await _client.get(
+      uri,
+      headers: _buildHeaders(config, accessToken: accessToken),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final payload = jsonDecode(response.body) as List<dynamic>;
+      return payload
+          .whereType<Map<String, dynamic>>()
+          .map(SupabaseReadingSessionRecord.fromJson)
+          .toList();
+    }
+
+    throw SupabaseBookServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+      response.statusCode,
+    );
+  }
+
+  Future<String> createReadingSession({
+    required String id,
+    required String ownerId,
+    required String bookUuid,
+    required DateTime startTime,
+    DateTime? endTime,
+    int? durationSeconds,
+    int? startPage,
+    int? endPage,
+    int? pagesRead,
+    String? notes,
+    String? mood,
+    bool isDeleted = false,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/reading_sessions');
+
+    final payload = {
+      'id': id,
+      'owner_id': ownerId,
+      'book_uuid': bookUuid,
+      'start_time': startTime.toUtc().toIso8601String(),
+      if (endTime != null) 'end_time': endTime.toUtc().toIso8601String(),
+      'duration_seconds': durationSeconds,
+      'start_page': startPage,
+      'end_page': endPage,
+      'pages_read': pagesRead,
+      'notes': notes,
+      'mood': mood,
+      'is_deleted': isDeleted,
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+    };
+
+    final response = await _client.post(
+      uri,
+      headers: _buildHeaders(config,
+          accessToken: accessToken, preferRepresentation: true),
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) return id;
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return (decoded['id'] as String?) ?? id;
+      }
+      return id;
+    }
+
+    throw SupabaseBookServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+      response.statusCode,
+    );
+  }
+
+  Future<bool> updateReadingSession({
+    required String id,
+    DateTime? startTime,
+    DateTime? endTime,
+    int? durationSeconds,
+    int? startPage,
+    int? endPage,
+    int? pagesRead,
+    String? notes,
+    String? mood,
+    bool? isDeleted,
+    required DateTime updatedAt,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/reading_sessions')
+        .replace(queryParameters: {'id': 'eq.$id'});
+
+    final payload = {
+      if (startTime != null) 'start_time': startTime.toUtc().toIso8601String(),
+      if (endTime != null) 'end_time': endTime.toUtc().toIso8601String(),
+      if (durationSeconds != null) 'duration_seconds': durationSeconds,
+      if (startPage != null) 'start_page': startPage,
+      if (endPage != null) 'end_page': endPage,
+      if (pagesRead != null) 'pages_read': pagesRead,
+      if (notes != null) 'notes': notes,
+      if (mood != null) 'mood': mood,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+    };
+
+    final response = await _client.patch(
+      uri,
+      headers: _buildHeaders(config, accessToken: accessToken),
+      body: jsonEncode(payload),
+    );
+
+    return response.statusCode >= 200 && response.statusCode < 300;
+  }
+
+  Future<List<SupabaseWishlistItemRecord>> fetchWishlistItems({
+    required String userId,
+    String? accessToken,
+    DateTime? updatedAfter,
+  }) async {
+    final config = await _loadConfig();
+    final query = <String, String>{
+      'select':
+          'id,uuid,user_id,title,author,isbn,notes,is_deleted,created_at,updated_at',
+      'user_id': 'eq.$userId',
+      'order': 'updated_at.asc',
+    };
+
+    if (updatedAfter != null) {
+      query['updated_at'] = 'gte.${updatedAfter.toUtc().toIso8601String()}';
+    }
+
+    final uri = Uri.parse('${config.url}/rest/v1/wishlist_items')
+        .replace(queryParameters: query);
+
+    final response = await _client.get(
+      uri,
+      headers: _buildHeaders(config, accessToken: accessToken),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final payload = jsonDecode(response.body) as List<dynamic>;
+      return payload
+          .whereType<Map<String, dynamic>>()
+          .map(SupabaseWishlistItemRecord.fromJson)
+          .toList();
+    }
+
+    throw SupabaseBookServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+      response.statusCode,
+    );
+  }
+
+  Future<String> createWishlistItem({
+    required String id,
+    required String uuid,
+    required String userId,
+    required String title,
+    String? author,
+    String? isbn,
+    String? notes,
+    bool isDeleted = false,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/wishlist_items');
+
+    final payload = {
+      'id': id,
+      'uuid': uuid,
+      'user_id': userId,
+      'title': title,
+      'author': author,
+      'isbn': isbn,
+      'notes': notes,
+      'is_deleted': isDeleted,
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+    };
+
+    final response = await _client.post(
+      uri,
+      headers: _buildHeaders(config,
+          accessToken: accessToken, preferRepresentation: true),
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) return id;
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return (decoded['id'] as String?) ?? id;
+      }
+      return id;
+    }
+
+    throw SupabaseBookServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+      response.statusCode,
+    );
+  }
+
+  Future<bool> deleteWishlistItem({
+    required String id,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/wishlist_items')
+        .replace(queryParameters: {'id': 'eq.$id'});
+
+    // Instead of hard delete, we update is_deleted = true if we want soft delete sync
+    // But typical for wishlist is hard delete or soft delete.
+    // Our sync uses is_deleted column.
+    final payload = {
+      'is_deleted': true,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    };
+
+    final response = await _client.patch(
+      uri,
+      headers: _buildHeaders(config, accessToken: accessToken),
+      body: jsonEncode(payload),
+    );
+
+    return response.statusCode >= 200 && response.statusCode < 300;
+  }
 }
 
 class SupabaseBookServiceException implements Exception {
@@ -757,6 +1010,114 @@ class SupabaseBookReviewRecord {
       authorId: json['author_id'] as String,
       rating: (json['rating'] as num).toInt(),
       review: json['review'] as String?,
+      isDeleted: (json['is_deleted'] as bool?) ?? false,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: parseDate(json['updated_at']),
+    );
+  }
+}
+
+class SupabaseReadingSessionRecord {
+  const SupabaseReadingSessionRecord({
+    required this.id,
+    required this.ownerId,
+    required this.bookUuid,
+    required this.startTime,
+    this.endTime,
+    this.durationSeconds,
+    this.startPage,
+    this.endPage,
+    this.pagesRead,
+    this.notes,
+    this.mood,
+    required this.isDeleted,
+    required this.createdAt,
+    this.updatedAt,
+  });
+
+  final String id;
+  final String ownerId;
+  final String bookUuid;
+  final DateTime startTime;
+  final DateTime? endTime;
+  final int? durationSeconds;
+  final int? startPage;
+  final int? endPage;
+  final int? pagesRead;
+  final String? notes;
+  final String? mood;
+  final bool isDeleted;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+
+  factory SupabaseReadingSessionRecord.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(dynamic value) {
+      if (value is String) {
+        return DateTime.tryParse(value);
+      }
+      return null;
+    }
+
+    return SupabaseReadingSessionRecord(
+      id: json['id'] as String,
+      ownerId: json['owner_id'] as String,
+      bookUuid: json['book_uuid'] as String,
+      startTime: DateTime.parse(json['start_time'] as String),
+      endTime: parseDate(json['end_time']),
+      durationSeconds: json['duration_seconds'] as int?,
+      startPage: json['start_page'] as int?,
+      endPage: json['end_page'] as int?,
+      pagesRead: json['pages_read'] as int?,
+      notes: json['notes'] as String?,
+      mood: json['mood'] as String?,
+      isDeleted: (json['is_deleted'] as bool?) ?? false,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: parseDate(json['updated_at']),
+    );
+  }
+}
+
+class SupabaseWishlistItemRecord {
+  const SupabaseWishlistItemRecord({
+    required this.id,
+    required this.uuid,
+    required this.userId,
+    required this.title,
+    this.author,
+    this.isbn,
+    this.notes,
+    required this.isDeleted,
+    required this.createdAt,
+    this.updatedAt,
+  });
+
+  final String id;
+  final String uuid;
+  final String userId;
+  final String title;
+  final String? author;
+  final String? isbn;
+  final String? notes;
+  final bool isDeleted;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+
+  factory SupabaseWishlistItemRecord.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(dynamic value) {
+      if (value is String) {
+        return DateTime.tryParse(value);
+      }
+      return null;
+    }
+
+    return SupabaseWishlistItemRecord(
+      id: json['id'] as String,
+      uuid: json['uuid'] as String,
+      userId: json['user_id'] as String,
+      title: json['title'] as String,
+      author: json['author'] as String?,
+      isbn: json['isbn'] as String?,
+      notes: json['notes'] as String?,
       isDeleted: (json['is_deleted'] as bool?) ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: parseDate(json['updated_at']),

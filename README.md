@@ -41,6 +41,7 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 - **Lista de Deseos (Wishlist):** Guarda libros que te interesan para el futuro y pásalos a tu biblioteca personal con un solo toque cuando los consigas
 - **Interfaz Literaria:** Diseño cuidado con tipografías clásicas (Georgia), géneros visualmente organizados y scroll optimizado para lectura de reseñas
 - **Filtros Avanzados:** Busca y filtra por título, autor, ISBN, estado de disponibilidad y más
+- **Perfil de Usuario Premium:** Gestión completa de perfil en pantalla dedicada, con personalización de avatar, biografía, libros favoritos y ubicación por provincias.
 - **Boletín Literario Provincial:** Descubre eventos literarios en tu provincia mediante informes narrativos generados por IA, con integración de datos en tiempo real y persistencia local inteligente.
 
 ### 👥 Comunidad y Grupos
@@ -76,7 +77,8 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 ### 📊 Estadísticas e Insights
 - **Dashboard Visual:** Gráficos interactivos sobre tu progreso de lectura y estado de la colección
 - **Métricas de Préstamo:** Descubre qué libros son los más solicitados en tus grupos
-- **Calendario y Ritmo de Lectura:** Nuevo diseño visual para el gráfico de ritmo de lectura y calendario de actividad para un seguimiento intuitivo de tus hábitos.
+- **Calendario y Ritmo de Lectura Dinámico:** Nuevo diseño para el seguimiento de hábitos con calendario de actividad y gráfico de ritmo que ajusta automáticamente su rango de fechas según tu historial. Soporte para zoom táctil mejorado.
+- **Interfaz Estandarizada:** Alineación visual perfecta y tipografía coherente en todas las pestañas de navegación (Lectura, Biblioteca, Préstamos).
 - **Estadísticas de Grupo:** Analiza la actividad y popularidad de libros en cada comunidad
 
 ### 💾 Herramientas y Exportación

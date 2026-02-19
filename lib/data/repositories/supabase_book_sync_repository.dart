@@ -5,19 +5,27 @@ import 'package:drift/drift.dart';
 import '../local/database.dart';
 import '../local/book_dao.dart';
 import '../local/timeline_entry_dao.dart';
+import '../local/reading_session_dao.dart';
+import '../local/wishlist_dao.dart';
 import '../../services/supabase_book_service.dart';
 
 class SupabaseBookSyncRepository {
   SupabaseBookSyncRepository({
     required BookDao bookDao,
     required TimelineEntryDao timelineDao,
+    required ReadingSessionDao sessionDao,
+    required WishlistDao wishlistDao,
     SupabaseBookService? bookService,
   })  : _bookDao = bookDao,
         _timelineDao = timelineDao,
+        _sessionDao = sessionDao,
+        _wishlistDao = wishlistDao,
         _bookService = bookService ?? SupabaseBookService();
 
   final BookDao _bookDao;
   final TimelineEntryDao _timelineDao;
+  final ReadingSessionDao _sessionDao;
+  final WishlistDao _wishlistDao;
   final SupabaseBookService _bookService;
 
   /// Mapea visibility y isAvailable de Supabase al status local
@@ -68,6 +76,14 @@ class SupabaseBookSyncRepository {
     );
     final remoteTimeline = await _bookService.fetchTimelineEntries(
       ownerId: ownerRemoteId,
+      accessToken: accessToken,
+    );
+    final remoteSessions = await _bookService.fetchReadingSessions(
+      ownerId: ownerRemoteId,
+      accessToken: accessToken,
+    );
+    final remoteWishlist = await _bookService.fetchWishlistItems(
+      userId: ownerRemoteId,
       accessToken: accessToken,
     );
 
@@ -346,6 +362,88 @@ class SupabaseBookSyncRepository {
           );
         }
       }
+
+      // Sync Reading Sessions
+      for (final remote in remoteSessions) {
+        final existing = await _sessionDao.findByRemoteId(remote.id);
+        if (existing != null) {
+          // Update local if not dirty or if remote is newer
+          // (Simplified: update if remote is newer or local is not dirty)
+          if (!existing.isDirty) {
+            await _sessionDao.updateSession(ReadingSessionsCompanion(
+              id: Value(existing.id),
+              remoteId: Value(remote.id),
+              startTime: Value(remote.startTime),
+              endTime: Value(remote.endTime),
+              durationSeconds: Value(remote.durationSeconds),
+              startPage: Value(remote.startPage),
+              endPage: Value(remote.endPage),
+              pagesRead: Value(remote.pagesRead),
+              notes: Value(remote.notes),
+              mood: Value(remote.mood),
+              isDeleted: Value(remote.isDeleted),
+              syncedAt: Value(now),
+              updatedAt: Value(remote.updatedAt ?? remote.createdAt),
+            ));
+          }
+        } else {
+          // Insert new session
+          await _sessionDao.insertSession(ReadingSessionsCompanion.insert(
+            uuid: remote.id,
+            remoteId: Value(remote.id),
+            bookUuid: remote.bookUuid,
+            startTime: remote.startTime,
+            endTime: Value(remote.endTime),
+            durationSeconds: Value(remote.durationSeconds),
+            startPage: Value(remote.startPage),
+            endPage: Value(remote.endPage),
+            pagesRead: Value(remote.pagesRead),
+            notes: Value(remote.notes),
+            mood: Value(remote.mood),
+            isDeleted: Value(remote.isDeleted),
+            createdAt: Value(remote.createdAt),
+            updatedAt: Value(remote.updatedAt ?? remote.createdAt),
+            syncedAt: Value(now),
+            // We need bookId. We'll find it by bookUuid.
+            bookId: (await _bookDao.findByUuid(remote.bookUuid))?.id ?? 0,
+          ));
+        }
+      }
+
+      // Sync Wishlist Items
+      for (final remote in remoteWishlist) {
+        final existing = await _wishlistDao.findByRemoteId(remote.id);
+        if (existing != null) {
+          if (!existing.isDirty) {
+            await _wishlistDao.updateItemFields(
+                existing.id,
+                WishlistItemsCompanion(
+                  remoteId: Value(remote.id),
+                  title: Value(remote.title),
+                  author: Value(remote.author),
+                  isbn: Value(remote.isbn),
+                  notes: Value(remote.notes),
+                  isDeleted: Value(remote.isDeleted),
+                  syncedAt: Value(now),
+                  updatedAt: Value(remote.updatedAt ?? remote.createdAt),
+                ));
+          }
+        } else {
+          await _wishlistDao.insertItem(WishlistItemsCompanion.insert(
+            uuid: remote.uuid,
+            remoteId: Value(remote.id),
+            userId: owner.id,
+            title: remote.title,
+            author: Value(remote.author),
+            isbn: Value(remote.isbn),
+            notes: Value(remote.notes),
+            isDeleted: Value(remote.isDeleted),
+            createdAt: Value(remote.createdAt),
+            updatedAt: Value(remote.updatedAt ?? remote.createdAt),
+            syncedAt: Value(now),
+          ));
+        }
+      }
     });
   }
 
@@ -618,6 +716,131 @@ class SupabaseBookSyncRepository {
             error: e,
             stackTrace: st,
           );
+        }
+      }
+    }
+
+    // 4. Push Reading Sessions
+    final dirtySessions = await _sessionDao.getDirtySessions();
+    if (dirtySessions.isNotEmpty) {
+      developer.log('Pushing ${dirtySessions.length} dirty sessions...');
+      for (final session in dirtySessions) {
+        try {
+          if (session.remoteId == null) {
+            final remoteId = await _bookService.createReadingSession(
+              id: session.uuid,
+              ownerId: ownerRemoteId,
+              bookUuid: session.bookUuid,
+              startTime: session.startTime,
+              endTime: session.endTime,
+              durationSeconds: session.durationSeconds,
+              startPage: session.startPage,
+              endPage: session.endPage,
+              pagesRead: session.pagesRead,
+              notes: session.notes,
+              mood: session.mood,
+              isDeleted: session.isDeleted == true,
+              createdAt: session.createdAt,
+              updatedAt: session.updatedAt,
+              accessToken: accessToken,
+            );
+            await _sessionDao.updateSession(ReadingSessionsCompanion(
+              id: Value(session.id),
+              remoteId: Value(remoteId),
+              syncedAt: Value(DateTime.now()),
+              isDirty: const Value(false),
+            ));
+          } else {
+            await _bookService.updateReadingSession(
+              id: session.remoteId!,
+              startTime: session.startTime,
+              endTime: session.endTime,
+              durationSeconds: session.durationSeconds,
+              startPage: session.startPage,
+              endPage: session.endPage,
+              pagesRead: session.pagesRead,
+              notes: session.notes,
+              mood: session.mood,
+              isDeleted: session.isDeleted == true,
+              updatedAt: session.updatedAt,
+              accessToken: accessToken,
+            );
+            await _sessionDao.updateSession(ReadingSessionsCompanion(
+              id: Value(session.id),
+              syncedAt: Value(DateTime.now()),
+              isDirty: const Value(false),
+            ));
+          }
+        } catch (e) {
+          developer.log('Error syncing session ${session.id}: $e');
+        }
+      }
+    }
+
+    // 5. Push Wishlist Items
+    final dirtyWishlist = await _wishlistDao.getDirtyItems();
+    if (dirtyWishlist.isNotEmpty) {
+      developer.log('Pushing ${dirtyWishlist.length} dirty wishlist items...');
+      for (final item in dirtyWishlist) {
+        try {
+          if (item.remoteId == null) {
+            final remoteId = await _bookService.createWishlistItem(
+              id: item.uuid,
+              uuid: item.uuid,
+              userId: ownerRemoteId,
+              title: item.title,
+              author: item.author,
+              isbn: item.isbn,
+              notes: item.notes,
+              isDeleted: item.isDeleted == true,
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt,
+              accessToken: accessToken,
+            );
+            await _wishlistDao.updateItemFields(
+              item.id,
+              WishlistItemsCompanion(
+                remoteId: Value(remoteId),
+                syncedAt: Value(DateTime.now()),
+                isDirty: const Value(false),
+              ),
+            );
+          } else {
+            // Wishlist update is usually just about deletion or notes,
+            // but we use create with UPSERT or just specialized delete.
+            // Our service has deleteWishlistItem, but sync usually wants full mirror.
+            // For now, if it's item.isDeleted we call delete.
+            if (item.isDeleted == true) {
+              await _bookService.deleteWishlistItem(
+                id: item.remoteId!,
+                accessToken: accessToken,
+              );
+            } else {
+              // Create with same ID to update (UPSERT in Supabase)
+              await _bookService.createWishlistItem(
+                id: item.remoteId!,
+                uuid: item.uuid,
+                userId: ownerRemoteId,
+                title: item.title,
+                author: item.author,
+                isbn: item.isbn,
+                notes: item.notes,
+                isDeleted: false,
+                createdAt: item.createdAt,
+                updatedAt: item.updatedAt,
+                accessToken: accessToken,
+              );
+            }
+            await _wishlistDao.updateItemFields(
+              item.id,
+              WishlistItemsCompanion(
+                syncedAt: Value(DateTime.now()),
+                isDirty: const Value(false),
+              ),
+            );
+          }
+        } catch (e) {
+          developer.log('Error syncing wishlist item ${item.id}: $e');
         }
       }
     }

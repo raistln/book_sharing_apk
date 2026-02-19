@@ -266,6 +266,12 @@
       "languageVersion": "3.3"
     },
     {
+      "name": "do_not_disturb",
+      "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/do_not_disturb-1.0.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
       "name": "drift",
       "rootUri": "file:///C:/Users/USUARIO/AppData/Local/Pub/Cache/hosted/pub.dev/drift-2.30.1",
       "packageUri": "lib/",

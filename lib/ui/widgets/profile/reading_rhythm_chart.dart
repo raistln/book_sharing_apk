@@ -80,7 +80,7 @@ class _ReadingRhythmChartState extends State<ReadingRhythmChart> {
                 behavior: HitTestBehavior.translucent,
                 onScaleStart: (d) => _baseScale = _horizontalScale,
                 onScaleUpdate: (d) => setState(() =>
-                    _horizontalScale = (_baseScale * d.scale).clamp(0.8, 4.0)),
+                    _horizontalScale = (_baseScale * d.scale).clamp(1.0, 10.0)),
                 child: SingleChildScrollView(
                   controller: _scrollController,
                   scrollDirection: Axis.horizontal,

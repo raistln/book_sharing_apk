@@ -179,75 +179,71 @@ class _LibraryTabState extends ConsumerState<LibraryTab>
       ],
     );
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-        child: Column(
-          children: [
-            headerActions,
-            const SizedBox(height: 16),
-            Container(
-              height: 40,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Column(
+        children: [
+          headerActions,
+          const SizedBox(height: 16),
+          Container(
+            height: 40,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              indicator: BoxDecoration(
+                color: theme.colorScheme.primary,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: TabBar(
-                controller: _tabController,
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                indicator: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                labelColor: theme.colorScheme.onPrimary,
-                unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-                tabs: const [
-                  Tab(text: '  Mis libros  '),
-                  Tab(text: '  Me prestaron  '),
-                ],
-              ),
+              labelColor: theme.colorScheme.onPrimary,
+              unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+              tabs: const [
+                Tab(text: '  Mis libros  '),
+                Tab(text: '  Me prestaron  '),
+              ],
             ),
-            const SizedBox(height: 16),
-            searchAndFilter,
-            const SizedBox(height: 16),
-            Expanded(
-              child: booksAsync.when(
-                data: (books) {
-                  final myBooks =
-                      _filterBooks(books, isBorrowedExternal: false);
-                  final borrowedBooks =
-                      _filterBooks(books, isBorrowedExternal: true);
+          ),
+          const SizedBox(height: 16),
+          searchAndFilter,
+          const SizedBox(height: 16),
+          Expanded(
+            child: booksAsync.when(
+              data: (books) {
+                final myBooks = _filterBooks(books, isBorrowedExternal: false);
+                final borrowedBooks =
+                    _filterBooks(books, isBorrowedExternal: true);
 
-                  return TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildBookListOrEmpty(
-                        context,
-                        myBooks,
-                        emptyMessage:
-                            'Añade tus libros para gestionarlos aquí.',
-                        isMyBooksTab: true,
-                      ),
-                      _buildBookListOrEmpty(
-                        context,
-                        borrowedBooks,
-                        emptyMessage:
-                            'Aquí aparecerán los libros que te presten amigos fuera de la app.',
-                        isMyBooksTab: false,
-                      ),
-                    ],
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(
-                  child: Text('Error: $error'),
-                ),
+                return TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildBookListOrEmpty(
+                      context,
+                      myBooks,
+                      emptyMessage: 'Añade tus libros para gestionarlos aquí.',
+                      isMyBooksTab: true,
+                    ),
+                    _buildBookListOrEmpty(
+                      context,
+                      borrowedBooks,
+                      emptyMessage:
+                          'Aquí aparecerán los libros que te presten amigos fuera de la app.',
+                      isMyBooksTab: false,
+                    ),
+                  ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Text('Error: $error'),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

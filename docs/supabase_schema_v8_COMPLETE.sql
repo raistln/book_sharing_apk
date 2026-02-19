@@ -49,6 +49,7 @@ BEGIN
     DROP TABLE IF EXISTS public.reading_clubs CASCADE;
     DROP TABLE IF EXISTS public.club_books CASCADE;
     DROP TABLE IF EXISTS public.wishlist_items CASCADE;
+    DROP TABLE IF EXISTS public.reading_sessions CASCADE;
     DROP TABLE IF EXISTS public.reading_timeline_entries CASCADE;
     DROP TABLE IF EXISTS public.loan_notifications CASCADE;
     DROP TABLE IF EXISTS public.loans CASCADE;
@@ -218,11 +219,12 @@ CREATE TABLE public.loan_notifications (
 CREATE TABLE public.wishlist_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     uuid TEXT UNIQUE NOT NULL,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     author TEXT,
     isbn TEXT,
     notes TEXT,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -367,14 +369,48 @@ END; $$;
 CREATE OR REPLACE FUNCTION public.cleanup_old_notifications()
 RETURNS void SECURITY DEFINER LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN
-  DELETE FROM public.loan_notifications WHERE (status IN ('read', 'dismissed') OR is_deleted = true) AND created_at < NOW() - INTERVAL '7 days';
+  DELETE FROM public.loan_notifications 
+  WHERE (status IN ('read', 'dismissed') OR is_deleted = true) 
+  AND created_at < NOW() - INTERVAL '7 days';
+  
+  -- Maintenance for in_app_notifications if they exist
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'in_app_notifications' AND table_schema = 'public') THEN
+    EXECUTE 'DELETE FROM public.in_app_notifications WHERE (status IN (''read'', ''dismissed'') OR is_deleted = true) AND created_at < NOW() - INTERVAL ''7 days''';
+  END IF;
 END; $$;
 
 CREATE OR REPLACE FUNCTION public.cleanup_deleted_records()
 RETURNS void SECURITY DEFINER LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN
-  DELETE FROM public.loans WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.profiles WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.groups WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.group_members WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.group_invitations WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
   DELETE FROM public.shared_books WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.reading_timeline_entries WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.loans WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.loan_notifications WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.wishlist_items WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.reading_clubs WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.club_members WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.club_books WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.reading_sessions WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+END; $$;
+
+CREATE OR REPLACE FUNCTION public.cleanup_system_data()
+RETURNS void SECURITY DEFINER LANGUAGE plpgsql SET search_path = public AS $$
+BEGIN
+  DELETE FROM public.system_logs WHERE created_at < NOW() - INTERVAL '14 days';
+  DELETE FROM public.system_metrics WHERE recorded_at < NOW() - INTERVAL '60 days';
+  DELETE FROM public.group_invitations WHERE status = 'expired' OR (status = 'pending' AND expires_at < NOW());
+END; $$;
+
+CREATE OR REPLACE FUNCTION public.cleanup_expired_content()
+RETURNS void SECURITY DEFINER LANGUAGE plpgsql SET search_path = public AS $$
+BEGIN
+  DELETE FROM public.literary_bulletins 
+  WHERE (year < (extract(year from NOW()) - 2))
+     OR (year = (extract(year from NOW()) - 2) AND month < extract(month from NOW()));
 END; $$;
 
 CREATE OR REPLACE FUNCTION public.handle_loan_updates()
@@ -415,6 +451,9 @@ CREATE POLICY "books_access" ON public.shared_books FOR ALL USING (owner_id = (s
 ALTER TABLE public.reading_timeline_entries ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "timeline_access" ON public.reading_timeline_entries FOR ALL USING (owner_id = (select auth.uid()));
 
+ALTER TABLE public.reading_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "sessions_access" ON public.reading_sessions FOR ALL USING (owner_id = (select auth.uid()));
+
 ALTER TABLE public.loans ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "loans_access" ON public.loans FOR ALL USING (lender_user_id = (select auth.uid()) OR borrower_user_id = (select auth.uid()));
 
@@ -436,14 +475,17 @@ CREATE TRIGGER update_groups_at BEFORE UPDATE ON public.groups FOR EACH ROW EXEC
 CREATE TRIGGER update_shared_books_at BEFORE UPDATE ON public.shared_books FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_loans_at BEFORE UPDATE ON public.loans FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_timeline_at BEFORE UPDATE ON public.reading_timeline_entries FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_sessions_at BEFORE UPDATE ON public.reading_sessions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_wishlist_at BEFORE UPDATE ON public.wishlist_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER loan_updates_handler BEFORE UPDATE ON public.loans FOR EACH ROW EXECUTE FUNCTION handle_loan_updates();
 
 SELECT cron.schedule('expire-overdue-loans', '0 * * * *', $$SELECT public.expire_overdue_loans()$$);
 SELECT cron.schedule('send-loan-reminders', '0 9 * * *', $$SELECT public.send_loan_reminders()$$);
-SELECT cron.schedule('cleanup-old-notifications', '0 0 * * *', $$SELECT public.cleanup_old_notifications()$$);
-SELECT cron.schedule('cleanup-deleted-records', '0 1 * * *', $$SELECT public.cleanup_deleted_records()$$);
+SELECT cron.schedule('cleanup-notifications', '0 0 * * *', $$SELECT public.cleanup_old_notifications()$$);
+SELECT cron.schedule('cleanup-deleted', '0 1 * * *', $$SELECT public.cleanup_deleted_records()$$);
+SELECT cron.schedule('cleanup-system', '0 2 * * *', $$SELECT public.cleanup_system_data()$$);
+SELECT cron.schedule('cleanup-bulletins', '0 3 1 * *', $$SELECT public.cleanup_expired_content()$$);
 
 -- ============================================================================
 -- DEPLOYMENT COMPLETE (v8 - FULL - LINTER CLEAN)

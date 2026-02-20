@@ -39,76 +39,113 @@ class _ReadingRhythmChartState extends State<ReadingRhythmChart> {
         final maxWidth = constraints.maxWidth;
         final chartWidth = maxWidth * _horizontalScale;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        return Stack(
           children: [
-            // Header minimalista y tranquilo
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Tu viaje lector",
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.secondary,
-                          letterSpacing: 1.2,
-                        ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header minimalista y tranquilo
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Tu viaje lector",
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.secondary,
+                              letterSpacing: 1.2,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.data.insight,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.8),
+                              height: 1.3,
+                              fontFamily: 'Serif',
+                            ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.data.insight,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.8),
-                          height: 1.3,
-                          fontFamily:
-                              'Serif', // Si tienes una fuente serif, queda muy elegante aquí
+                ),
+
+                const SizedBox(height: 16),
+
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onScaleStart: (d) => _baseScale = _horizontalScale,
+                    onScaleUpdate: (d) => setState(() => _horizontalScale =
+                        (_baseScale * d.scale).clamp(1.0, 10.0)),
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: SizedBox(
+                        width: chartWidth,
+                        child: Stack(
+                          children: [
+                            // Capa 1: Fondo sutil (El tiempo)
+                            Positioned.fill(
+                                child: _buildZenGrid(context, chartWidth)),
+
+                            // Capa 2: Los libros (El viaje)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(top: 40.0, bottom: 100),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: widget.data.rows
+                                    .map((row) => _buildZenBookRow(
+                                        context, row, chartWidth))
+                                    .toList(),
+                              ),
+                            ),
+                          ],
                         ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onScaleStart: (d) => _baseScale = _horizontalScale,
-                onScaleUpdate: (d) => setState(() =>
-                    _horizontalScale = (_baseScale * d.scale).clamp(1.0, 10.0)),
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: SizedBox(
-                    width: chartWidth,
-                    child: Stack(
-                      children: [
-                        // Capa 1: Fondo sutil (El tiempo)
-                        Positioned.fill(
-                            child: _buildZenGrid(context, chartWidth)),
-
-                        // Capa 2: Los libros (El viaje)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 40.0, bottom: 20),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment
-                                .center, // Centrado verticalmente si hay pocos
-                            children: widget.data.rows
-                                .map((row) =>
-                                    _buildZenBookRow(context, row, chartWidth))
-                                .toList(),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
+              ],
+            ),
+            // Zoom Controls
+            Positioned(
+              left: 16,
+              bottom: 16,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FloatingActionButton.small(
+                    heroTag: 'zoom_in_rhythm',
+                    onPressed: () {
+                      setState(() {
+                        _horizontalScale =
+                            (_horizontalScale * 1.5).clamp(1.0, 10.0);
+                      });
+                    },
+                    child: const Icon(Icons.add),
+                  ),
+                  const SizedBox(height: 8),
+                  FloatingActionButton.small(
+                    heroTag: 'zoom_out_rhythm',
+                    onPressed: () {
+                      setState(() {
+                        _horizontalScale =
+                            (_horizontalScale / 1.5).clamp(1.0, 10.0);
+                      });
+                    },
+                    child: const Icon(Icons.remove),
+                  ),
+                ],
               ),
             ),
           ],

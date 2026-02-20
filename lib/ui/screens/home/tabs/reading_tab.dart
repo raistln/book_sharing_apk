@@ -160,49 +160,56 @@ class _ReadingTabState extends ConsumerState<ReadingTab> {
                 ),
               ),
               const SizedBox(height: 24),
-              SizedBox(
-                height: 420, // Increased height for zoom comfort
-                child: _activeChartIndex == 0
-                    ? Consumer(
-                        builder: (context, ref, child) {
-                          return rhythmAsync.when(
-                            data: (data) => ReadingRhythmChart(
-                              data: data,
-                              onBookTap: (book) {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => BookDetailsPage(
-                                      bookId: book.id,
-                                      scrollToTimeline: true,
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: Container(
+                  constraints: BoxConstraints(
+                    minHeight: _activeChartIndex == 0 ? 750 : 0,
+                    maxHeight: _activeChartIndex == 0 ? 750 : double.infinity,
+                  ),
+                  child: _activeChartIndex == 0
+                      ? Consumer(
+                          builder: (context, ref, child) {
+                            return rhythmAsync.when(
+                              data: (data) => ReadingRhythmChart(
+                                data: data,
+                                onBookTap: (book) {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => BookDetailsPage(
+                                        bookId: book.id,
+                                        scrollToTimeline: true,
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
-                            ),
-                            loading: () => const Center(
-                                child: CircularProgressIndicator()),
-                            error: (err, _) =>
-                                Center(child: Text('Error: $err')),
-                          );
-                        },
-                      )
-                    : Consumer(
-                        builder: (context, ref, child) {
-                          return readBooksAsync.when(
-                            data: (books) => Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              child: ReadingCalendar(
-                                readBooks: books,
+                                  );
+                                },
                               ),
-                            ),
-                            loading: () => const Center(
-                                child: CircularProgressIndicator()),
-                            error: (err, _) =>
-                                Center(child: Text('Error: $err')),
-                          );
-                        },
-                      ),
+                              loading: () => const Center(
+                                  child: CircularProgressIndicator()),
+                              error: (err, _) =>
+                                  Center(child: Text('Error: $err')),
+                            );
+                          },
+                        )
+                      : Consumer(
+                          builder: (context, ref, child) {
+                            return readBooksAsync.when(
+                              data: (books) => Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                child: ReadingCalendar(
+                                  readBooks: books,
+                                ),
+                              ),
+                              loading: () => const Center(
+                                  child: CircularProgressIndicator()),
+                              error: (err, _) =>
+                                  Center(child: Text('Error: $err')),
+                            );
+                          },
+                        ),
+                ),
               ),
 
               const SizedBox(height: 80), // Bottom padding for FAB

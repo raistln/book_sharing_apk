@@ -55,4 +55,5 @@ app.*.map.json
 # Documentation - Strategic planning
 docs/future_iterations.md
 docs/future_iterations_market.md
-docs/changes_v1.4.md
+docs/changes_v1.*.md
+docs/plan_perfiles*

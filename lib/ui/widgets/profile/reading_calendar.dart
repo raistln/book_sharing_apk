@@ -10,8 +10,8 @@ class ReadingCalendar extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final months = <DateTime>[];
-    for (int i = 11; i >= 0; i--) {
-      months.add(DateTime(now.year, now.month - i, 1));
+    for (int i = 1; i <= 12; i++) {
+      months.add(DateTime(now.year, i, 1));
     }
 
     return GridView.builder(

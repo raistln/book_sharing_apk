@@ -89,6 +89,8 @@ class GroupPushRepository {
     required String name,
     String? description,
     required LocalUser owner,
+    List<String>? allowedGenres,
+    String? primaryColor,
     String? accessToken,
   }) async {
     final now = DateTime.now();
@@ -102,6 +104,11 @@ class GroupPushRepository {
     final groupUuid = _uuid.v4();
     final ownerMemberUuid = _uuid.v4();
 
+    // Encode genres as JSON for storage
+    final genresJson = (allowedGenres != null && allowedGenres.isNotEmpty)
+        ? jsonEncode(allowedGenres)
+        : null;
+
     return _db.transaction(() async {
       final groupId = await _groupDao.insertGroup(
         GroupsCompanion.insert(
@@ -112,6 +119,10 @@ class GroupPushRepository {
               description != null ? Value(description) : const Value.absent(),
           ownerUserId: Value(owner.id),
           ownerRemoteId: Value(ownerRecord.remoteId!),
+          allowedGenres:
+              genresJson != null ? Value(genresJson) : const Value.absent(),
+          primaryColor:
+              primaryColor != null ? Value(primaryColor) : const Value.absent(),
           isDirty: const Value(false),
           isDeleted: const Value(false),
           syncedAt: Value(now),
@@ -146,6 +157,8 @@ class GroupPushRepository {
           'name': name,
           'description': description,
           'owner_id': ownerRecord.remoteId,
+          if (genresJson != null) 'allowed_genres': allowedGenres,
+          if (primaryColor != null) 'primary_color': primaryColor,
           'created_at': now.toIso8601String(),
         },
         accessToken: accessToken,
@@ -171,9 +184,16 @@ class GroupPushRepository {
     required Group group,
     required String name,
     String? description,
+    List<String>? allowedGenres,
+    String? primaryColor,
     String? accessToken,
   }) async {
     final now = DateTime.now();
+
+    // Encode genres as JSON for storage
+    final genresJson = (allowedGenres != null && allowedGenres.isNotEmpty)
+        ? jsonEncode(allowedGenres)
+        : null;
 
     await _groupDao.updateGroupFields(
       groupId: group.id,
@@ -181,6 +201,10 @@ class GroupPushRepository {
         name: Value(name),
         description:
             description != null ? Value(description) : const Value.absent(),
+        allowedGenres:
+            allowedGenres != null ? Value(genresJson) : const Value.absent(),
+        primaryColor:
+            primaryColor != null ? Value(primaryColor) : const Value.absent(),
         isDirty: const Value(false),
         syncedAt: Value(now),
         updatedAt: Value(now),
@@ -192,6 +216,8 @@ class GroupPushRepository {
       body: {
         'name': name,
         'description': description,
+        if (allowedGenres != null) 'allowed_genres': allowedGenres,
+        if (primaryColor != null) 'primary_color': primaryColor,
         'updated_at': now.toIso8601String(),
       },
       accessToken: accessToken,

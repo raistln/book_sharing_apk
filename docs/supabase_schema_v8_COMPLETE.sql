@@ -1,7 +1,8 @@
 -- ============================================================================
--- Book Sharing App - Supabase SQL Schema v8 - COMPLETE DEPLOYMENT
+-- Book Sharing App - Supabase SQL Schema v9 - COMPLETE DEPLOYMENT
 -- ============================================================================
 -- Including: Base Schema + Timeline Sync + Loan Hardening + Wishlist + Book Clubs
+-- + Thematic Groups (allowed_genres, primary_color)
 -- Optimized with: (select auth.uid()) and Linter-friendly RLS separation.
 -- ============================================================================
 
@@ -107,6 +108,11 @@ CREATE TABLE public.groups (
   name TEXT NOT NULL,
   description TEXT,
   owner_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  -- Thematic group: JSON array of BookGenre names, e.g. '["fantasy","horror"]
+  -- NULL means no genre filter (all genres visible).
+  allowed_genres JSONB DEFAULT NULL,
+  -- Hex color of the primary (first) genre, e.g. '#7B5EA7'. NULL = no tint.
+  primary_color TEXT DEFAULT NULL,
   is_deleted BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -394,7 +400,10 @@ BEGIN
   DELETE FROM public.reading_clubs WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
   DELETE FROM public.club_members WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
   DELETE FROM public.club_books WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
-  DELETE FROM public.reading_sessions WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  -- reading_sessions added in v9 cleanup
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'reading_sessions' AND table_schema = 'public') THEN
+    DELETE FROM public.reading_sessions WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  END IF;
 END; $$;
 
 CREATE OR REPLACE FUNCTION public.cleanup_system_data()

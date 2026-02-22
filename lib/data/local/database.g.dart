@@ -3306,6 +3306,18 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
   late final GeneratedColumn<String> ownerRemoteId = GeneratedColumn<String>(
       'owner_remote_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _allowedGenresMeta =
+      const VerificationMeta('allowedGenres');
+  @override
+  late final GeneratedColumn<String> allowedGenres = GeneratedColumn<String>(
+      'allowed_genres', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _primaryColorMeta =
+      const VerificationMeta('primaryColor');
+  @override
+  late final GeneratedColumn<String> primaryColor = GeneratedColumn<String>(
+      'primary_color', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
   @override
@@ -3357,6 +3369,8 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
         description,
         ownerUserId,
         ownerRemoteId,
+        allowedGenres,
+        primaryColor,
         isDirty,
         isDeleted,
         syncedAt,
@@ -3410,6 +3424,18 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
           ownerRemoteId.isAcceptableOrUnknown(
               data['owner_remote_id']!, _ownerRemoteIdMeta));
     }
+    if (data.containsKey('allowed_genres')) {
+      context.handle(
+          _allowedGenresMeta,
+          allowedGenres.isAcceptableOrUnknown(
+              data['allowed_genres']!, _allowedGenresMeta));
+    }
+    if (data.containsKey('primary_color')) {
+      context.handle(
+          _primaryColorMeta,
+          primaryColor.isAcceptableOrUnknown(
+              data['primary_color']!, _primaryColorMeta));
+    }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
           isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
@@ -3453,6 +3479,10 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
           .read(DriftSqlType.int, data['${effectivePrefix}owner_user_id']),
       ownerRemoteId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}owner_remote_id']),
+      allowedGenres: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}allowed_genres']),
+      primaryColor: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}primary_color']),
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -3480,6 +3510,8 @@ class Group extends DataClass implements Insertable<Group> {
   final String? description;
   final int? ownerUserId;
   final String? ownerRemoteId;
+  final String? allowedGenres;
+  final String? primaryColor;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -3493,6 +3525,8 @@ class Group extends DataClass implements Insertable<Group> {
       this.description,
       this.ownerUserId,
       this.ownerRemoteId,
+      this.allowedGenres,
+      this.primaryColor,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -3515,6 +3549,12 @@ class Group extends DataClass implements Insertable<Group> {
     }
     if (!nullToAbsent || ownerRemoteId != null) {
       map['owner_remote_id'] = Variable<String>(ownerRemoteId);
+    }
+    if (!nullToAbsent || allowedGenres != null) {
+      map['allowed_genres'] = Variable<String>(allowedGenres);
+    }
+    if (!nullToAbsent || primaryColor != null) {
+      map['primary_color'] = Variable<String>(primaryColor);
     }
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
@@ -3543,6 +3583,12 @@ class Group extends DataClass implements Insertable<Group> {
       ownerRemoteId: ownerRemoteId == null && nullToAbsent
           ? const Value.absent()
           : Value(ownerRemoteId),
+      allowedGenres: allowedGenres == null && nullToAbsent
+          ? const Value.absent()
+          : Value(allowedGenres),
+      primaryColor: primaryColor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(primaryColor),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -3564,6 +3610,8 @@ class Group extends DataClass implements Insertable<Group> {
       description: serializer.fromJson<String?>(json['description']),
       ownerUserId: serializer.fromJson<int?>(json['ownerUserId']),
       ownerRemoteId: serializer.fromJson<String?>(json['ownerRemoteId']),
+      allowedGenres: serializer.fromJson<String?>(json['allowedGenres']),
+      primaryColor: serializer.fromJson<String?>(json['primaryColor']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -3582,6 +3630,8 @@ class Group extends DataClass implements Insertable<Group> {
       'description': serializer.toJson<String?>(description),
       'ownerUserId': serializer.toJson<int?>(ownerUserId),
       'ownerRemoteId': serializer.toJson<String?>(ownerRemoteId),
+      'allowedGenres': serializer.toJson<String?>(allowedGenres),
+      'primaryColor': serializer.toJson<String?>(primaryColor),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -3598,6 +3648,8 @@ class Group extends DataClass implements Insertable<Group> {
           Value<String?> description = const Value.absent(),
           Value<int?> ownerUserId = const Value.absent(),
           Value<String?> ownerRemoteId = const Value.absent(),
+          Value<String?> allowedGenres = const Value.absent(),
+          Value<String?> primaryColor = const Value.absent(),
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -3612,6 +3664,10 @@ class Group extends DataClass implements Insertable<Group> {
         ownerUserId: ownerUserId.present ? ownerUserId.value : this.ownerUserId,
         ownerRemoteId:
             ownerRemoteId.present ? ownerRemoteId.value : this.ownerRemoteId,
+        allowedGenres:
+            allowedGenres.present ? allowedGenres.value : this.allowedGenres,
+        primaryColor:
+            primaryColor.present ? primaryColor.value : this.primaryColor,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -3631,6 +3687,12 @@ class Group extends DataClass implements Insertable<Group> {
       ownerRemoteId: data.ownerRemoteId.present
           ? data.ownerRemoteId.value
           : this.ownerRemoteId,
+      allowedGenres: data.allowedGenres.present
+          ? data.allowedGenres.value
+          : this.allowedGenres,
+      primaryColor: data.primaryColor.present
+          ? data.primaryColor.value
+          : this.primaryColor,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -3649,6 +3711,8 @@ class Group extends DataClass implements Insertable<Group> {
           ..write('description: $description, ')
           ..write('ownerUserId: $ownerUserId, ')
           ..write('ownerRemoteId: $ownerRemoteId, ')
+          ..write('allowedGenres: $allowedGenres, ')
+          ..write('primaryColor: $primaryColor, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -3667,6 +3731,8 @@ class Group extends DataClass implements Insertable<Group> {
       description,
       ownerUserId,
       ownerRemoteId,
+      allowedGenres,
+      primaryColor,
       isDirty,
       isDeleted,
       syncedAt,
@@ -3683,6 +3749,8 @@ class Group extends DataClass implements Insertable<Group> {
           other.description == this.description &&
           other.ownerUserId == this.ownerUserId &&
           other.ownerRemoteId == this.ownerRemoteId &&
+          other.allowedGenres == this.allowedGenres &&
+          other.primaryColor == this.primaryColor &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -3698,6 +3766,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
   final Value<String?> description;
   final Value<int?> ownerUserId;
   final Value<String?> ownerRemoteId;
+  final Value<String?> allowedGenres;
+  final Value<String?> primaryColor;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -3711,6 +3781,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.description = const Value.absent(),
     this.ownerUserId = const Value.absent(),
     this.ownerRemoteId = const Value.absent(),
+    this.allowedGenres = const Value.absent(),
+    this.primaryColor = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -3725,6 +3797,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.description = const Value.absent(),
     this.ownerUserId = const Value.absent(),
     this.ownerRemoteId = const Value.absent(),
+    this.allowedGenres = const Value.absent(),
+    this.primaryColor = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -3740,6 +3814,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     Expression<String>? description,
     Expression<int>? ownerUserId,
     Expression<String>? ownerRemoteId,
+    Expression<String>? allowedGenres,
+    Expression<String>? primaryColor,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -3754,6 +3830,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       if (description != null) 'description': description,
       if (ownerUserId != null) 'owner_user_id': ownerUserId,
       if (ownerRemoteId != null) 'owner_remote_id': ownerRemoteId,
+      if (allowedGenres != null) 'allowed_genres': allowedGenres,
+      if (primaryColor != null) 'primary_color': primaryColor,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -3770,6 +3848,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       Value<String?>? description,
       Value<int?>? ownerUserId,
       Value<String?>? ownerRemoteId,
+      Value<String?>? allowedGenres,
+      Value<String?>? primaryColor,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -3783,6 +3863,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       description: description ?? this.description,
       ownerUserId: ownerUserId ?? this.ownerUserId,
       ownerRemoteId: ownerRemoteId ?? this.ownerRemoteId,
+      allowedGenres: allowedGenres ?? this.allowedGenres,
+      primaryColor: primaryColor ?? this.primaryColor,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -3815,6 +3897,12 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     if (ownerRemoteId.present) {
       map['owner_remote_id'] = Variable<String>(ownerRemoteId.value);
     }
+    if (allowedGenres.present) {
+      map['allowed_genres'] = Variable<String>(allowedGenres.value);
+    }
+    if (primaryColor.present) {
+      map['primary_color'] = Variable<String>(primaryColor.value);
+    }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
     }
@@ -3843,6 +3931,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
           ..write('description: $description, ')
           ..write('ownerUserId: $ownerUserId, ')
           ..write('ownerRemoteId: $ownerRemoteId, ')
+          ..write('allowedGenres: $allowedGenres, ')
+          ..write('primaryColor: $primaryColor, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -20097,6 +20187,8 @@ typedef $$GroupsTableCreateCompanionBuilder = GroupsCompanion Function({
   Value<String?> description,
   Value<int?> ownerUserId,
   Value<String?> ownerRemoteId,
+  Value<String?> allowedGenres,
+  Value<String?> primaryColor,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -20111,6 +20203,8 @@ typedef $$GroupsTableUpdateCompanionBuilder = GroupsCompanion Function({
   Value<String?> description,
   Value<int?> ownerUserId,
   Value<String?> ownerRemoteId,
+  Value<String?> allowedGenres,
+  Value<String?> primaryColor,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -20211,6 +20305,12 @@ class $$GroupsTableFilterComposer
 
   ColumnFilters<String> get ownerRemoteId => $composableBuilder(
       column: $table.ownerRemoteId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get allowedGenres => $composableBuilder(
+      column: $table.allowedGenres, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get primaryColor => $composableBuilder(
+      column: $table.primaryColor, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -20339,6 +20439,14 @@ class $$GroupsTableOrderingComposer
       column: $table.ownerRemoteId,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get allowedGenres => $composableBuilder(
+      column: $table.allowedGenres,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get primaryColor => $composableBuilder(
+      column: $table.primaryColor,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
 
@@ -20401,6 +20509,12 @@ class $$GroupsTableAnnotationComposer
 
   GeneratedColumn<String> get ownerRemoteId => $composableBuilder(
       column: $table.ownerRemoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get allowedGenres => $composableBuilder(
+      column: $table.allowedGenres, builder: (column) => column);
+
+  GeneratedColumn<String> get primaryColor => $composableBuilder(
+      column: $table.primaryColor, builder: (column) => column);
 
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
@@ -20535,6 +20649,8 @@ class $$GroupsTableTableManager extends RootTableManager<
             Value<String?> description = const Value.absent(),
             Value<int?> ownerUserId = const Value.absent(),
             Value<String?> ownerRemoteId = const Value.absent(),
+            Value<String?> allowedGenres = const Value.absent(),
+            Value<String?> primaryColor = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -20549,6 +20665,8 @@ class $$GroupsTableTableManager extends RootTableManager<
             description: description,
             ownerUserId: ownerUserId,
             ownerRemoteId: ownerRemoteId,
+            allowedGenres: allowedGenres,
+            primaryColor: primaryColor,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -20563,6 +20681,8 @@ class $$GroupsTableTableManager extends RootTableManager<
             Value<String?> description = const Value.absent(),
             Value<int?> ownerUserId = const Value.absent(),
             Value<String?> ownerRemoteId = const Value.absent(),
+            Value<String?> allowedGenres = const Value.absent(),
+            Value<String?> primaryColor = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -20577,6 +20697,8 @@ class $$GroupsTableTableManager extends RootTableManager<
             description: description,
             ownerUserId: ownerUserId,
             ownerRemoteId: ownerRemoteId,
+            allowedGenres: allowedGenres,
+            primaryColor: primaryColor,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,

@@ -24,6 +24,77 @@ enum BookGenre {
   dystopian,
   classic;
 
+  /// Hex color representing this genre's thematic tint.
+  String get primaryHex {
+    switch (this) {
+      case BookGenre.fantasy:
+        return '#7B5EA7';
+      case BookGenre.scienceFiction:
+        return '#3D5A99';
+      case BookGenre.horror:
+        return '#8B2020';
+      case BookGenre.thrillerSuspense:
+      case BookGenre.crimeMystery:
+        return '#4A4A5A';
+      case BookGenre.romance:
+        return '#C47A8A';
+      case BookGenre.historical:
+        return '#8B6347';
+      case BookGenre.adventure:
+        return '#3A7D44';
+      case BookGenre.children:
+      case BookGenre.youngAdult:
+        return '#E07B39';
+      case BookGenre.poetry:
+        return '#C9A84C';
+      case BookGenre.essay:
+      case BookGenre.nonFiction:
+      case BookGenre.biographyMemoir:
+      case BookGenre.technicalEducational:
+      case BookGenre.selfHelp:
+      case BookGenre.politicsSociety:
+      case BookGenre.religionSpirituality:
+      case BookGenre.philosophy:
+        return '#4A6B8A';
+      case BookGenre.classic:
+      case BookGenre.literaryFiction:
+        return '#A08060';
+      case BookGenre.comicsGraphicNovel:
+      case BookGenre.humor:
+      case BookGenre.dystopian:
+        return '#7A7A7A';
+    }
+  }
+
+  /// Decode a JSON-encoded list of genre names (stored in [Group.allowedGenres])
+  /// into a [Set] of [BookGenre]. Returns empty set if [json] is null/invalid.
+  static Set<BookGenre> allowedFromJson(String? json) {
+    if (json == null || json.isEmpty) return const {};
+    try {
+      // Simple parsing of a JSON array: ["fantasy","horror"]
+      final trimmed = json.trim();
+      if (!trimmed.startsWith('[')) return const {};
+      final inner = trimmed.substring(1, trimmed.length - 1);
+      if (inner.trim().isEmpty) return const {};
+      return inner
+          .split(',')
+          .map((s) => s.trim().replaceAll('"', "").replaceAll("'", ''))
+          .where((s) => s.isNotEmpty)
+          .map((s) => fromString(s))
+          .whereType<BookGenre>()
+          .toSet();
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// Encode a list of [BookGenre] as a JSON array string for [Group.allowedGenres].
+  static String encodeToJson(List<BookGenre> genres) {
+    if (genres.isEmpty) return '[]';
+    final items = genres.map((g) => '"${g.name}"').join(',');
+    return '[$items]';
+  }
+
   String get label {
     switch (this) {
       case BookGenre.fantasy:

@@ -152,9 +152,11 @@ class ReadingTimelineService {
       eventDate: eventDate ?? DateTime.now(),
     );
 
-    // If adding progress while paused, automatically switch back to reading
+    // If adding progress while paused, automatically switch back to the correct active status.
+    // A book with isRead==true was paused during a reread → restore 'rereading'.
     if (book.readingStatus == 'paused') {
-      await bookDao.updateReadingStatus(book.id, 'reading');
+      final resumeStatus = book.isRead ? 'rereading' : 'reading';
+      await bookDao.updateReadingStatus(book.id, resumeStatus);
     }
 
     return entry;

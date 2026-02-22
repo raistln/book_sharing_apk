@@ -158,6 +158,13 @@ class Groups extends Table {
       integer().references(LocalUsers, #id).nullable()();
   TextColumn get ownerRemoteId => text().nullable()();
 
+  // Thematic group support
+  // JSON array of BookGenre.name strings (e.g. '["fantasy","horror"]')
+  // null means no filter — all genres allowed.
+  TextColumn get allowedGenres => text().nullable()();
+  // Hex color of the primary (first) genre, e.g. '#7B5EA7'. null = no tint.
+  TextColumn get primaryColor => text().nullable()();
+
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get syncedAt => dateTime().nullable()();
@@ -714,7 +721,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -945,6 +952,12 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(wishlistItems, wishlistItems.isDirty);
             await m.addColumn(wishlistItems, wishlistItems.isDeleted);
             await m.addColumn(wishlistItems, wishlistItems.syncedAt);
+          }
+
+          if (from < 26) {
+            // Migration to v26: Thematic groups — genre filter + color tint
+            await m.addColumn(groups, groups.allowedGenres);
+            await m.addColumn(groups, groups.primaryColor);
           }
         },
       );

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/local/database.dart';
+import '../../../../models/book_genre.dart';
 import '../../../../providers/book_providers.dart';
 import '../../../../services/group_push_controller.dart';
 import '../../../../services/loan_controller.dart';
@@ -199,6 +200,10 @@ Future<void> _handleCreateGroup(
       name: result.name,
       description: result.description,
       owner: owner,
+      allowedGenres: result.allowedGenres != null
+          ? _decodeGenreList(result.allowedGenres!)
+          : null,
+      primaryColor: result.primaryColor,
     );
   } catch (error) {
     if (!context.mounted) {
@@ -209,6 +214,22 @@ Future<void> _handleCreateGroup(
       message: 'No se pudo crear el grupo: $error',
       isError: true,
     );
+  }
+}
+
+/// Decode JSON genre list from a string like '["fantasy","horror"]'.
+List<String> _decodeGenreList(String json) {
+  try {
+    final trimmed = json.trim();
+    if (!trimmed.startsWith('[')) return [];
+    final inner = trimmed.substring(1, trimmed.length - 1);
+    return inner
+        .split(',')
+        .map((s) => s.trim().replaceAll('"', '').replaceAll("'", ''))
+        .where((s) => s.isNotEmpty)
+        .toList();
+  } catch (_) {
+    return [];
   }
 }
 
@@ -225,6 +246,34 @@ Future<void> _handleJoinGroupByCode(
         code: code,
         user: user,
       );
+
+      // After joining, look up the newly joined group from the local list
+      // to show a thematic filter warning if applicable.
+      if (!context.mounted) return;
+      final groups = ref.read(groupListProvider).value ?? [];
+      // The most recently updated group is likely the one we just joined
+      final joinedGroup = groups.isNotEmpty ? groups.last : null;
+      final genres = BookGenre.allowedFromJson(joinedGroup?.allowedGenres);
+      if (genres.isNotEmpty && context.mounted) {
+        final genreNames = genres.map((g) => g.label).join(', ');
+        await showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            icon: const Icon(Icons.local_library_outlined),
+            title: const Text('Grupo temático'),
+            content: Text(
+              'Este grupo tiene un filtro activo de géneros: $genreNames.\n\n'
+              'Solo los libros físicos de esos géneros serán visibles en este grupo.',
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
+        );
+      }
     },
   );
 }

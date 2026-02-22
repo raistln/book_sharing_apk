@@ -7,9 +7,11 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../../data/local/database.dart';
 import '../../../../data/local/group_dao.dart';
+import '../../../../models/book_genre.dart';
 import '../../../../providers/book_providers.dart';
 import '../../../../services/coach_marks/coach_mark_controller.dart';
 import '../../../../services/coach_marks/coach_mark_models.dart';
+import '../../../../ui/dialogs/group_form_dialog.dart';
 import '../../../../ui/widgets/coach_mark_target.dart';
 import '../../../../utils/group_utils.dart';
 import '../../../../design_system/literary_shadows.dart';
@@ -131,6 +133,42 @@ class _GroupCardState extends ConsumerState<GroupCard> {
           : popup;
     }
 
+    // ---- Thematic group color tint -----------------------------------
+    Color? tintColor;
+    if (group.primaryColor != null) {
+      final hex = group.primaryColor!.replaceFirst('#', '');
+      try {
+        tintColor = Color(int.parse('FF$hex', radix: 16));
+      } catch (_) {}
+    }
+
+    // ---- Allowed genres list (for subtitle) -------------------------
+    final allowedGenres = BookGenre.allowedFromJson(group.allowedGenres);
+    final genreSubtitle = allowedGenres.isNotEmpty
+        ? allowedGenres.map((g) => g.label).join(' · ')
+        : null;
+
+    // ---- Owner excluded-books count ---------------------------------
+    // Only show for the owner when genre filter is active
+    Map<String, int>? excludedInfo;
+    if (isOwner && allowedGenres.isNotEmpty) {
+      final myBooksAsync = ref.watch(bookListProvider);
+      final myBooks = myBooksAsync.asData?.value ?? [];
+      int passing = 0;
+      int excluded = 0;
+      for (final book in myBooks) {
+        if (!book.isPhysical || book.isDeleted) continue;
+        final genre = BookGenre.fromString(book.genre);
+        if (genre != null && allowedGenres.contains(genre)) {
+          passing++;
+        } else {
+          excluded++;
+        }
+      }
+      excludedInfo = {'passing': passing, 'excluded': excluded};
+    }
+    // -----------------------------------------------------------------
+
     return Card(
       elevation: 0,
       shadowColor: Colors.transparent,
@@ -139,6 +177,17 @@ class _GroupCardState extends ConsumerState<GroupCard> {
           borderRadius: BorderRadius.circular(12),
           color: theme.cardTheme.color ?? theme.colorScheme.surface,
           boxShadow: LiteraryShadows.groupCardShadow(context),
+          // Thematic tint: soft 15% opacity overlay
+          gradient: tintColor != null
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    tintColor.withValues(alpha: 0.12),
+                    tintColor.withValues(alpha: 0.04),
+                  ],
+                )
+              : null,
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -175,6 +224,33 @@ class _GroupCardState extends ConsumerState<GroupCard> {
                             },
                           ),
                         ],
+                        // Genre subtitle — visible to all members
+                        if (genreSubtitle != null) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.local_library_outlined,
+                                size: 12,
+                                color: tintColor ??
+                                    theme.colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  genreSubtitle,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: tintColor?.withValues(alpha: 0.85) ??
+                                        theme.colorScheme.onSurfaceVariant,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 4),
                         Text(
                             'Última actualización: ${DateFormat.yMd().add_Hm().format(group.updatedAt)}',
@@ -195,6 +271,14 @@ class _GroupCardState extends ConsumerState<GroupCard> {
                   ),
                 ],
               ),
+              // Owner excluded-books info block
+              if (excludedInfo != null && excludedInfo['excluded']! > 0) ...[
+                const SizedBox(height: 8),
+                _ExcludedBooksRow(
+                  passing: excludedInfo['passing']!,
+                  excluded: excludedInfo['excluded']!,
+                ),
+              ],
               const SizedBox(height: 12),
               // Hide stats and shared books for personal loans group
               if (!isPersonalGroup) ...[
@@ -296,15 +380,37 @@ Future<void> _handleEditGroup(
   WidgetRef ref,
   Group group,
 ) async {
-  final result = await showDialog<({String name, String? description})>(
+  // Decode current genres so the dialog can pre-populate them
+  final currentGenres = BookGenre.allowedFromJson(group.allowedGenres).toList();
+
+  final result = await showDialog<GroupFormResult>(
     context: context,
-    builder: (context) => _GroupFormDialog(
+    builder: (context) => GroupFormDialog(
       initialName: group.name,
       initialDescription: group.description,
+      initialGenres: currentGenres,
     ),
   );
 
   if (result == null || !context.mounted) return;
+
+  // Decode genre list from JSON for the controller
+  List<String>? allowedGenres;
+  if (result.allowedGenres != null) {
+    try {
+      final j = result.allowedGenres!.trim();
+      if (j.startsWith('[')) {
+        final inner = j.substring(1, j.length - 1);
+        allowedGenres = inner.isEmpty
+            ? []
+            : inner
+                .split(',')
+                .map((s) => s.trim().replaceAll('"', '').replaceAll("'", ''))
+                .where((s) => s.isNotEmpty)
+                .toList();
+      }
+    } catch (_) {}
+  }
 
   final controller = ref.read(groupPushControllerProvider.notifier);
   try {
@@ -312,6 +418,8 @@ Future<void> _handleEditGroup(
       group: group,
       name: result.name,
       description: result.description,
+      allowedGenres: allowedGenres,
+      primaryColor: result.primaryColor,
     );
     if (!context.mounted) return;
     _showFeedbackSnackBar(
@@ -531,88 +639,43 @@ Future<void> _showInvitationsSheet(
   );
 }
 
-// Dialogs and Sheets
-class _GroupFormDialog extends StatefulWidget {
-  const _GroupFormDialog({
-    this.initialName,
-    this.initialDescription,
-  });
+/// Shows the owner how many of their books pass vs. are excluded by the group
+/// genre filter. Provides a nudge to fix excluded books.
+class _ExcludedBooksRow extends StatelessWidget {
+  const _ExcludedBooksRow({required this.passing, required this.excluded});
 
-  final String? initialName;
-  final String? initialDescription;
-
-  @override
-  State<_GroupFormDialog> createState() => _GroupFormDialogState();
-}
-
-class _GroupFormDialogState extends State<_GroupFormDialog> {
-  late final TextEditingController _nameController;
-  late final TextEditingController _descriptionController;
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.initialName);
-    _descriptionController =
-        TextEditingController(text: widget.initialDescription);
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
-  }
+  final int passing;
+  final int excluded;
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Editar grupo'),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Nombre del grupo'),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'El nombre es obligatorio';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _descriptionController,
-              decoration:
-                  const InputDecoration(labelText: 'Descripción (opcional)'),
-              maxLines: 3,
-            ),
-          ],
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: colorScheme.error.withValues(alpha: 0.25),
+          width: 0.8,
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              Navigator.of(context).pop((
-                name: _nameController.text.trim(),
-                description: _descriptionController.text.trim().isEmpty
-                    ? null
-                    : _descriptionController.text.trim(),
-              ));
-            }
-          },
-          child: const Text('Guardar'),
-        ),
-      ],
+      child: Row(
+        children: [
+          Icon(Icons.filter_list_outlined,
+              size: 16, color: colorScheme.error.withValues(alpha: 0.8)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              '$excluded ${excluded == 1 ? 'libro excluido' : 'libros excluidos'} por el filtro de género · $passing visibles',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -86,6 +86,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required String name,
     String? description,
     required LocalUser owner,
+    List<String>? allowedGenres,
+    String? primaryColor,
     String? accessToken,
   }) async {
     state = state.copyWith(
@@ -95,6 +97,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         name: name,
         description: description,
         owner: owner,
+        allowedGenres: allowedGenres,
+        primaryColor: primaryColor,
         accessToken: accessToken,
       );
 
@@ -125,6 +129,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required Group group,
     required String name,
     String? description,
+    List<String>? allowedGenres,
+    String? primaryColor,
     String? accessToken,
   }) async {
     state = state.copyWith(
@@ -134,6 +140,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
         group: group,
         name: name,
         description: description,
+        allowedGenres: allowedGenres,
+        primaryColor: primaryColor,
         accessToken: accessToken,
       );
       _groupSyncController.markPendingChanges();
@@ -146,9 +154,6 @@ class GroupPushController extends StateNotifier<GroupActionState> {
       await _runNotificationTask(() async {
         final members = await _groupDao.getMembersByGroupId(group.id);
         for (final member in members) {
-          // Don't notify the person who made the change (actor)
-          // Actually, we don't easily know who the actor is here if it's not the owner
-          // Use a placeholder or check against owner/admin
           await _notificationRepository.createNotification(
             type: InAppNotificationType.groupUpdated,
             targetUserId: member.memberUserId,

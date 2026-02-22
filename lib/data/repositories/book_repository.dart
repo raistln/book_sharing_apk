@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../models/book_genre.dart';
 import '../local/book_dao.dart';
 import '../local/database.dart';
 import '../local/group_dao.dart';
@@ -42,7 +43,9 @@ class BookRepository {
     }
   }
 
-  /// Shares all existing books (except private/archived) with a newly joined group
+  /// Shares all existing books (except private/archived) with a newly joined group.
+  /// Applies the group's genre filter: if the group has [allowedGenres], only books
+  /// whose genre is in that list are shared. Books with null genre are excluded too.
   Future<void> shareExistingBooksWithGroup({
     required Group group,
     required LocalUser owner,
@@ -56,6 +59,10 @@ class BookRepository {
     final now = DateTime.now();
     var sharedCount = 0;
 
+    // Parse genre filter for this group
+    final allowedGenres = BookGenre.allowedFromJson(group.allowedGenres);
+    final hasFilter = allowedGenres.isNotEmpty;
+
     for (final book in books) {
       if (!_shouldShare(book.status, book.isPhysical)) {
         developer.log(
@@ -63,6 +70,18 @@ class BookRepository {
           name: 'BookRepository',
         );
         continue;
+      }
+
+      // Genre filter: if group has a theme, exclude books that don't match
+      if (hasFilter) {
+        final bookGenre = BookGenre.fromString(book.genre);
+        if (bookGenre == null || !allowedGenres.contains(bookGenre)) {
+          developer.log(
+            '[shareExistingBooksWithGroup] Skipping book ${book.id} (genre: ${book.genre}) — not in group filter',
+            name: 'BookRepository',
+          );
+          continue;
+        }
       }
 
       // Check if already shared
@@ -211,6 +230,7 @@ class BookRepository {
       timestamp: now,
       ownerUserId: owner?.id,
       ownerRemoteId: owner?.remoteId,
+      bookGenre: genre,
     );
     _scheduleSync();
     return bookId;
@@ -302,6 +322,7 @@ class BookRepository {
         timestamp: now,
         ownerUserId: book.ownerUserId,
         ownerRemoteId: book.ownerRemoteId,
+        bookGenre: book.genre,
       );
     }
     _scheduleSync();
@@ -383,6 +404,7 @@ class BookRepository {
     required DateTime timestamp,
     int? ownerUserId,
     String? ownerRemoteId,
+    String? bookGenre,
   }) async {
     if (ownerUserId == null) {
       developer.log('[_autoShareBook] ownerUserId is null, skipping.',
@@ -420,6 +442,30 @@ class BookRepository {
     var changed = false;
     await db.transaction(() async {
       for (final group in groups) {
+        // ---- Genre filter -----------------------------------------------
+        // If this group has a theme, check whether the book matches.
+        final allowedGenres = BookGenre.allowedFromJson(group.allowedGenres);
+        if (allowedGenres.isNotEmpty) {
+          final parsedGenre = BookGenre.fromString(bookGenre);
+          if (parsedGenre == null || !allowedGenres.contains(parsedGenre)) {
+            // Book doesn't match the group's theme.
+            // If it was previously shared, soft-delete it.
+            final existing = await _groupDao.findSharedBookByGroupAndBook(
+              groupId: group.id,
+              bookId: bookId,
+            );
+            if (existing != null && !existing.isDeleted) {
+              await _groupDao.softDeleteSharedBook(
+                sharedBookId: existing.id,
+                timestamp: timestamp,
+              );
+              changed = true;
+            }
+            continue;
+          }
+        }
+        // -----------------------------------------------------------------
+
         final existing = await _groupDao.findSharedBookByGroupAndBook(
           groupId: group.id,
           bookId: bookId,

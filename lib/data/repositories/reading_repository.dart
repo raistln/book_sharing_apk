@@ -93,11 +93,14 @@ class ReadingRepository {
     }
 
     // Actualizar estado del libro
+    // Si estaba pausado durante una relectura (isRead==true) → volver a 'rereading';
+    // si era la primera lectura → 'reading'.
     final book = await _bookDao.findById(bookId);
     if (book != null &&
         book.readingStatus != 'reading' &&
         book.readingStatus != 'rereading') {
-      await _bookDao.updateReadingStatus(bookId, 'reading');
+      final resumeStatus = book.isRead ? 'rereading' : 'reading';
+      await _bookDao.updateReadingStatus(bookId, resumeStatus);
     }
 
     // Determinar página inicial
@@ -285,7 +288,14 @@ class ReadingRepository {
       eventDate: now,
     );
 
-    // 4. Actualizar libro
+    // 4. Si el libro estaba pausado, restablecer el estado activo correcto.
+    // Un libro isRead==true que se pausa viene de una relectura → 'rereading'.
+    if (book.readingStatus == 'paused') {
+      final resumeStatus = book.isRead ? 'rereading' : 'reading';
+      await _bookDao.updateReadingStatus(book.id, resumeStatus);
+    }
+
+    // 5. Actualizar libro
     await _bookDao.updateBookFields(
       bookId: book.id,
       entry: BooksCompanion(

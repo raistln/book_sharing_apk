@@ -94,23 +94,24 @@ class ReadingRhythmHelper {
       return segments;
     }
 
+    // --- Only use entries from the LAST reading session ---
+    // Find the last 'start' or 'rereading' event to isolate the most recent read cycle.
+    // This prevents multi-year gaps from appearing when a book is re-read.
+    final lastSessionIndex = _findLastSessionStart(entries);
+    final sessionEntries =
+        lastSessionIndex >= 0 ? entries.sublist(lastSessionIndex) : entries;
+
     // Process actual entries
     // We look for pairs of start/resume -> pause/finish
-    // Or just connect the dots for simplicity in this version
-
     DateTime? currentStart;
 
-    for (int i = 0; i < entries.length; i++) {
-      final e = entries[i];
+    for (int i = 0; i < sessionEntries.length; i++) {
+      final e = sessionEntries[i];
       final type = e.eventType.toLowerCase();
 
-      if (type == 'start' || type == 'resume') {
-        if (currentStart == null) {
-          currentStart = e.eventDate;
-        } else {
-          // If we were already "started" (missing a pause), close the previous segment effectively?
-          // Or just ignore and keep extending. Let's assume continuous reading if no pause event.
-        }
+      if (type == 'start' || type == 'resume' || type == 'rereading') {
+        currentStart ??= e.eventDate;
+        // If we were already "started" (missing a pause), keep extending.
       } else if (type == 'pause' || type == 'finish' || type == 'abandoned') {
         if (currentStart != null) {
           segments.add(RhythmSegment(
@@ -120,18 +121,10 @@ class ReadingRhythmHelper {
           ));
           currentStart = null;
         } else {
-          // A finish without a start?
-          // Maybe it started way back. Let's create a segment from "some time ago" or just the single point?
-          // Ideally we look for the previous entry.
-          if (i > 0) {
-            // Connect to previous entry if meaningful?
-            // For now, let's be strict: only start->end creates a solid bar.
-          }
+          // A finish without a start — skip (strict: only start->end creates a bar)
         }
       } else if (type == 'progress') {
-        // Progress updates usually imply reading is happening.
-        // If we have a start, we extend to this progress.
-        // If we don't have a start, this progress IS the start implicitly?
+        // Progress implies reading is ongoing.
         currentStart ??= e.eventDate;
       }
     }
@@ -146,6 +139,18 @@ class ReadingRhythmHelper {
     }
 
     return segments;
+  }
+
+  /// Returns the index of the last 'start' or 'rereading' event in the entries list.
+  /// Entries must already be sorted ascending by date.
+  static int _findLastSessionStart(List<ReadingTimelineEntry> entries) {
+    for (int i = entries.length - 1; i >= 0; i--) {
+      final type = entries[i].eventType.toLowerCase();
+      if (type == 'start' || type == 'rereading') {
+        return i;
+      }
+    }
+    return -1; // No session-start found → use all entries
   }
 
   static String _generateInsight(List<RhythmRow> rows) {

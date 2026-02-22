@@ -26,6 +26,33 @@ class SupabaseClubSyncRepository {
 
   Future<void> syncFromRemote({String? accessToken}) async {
     final remoteClubs = await _clubService.fetchClubs(accessToken: accessToken);
+    final remoteCommentsByClub = <String, List<SupabaseSectionCommentRecord>>{};
+    final remoteReportsByClub = <String, List<SupabaseCommentReportRecord>>{};
+    final remoteLogsByClub = <String, List<SupabaseModerationLogRecord>>{};
+
+    for (final remote in remoteClubs) {
+      final bookIds =
+          remote.books.map((book) => book.id).toList(growable: false);
+      final comments = await _clubService.fetchSectionComments(
+        bookIds: bookIds,
+        accessToken: accessToken,
+      );
+      remoteCommentsByClub[remote.id] = comments;
+
+      final commentIds = comments.map((comment) => comment.id).toList();
+      final reports = await _clubService.fetchCommentReports(
+        commentIds: commentIds,
+        accessToken: accessToken,
+      );
+      remoteReportsByClub[remote.id] = reports;
+
+      final logs = await _clubService.fetchModerationLogs(
+        clubId: remote.id,
+        accessToken: accessToken,
+      );
+      remoteLogsByClub[remote.id] = logs;
+    }
+
     final db = _clubDao.db;
     final now = DateTime.now();
 
@@ -211,6 +238,28 @@ class SupabaseClubSyncRepository {
                 localClubUuid, local.memberRemoteId!);
           }
         }
+
+        final remoteComments = remoteCommentsByClub[remote.id] ?? [];
+        await _syncSectionComments(
+          localClubId: localClubId,
+          localClubUuid: localClubUuid,
+          remoteComments: remoteComments,
+          syncedAt: now,
+        );
+
+        final remoteReports = remoteReportsByClub[remote.id] ?? [];
+        await _syncCommentReports(
+          remoteReports: remoteReports,
+          syncedAt: now,
+        );
+
+        final remoteLogs = remoteLogsByClub[remote.id] ?? [];
+        await _syncModerationLogs(
+          localClubId: localClubId,
+          localClubUuid: localClubUuid,
+          remoteLogs: remoteLogs,
+          syncedAt: now,
+        );
       }
     });
   }
@@ -493,5 +542,199 @@ class SupabaseClubSyncRepository {
 
   Future<ClubMember?> _findMemberByRemoteId(String remoteId) async {
     return _clubDao.getMemberByRemoteId(remoteId);
+  }
+
+  Future<void> _syncSectionComments({
+    required int localClubId,
+    required String localClubUuid,
+    required List<SupabaseSectionCommentRecord> remoteComments,
+    required DateTime syncedAt,
+  }) async {
+    for (final remote in remoteComments) {
+      final clubBook = await _clubDao.getClubBookByRemoteId(remote.bookId);
+      if (clubBook == null) {
+        continue;
+      }
+
+      final author = await _ensureLocalUser(
+        remoteId: remote.authorUserId,
+        createdAtFallback: remote.createdAt,
+      );
+      if (author == null) {
+        continue;
+      }
+
+      final existing = await _clubDao.getCommentByRemoteId(remote.id) ??
+          await _clubDao.getCommentByUuid(remote.id);
+
+      if (existing != null && existing.isDirty) {
+        continue;
+      }
+
+      if (existing != null) {
+        await (_clubDao.update(_clubDao.sectionComments)
+              ..where((t) => t.id.equals(existing.id)))
+            .write(SectionCommentsCompanion(
+          clubId: Value(localClubId),
+          clubUuid: Value(localClubUuid),
+          bookId: Value(clubBook.id),
+          bookUuid: Value(clubBook.uuid),
+          sectionNumber: Value(remote.sectionNumber),
+          userId: Value(author.id),
+          userRemoteId: Value(remote.authorUserId),
+          authorRemoteId: Value(remote.authorUserId),
+          content: Value(remote.content),
+          reportsCount: Value(remote.reportCount),
+          isHidden: Value(remote.isHidden),
+          isDeleted: const Value(false),
+          isDirty: const Value(false),
+          syncedAt: Value(syncedAt),
+          createdAt: Value(remote.createdAt),
+          updatedAt: Value(remote.updatedAt),
+          remoteId: Value(remote.id),
+        ));
+        continue;
+      }
+
+      await _clubDao.insertComment(SectionCommentsCompanion.insert(
+        uuid: remote.id,
+        remoteId: Value(remote.id),
+        clubId: localClubId,
+        clubUuid: localClubUuid,
+        bookId: clubBook.id,
+        bookUuid: clubBook.uuid,
+        sectionNumber: remote.sectionNumber,
+        userId: author.id,
+        userRemoteId: Value(remote.authorUserId),
+        authorRemoteId: Value(remote.authorUserId),
+        content: remote.content,
+        reportsCount: Value(remote.reportCount),
+        isHidden: Value(remote.isHidden),
+        isDirty: const Value(false),
+        isDeleted: const Value(false),
+        syncedAt: Value(syncedAt),
+        createdAt: Value(remote.createdAt),
+        updatedAt: Value(remote.updatedAt),
+      ));
+    }
+  }
+
+  Future<void> _syncCommentReports({
+    required List<SupabaseCommentReportRecord> remoteReports,
+    required DateTime syncedAt,
+  }) async {
+    for (final remote in remoteReports) {
+      final comment = await _clubDao.getCommentByRemoteId(remote.commentId);
+      if (comment == null) {
+        continue;
+      }
+
+      final reporter = await _ensureLocalUser(
+        remoteId: remote.reportedByUserId,
+        createdAtFallback: remote.createdAt,
+      );
+      if (reporter == null) {
+        continue;
+      }
+
+      final existing = await _clubDao.getReportByRemoteId(remote.id) ??
+          await (_clubDao.select(_clubDao.commentReports)
+                ..where((t) =>
+                    t.commentId.equals(comment.id) &
+                    t.reportedByUserId.equals(reporter.id)))
+              .getSingleOrNull();
+
+      if (existing != null && existing.isDirty) {
+        continue;
+      }
+
+      if (existing != null) {
+        await (_clubDao.update(_clubDao.commentReports)
+              ..where((t) => t.id.equals(existing.id)))
+            .write(CommentReportsCompanion(
+          commentId: Value(comment.id),
+          commentUuid: Value(comment.uuid),
+          reportedByUserId: Value(reporter.id),
+          reportedByRemoteId: Value(remote.reportedByUserId),
+          reason: Value(remote.reason),
+          remoteId: Value(remote.id),
+          isDirty: const Value(false),
+          syncedAt: Value(syncedAt),
+          createdAt: Value(remote.createdAt),
+        ));
+        continue;
+      }
+
+      await _clubDao.into(_clubDao.commentReports).insertOnConflictUpdate(
+            CommentReportsCompanion(
+              uuid: Value(remote.id),
+              remoteId: Value(remote.id),
+              commentId: Value(comment.id),
+              commentUuid: Value(comment.uuid),
+              reportedByUserId: Value(reporter.id),
+              reportedByRemoteId: Value(remote.reportedByUserId),
+              reason: Value(remote.reason),
+              isDirty: const Value(false),
+              syncedAt: Value(syncedAt),
+              createdAt: Value(remote.createdAt),
+            ),
+          );
+    }
+  }
+
+  Future<void> _syncModerationLogs({
+    required int localClubId,
+    required String localClubUuid,
+    required List<SupabaseModerationLogRecord> remoteLogs,
+    required DateTime syncedAt,
+  }) async {
+    for (final remote in remoteLogs) {
+      final performer = await _ensureLocalUser(
+        remoteId: remote.performedByUserId,
+        createdAtFallback: remote.createdAt,
+      );
+      if (performer == null) {
+        continue;
+      }
+
+      final existing = await _clubDao.getModerationLogByRemoteId(remote.id);
+      if (existing != null && existing.isDirty) {
+        continue;
+      }
+
+      if (existing != null) {
+        await (_clubDao.update(_clubDao.moderationLogs)
+              ..where((t) => t.id.equals(existing.id)))
+            .write(ModerationLogsCompanion(
+          clubId: Value(localClubId),
+          clubUuid: Value(localClubUuid),
+          action: Value(remote.action),
+          performedByUserId: Value(performer.id),
+          performedByRemoteId: Value(remote.performedByUserId),
+          targetId: Value(remote.targetId),
+          reason: Value(remote.reason),
+          remoteId: Value(remote.id),
+          isDirty: const Value(false),
+          syncedAt: Value(syncedAt),
+          createdAt: Value(remote.createdAt),
+        ));
+        continue;
+      }
+
+      await _clubDao.insertModerationLog(ModerationLogsCompanion.insert(
+        uuid: remote.id,
+        remoteId: Value(remote.id),
+        clubId: localClubId,
+        clubUuid: localClubUuid,
+        action: remote.action,
+        performedByUserId: performer.id,
+        performedByRemoteId: Value(remote.performedByUserId),
+        targetId: remote.targetId,
+        reason: Value(remote.reason),
+        isDirty: const Value(false),
+        syncedAt: Value(syncedAt),
+        createdAt: Value(remote.createdAt),
+      ));
+    }
   }
 }

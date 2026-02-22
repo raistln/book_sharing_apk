@@ -18,6 +18,7 @@ class UnifiedSyncCoordinator {
     required GroupSyncController groupSyncController,
     required SyncController notificationSyncController,
     required SyncController loanSyncController,
+    required SyncController clubSyncController,
     VoidCallback? onUserActivity,
     bool enableConnectivityMonitoring = true,
     bool enableBatteryMonitoring = true,
@@ -26,6 +27,7 @@ class UnifiedSyncCoordinator {
         _groupSyncController = groupSyncController,
         _notificationSyncController = notificationSyncController,
         _loanSyncController = loanSyncController,
+        _clubSyncController = clubSyncController,
         _onUserActivity = onUserActivity,
         _enableConnectivityMonitoring = enableConnectivityMonitoring,
         _enableBatteryMonitoring = enableBatteryMonitoring {
@@ -37,6 +39,7 @@ class UnifiedSyncCoordinator {
   final GroupSyncController _groupSyncController;
   final SyncController _notificationSyncController;
   final SyncController _loanSyncController;
+  final SyncController _clubSyncController;
   final VoidCallback? _onUserActivity;
   final bool _enableConnectivityMonitoring;
   final bool _enableBatteryMonitoring;
@@ -182,6 +185,9 @@ class UnifiedSyncCoordinator {
       case SyncEntity.notifications:
         _notificationSyncController.markPendingChanges();
         break;
+      case SyncEntity.clubs:
+        _clubSyncController.markPendingChanges();
+        break;
     }
   }
 
@@ -215,6 +221,10 @@ class UnifiedSyncCoordinator {
 
       if (entitiesToSync.contains(SyncEntity.notifications)) {
         await _syncEntity(SyncEntity.notifications);
+      }
+
+      if (entitiesToSync.contains(SyncEntity.clubs)) {
+        await _syncEntity(SyncEntity.clubs);
       }
 
       _updateState(_state.copyWith(
@@ -296,14 +306,22 @@ class UnifiedSyncCoordinator {
       switch (entity) {
         case SyncEntity.users:
           await _userSyncController.sync();
+          break;
         case SyncEntity.books:
           await _bookSyncController.sync();
+          break;
         case SyncEntity.groups:
           await _groupSyncController.syncGroups();
+          break;
         case SyncEntity.loans:
           await _loanSyncController.sync(); // Now uses dedicated controller
+          break;
         case SyncEntity.notifications:
           await _notificationSyncController.sync();
+          break;
+        case SyncEntity.clubs:
+          await _clubSyncController.sync();
+          break;
       }
 
       _updateEntityState(

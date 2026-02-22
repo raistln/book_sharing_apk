@@ -115,6 +115,19 @@ class ReadingSessionController
     );
   }
 
+  Future<void> startSession(int bookId, String bookUuid) async {
+    state = const AsyncValue.loading();
+    try {
+      final newSession = await _repository.startSession(
+        bookId: bookId,
+        bookUuid: bookUuid,
+      );
+      state = AsyncValue.data(newSession);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
   Future<void> endSession(int endPage, {String? notes, String? mood}) async {
     final currentSession = state.value;
     if (currentSession == null) {

@@ -206,7 +206,7 @@ void main() {
 
         final reviewId = await bookRepository.addReview(
           book: book,
-          rating: 5,
+          rating: 4,
           review: 'Excellent book!',
           author: owner,
         );
@@ -216,7 +216,7 @@ void main() {
 
         final reviews = await bookRepository.fetchActiveReviews();
         expect(reviews.length, 1);
-        expect(reviews.first.rating, 5);
+        expect(reviews.first.rating, 4);
         expect(reviews.first.review, 'Excellent book!');
       });
 

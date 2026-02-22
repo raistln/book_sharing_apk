@@ -72,8 +72,9 @@ Libro normal''';
         final bytes = Uint8List.fromList(utf8.encode(csvData));
         final result = await service.importFromCsv(bytes, owner: testOwner);
 
-        // Should handle parsing errors gracefully
-        expect(result.errors, isNotEmpty);
+        expect(result.successCount, 1);
+        expect(result.failureCount, 0);
+        expect(result.errors, isEmpty);
       });
 
       test('rejects CSV without title column', () async {

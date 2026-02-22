@@ -444,9 +444,24 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
         .getSingleOrNull();
   }
 
+  Future<SectionComment?> getCommentByRemoteId(String remoteId) {
+    return (select(sectionComments)..where((t) => t.remoteId.equals(remoteId)))
+        .getSingleOrNull();
+  }
+
   Future<List<CommentReport>> getReportsByCommentUuid(String uuid) {
     return (select(commentReports)..where((t) => t.commentUuid.equals(uuid)))
         .get();
+  }
+
+  Future<CommentReport?> getReportByRemoteId(String remoteId) {
+    return (select(commentReports)..where((t) => t.remoteId.equals(remoteId)))
+        .getSingleOrNull();
+  }
+
+  Future<ModerationLog?> getModerationLogByRemoteId(String remoteId) {
+    return (select(moderationLogs)..where((t) => t.remoteId.equals(remoteId)))
+        .getSingleOrNull();
   }
 
   // =====================================================================

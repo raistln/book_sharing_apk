@@ -19,6 +19,7 @@ void main() {
     late MockGroupSyncController mockGroupSync;
     late MockSyncController mockNotificationSync;
     late MockSyncController mockLoanSync;
+    late MockSyncController mockClubSync;
     late UnifiedSyncCoordinator coordinator;
 
     setUp(() {
@@ -27,6 +28,7 @@ void main() {
       mockGroupSync = MockGroupSyncController();
       mockNotificationSync = MockSyncController();
       mockLoanSync = MockSyncController();
+      mockClubSync = MockSyncController();
 
       // Reset all mock states
       reset(mockUserSync);
@@ -34,6 +36,7 @@ void main() {
       reset(mockGroupSync);
       reset(mockNotificationSync);
       reset(mockLoanSync);
+      reset(mockClubSync);
 
       // Setup default successful sync responses
       when(() => mockUserSync.sync()).thenAnswer((_) async {});
@@ -41,6 +44,7 @@ void main() {
       when(() => mockGroupSync.syncGroups()).thenAnswer((_) async {});
       when(() => mockNotificationSync.sync()).thenAnswer((_) async {});
       when(() => mockLoanSync.sync()).thenAnswer((_) async {});
+      when(() => mockClubSync.sync()).thenAnswer((_) async {});
 
       // Stub state getters to avoid crashes when coordinator reads them
       when(() => mockUserSync.state).thenReturn(const SyncState());
@@ -48,6 +52,7 @@ void main() {
       when(() => mockGroupSync.state).thenReturn(const SyncState());
       when(() => mockNotificationSync.state).thenReturn(const SyncState());
       when(() => mockLoanSync.state).thenReturn(const SyncState());
+      when(() => mockClubSync.state).thenReturn(const SyncState());
 
       // Stub mounted property to avoid null pointer exceptions
       when(() => mockUserSync.mounted).thenReturn(true);
@@ -55,6 +60,7 @@ void main() {
       when(() => mockGroupSync.mounted).thenReturn(true);
       when(() => mockNotificationSync.mounted).thenReturn(true);
       when(() => mockLoanSync.mounted).thenReturn(true);
+      when(() => mockClubSync.mounted).thenReturn(true);
 
       coordinator = UnifiedSyncCoordinator(
         userSyncController: mockUserSync,
@@ -62,6 +68,7 @@ void main() {
         groupSyncController: mockGroupSync,
         notificationSyncController: mockNotificationSync,
         loanSyncController: mockLoanSync,
+        clubSyncController: mockClubSync,
         enableConnectivityMonitoring: false, // Disable for tests
         enableBatteryMonitoring: false, // Disable for tests
       );
@@ -76,6 +83,7 @@ void main() {
       reset(mockGroupSync);
       reset(mockNotificationSync);
       reset(mockLoanSync);
+      reset(mockClubSync);
     });
 
     group('Básico', () {
@@ -106,6 +114,7 @@ void main() {
         verify(() => mockBookSync.sync()).called(1);
         verify(() => mockNotificationSync.sync()).called(1);
         verify(() => mockLoanSync.sync()).called(1);
+        verify(() => mockClubSync.sync()).called(1);
       });
 
       test('syncNow sincroniza solo entidades especificadas', () async {
@@ -117,6 +126,7 @@ void main() {
         verifyNever(() => mockGroupSync.syncGroups());
         verifyNever(() => mockNotificationSync.sync());
         verifyNever(() => mockLoanSync.sync());
+        verifyNever(() => mockClubSync.sync());
       });
     });
 
@@ -201,6 +211,7 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
+        final mockClubSyncForTest = MockSyncController();
 
         // Reset all mocks
         reset(mockUserSyncForTest);
@@ -208,6 +219,7 @@ void main() {
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
+        reset(mockClubSyncForTest);
 
         // Setup mock responses
         when(() => mockUserSyncForTest.sync()).thenAnswer((_) async {});
@@ -226,6 +238,9 @@ void main() {
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
         when(() => mockLoanSyncForTest.mounted).thenReturn(true);
+        when(() => mockClubSyncForTest.sync()).thenAnswer((_) async {});
+        when(() => mockClubSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockClubSyncForTest.mounted).thenReturn(true);
 
         final coordinatorForTest = UnifiedSyncCoordinator(
           userSyncController: mockUserSyncForTest,
@@ -233,6 +248,7 @@ void main() {
           groupSyncController: mockGroupSyncForTest,
           notificationSyncController: mockNotificationSyncForTest,
           loanSyncController: mockLoanSyncForTest,
+          clubSyncController: mockClubSyncForTest,
           enableConnectivityMonitoring: false,
           enableBatteryMonitoring: false,
         );
@@ -257,6 +273,7 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
+        final mockClubSyncForTest = MockSyncController();
 
         // Reset all mocks
         reset(mockUserSyncForTest);
@@ -264,6 +281,7 @@ void main() {
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
+        reset(mockClubSyncForTest);
 
         // Setup mock responses
         when(() => mockUserSyncForTest.sync()).thenAnswer((_) async {});
@@ -282,6 +300,9 @@ void main() {
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
         when(() => mockLoanSyncForTest.mounted).thenReturn(true);
+        when(() => mockClubSyncForTest.sync()).thenAnswer((_) async {});
+        when(() => mockClubSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockClubSyncForTest.mounted).thenReturn(true);
 
         final coordinatorForTest = UnifiedSyncCoordinator(
           userSyncController: mockUserSyncForTest,
@@ -289,6 +310,7 @@ void main() {
           groupSyncController: mockGroupSyncForTest,
           notificationSyncController: mockNotificationSyncForTest,
           loanSyncController: mockLoanSyncForTest,
+          clubSyncController: mockClubSyncForTest,
           enableConnectivityMonitoring: false,
           enableBatteryMonitoring: false,
         );
@@ -313,6 +335,7 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
+        final mockClubSyncForTest = MockSyncController();
 
         // Reset all mocks
         reset(mockUserSyncForTest);
@@ -320,6 +343,7 @@ void main() {
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
+        reset(mockClubSyncForTest);
 
         // Setup mock responses
         when(() => mockUserSyncForTest.sync()).thenAnswer((_) async {});
@@ -338,6 +362,9 @@ void main() {
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
         when(() => mockLoanSyncForTest.mounted).thenReturn(true);
+        when(() => mockClubSyncForTest.sync()).thenAnswer((_) async {});
+        when(() => mockClubSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockClubSyncForTest.mounted).thenReturn(true);
 
         final coordinatorForTest = UnifiedSyncCoordinator(
           userSyncController: mockUserSyncForTest,
@@ -345,6 +372,7 @@ void main() {
           groupSyncController: mockGroupSyncForTest,
           notificationSyncController: mockNotificationSyncForTest,
           loanSyncController: mockLoanSyncForTest,
+          clubSyncController: mockClubSyncForTest,
           enableConnectivityMonitoring: false,
           enableBatteryMonitoring: false,
         );
@@ -372,6 +400,7 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
+        final mockClubSyncForTest = MockSyncController();
 
         // Reset all mocks
         reset(mockBookSyncForTest);
@@ -379,6 +408,7 @@ void main() {
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
+        reset(mockClubSyncForTest);
 
         when(() => mockBookSyncForTest.sync())
             .thenThrow(Exception('Error de sincronización'));
@@ -397,6 +427,9 @@ void main() {
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
         when(() => mockLoanSyncForTest.mounted).thenReturn(true);
+        when(() => mockClubSyncForTest.sync()).thenAnswer((_) async {});
+        when(() => mockClubSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockClubSyncForTest.mounted).thenReturn(true);
 
         final coordinatorForTest = UnifiedSyncCoordinator(
           userSyncController: mockUserSyncForTest,
@@ -404,6 +437,7 @@ void main() {
           groupSyncController: mockGroupSyncForTest,
           notificationSyncController: mockNotificationSyncForTest,
           loanSyncController: mockLoanSyncForTest,
+          clubSyncController: mockClubSyncForTest,
           enableConnectivityMonitoring: false,
           enableBatteryMonitoring: false,
         );
@@ -431,6 +465,7 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
+        final mockClubSyncForTest = MockSyncController();
 
         // Reset all mocks
         reset(mockBookSyncForTest);
@@ -438,6 +473,7 @@ void main() {
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
+        reset(mockClubSyncForTest);
 
         var callCount = 0;
         when(() => mockBookSyncForTest.sync()).thenAnswer((_) async {
@@ -461,6 +497,9 @@ void main() {
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
         when(() => mockLoanSyncForTest.mounted).thenReturn(true);
+        when(() => mockClubSyncForTest.sync()).thenAnswer((_) async {});
+        when(() => mockClubSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockClubSyncForTest.mounted).thenReturn(true);
 
         final coordinatorForTest = UnifiedSyncCoordinator(
           userSyncController: mockUserSyncForTest,
@@ -468,6 +507,7 @@ void main() {
           groupSyncController: mockGroupSyncForTest,
           notificationSyncController: mockNotificationSyncForTest,
           loanSyncController: mockLoanSyncForTest,
+          clubSyncController: mockClubSyncForTest,
           enableConnectivityMonitoring: false,
           enableBatteryMonitoring: false,
         );
@@ -497,6 +537,7 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
+        final mockClubSyncForTest = MockSyncController();
 
         // Reset all mocks
         reset(mockBookSyncForTest);
@@ -504,6 +545,7 @@ void main() {
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
+        reset(mockClubSyncForTest);
 
         when(() => mockBookSyncForTest.sync())
             .thenThrow(Exception('Error persistente'));
@@ -522,6 +564,9 @@ void main() {
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
         when(() => mockLoanSyncForTest.mounted).thenReturn(true);
+        when(() => mockClubSyncForTest.sync()).thenAnswer((_) async {});
+        when(() => mockClubSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockClubSyncForTest.mounted).thenReturn(true);
 
         final coordinatorForTest = UnifiedSyncCoordinator(
           userSyncController: mockUserSyncForTest,
@@ -529,6 +574,7 @@ void main() {
           groupSyncController: mockGroupSyncForTest,
           notificationSyncController: mockNotificationSyncForTest,
           loanSyncController: mockLoanSyncForTest,
+          clubSyncController: mockClubSyncForTest,
           enableConnectivityMonitoring: false,
           enableBatteryMonitoring: false,
         );
@@ -556,6 +602,7 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
+        final mockClubSyncForTest = MockSyncController();
 
         // Reset all mocks
         reset(mockBookSyncForTest);
@@ -563,6 +610,7 @@ void main() {
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
+        reset(mockClubSyncForTest);
 
         var callCount = 0;
         when(() => mockBookSyncForTest.sync()).thenAnswer((_) async {
@@ -586,6 +634,9 @@ void main() {
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
         when(() => mockLoanSyncForTest.mounted).thenReturn(true);
+        when(() => mockClubSyncForTest.sync()).thenAnswer((_) async {});
+        when(() => mockClubSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockClubSyncForTest.mounted).thenReturn(true);
 
         final coordinatorForTest = UnifiedSyncCoordinator(
           userSyncController: mockUserSyncForTest,
@@ -593,6 +644,7 @@ void main() {
           groupSyncController: mockGroupSyncForTest,
           notificationSyncController: mockNotificationSyncForTest,
           loanSyncController: mockLoanSyncForTest,
+          clubSyncController: mockClubSyncForTest,
           enableConnectivityMonitoring: false,
           enableBatteryMonitoring: false,
         );
@@ -672,6 +724,7 @@ void main() {
         final mockGroupSyncForTest = MockGroupSyncController();
         final mockNotificationSyncForTest = MockSyncController();
         final mockLoanSyncForTest = MockSyncController();
+        final mockClubSyncForTest = MockSyncController();
 
         // Reset all mocks
         reset(mockUserSyncForTest);
@@ -679,6 +732,7 @@ void main() {
         reset(mockGroupSyncForTest);
         reset(mockNotificationSyncForTest);
         reset(mockLoanSyncForTest);
+        reset(mockClubSyncForTest);
 
         when(() => mockUserSyncForTest.sync()).thenAnswer(
           (_) => Future.delayed(const Duration(milliseconds: 500)),
@@ -698,6 +752,9 @@ void main() {
         when(() => mockLoanSyncForTest.sync()).thenAnswer((_) async {});
         when(() => mockLoanSyncForTest.state).thenReturn(const SyncState());
         when(() => mockLoanSyncForTest.mounted).thenReturn(true);
+        when(() => mockClubSyncForTest.sync()).thenAnswer((_) async {});
+        when(() => mockClubSyncForTest.state).thenReturn(const SyncState());
+        when(() => mockClubSyncForTest.mounted).thenReturn(true);
 
         final coordinatorForTest = UnifiedSyncCoordinator(
           userSyncController: mockUserSyncForTest,
@@ -705,6 +762,7 @@ void main() {
           groupSyncController: mockGroupSyncForTest,
           notificationSyncController: mockNotificationSyncForTest,
           loanSyncController: mockLoanSyncForTest,
+          clubSyncController: mockClubSyncForTest,
           enableConnectivityMonitoring: false,
           enableBatteryMonitoring: false,
         );

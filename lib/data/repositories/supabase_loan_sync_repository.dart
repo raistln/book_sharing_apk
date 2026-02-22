@@ -43,14 +43,13 @@ class SupabaseLoanSyncRepository {
         .get();
 
     final bookMap = {for (var b in books) b.id: b.uuid};
-    final userMap = {for (var u in users) u.id: u.uuid};
+    final userMap = {for (var u in users) u.id: u.remoteId ?? u.uuid};
 
     final loansPayload = dirtyLoans.map((l) {
       final bookUuid = l.bookId != null ? bookMap[l.bookId] : null;
       final borrowerUuid =
           l.borrowerUserId != null ? userMap[l.borrowerUserId] : null;
-      final lenderUuid = userMap[l.lenderUserId] ??
-          userId; // Fallback to current user if missing? Should not happen if DB valid.
+      final lenderUuid = userMap[l.lenderUserId] ?? userId;
 
       return {
         'uuid': l.uuid,
@@ -127,11 +126,24 @@ class SupabaseLoanSyncRepository {
           ..where((b) => b.uuid.isIn(bookUuids)))
         .get();
     final users = await (_db.select(_db.localUsers)
-          ..where((u) => u.uuid.isIn(userUuids)))
+          ..where((u) => u.remoteId.isIn(userUuids)))
         .get();
 
     final bookIdMap = {for (var b in books) b.uuid: b.id};
-    final userIdMap = {for (var u in users) u.uuid: u.id};
+    final userIdMap = {for (var u in users) u.remoteId: u.id};
+
+    final missingUserUuids = userUuids
+        .where((uuid) => uuid.isNotEmpty && !userIdMap.containsKey(uuid))
+        .toList();
+    for (final uuid in missingUserUuids) {
+      final ensuredId = await _ensureLocalUserId(
+        remoteId: uuid,
+        createdAtFallback: DateTime.now(),
+      );
+      if (ensuredId != null) {
+        userIdMap[uuid] = ensuredId;
+      }
+    }
 
     await _db.batch((batch) {
       for (final data in remoteLoans) {
@@ -147,8 +159,9 @@ class SupabaseLoanSyncRepository {
             borrowerUuid != null ? userIdMap[borrowerUuid] : null;
         final lenderId = lenderUuid != null ? userIdMap[lenderUuid] : null;
 
-        // If lender is mandatory and we don't have it (e.g. it's us but we use ID), assume current user if UUID matches?
-        // But we must have the user in DB.
+        if (lenderId == null) {
+          continue;
+        }
 
         batch.insert(
           _db.loans,
@@ -157,8 +170,7 @@ class SupabaseLoanSyncRepository {
             sharedBookId: Value(data['shared_book_id'] as int?),
             bookId: Value(bookId),
             borrowerUserId: Value(borrowerId),
-            lenderUserId: Value(lenderId ??
-                -1), // -1 or null? Table says NOT NULL. Lender MUST exist.
+            lenderUserId: Value(lenderId),
             externalBorrowerName:
                 Value(data['external_borrower_name'] as String?),
             externalBorrowerContact:
@@ -190,5 +202,47 @@ class SupabaseLoanSyncRepository {
         );
       }
     });
+  }
+
+  Future<int?> _ensureLocalUserId({
+    required String remoteId,
+    required DateTime createdAtFallback,
+  }) async {
+    final existing = await (_db.select(_db.localUsers)
+          ..where((u) => u.remoteId.equals(remoteId)))
+        .getSingleOrNull();
+    if (existing != null) {
+      return existing.id;
+    }
+
+    final sanitizedId = remoteId.replaceAll(RegExp('[^a-zA-Z0-9]'), '');
+    final suffix = sanitizedId.isNotEmpty
+        ? (sanitizedId.length >= 8
+            ? sanitizedId.substring(0, 8)
+            : sanitizedId.padRight(8, '0'))
+        : '00000000';
+    final placeholderUsername = 'miembro_$suffix';
+    final now = DateTime.now();
+
+    try {
+      final id = await _db.into(_db.localUsers).insert(
+            LocalUsersCompanion.insert(
+              uuid: remoteId,
+              username: placeholderUsername,
+              remoteId: Value(remoteId),
+              isDirty: const Value(false),
+              isDeleted: const Value(false),
+              createdAt: Value(createdAtFallback),
+              updatedAt: Value(now),
+              syncedAt: Value(now),
+            ),
+          );
+      return id;
+    } catch (_) {
+      final fallback = await (_db.select(_db.localUsers)
+            ..where((u) => u.remoteId.equals(remoteId)))
+          .getSingleOrNull();
+      return fallback?.id;
+    }
   }
 }

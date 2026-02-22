@@ -290,6 +290,64 @@ class SupabaseSectionCommentRecord {
   }
 }
 
+class SupabaseCommentReportRecord {
+  SupabaseCommentReportRecord({
+    required this.id,
+    required this.commentId,
+    required this.reportedByUserId,
+    this.reason,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String commentId;
+  final String reportedByUserId;
+  final String? reason;
+  final DateTime createdAt;
+
+  factory SupabaseCommentReportRecord.fromJson(Map<String, dynamic> json) {
+    return SupabaseCommentReportRecord(
+      id: json['id'] as String,
+      commentId: json['comment_id'] as String,
+      reportedByUserId: json['reported_by_user_id'] as String,
+      reason: json['reason'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+}
+
+class SupabaseModerationLogRecord {
+  SupabaseModerationLogRecord({
+    required this.id,
+    required this.clubId,
+    required this.action,
+    required this.performedByUserId,
+    required this.targetId,
+    this.reason,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String clubId;
+  final String action;
+  final String performedByUserId;
+  final String targetId;
+  final String? reason;
+  final DateTime createdAt;
+
+  factory SupabaseModerationLogRecord.fromJson(Map<String, dynamic> json) {
+    return SupabaseModerationLogRecord(
+      id: json['id'] as String,
+      clubId: json['club_id'] as String,
+      action: json['action'] as String,
+      performedByUserId: json['performed_by_user_id'] as String,
+      targetId: json['target_id'] as String,
+      reason: json['reason'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+}
+
 // =====================================================================
 // SUPABASE CLUB SERVICE
 // =====================================================================
@@ -367,6 +425,108 @@ class SupabaseClubService {
         .whereType<Map<String, dynamic>>()
         .map(SupabaseClubRecord.fromJson)
         .toList(growable: false);
+  }
+
+  Future<List<SupabaseSectionCommentRecord>> fetchSectionComments({
+    required List<String> bookIds,
+    String? accessToken,
+  }) async {
+    if (bookIds.isEmpty) return [];
+
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/section_comments').replace(
+      queryParameters: {
+        'select':
+            'id,book_id,section_number,author_user_id,content,report_count,is_hidden,created_at,updated_at',
+        'book_id': 'in.(${bookIds.join(',')})',
+        'order': 'updated_at.asc',
+      },
+    );
+
+    final response = await _client.get(
+      uri,
+      headers: _buildHeaders(config, accessToken: accessToken),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final payload =
+          jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+      return payload
+          .whereType<Map<String, dynamic>>()
+          .map(SupabaseSectionCommentRecord.fromJson)
+          .toList(growable: false);
+    }
+
+    throw SupabaseClubServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+    );
+  }
+
+  Future<List<SupabaseCommentReportRecord>> fetchCommentReports({
+    required List<String> commentIds,
+    String? accessToken,
+  }) async {
+    if (commentIds.isEmpty) return [];
+
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/comment_reports').replace(
+      queryParameters: {
+        'select': 'id,comment_id,reported_by_user_id,reason,created_at',
+        'comment_id': 'in.(${commentIds.join(',')})',
+        'order': 'created_at.asc',
+      },
+    );
+
+    final response = await _client.get(
+      uri,
+      headers: _buildHeaders(config, accessToken: accessToken),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final payload =
+          jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+      return payload
+          .whereType<Map<String, dynamic>>()
+          .map(SupabaseCommentReportRecord.fromJson)
+          .toList(growable: false);
+    }
+
+    throw SupabaseClubServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+    );
+  }
+
+  Future<List<SupabaseModerationLogRecord>> fetchModerationLogs({
+    required String clubId,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/moderation_logs').replace(
+      queryParameters: {
+        'select':
+            'id,club_id,action,performed_by_user_id,target_id,reason,created_at',
+        'club_id': 'eq.$clubId',
+        'order': 'created_at.desc',
+      },
+    );
+
+    final response = await _client.get(
+      uri,
+      headers: _buildHeaders(config, accessToken: accessToken),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final payload =
+          jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+      return payload
+          .whereType<Map<String, dynamic>>()
+          .map(SupabaseModerationLogRecord.fromJson)
+          .toList(growable: false);
+    }
+
+    throw SupabaseClubServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+    );
   }
 
   // =====================================================================
@@ -867,6 +1027,86 @@ class SupabaseClubService {
       'is_hidden': false,
       'created_at': createdAt.toUtc().toIso8601String(),
       'updated_at': updatedAt.toUtc().toIso8601String(),
+    };
+
+    final response = await _client.post(
+      uri,
+      headers: _buildHeaders(
+        config,
+        accessToken: accessToken,
+        preferRepresentation: true,
+      ),
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return _extractId(response, id);
+    }
+
+    throw SupabaseClubServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+    );
+  }
+
+  Future<String> createCommentReport({
+    required String id,
+    required String commentId,
+    required String reportedByUserId,
+    String? reason,
+    required DateTime createdAt,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/comment_reports');
+
+    final payload = <String, dynamic>{
+      'id': id,
+      'comment_id': commentId,
+      'reported_by_user_id': reportedByUserId,
+      'reason': reason,
+      'created_at': createdAt.toUtc().toIso8601String(),
+    };
+
+    final response = await _client.post(
+      uri,
+      headers: _buildHeaders(
+        config,
+        accessToken: accessToken,
+        preferRepresentation: true,
+      ),
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return _extractId(response, id);
+    }
+
+    throw SupabaseClubServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+    );
+  }
+
+  Future<String> createModerationLog({
+    required String id,
+    required String clubId,
+    required String action,
+    required String performedByUserId,
+    required String targetId,
+    String? reason,
+    required DateTime createdAt,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/moderation_logs');
+
+    final payload = <String, dynamic>{
+      'id': id,
+      'club_id': clubId,
+      'action': action,
+      'performed_by_user_id': performedByUserId,
+      'target_id': targetId,
+      'reason': reason,
+      'created_at': createdAt.toUtc().toIso8601String(),
     };
 
     final response = await _client.post(

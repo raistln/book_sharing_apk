@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:screen_brightness/screen_brightness.dart';
-import 'package:do_not_disturb/do_not_disturb.dart';
-import 'package:flutter/services.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 
@@ -20,8 +18,7 @@ class ReadingSessionScreen extends ConsumerStatefulWidget {
     super.key,
     required this.book,
     this.targetDuration,
-    this.initialZenMode =
-        false, // ← Este parámetro controla si viene en modo zen desde antes
+    this.initialZenMode = false,
   });
 
   final Book book;
@@ -37,140 +34,112 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
   Timer? _timer;
   Duration _elapsed = Duration.zero;
   DateTime? _startTime;
-
-  bool _isNightMode = false; // Modo visual (colores oscuros)
-  bool _isZenMode = false; // Modo descanso (DND + brillo bajo)
-  final _dndPlugin = DoNotDisturbPlugin();
+  bool _isInitializing = true;
+  bool _isZenMode = false;
   int _lastKnownPage = 0;
 
   @override
   void initState() {
     super.initState();
-
-    // CAMBIO 3: Modo zen solo se activa si se pasó el parámetro initialZenMode
     _isZenMode = widget.initialZenMode;
-    _isNightMode = widget
-        .initialZenMode; // Si viene en zen, también activa modo noche visual
-
+    // Keep screen on while reading
     WakelockPlus.enable();
+    _initBrightness();
 
-    // Solo aplicar configuración de zen (DND + brillo) si se pasó como parámetro inicial
-    if (_isZenMode) {
-      _initZenMode();
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await ref
-          .read(readingSessionControllerProvider.notifier)
-          .initializeSession(widget.book.id, widget.book.uuid);
-
-      if (mounted) {
-        final initialSession = ref.read(readingSessionControllerProvider).value;
-        if (initialSession != null) {
-          _startTimer(initialSession.startTime);
-        }
-      }
+    // Defer session start/check to after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeSession();
     });
   }
 
-  /// Inicializa modo zen (solo si se activó antes de entrar)
-  Future<void> _initZenMode() async {
+  Future<void> _initBrightness() async {
     try {
-      // Activar DND si es Android
-      if (Platform.isAndroid) {
-        final status = await Permission.accessNotificationPolicy.status;
-        if (!status.isGranted) {
-          await Permission.accessNotificationPolicy.request();
-        }
-
-        // Activar DND (Modo PRIORIDAD)
-        await _dndPlugin.setInterruptionFilter(InterruptionFilter.priority);
+      if (_isZenMode) {
+        await ScreenBrightness().setScreenBrightness(0.05);
       }
-
-      // Bajar brillo
-      await ScreenBrightness().setScreenBrightness(0.05);
     } catch (e) {
-      debugPrint('Error inicializando zen mode: $e');
+      debugPrint('Error getting brightness: $e');
     }
   }
 
-  /// CAMBIO 2: Modo noche ahora solo cambia los colores (sin DND ni brillo)
-  /// El modo zen (DND + brillo) solo se activa si se pasó initialZenMode = true
-  Future<void> _toggleNightMode() async {
+  Future<void> _toggleZenMode() async {
+    final newZenMode = !_isZenMode;
+
+    // If enabling Zen Mode, check/request DND permission
+    if (newZenMode) {
+      await Permission.notification.request();
+      // Note: Full DND control usually requires special access on Android
+      // 'ACCESS_NOTIFICATION_POLICY'.
+      // For now, we'll just toggle the UI and brightness.
+      // DND is system-level and hard to toggle programmatically without user intervention on modern Android.
+      // We can suggest the user to enable it or just rely on the immersive UI.
+    }
+
     setState(() {
-      _isNightMode = !_isNightMode;
+      _isZenMode = newZenMode;
     });
 
-    // No cambiamos el brillo ni activamos DND
-    // Solo es un toggle visual de colores
+    try {
+      if (_isZenMode) {
+        await ScreenBrightness().setScreenBrightness(0.05); // Very low
+      } else {
+        await ScreenBrightness().resetScreenBrightness();
+      }
+    } catch (e) {
+      debugPrint('Error setting brightness: $e');
+    }
   }
 
-  void _startTimer(DateTime startTime) {
-    _startTime = startTime;
+  Future<void> _initializeSession() async {
+    final controller = ref.read(readingSessionControllerProvider.notifier);
+    // Check if there is already an active session for this book
+    final existingSession =
+        await ref.read(activeSessionProvider(widget.book.id).future);
 
-    if (_timer != null && _timer!.isActive) {
-      setState(() {
-        _elapsed = DateTime.now().difference(_startTime!);
-      });
-      return;
+    // Get last known progress
+    final lastProgress =
+        await ref.read(bookProgressProvider(widget.book.id).future);
+    if (lastProgress?.currentPage != null) {
+      _lastKnownPage = lastProgress!.currentPage!;
     }
 
-    _elapsed = DateTime.now().difference(_startTime!);
+    if (existingSession != null) {
+      // Resume existing session
+      controller.setSession(existingSession);
+      _startTime = existingSession.startTime;
+    } else {
+      // Start new session
+      await controller.startSession(widget.book.id, widget.book.uuid);
+      final newSession = ref.read(readingSessionControllerProvider).value;
+      if (newSession != null) {
+        _startTime = newSession.startTime;
+      }
+    }
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) return;
+    _startTimer();
+    if (mounted) {
       setState(() {
-        _elapsed = DateTime.now().difference(_startTime!);
+        _isInitializing = false;
       });
+    }
+  }
 
-      if (widget.targetDuration != null && _elapsed >= widget.targetDuration!) {
-        timer.cancel();
-        HapticFeedback.lightImpact(); // Vibración ligera al terminar
-        _showTimeIsUpDialog();
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_startTime != null && mounted) {
+        setState(() {
+          _elapsed = DateTime.now().difference(_startTime!);
+        });
       }
     });
-  }
-
-  void _showTimeIsUpDialog() {
-    // Alarma visual acompañada de vibración si es posible
-    HapticFeedback.vibrate();
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('¡Tiempo cumplido!'),
-        content: const Text('Has alcanzado tu objetivo de lectura.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Continuar leyendo'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _endSession();
-            },
-            child: const Text('Terminar sesión'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     WakelockPlus.disable();
-
-    // Restaurar brillo y DND solo si estaba en modo zen
-    if (_isZenMode) {
-      if (Platform.isAndroid) {
-        _dndPlugin.setInterruptionFilter(InterruptionFilter.all);
-      }
-      ScreenBrightness().resetScreenBrightness();
-    }
-
+    ScreenBrightness().resetScreenBrightness();
     super.dispose();
   }
 
@@ -187,6 +156,7 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
   Future<void> _endSession() async {
     final controller = ref.read(readingSessionControllerProvider.notifier);
 
+    // Show dialog to get end page
     final result = await showDialog<_EndSessionResult>(
       context: context,
       barrierDismissible: false,
@@ -198,25 +168,26 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
     );
 
     if (result != null && mounted) {
-      if (result.cancelSession) {
-        await controller.cancelSession();
-      } else if (result.finishBook) {
+      if (result.finishBook) {
+        // Mark as finished
         await controller.finishBook(
           result.page,
           notes: result.notes,
         );
 
         if (mounted) {
+          // Show review dialog
           await showAddReviewDialog(context, ref, widget.book);
         }
       } else {
+        // Just end session
         await controller.endSession(result.page, notes: result.notes);
       }
 
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context); // Close session screen
 
-        if (!result.cancelSession && result.viewBook) {
+        if (result.viewBook) {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -228,73 +199,11 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
     }
   }
 
-  /// CAMBIO 1: Al presionar la X, cancelar sesión y parar el timer
-  Future<void> _closeSessionWithoutSaving() async {
-    // Mostrar confirmación
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Cerrar sin guardar?'),
-        content: const Text(
-          'Se perderá el progreso de esta sesión de lectura.\n'
-          '¿Estás seguro?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('Cerrar sin guardar'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      // Cancelar la sesión en el controller (la elimina de DB)
-      await ref.read(readingSessionControllerProvider.notifier).cancelSession();
-
-      // Parar el timer
-      _timer?.cancel();
-
-      // Resetear el elapsed a cero (opcional, porque vamos a cerrar la pantalla)
-      setState(() {
-        _elapsed = Duration.zero;
-      });
-
-      // Cerrar la pantalla
-      if (mounted) {
-        Navigator.pop(context);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final sessionState = ref.watch(readingSessionControllerProvider);
-
-    ref.listen(readingSessionControllerProvider, (previous, next) {
-      final previousSession = previous?.value;
-      final nextSession = next.value;
-
-      if (nextSession != null && nextSession.id != previousSession?.id) {
-        _startTimer(nextSession.startTime);
-      }
-
-      if (nextSession == null && previousSession != null) {
-        _timer?.cancel();
-      }
-    });
-
     final remaining = widget.targetDuration != null
         ? widget.targetDuration! - _elapsed
         : _elapsed;
-
     double progress = 0.0;
     if (widget.targetDuration != null && widget.targetDuration!.inSeconds > 0) {
       progress = (_elapsed.inSeconds / widget.targetDuration!.inSeconds)
@@ -302,211 +211,167 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
     }
 
     return ColorFiltered(
-      colorFilter: _isNightMode
+      colorFilter: _isZenMode
           ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
           : const ColorFilter.mode(Colors.transparent, BlendMode.saturation),
       child: Scaffold(
-        backgroundColor: _isNightMode ? Colors.black : null,
+        backgroundColor: _isZenMode ? Colors.black : null,
         appBar: AppBar(
           title: Text(widget.book.title),
-          backgroundColor: _isNightMode ? Colors.black : null,
-          foregroundColor: _isNightMode ? Colors.white54 : null,
+          backgroundColor: _isZenMode ? Colors.black : null,
+          foregroundColor: _isZenMode ? Colors.white54 : null,
           actions: [
-            // CAMBIO 2: Botón solo cambia modo visual noche/día
             IconButton(
-              icon:
-                  Icon(_isNightMode ? Icons.nightlight_round : Icons.wb_sunny),
-              onPressed: _toggleNightMode,
-              tooltip: _isNightMode ? 'Modo Día' : 'Modo Noche',
+              icon: Icon(_isZenMode ? Icons.nightlight_round : Icons.wb_sunny),
+              onPressed: _toggleZenMode,
+              tooltip: _isZenMode ? 'Modo Normal' : 'Modo Lectura Nocturna',
             ),
           ],
           leading: IconButton(
             icon: const Icon(Icons.close),
-            onPressed:
-                _closeSessionWithoutSaving, // ← CAMBIO 1: Usar nuevo método
+            onPressed: () {
+              // Just close screen, session continues in background
+              Navigator.pop(context);
+            },
           ),
         ),
-        body: sessionState.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error al iniciar sesión: $err',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () {
-                      ref
-                          .read(readingSessionControllerProvider.notifier)
-                          .initializeSession(widget.book.id, widget.book.uuid);
-                    },
-                    child: const Text('Reintentar'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          data: (session) {
-            if (session == null) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (session.startPage != null && session.startPage! > 0) {
-              _lastKnownPage = session.startPage!;
-            }
-
-            return SafeArea(
-              child: SizedBox(
-                width: double.infinity,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Spacer(),
-                    // Portada del libro
-                    Opacity(
-                      opacity: _isNightMode ? 0.6 : 1.0,
-                      child: Container(
-                        height: 200,
-                        width: 130,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.3),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                          image: widget.book.coverPath != null
-                              ? DecorationImage(
-                                  image: File(widget.book.coverPath!)
-                                          .existsSync()
-                                      ? FileImage(File(widget.book.coverPath!))
-                                          as ImageProvider
-                                      : NetworkImage(widget.book.coverPath!),
-                                  fit: BoxFit.cover,
-                                )
+        body: _isInitializing
+            ? const Center(child: CircularProgressIndicator())
+            : SafeArea(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Spacer(),
+                      // Book Cover (Opaque)
+                      Opacity(
+                        opacity: _isZenMode ? 0.6 : 1.0,
+                        child: Container(
+                          height: 200,
+                          width: 130,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                            image: widget.book.coverPath != null
+                                ? DecorationImage(
+                                    image: File(widget.book.coverPath!)
+                                            .existsSync()
+                                        ? FileImage(
+                                                File(widget.book.coverPath!))
+                                            as ImageProvider
+                                        : NetworkImage(widget.book.coverPath!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                          ),
+                          child: widget.book.coverPath == null
+                              ? const Icon(Icons.book,
+                                  size: 64, color: Colors.grey)
                               : null,
                         ),
-                        child: widget.book.coverPath == null
-                            ? const Icon(Icons.book,
-                                size: 64, color: Colors.grey)
-                            : null,
                       ),
-                    ),
-                    const SizedBox(height: 60),
+                      const SizedBox(height: 60),
 
-                    // Temporizador circular
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: 240,
-                          height: 240,
-                          child: CircularProgressIndicator(
-                            value:
-                                widget.targetDuration != null ? progress : null,
-                            strokeWidth: 6,
-                            backgroundColor: Theme.of(context)
-                                .dividerColor
-                                .withValues(alpha: 0.1),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              _isNightMode
-                                  ? Colors.grey.shade700
-                                  : Theme.of(context).colorScheme.primary,
+                      // Circular Timer
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 240,
+                            height: 240,
+                            child: CircularProgressIndicator(
+                              value: widget.targetDuration != null
+                                  ? progress
+                                  : null,
+                              strokeWidth: 6,
+                              backgroundColor: Theme.of(context)
+                                  .dividerColor
+                                  .withValues(alpha: 0.1),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                _isZenMode
+                                    ? Colors.grey.shade700
+                                    : Theme.of(context).colorScheme.primary,
+                              ),
                             ),
                           ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _formatDuration(remaining),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .displayLarge
-                                  ?.copyWith(
-                                fontFeatures: [
-                                  const FontFeature.tabularFigures()
-                                ],
-                                color: _isNightMode ? Colors.grey : null,
-                              ),
-                            ),
-                            if (widget.targetDuration != null)
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                               Text(
-                                'restante',
+                                _formatDuration(remaining),
                                 style: Theme.of(context)
                                     .textTheme
-                                    .labelMedium
+                                    .displayLarge
                                     ?.copyWith(
-                                      color: _isNightMode ? Colors.grey : null,
-                                    ),
+                                  fontFeatures: [
+                                    const FontFeature.tabularFigures()
+                                  ],
+                                  color: _isZenMode ? Colors.grey : null,
+                                ),
                               ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    const Spacer(),
-
-                    // Botón terminar
-                    TextButton.icon(
-                      onPressed: () => _endSession(),
-                      icon: Icon(
-                        Icons.stop,
-                        color: _isNightMode
-                            ? Colors.grey
-                            : Theme.of(context).colorScheme.error,
+                              if (widget.targetDuration != null)
+                                Text(
+                                  'restante',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelMedium
+                                      ?.copyWith(
+                                        color: _isZenMode ? Colors.grey : null,
+                                      ),
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
-                      label: Text(
-                        'TERMINAR SESIÓN',
-                        style: TextStyle(
-                          color: _isNightMode
+
+                      const Spacer(),
+
+                      // End Session Button
+                      TextButton.icon(
+                        onPressed: () => _endSession(),
+                        icon: Icon(
+                          Icons.stop,
+                          color: _isZenMode
                               ? Colors.grey
                               : Theme.of(context).colorScheme.error,
-                          fontWeight: FontWeight.bold,
+                        ),
+                        label: Text(
+                          'TERMINAR SESIÓN',
+                          style: TextStyle(
+                            color: _isZenMode
+                                ? Colors.grey
+                                : Theme.of(context).colorScheme.error,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
 
-                    const SizedBox(height: 40),
-                  ],
+                      const SizedBox(height: 40),
+                    ],
+                  ),
                 ),
               ),
-            );
-          },
-        ),
       ),
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Clases auxiliares del diálogo (sin cambios)
-// ---------------------------------------------------------------------------
 
 class _EndSessionResult {
   final int page;
   final String? notes;
   final bool viewBook;
   final bool finishBook;
-  final bool cancelSession;
 
-  _EndSessionResult(
-    this.page,
-    this.notes,
-    this.viewBook, {
-    this.finishBook = false,
-    this.cancelSession = false,
-  });
+  _EndSessionResult(this.page, this.notes, this.viewBook,
+      {this.finishBook = false});
 }
 
 class _EndSessionDialog extends StatefulWidget {
@@ -614,7 +479,7 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
         Row(
           children: [
             Expanded(
-              child: OutlinedButton(
+              child: TextButton(
                 onPressed: () {
                   final page = int.tryParse(_pageController.text) ?? 0;
                   Navigator.pop(
@@ -624,15 +489,10 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
                       _notesController.text,
                       false,
                       finishBook: _finishBook,
-                      cancelSession: true,
                     ),
                   );
                 },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.error,
-                  side: BorderSide(color: Theme.of(context).colorScheme.error),
-                ),
-                child: const Text('NO GUARDAR'),
+                child: const Text('SOLO GUARDAR'),
               ),
             ),
             const SizedBox(width: 8),
@@ -651,7 +511,7 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
                   );
                 },
                 child: const Text(
-                  'GUARDAR',
+                  'GUARDAR Y VER LIBRO',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 12),
                 ),

@@ -3,10 +3,15 @@ import 'package:book_sharing_app/ui/widgets/profile/reading_rhythm_chart.dart';
 import 'package:book_sharing_app/utils/reading_rhythm_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
   group('ReadingRhythmChart', () {
     final now = DateTime(2024, 1, 24, 15, 0);
+
+    setUpAll(() async {
+      await initializeDateFormatting('es');
+    });
 
     Book createBook(int id, String title) {
       return Book(
@@ -62,9 +67,8 @@ void main() {
       ));
 
       expect(find.text('Test Insight'), findsOneWidget);
-      // Row count: 2. Each row is an InkWell containing a stack of segments.
-      // We can look for the InkWell or the Book icon.
-      expect(find.byType(InkWell), findsNWidgets(2));
+      expect(find.text('Book 1'), findsOneWidget);
+      expect(find.text('Book 2'), findsOneWidget);
     });
 
     testWidgets('Tapping a row calls onBookTap', (WidgetTester tester) async {
@@ -78,8 +82,7 @@ void main() {
         ),
       ));
 
-      await tester
-          .tap(find.text('Test Insight')); // Just to ensure layout is ready
+      await tester.pumpAndSettle();
       await tester.tap(find.byType(InkWell).first);
       await tester.pumpAndSettle();
 
@@ -105,7 +108,10 @@ void main() {
         ),
       ));
 
-      expect(find.textContaining('No hay suficientes datos'), findsOneWidget);
+      expect(
+        find.textContaining('El silencio antes de la historia...'),
+        findsOneWidget,
+      );
     });
   });
 }

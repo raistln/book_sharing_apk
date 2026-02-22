@@ -397,6 +397,148 @@ class SupabaseClubBookSyncRepository {
       }
     }
 
+    final dirtyReports = allDirty['reports'] as List<CommentReport>? ?? [];
+
+    if (kDebugMode) {
+      debugPrint(
+        '[ClubBookSync] Found ${dirtyReports.length} dirty reports',
+      );
+    }
+
+    for (final report in dirtyReports) {
+      try {
+        final comment = await _clubDao.getCommentByUuid(report.commentUuid);
+        if (comment == null || comment.remoteId == null) {
+          if (kDebugMode) {
+            debugPrint(
+              '[ClubBookSync] Skipping report ${report.uuid}: comment lacks remoteId',
+            );
+          }
+          continue;
+        }
+
+        String? reporterRemoteId = report.reportedByRemoteId;
+        if (reporterRemoteId == null || reporterRemoteId.isEmpty) {
+          final user = await (_clubDao.select(_clubDao.localUsers)
+                ..where((u) => u.id.equals(report.reportedByUserId)))
+              .getSingleOrNull();
+          reporterRemoteId = user?.remoteId;
+        }
+
+        if (reporterRemoteId == null || reporterRemoteId.isEmpty) {
+          if (kDebugMode) {
+            debugPrint(
+              '[ClubBookSync] Skipping report ${report.uuid}: reporter lacks remoteId',
+            );
+          }
+          continue;
+        }
+
+        final provisionalRemoteId = report.remoteId ?? report.uuid;
+        final remoteId = await _clubService.createCommentReport(
+          id: provisionalRemoteId,
+          commentId: comment.remoteId!,
+          reportedByUserId: reporterRemoteId,
+          reason: report.reason,
+          createdAt: report.createdAt,
+          accessToken: accessToken,
+        );
+
+        await (_clubDao.update(_clubDao.commentReports)
+              ..where((t) => t.id.equals(report.id)))
+            .write(
+          CommentReportsCompanion(
+            remoteId: Value(remoteId),
+            isDirty: const Value(false),
+            syncedAt: Value(DateTime.now()),
+          ),
+        );
+
+        if (kDebugMode) {
+          debugPrint('[ClubBookSync] Created report ${report.uuid}');
+        }
+      } catch (error) {
+        if (kDebugMode) {
+          debugPrint(
+            '[ClubBookSync] Failed to push report ${report.uuid}: $error',
+          );
+        }
+        rethrow;
+      }
+    }
+
+    final dirtyLogs = allDirty['logs'] as List<ModerationLog>? ?? [];
+
+    if (kDebugMode) {
+      debugPrint(
+        '[ClubBookSync] Found ${dirtyLogs.length} dirty moderation logs',
+      );
+    }
+
+    for (final log in dirtyLogs) {
+      try {
+        final club = await _clubDao.getClubByUuid(log.clubUuid);
+        if (club == null || club.remoteId == null) {
+          if (kDebugMode) {
+            debugPrint(
+              '[ClubBookSync] Skipping moderation log ${log.uuid}: club lacks remoteId',
+            );
+          }
+          continue;
+        }
+
+        String? performerRemoteId = log.performedByRemoteId;
+        if (performerRemoteId == null || performerRemoteId.isEmpty) {
+          final user = await (_clubDao.select(_clubDao.localUsers)
+                ..where((u) => u.id.equals(log.performedByUserId)))
+              .getSingleOrNull();
+          performerRemoteId = user?.remoteId;
+        }
+
+        if (performerRemoteId == null || performerRemoteId.isEmpty) {
+          if (kDebugMode) {
+            debugPrint(
+              '[ClubBookSync] Skipping moderation log ${log.uuid}: performer lacks remoteId',
+            );
+          }
+          continue;
+        }
+
+        final provisionalRemoteId = log.remoteId ?? log.uuid;
+        final remoteId = await _clubService.createModerationLog(
+          id: provisionalRemoteId,
+          clubId: club.remoteId!,
+          action: log.action,
+          performedByUserId: performerRemoteId,
+          targetId: log.targetId,
+          reason: log.reason,
+          createdAt: log.createdAt,
+          accessToken: accessToken,
+        );
+
+        await (_clubDao.update(_clubDao.moderationLogs)
+              ..where((t) => t.id.equals(log.id)))
+            .write(
+          ModerationLogsCompanion(
+            remoteId: Value(remoteId),
+            isDirty: const Value(false),
+            syncedAt: Value(DateTime.now()),
+          ),
+        );
+
+        if (kDebugMode) {
+          debugPrint('[ClubBookSync] Created moderation log ${log.uuid}');
+        }
+      } catch (error) {
+        if (kDebugMode) {
+          debugPrint(
+            '[ClubBookSync] Failed to push moderation log ${log.uuid}: $error',
+          );
+        }
+        rethrow;
+      }
+    }
+
     if (kDebugMode) {
       debugPrint('[ClubBookSync] Push completed successfully');
     }

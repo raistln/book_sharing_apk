@@ -318,7 +318,7 @@ class SupabaseGroupService {
       queryParameters: {
         'select': 'id,name,description,owner_id,created_at,'
             'group_members(id,user_id,role,created_at,profiles(username)),'
-            'shared_books(id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,genre,page_count,publication_year,created_at,updated_at,'
+            'shared_books(id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,is_deleted,genre,page_count,publication_year,created_at,updated_at,'
             'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at,'
             'borrower:profiles!borrower_user_id(username),lender:profiles!lender_user_id(username))),'
             'group_invitations(id,group_id,inviter_id,accepted_user_id,role,code,status,expires_at,responded_at,created_at,updated_at)',
@@ -359,7 +359,7 @@ class SupabaseGroupService {
     final config = await _loadConfig();
     final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
       queryParameters: {
-        'select': 'id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,created_at,updated_at,page_count,publication_year,'
+        'select': 'id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,is_deleted,created_at,updated_at,page_count,publication_year,'
             'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at,'
             'borrower:profiles!borrower_user_id(username),lender:profiles!lender_user_id(username))',
         'group_id': 'eq.$groupId',

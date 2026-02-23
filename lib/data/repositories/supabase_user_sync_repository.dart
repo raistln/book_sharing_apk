@@ -199,7 +199,8 @@ class SupabaseUserSyncRepository {
           name: 'SupabaseUserSyncRepository',
           level: 1000,
         );
-        throw SupabaseUserSyncException(error.toString());
+        // ✅ No relanzar: continúa con el siguiente usuario sucio
+        continue;
       }
     }
   }

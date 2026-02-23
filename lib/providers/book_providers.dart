@@ -9,6 +9,7 @@ import '../data/local/user_dao.dart';
 import '../data/local/timeline_entry_dao.dart';
 import '../data/local/reading_session_dao.dart';
 import '../data/local/wishlist_dao.dart';
+import '../data/local/sync_cursor_dao.dart';
 import '../data/repositories/book_repository.dart';
 import '../data/repositories/loan_repository.dart';
 import '../data/repositories/notification_repository.dart';
@@ -422,6 +423,11 @@ final supabaseBookServiceProvider = Provider<SupabaseBookService>((ref) {
   return service;
 });
 
+final syncCursorDaoProvider = Provider<SyncCursorDao>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return SyncCursorDao(db);
+});
+
 final supabaseBookSyncRepositoryProvider =
     Provider<SupabaseBookSyncRepository>((ref) {
   final bookDao = ref.watch(bookDaoProvider);
@@ -429,12 +435,14 @@ final supabaseBookSyncRepositoryProvider =
   final timelineDao = ref.watch(timelineEntryDaoProvider);
   final sessionDao = ref.watch(readingSessionDaoProvider);
   final wishlistDao = ref.watch(wishlistDaoProvider);
+  final syncCursorDao = ref.watch(syncCursorDaoProvider); // ← NUEVO
   return SupabaseBookSyncRepository(
     bookDao: bookDao,
     bookService: bookService,
     timelineDao: timelineDao,
     sessionDao: sessionDao,
     wishlistDao: wishlistDao,
+    syncCursorDao: syncCursorDao, // ← NUEVO
   );
 });
 

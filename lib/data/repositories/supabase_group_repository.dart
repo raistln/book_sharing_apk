@@ -502,6 +502,19 @@ class SupabaseGroupSyncRepository {
         final localSharedBooks =
             await _groupDao.findSharedBooksByGroupId(localGroupId);
 
+        // ✅ Bug #9: Guard against accidental mass deletion if remote list is unexpectedly empty
+        if (sharedRecords.isEmpty && localSharedBooks.isNotEmpty) {
+          if (kDebugMode) {
+            debugPrint(
+              '[GroupSync] WARNING: Remote shared books list is empty for group ${remote.id}, but local has ${localSharedBooks.length} items. Skipping pruning to prevent accidental loss.',
+            );
+          }
+          // We only prune if we trust the empty result. In Supabase, if select returns [],
+          // it could be a real empty group or an RLS/Network issue.
+          // For now, we play it safe.
+          continue;
+        }
+
         for (final local in localSharedBooks) {
           if (local.remoteId != null &&
               local.remoteId!.isNotEmpty &&
@@ -552,7 +565,7 @@ class SupabaseGroupSyncRepository {
                 debugPrint(
                     '[GroupSync] Failed to delete shared book ${shared.uuid} remotely: $error');
               }
-              rethrow;
+              continue;
             }
           }
 
@@ -693,7 +706,7 @@ class SupabaseGroupSyncRepository {
             debugPrint(
                 '[GroupSync] Failed to push shared book ${shared.uuid}: $error');
           }
-          rethrow;
+          continue;
         }
       }
     }

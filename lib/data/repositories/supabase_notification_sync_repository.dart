@@ -166,7 +166,7 @@ class SupabaseNotificationSyncRepository {
 
         final convertedType = _convertNotificationType(local.type);
         developer.log(
-          'Subiendo notificación $local.uuid (tipo=$local.type → $convertedType) para usuario remoto $targetUserRemoteId.',
+          'Subiendo notificación ${local.uuid} (tipo=${local.type} → $convertedType) para usuario remoto $targetUserRemoteId.',
           name: 'SupabaseNotificationSyncRepository',
         );
 
@@ -214,7 +214,7 @@ class SupabaseNotificationSyncRepository {
           stackTrace: stackTrace,
           level: 1000,
         );
-        rethrow;
+        // ✅ No relanzar: continúa con la siguiente notificación
       }
     }
   }

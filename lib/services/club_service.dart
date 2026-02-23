@@ -4,15 +4,23 @@ import 'package:uuid/uuid.dart';
 import '../data/local/club_dao.dart';
 import '../data/local/database.dart';
 import '../models/club_enums.dart';
+import '../models/global_sync_state.dart' show SyncEntity;
+import 'unified_sync_coordinator.dart';
 
 /// Service for managing reading clubs
 class ClubService {
   ClubService({
     required this.dao,
+    required this.syncCoordinator,
   });
 
   final ClubDao dao;
+  final UnifiedSyncCoordinator syncCoordinator;
   final _uuid = const Uuid();
+
+  void _markDirty() {
+    syncCoordinator.markPendingChanges(SyncEntity.clubs);
+  }
 
   // =====================================================================
   // CLUB CRUD
@@ -61,6 +69,7 @@ class ClubService {
       isDirty: const Value(true),
     ));
 
+    _markDirty();
     return clubUuid;
   }
 
@@ -93,11 +102,13 @@ class ClubService {
     );
 
     await dao.upsertClub(updates);
+    _markDirty();
   }
 
   /// Delete a club (soft delete)
   Future<void> deleteClub(String clubUuid) async {
     await dao.deleteClub(clubUuid);
+    _markDirty();
   }
 
   /// Get a specific club
@@ -157,6 +168,7 @@ class ClubService {
     }
 
     await dao.removeClubMember(clubUuid, userUuid);
+    _markDirty();
   }
 
   /// Join a club by its UUID
@@ -188,6 +200,7 @@ class ClubService {
       status: const Value('activo'),
       isDirty: const Value(true),
     ));
+    _markDirty();
   }
 
   /// Kick a member (admin/owner only)
@@ -221,6 +234,7 @@ class ClubService {
       targetId: targetUserUuid,
       isDirty: const Value(true),
     ));
+    _markDirty();
   }
 
   /// Update member activity timestamp
@@ -268,6 +282,7 @@ class ClubService {
       startDate: startDate != null ? Value(startDate) : const Value.absent(),
       isDirty: const Value(true),
     ));
+    _markDirty();
   }
 
   /// Stream all club books
@@ -322,6 +337,7 @@ class ClubService {
       totalChapters: totalChapters,
       isDirty: const Value(true),
     ));
+    _markDirty();
   }
 
   // =====================================================================
@@ -392,6 +408,7 @@ class ClubService {
 
     // Update member activity timestamp
     await updateMemberActivity(clubUuid, userUuid);
+    _markDirty();
   }
 
   // =====================================================================

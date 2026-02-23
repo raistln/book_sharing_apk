@@ -7,6 +7,7 @@ import '../local/book_dao.dart';
 import '../local/timeline_entry_dao.dart';
 import '../local/reading_session_dao.dart';
 import '../local/wishlist_dao.dart';
+import '../local/sync_cursor_dao.dart'; // ← NUEVO
 import '../../services/supabase_book_service.dart';
 
 class SupabaseBookSyncRepository {
@@ -15,17 +16,20 @@ class SupabaseBookSyncRepository {
     required TimelineEntryDao timelineDao,
     required ReadingSessionDao sessionDao,
     required WishlistDao wishlistDao,
+    required SyncCursorDao syncCursorDao, // ← NUEVO
     SupabaseBookService? bookService,
   })  : _bookDao = bookDao,
         _timelineDao = timelineDao,
         _sessionDao = sessionDao,
         _wishlistDao = wishlistDao,
+        _syncCursorDao = syncCursorDao, // ← NUEVO
         _bookService = bookService ?? SupabaseBookService();
 
   final BookDao _bookDao;
   final TimelineEntryDao _timelineDao;
   final ReadingSessionDao _sessionDao;
   final WishlistDao _wishlistDao;
+  final SyncCursorDao _syncCursorDao; // ← NUEVO
   final SupabaseBookService _bookService;
 
   /// Mapea visibility y isAvailable de Supabase al status local
@@ -67,93 +71,84 @@ class SupabaseBookSyncRepository {
       name: 'SupabaseBookSyncRepository',
     );
 
-    // Fetch last sync timestamps
-    final lastSyncedBook = await (_bookDao.attachedDatabase
-            .select(_bookDao.attachedDatabase.books)
-          ..orderBy([
-            (t) => OrderingTerm(expression: t.syncedAt, mode: OrderingMode.desc)
-          ])
-          ..limit(1))
-        .getSingleOrNull();
+    // ✅ Leer cursores correctos (MAX updatedAt del servidor, no syncedAt local)
+    final cursorBooks = await _syncCursorDao.getCursor('books');
+    final cursorReviews = await _syncCursorDao.getCursor('reviews');
+    final cursorTimeline = await _syncCursorDao.getCursor('timeline');
+    final cursorSessions = await _syncCursorDao.getCursor('sessions');
+    final cursorWishlist = await _syncCursorDao.getCursor('wishlist');
 
-    final lastSyncedReview = await (_bookDao.attachedDatabase
-            .select(_bookDao.attachedDatabase.bookReviews)
-          ..orderBy([
-            (t) => OrderingTerm(expression: t.syncedAt, mode: OrderingMode.desc)
-          ])
-          ..limit(1))
-        .getSingleOrNull();
-
-    final lastSyncedTimeline = await (_timelineDao.db
-            .select(_timelineDao.db.readingTimelineEntries)
-          ..orderBy([
-            (t) => OrderingTerm(expression: t.syncedAt, mode: OrderingMode.desc)
-          ])
-          ..limit(1))
-        .getSingleOrNull();
-
-    final lastSyncedSession = await (_sessionDao.db
-            .select(_sessionDao.db.readingSessions)
-          ..orderBy([
-            (t) => OrderingTerm(expression: t.syncedAt, mode: OrderingMode.desc)
-          ])
-          ..limit(1))
-        .getSingleOrNull();
-
-    final lastSyncedWishlistItem = await (_wishlistDao.db
-            .select(_wishlistDao.db.wishlistItems)
-          ..orderBy([
-            (t) => OrderingTerm(expression: t.syncedAt, mode: OrderingMode.desc)
-          ])
-          ..limit(1))
-        .getSingleOrNull();
-
-    final remoteBooks = await _bookService.fetchBooks(
-      ownerId: ownerRemoteId,
-      accessToken: accessToken,
-      updatedAfter: lastSyncedBook?.syncedAt,
-    );
     developer.log(
-      'Fetched ${remoteBooks.length} remote books (updated after ${lastSyncedBook?.syncedAt})',
+      '🔄 Starting syncFromRemote for user $ownerRemoteId (cursors: books=$cursorBooks, reviews=$cursorReviews, timeline=$cursorTimeline)',
       name: 'SupabaseBookSyncRepository',
     );
 
-    final remoteReviews = await _bookService.fetchReviews(
-      accessToken: accessToken,
-      updatedAfter: lastSyncedReview?.syncedAt,
-    );
-    developer.log(
-      'Fetched ${remoteReviews.length} remote reviews (updated after ${lastSyncedReview?.syncedAt})',
-      name: 'SupabaseBookSyncRepository',
-    );
+    // ✅ Fetch remoto en paralelo para mejor rendimiento
+    final futures = await Future.wait([
+      _bookService
+          .fetchBooks(
+        ownerId: ownerRemoteId,
+        accessToken: accessToken,
+        updatedAfter: cursorBooks,
+      )
+          .catchError((e) {
+        developer.log('Error fetching books: $e',
+            name: 'SupabaseBookSyncRepository', level: 900);
+        return <SupabaseBookRecord>[];
+      }),
+      _bookService
+          .fetchReviews(
+        accessToken: accessToken,
+        updatedAfter: cursorReviews,
+      )
+          .catchError((e) {
+        developer.log('Error fetching reviews: $e',
+            name: 'SupabaseBookSyncRepository', level: 900);
+        return <SupabaseBookReviewRecord>[];
+      }),
+      _bookService
+          .fetchTimelineEntries(
+        ownerId: ownerRemoteId,
+        accessToken: accessToken,
+        updatedAfter: cursorTimeline,
+      )
+          .catchError((e) {
+        developer.log('Error fetching timeline: $e',
+            name: 'SupabaseBookSyncRepository', level: 900);
+        return <SupabaseTimelineEntryRecord>[];
+      }),
+      _bookService
+          .fetchReadingSessions(
+        ownerId: ownerRemoteId,
+        accessToken: accessToken,
+        updatedAfter: cursorSessions,
+      )
+          .catchError((e) {
+        developer.log('Error fetching sessions: $e',
+            name: 'SupabaseBookSyncRepository', level: 900);
+        return <SupabaseReadingSessionRecord>[];
+      }),
+      _bookService
+          .fetchWishlistItems(
+        userId: ownerRemoteId,
+        accessToken: accessToken,
+        updatedAfter: cursorWishlist,
+      )
+          .catchError((e) {
+        developer.log('Error fetching wishlist: $e',
+            name: 'SupabaseBookSyncRepository', level: 900);
+        return <SupabaseWishlistItemRecord>[];
+      }),
+    ]);
 
-    final remoteTimeline = await _bookService.fetchTimelineEntries(
-      ownerId: ownerRemoteId,
-      accessToken: accessToken,
-      updatedAfter: lastSyncedTimeline?.syncedAt,
-    );
-    developer.log(
-      'Fetched ${remoteTimeline.length} remote timeline entries (updated after ${lastSyncedTimeline?.syncedAt})',
-      name: 'SupabaseBookSyncRepository',
-    );
+    final remoteBooks = futures[0] as List<SupabaseBookRecord>;
+    final remoteReviews = futures[1] as List<SupabaseBookReviewRecord>;
+    final remoteTimeline = futures[2] as List<SupabaseTimelineEntryRecord>;
+    final remoteSessions = futures[3] as List<SupabaseReadingSessionRecord>;
+    final remoteWishlist = futures[4] as List<SupabaseWishlistItemRecord>;
 
-    final remoteSessions = await _bookService.fetchReadingSessions(
-      ownerId: ownerRemoteId,
-      accessToken: accessToken,
-      updatedAfter: lastSyncedSession?.syncedAt,
-    );
     developer.log(
-      'Fetched ${remoteSessions.length} remote reading sessions (updated after ${lastSyncedSession?.syncedAt})',
-      name: 'SupabaseBookSyncRepository',
-    );
-
-    final remoteWishlist = await _bookService.fetchWishlistItems(
-      userId: ownerRemoteId,
-      accessToken: accessToken,
-      updatedAfter: lastSyncedWishlistItem?.syncedAt,
-    );
-    developer.log(
-      'Fetched ${remoteWishlist.length} remote wishlist items (updated after ${lastSyncedWishlistItem?.syncedAt})',
+      'Fetched: ${remoteBooks.length} books, ${remoteReviews.length} reviews, ${remoteTimeline.length} timeline, ${remoteSessions.length} sessions, ${remoteWishlist.length} wishlist',
       name: 'SupabaseBookSyncRepository',
     );
 
@@ -220,20 +215,31 @@ class SupabaseBookSyncRepository {
           }
 
           if (existing.isDirty) {
-            await _bookDao.updateBookFields(
-              bookId: existing.id,
-              entry: BooksCompanion(
-                remoteId: existing.remoteId == null
-                    ? Value(remote.id)
-                    : const Value<String?>.absent(),
-                syncedAt: Value(now),
-              ),
-            );
-            developer.log(
-              'Saltando libro ${existing.title} por cambios locales pendientes.',
-              name: 'SupabaseBookSyncRepository',
-            );
-            continue;
+            final remoteUpdatedAt = remote.updatedAt ?? remote.createdAt;
+            final localUpdatedAt = existing.updatedAt;
+
+            if (remoteUpdatedAt.isAfter(localUpdatedAt)) {
+              developer.log(
+                '🔄 Conflicto: Registro remoto más reciente para "${existing.title}". Sobrescribiendo local.',
+                name: 'SupabaseBookSyncRepository',
+              );
+              // Continuamos con la actualización (no hacemos continue)
+            } else {
+              developer.log(
+                '⚠️ Conflicto: Registro local más reciente para "${existing.title}". Manteniendo local.',
+                name: 'SupabaseBookSyncRepository',
+              );
+              await _bookDao.updateBookFields(
+                bookId: existing.id,
+                entry: BooksCompanion(
+                  remoteId: existing.remoteId == null
+                      ? Value(remote.id)
+                      : const Value<String?>.absent(),
+                  syncedAt: Value(now),
+                ),
+              );
+              continue;
+            }
           }
 
           await _bookDao.updateBookFields(
@@ -382,20 +388,30 @@ class SupabaseBookSyncRepository {
 
         if (existing != null) {
           if (existing.isDirty) {
-            await _bookDao.updateReviewFields(
-              reviewId: existing.id,
-              entry: BookReviewsCompanion(
-                remoteId: existing.remoteId == null
-                    ? Value(remote.id)
-                    : const Value<String?>.absent(),
-                syncedAt: Value(now),
-              ),
-            );
-            developer.log(
-              'Reseña local ${existing.id} mantiene cambios pendientes, se omite actualización remota.',
-              name: 'SupabaseBookSyncRepository',
-            );
-            continue;
+            final remoteUpdatedAt = remote.updatedAt ?? remote.createdAt;
+            final localUpdatedAt = existing.updatedAt;
+
+            if (remoteUpdatedAt.isAfter(localUpdatedAt)) {
+              developer.log(
+                '🔄 Conflicto: Reseña remota más reciente para "${book.title}". Sobrescribiendo local.',
+                name: 'SupabaseBookSyncRepository',
+              );
+            } else {
+              developer.log(
+                '⚠️ Conflicto: Reseña local más reciente para "${book.title}". Manteniendo local.',
+                name: 'SupabaseBookSyncRepository',
+              );
+              await _bookDao.updateReviewFields(
+                reviewId: existing.id,
+                entry: BookReviewsCompanion(
+                  remoteId: existing.remoteId == null
+                      ? Value(remote.id)
+                      : const Value<String?>.absent(),
+                  syncedAt: Value(now),
+                ),
+              );
+              continue;
+            }
           }
 
           await _bookDao.updateReviewFields(
@@ -455,33 +471,71 @@ class SupabaseBookSyncRepository {
 
         final existing = await _timelineDao.findByRemoteId(remote.id);
         if (existing != null) {
-          if (!existing.isDirty) {
-            await _timelineDao.updateEntryFields(
-                existing.id,
-                ReadingTimelineEntriesCompanion(
+          if (existing.isDirty) {
+            final remoteUpdatedAt = remote.updatedAt ?? remote.createdAt;
+            final localUpdatedAt = existing.updatedAt;
+
+            if (remoteUpdatedAt.isAfter(localUpdatedAt)) {
+              developer.log(
+                '🔄 Conflicto: Timeline entry remoto más reciente para "${book.title}". Sobrescribiendo local.',
+                name: 'SupabaseBookSyncRepository',
+              );
+            } else {
+              developer.log(
+                '⚠️ Conflicto: Timeline entry local más reciente para "${book.title}". Manteniendo local.',
+                name: 'SupabaseBookSyncRepository',
+              );
+              // Mark as synced with remote ID but keep local changes
+              await _timelineDao.updateEntryFields(
+                  existing.id,
+                  ReadingTimelineEntriesCompanion(
+                    remoteId: Value(remote.id),
+                    syncedAt: Value(now),
+                  ));
+              continue;
+            }
+          }
+
+          await _timelineDao.updateEntryFields(
+              existing.id,
+              ReadingTimelineEntriesCompanion(
+                remoteId: Value(remote.id),
+                currentPage: Value(remote.currentPage),
+                percentageRead: Value(remote.percentageRead),
+                eventType: Value(remote.eventType),
+                note: Value(remote.note),
+                eventDate: Value(remote.eventDate),
+                isDeleted: Value(remote.isDeleted),
+                isDirty: const Value(false),
+                syncedAt: Value(now),
+                updatedAt: Value(remote.updatedAt ?? remote.createdAt),
+              ));
+        } else {
+          // Bug #2 Fix: Insert directly via into().insert to ensure isDirty: false
+          await _timelineDao.db
+              .into(_timelineDao.db.readingTimelineEntries)
+              .insert(
+                ReadingTimelineEntriesCompanion.insert(
+                  uuid: remote.id,
                   remoteId: Value(remote.id),
+                  bookId: book.id,
+                  bookUuid: Value(book
+                      .uuid), // ✅ Was missing Value() because it's nullable in DB
+                  ownerUserId: owner.id,
+                  eventType: remote.eventType,
                   currentPage: Value(remote.currentPage),
-                  percentageRead: Value(remote.percentageRead),
-                  eventType: Value(remote.eventType),
+                  percentageRead:
+                      Value(remote.percentageRead?.toInt()), // ✅ DB is Int
                   note: Value(remote.note),
                   eventDate: Value(remote.eventDate),
                   isDeleted: Value(remote.isDeleted),
+                  isDirty: const Value(false),
                   syncedAt: Value(now),
+                  createdAt: Value(remote.createdAt),
                   updatedAt: Value(remote.updatedAt ?? remote.createdAt),
-                ));
-          }
-        } else {
-          // Insert new
-          await _timelineDao.createEntry(
-            bookId: book.id,
-            ownerUserId: owner.id,
-            eventType: remote.eventType,
-            currentPage: remote.currentPage,
-            percentageRead: remote.percentageRead,
-            note: remote.note,
-            eventDate: remote.eventDate,
-            remoteId: remote.id,
-          );
+                ),
+                mode: InsertMode.insertOrIgnore,
+              );
         }
         timelineCount++;
       }
@@ -493,20 +547,43 @@ class SupabaseBookSyncRepository {
       for (final remote in remoteWishlist) {
         final existing = await _wishlistDao.findByRemoteId(remote.id);
         if (existing != null) {
-          if (!existing.isDirty) {
-            await _wishlistDao.updateItemFields(
-                existing.id,
-                WishlistItemsCompanion(
-                  remoteId: Value(remote.id),
-                  title: Value(remote.title),
-                  author: Value(remote.author),
-                  isbn: Value(remote.isbn),
-                  notes: Value(remote.notes),
-                  isDeleted: Value(remote.isDeleted),
-                  syncedAt: Value(now),
-                  updatedAt: Value(remote.updatedAt ?? remote.createdAt),
-                ));
+          if (existing.isDirty) {
+            final remoteUpdatedAt = remote.updatedAt ?? remote.createdAt;
+            final localUpdatedAt = existing.updatedAt;
+
+            if (remoteUpdatedAt.isAfter(localUpdatedAt)) {
+              developer.log(
+                '🔄 Conflicto: Wishlist item remoto más reciente para "${remote.title}". Sobrescribiendo local.',
+                name: 'SupabaseBookSyncRepository',
+              );
+            } else {
+              developer.log(
+                '⚠️ Conflicto: Wishlist item local más reciente para "${remote.title}". Manteniendo local.',
+                name: 'SupabaseBookSyncRepository',
+              );
+              await _wishlistDao.updateItemFields(
+                  existing.id,
+                  WishlistItemsCompanion(
+                    remoteId: Value(remote.id),
+                    syncedAt: Value(now),
+                  ));
+              continue;
+            }
           }
+
+          await _wishlistDao.updateItemFields(
+              existing.id,
+              WishlistItemsCompanion(
+                remoteId: Value(remote.id),
+                title: Value(remote.title),
+                author: Value(remote.author),
+                isbn: Value(remote.isbn),
+                notes: Value(remote.notes),
+                isDeleted: Value(remote.isDeleted),
+                isDirty: const Value(false),
+                syncedAt: Value(now),
+                updatedAt: Value(remote.updatedAt ?? remote.createdAt),
+              ));
         } else {
           await _wishlistDao.insertItem(WishlistItemsCompanion.insert(
             uuid: remote.uuid,
@@ -532,23 +609,45 @@ class SupabaseBookSyncRepository {
       for (final remote in remoteSessions) {
         final existing = await _sessionDao.findByRemoteId(remote.id);
         if (existing != null) {
-          if (!existing.isDirty) {
-            await _sessionDao.updateSession(ReadingSessionsCompanion(
-              id: Value(existing.id),
-              remoteId: Value(remote.id),
-              startTime: Value(remote.startTime),
-              endTime: Value(remote.endTime),
-              durationSeconds: Value(remote.durationSeconds),
-              startPage: Value(remote.startPage),
-              endPage: Value(remote.endPage),
-              pagesRead: Value(remote.pagesRead),
-              notes: Value(remote.notes),
-              mood: Value(remote.mood),
-              isDeleted: Value(remote.isDeleted),
-              syncedAt: Value(now),
-              updatedAt: Value(remote.updatedAt ?? remote.createdAt),
-            ));
+          if (existing.isDirty) {
+            final remoteUpdatedAt = remote.updatedAt ?? remote.createdAt;
+            final localUpdatedAt = existing.updatedAt;
+
+            if (remoteUpdatedAt.isAfter(localUpdatedAt)) {
+              developer.log(
+                '🔄 Conflicto: Sesión remota más reciente para "${remote.id}". Sobrescribiendo local.',
+                name: 'SupabaseBookSyncRepository',
+              );
+            } else {
+              developer.log(
+                '⚠️ Conflicto: Sesión local más reciente para "${remote.id}". Manteniendo local.',
+                name: 'SupabaseBookSyncRepository',
+              );
+              await _sessionDao.updateSession(ReadingSessionsCompanion(
+                id: Value(existing.id),
+                remoteId: Value(remote.id),
+                syncedAt: Value(now),
+              ));
+              continue;
+            }
           }
+
+          await _sessionDao.updateSession(ReadingSessionsCompanion(
+            id: Value(existing.id),
+            remoteId: Value(remote.id),
+            startTime: Value(remote.startTime),
+            endTime: Value(remote.endTime),
+            durationSeconds: Value(remote.durationSeconds),
+            startPage: Value(remote.startPage),
+            endPage: Value(remote.endPage),
+            pagesRead: Value(remote.pagesRead),
+            notes: Value(remote.notes),
+            mood: Value(remote.mood),
+            isDeleted: Value(remote.isDeleted),
+            isDirty: const Value(false),
+            syncedAt: Value(now),
+            updatedAt: Value(remote.updatedAt ?? remote.createdAt),
+          ));
         } else {
           final book = await _bookDao.findByUuid(remote.bookUuid);
           if (book != null) {
@@ -580,11 +679,33 @@ class SupabaseBookSyncRepository {
         }
         sessionCount++;
       }
+      // ✅ AL FINAL DE LA TRANSACCIÓN: actualizar cursores con el MAX(updatedAt) recibido
+      await _syncCursorDao.updateCursor('books',
+          _maxUpdatedAt(remoteBooks.map((b) => b.updatedAt ?? b.createdAt)));
+      await _syncCursorDao.updateCursor('reviews',
+          _maxUpdatedAt(remoteReviews.map((r) => r.updatedAt ?? r.createdAt)));
+      await _syncCursorDao.updateCursor('timeline',
+          _maxUpdatedAt(remoteTimeline.map((t) => t.updatedAt ?? t.createdAt)));
+      await _syncCursorDao.updateCursor('sessions',
+          _maxUpdatedAt(remoteSessions.map((s) => s.updatedAt ?? s.createdAt)));
+      await _syncCursorDao.updateCursor('wishlist',
+          _maxUpdatedAt(remoteWishlist.map((w) => w.updatedAt ?? w.createdAt)));
+
       developer.log(
         '✅ syncFromRemote COMPLETED: $timelineCount timeline, $wishlistCount wishlist, $sessionCount sessions processed.',
         name: 'SupabaseBookSyncRepository',
       );
     });
+  }
+
+  // ✅ Helper para obtener la fecha máxima de una lista
+  DateTime? _maxUpdatedAt(Iterable<DateTime?> dates) {
+    DateTime? max;
+    for (final d in dates) {
+      if (d == null) continue;
+      if (max == null || d.isAfter(max)) max = d;
+    }
+    return max;
   }
 
   Future<void> pushLocalChanges({
@@ -664,6 +785,8 @@ class SupabaseBookSyncRepository {
               externalLenderName: book.externalLenderName,
               createdAt: book.createdAt,
               updatedAt: book.updatedAt,
+              upsert:
+                  true, // ✅ Bug #3: Use upsert to avoid duplicate key errors
               accessToken: accessToken,
             );
 
@@ -687,6 +810,7 @@ class SupabaseBookSyncRepository {
               isAvailable: book.status == 'available',
               isPhysical: book.isPhysical,
               isDeleted: book.isDeleted == true,
+              isRead: book.isRead,
               genre: book.genre,
               pageCount: book.pageCount,
               publicationYear: book.publicationYear,
@@ -977,6 +1101,7 @@ class SupabaseBookSyncRepository {
               isDeleted: item.isDeleted == true,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              upsert: true,
               accessToken: accessToken,
             );
             await _wishlistDao.updateItemFields(
@@ -1007,6 +1132,7 @@ class SupabaseBookSyncRepository {
                 isDeleted: false,
                 createdAt: item.createdAt,
                 updatedAt: item.updatedAt,
+                upsert: true,
                 accessToken: accessToken,
               );
               wishlistUpdated++;

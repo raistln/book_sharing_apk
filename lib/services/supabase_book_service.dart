@@ -199,6 +199,7 @@ class SupabaseBookService {
     DateTime? readAt,
     bool isBorrowedExternal = false,
     String? externalLenderName,
+    bool upsert = false,
     String? accessToken,
   }) async {
     final config = await _loadConfig();
@@ -232,18 +233,24 @@ class SupabaseBookService {
     };
 
     developer.log(
-      'POST ${uri.path} → crear libro ${payload['id']}',
+      'POST ${uri.path} → ${upsert ? 'upsert' : 'crear'} libro ${payload['id']}',
       name: 'SupabaseBookService',
       error: jsonEncode(payload),
     );
 
+    final headers = _buildHeaders(
+      config,
+      accessToken: accessToken,
+      preferRepresentation: true,
+    );
+
+    if (upsert) {
+      headers['Prefer'] = '${headers['Prefer']}, resolution=merge-duplicates';
+    }
+
     final response = await _client.post(
       uri,
-      headers: _buildHeaders(
-        config,
-        accessToken: accessToken,
-        preferRepresentation: true,
-      ),
+      headers: headers,
       body: jsonEncode(payload),
     );
 
@@ -345,6 +352,7 @@ class SupabaseBookService {
     required bool isDeleted,
     required DateTime createdAt,
     required DateTime updatedAt,
+    bool upsert = false,
     String? accessToken,
   }) async {
     final config = await _loadConfig();
@@ -362,18 +370,24 @@ class SupabaseBookService {
     };
 
     developer.log(
-      'POST ${uri.path} → crear reseña ${payload['id']}',
+      'POST ${uri.path} → ${upsert ? 'upsert' : 'crear'} reseña ${payload['id']}',
       name: 'SupabaseBookService',
       error: jsonEncode(payload),
     );
 
+    final headers = _buildHeaders(
+      config,
+      accessToken: accessToken,
+      preferRepresentation: true,
+    );
+
+    if (upsert) {
+      headers['Prefer'] = '${headers['Prefer']}, resolution=merge-duplicates';
+    }
+
     final response = await _client.post(
       uri,
-      headers: _buildHeaders(
-        config,
-        accessToken: accessToken,
-        preferRepresentation: true,
-      ),
+      headers: headers,
       body: jsonEncode(payload),
     );
 
@@ -773,6 +787,7 @@ class SupabaseBookService {
     bool isDeleted = false,
     required DateTime createdAt,
     required DateTime updatedAt,
+    bool upsert = false,
     String? accessToken,
   }) async {
     final config = await _loadConfig();
@@ -791,10 +806,16 @@ class SupabaseBookService {
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
 
+    final headers = _buildHeaders(config,
+        accessToken: accessToken, preferRepresentation: true);
+
+    if (upsert) {
+      headers['Prefer'] = '${headers['Prefer']}, resolution=merge-duplicates';
+    }
+
     final response = await _client.post(
       uri,
-      headers: _buildHeaders(config,
-          accessToken: accessToken, preferRepresentation: true),
+      headers: headers,
       body: jsonEncode(payload),
     );
 

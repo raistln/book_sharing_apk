@@ -16236,6 +16236,257 @@ class ReadingSessionsCompanion extends UpdateCompanion<ReadingSession> {
   }
 }
 
+class $SyncCursorsTable extends SyncCursors
+    with TableInfo<$SyncCursorsTable, SyncCursor> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncCursorsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _entityMeta = const VerificationMeta('entity');
+  @override
+  late final GeneratedColumn<String> entity = GeneratedColumn<String>(
+      'entity', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _lastRemoteUpdatedAtMeta =
+      const VerificationMeta('lastRemoteUpdatedAt');
+  @override
+  late final GeneratedColumn<DateTime> lastRemoteUpdatedAt =
+      GeneratedColumn<DateTime>('last_remote_updated_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _lastSyncedAtMeta =
+      const VerificationMeta('lastSyncedAt');
+  @override
+  late final GeneratedColumn<DateTime> lastSyncedAt = GeneratedColumn<DateTime>(
+      'last_synced_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [entity, lastRemoteUpdatedAt, lastSyncedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_cursors';
+  @override
+  VerificationContext validateIntegrity(Insertable<SyncCursor> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('entity')) {
+      context.handle(_entityMeta,
+          entity.isAcceptableOrUnknown(data['entity']!, _entityMeta));
+    } else if (isInserting) {
+      context.missing(_entityMeta);
+    }
+    if (data.containsKey('last_remote_updated_at')) {
+      context.handle(
+          _lastRemoteUpdatedAtMeta,
+          lastRemoteUpdatedAt.isAcceptableOrUnknown(
+              data['last_remote_updated_at']!, _lastRemoteUpdatedAtMeta));
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+          _lastSyncedAtMeta,
+          lastSyncedAt.isAcceptableOrUnknown(
+              data['last_synced_at']!, _lastSyncedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {entity};
+  @override
+  SyncCursor map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncCursor(
+      entity: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}entity'])!,
+      lastRemoteUpdatedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}last_remote_updated_at']),
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
+    );
+  }
+
+  @override
+  $SyncCursorsTable createAlias(String alias) {
+    return $SyncCursorsTable(attachedDatabase, alias);
+  }
+}
+
+class SyncCursor extends DataClass implements Insertable<SyncCursor> {
+  final String entity;
+  final DateTime? lastRemoteUpdatedAt;
+  final DateTime? lastSyncedAt;
+  const SyncCursor(
+      {required this.entity, this.lastRemoteUpdatedAt, this.lastSyncedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['entity'] = Variable<String>(entity);
+    if (!nullToAbsent || lastRemoteUpdatedAt != null) {
+      map['last_remote_updated_at'] = Variable<DateTime>(lastRemoteUpdatedAt);
+    }
+    if (!nullToAbsent || lastSyncedAt != null) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
+    }
+    return map;
+  }
+
+  SyncCursorsCompanion toCompanion(bool nullToAbsent) {
+    return SyncCursorsCompanion(
+      entity: Value(entity),
+      lastRemoteUpdatedAt: lastRemoteUpdatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastRemoteUpdatedAt),
+      lastSyncedAt: lastSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAt),
+    );
+  }
+
+  factory SyncCursor.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncCursor(
+      entity: serializer.fromJson<String>(json['entity']),
+      lastRemoteUpdatedAt:
+          serializer.fromJson<DateTime?>(json['lastRemoteUpdatedAt']),
+      lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'entity': serializer.toJson<String>(entity),
+      'lastRemoteUpdatedAt': serializer.toJson<DateTime?>(lastRemoteUpdatedAt),
+      'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
+    };
+  }
+
+  SyncCursor copyWith(
+          {String? entity,
+          Value<DateTime?> lastRemoteUpdatedAt = const Value.absent(),
+          Value<DateTime?> lastSyncedAt = const Value.absent()}) =>
+      SyncCursor(
+        entity: entity ?? this.entity,
+        lastRemoteUpdatedAt: lastRemoteUpdatedAt.present
+            ? lastRemoteUpdatedAt.value
+            : this.lastRemoteUpdatedAt,
+        lastSyncedAt:
+            lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
+      );
+  SyncCursor copyWithCompanion(SyncCursorsCompanion data) {
+    return SyncCursor(
+      entity: data.entity.present ? data.entity.value : this.entity,
+      lastRemoteUpdatedAt: data.lastRemoteUpdatedAt.present
+          ? data.lastRemoteUpdatedAt.value
+          : this.lastRemoteUpdatedAt,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncCursor(')
+          ..write('entity: $entity, ')
+          ..write('lastRemoteUpdatedAt: $lastRemoteUpdatedAt, ')
+          ..write('lastSyncedAt: $lastSyncedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(entity, lastRemoteUpdatedAt, lastSyncedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncCursor &&
+          other.entity == this.entity &&
+          other.lastRemoteUpdatedAt == this.lastRemoteUpdatedAt &&
+          other.lastSyncedAt == this.lastSyncedAt);
+}
+
+class SyncCursorsCompanion extends UpdateCompanion<SyncCursor> {
+  final Value<String> entity;
+  final Value<DateTime?> lastRemoteUpdatedAt;
+  final Value<DateTime?> lastSyncedAt;
+  final Value<int> rowid;
+  const SyncCursorsCompanion({
+    this.entity = const Value.absent(),
+    this.lastRemoteUpdatedAt = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncCursorsCompanion.insert({
+    required String entity,
+    this.lastRemoteUpdatedAt = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : entity = Value(entity);
+  static Insertable<SyncCursor> custom({
+    Expression<String>? entity,
+    Expression<DateTime>? lastRemoteUpdatedAt,
+    Expression<DateTime>? lastSyncedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (entity != null) 'entity': entity,
+      if (lastRemoteUpdatedAt != null)
+        'last_remote_updated_at': lastRemoteUpdatedAt,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncCursorsCompanion copyWith(
+      {Value<String>? entity,
+      Value<DateTime?>? lastRemoteUpdatedAt,
+      Value<DateTime?>? lastSyncedAt,
+      Value<int>? rowid}) {
+    return SyncCursorsCompanion(
+      entity: entity ?? this.entity,
+      lastRemoteUpdatedAt: lastRemoteUpdatedAt ?? this.lastRemoteUpdatedAt,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (entity.present) {
+      map['entity'] = Variable<String>(entity.value);
+    }
+    if (lastRemoteUpdatedAt.present) {
+      map['last_remote_updated_at'] =
+          Variable<DateTime>(lastRemoteUpdatedAt.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncCursorsCompanion(')
+          ..write('entity: $entity, ')
+          ..write('lastRemoteUpdatedAt: $lastRemoteUpdatedAt, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -16265,6 +16516,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ModerationLogsTable moderationLogs = $ModerationLogsTable(this);
   late final $ReadingSessionsTable readingSessions =
       $ReadingSessionsTable(this);
+  late final $SyncCursorsTable syncCursors = $SyncCursorsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -16289,7 +16541,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         sectionComments,
         commentReports,
         moderationLogs,
-        readingSessions
+        readingSessions,
+        syncCursors
       ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
@@ -30045,6 +30298,146 @@ typedef $$ReadingSessionsTableProcessedTableManager = ProcessedTableManager<
     (ReadingSession, $$ReadingSessionsTableReferences),
     ReadingSession,
     PrefetchHooks Function({bool bookId})>;
+typedef $$SyncCursorsTableCreateCompanionBuilder = SyncCursorsCompanion
+    Function({
+  required String entity,
+  Value<DateTime?> lastRemoteUpdatedAt,
+  Value<DateTime?> lastSyncedAt,
+  Value<int> rowid,
+});
+typedef $$SyncCursorsTableUpdateCompanionBuilder = SyncCursorsCompanion
+    Function({
+  Value<String> entity,
+  Value<DateTime?> lastRemoteUpdatedAt,
+  Value<DateTime?> lastSyncedAt,
+  Value<int> rowid,
+});
+
+class $$SyncCursorsTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncCursorsTable> {
+  $$SyncCursorsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get entity => $composableBuilder(
+      column: $table.entity, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastRemoteUpdatedAt => $composableBuilder(
+      column: $table.lastRemoteUpdatedAt,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$SyncCursorsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncCursorsTable> {
+  $$SyncCursorsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get entity => $composableBuilder(
+      column: $table.entity, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastRemoteUpdatedAt => $composableBuilder(
+      column: $table.lastRemoteUpdatedAt,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$SyncCursorsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncCursorsTable> {
+  $$SyncCursorsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get entity =>
+      $composableBuilder(column: $table.entity, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastRemoteUpdatedAt => $composableBuilder(
+      column: $table.lastRemoteUpdatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt, builder: (column) => column);
+}
+
+class $$SyncCursorsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SyncCursorsTable,
+    SyncCursor,
+    $$SyncCursorsTableFilterComposer,
+    $$SyncCursorsTableOrderingComposer,
+    $$SyncCursorsTableAnnotationComposer,
+    $$SyncCursorsTableCreateCompanionBuilder,
+    $$SyncCursorsTableUpdateCompanionBuilder,
+    (SyncCursor, BaseReferences<_$AppDatabase, $SyncCursorsTable, SyncCursor>),
+    SyncCursor,
+    PrefetchHooks Function()> {
+  $$SyncCursorsTableTableManager(_$AppDatabase db, $SyncCursorsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncCursorsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncCursorsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncCursorsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> entity = const Value.absent(),
+            Value<DateTime?> lastRemoteUpdatedAt = const Value.absent(),
+            Value<DateTime?> lastSyncedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SyncCursorsCompanion(
+            entity: entity,
+            lastRemoteUpdatedAt: lastRemoteUpdatedAt,
+            lastSyncedAt: lastSyncedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String entity,
+            Value<DateTime?> lastRemoteUpdatedAt = const Value.absent(),
+            Value<DateTime?> lastSyncedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SyncCursorsCompanion.insert(
+            entity: entity,
+            lastRemoteUpdatedAt: lastRemoteUpdatedAt,
+            lastSyncedAt: lastSyncedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$SyncCursorsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $SyncCursorsTable,
+    SyncCursor,
+    $$SyncCursorsTableFilterComposer,
+    $$SyncCursorsTableOrderingComposer,
+    $$SyncCursorsTableAnnotationComposer,
+    $$SyncCursorsTableCreateCompanionBuilder,
+    $$SyncCursorsTableUpdateCompanionBuilder,
+    (SyncCursor, BaseReferences<_$AppDatabase, $SyncCursorsTable, SyncCursor>),
+    SyncCursor,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -30090,4 +30483,6 @@ class $AppDatabaseManager {
       $$ModerationLogsTableTableManager(_db, _db.moderationLogs);
   $$ReadingSessionsTableTableManager get readingSessions =>
       $$ReadingSessionsTableTableManager(_db, _db.readingSessions);
+  $$SyncCursorsTableTableManager get syncCursors =>
+      $$SyncCursorsTableTableManager(_db, _db.syncCursors);
 }

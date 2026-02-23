@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/sync_providers.dart';
 import '../../data/local/club_dao.dart';
 import '../../data/local/database.dart';
 import '../../services/club_service.dart';
@@ -16,6 +17,7 @@ final clubDaoProvider = Provider<ClubDao>((ref) {
 final clubServiceProvider = Provider<ClubService>((ref) {
   return ClubService(
     dao: ref.watch(clubDaoProvider),
+    syncCoordinator: ref.watch(unifiedSyncCoordinatorProvider),
   );
 });
 

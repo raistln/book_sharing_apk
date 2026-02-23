@@ -26,7 +26,8 @@ final supabaseLoanSyncRepositoryProvider =
     Provider<SupabaseLoanSyncRepository>((ref) {
   final db = ref.watch(appDatabaseProvider);
   final api = ref.watch(supabaseLoanServiceProvider);
-  return SupabaseLoanSyncRepository(db, api);
+  final syncCursorDao = ref.watch(syncCursorDaoProvider);
+  return SupabaseLoanSyncRepository(db, api, syncCursorDao);
 });
 
 final loanSyncControllerProvider =
@@ -113,6 +114,8 @@ final unifiedSyncCoordinatorProvider = Provider<UnifiedSyncCoordinator>((ref) {
       ref.read(inactivityManagerProvider).registerActivity();
     },
   );
+
+  coordinator.startAutoSync();
 
   ref.onDispose(() {
     coordinator.dispose();

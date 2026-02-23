@@ -162,7 +162,7 @@ class SupabaseClubBookSyncRepository {
           debugPrint(
               '[ClubBookSync] Failed to push club book ${book.uuid}: $error');
         }
-        rethrow;
+        continue;
       }
     }
 
@@ -250,7 +250,7 @@ class SupabaseClubBookSyncRepository {
             '[ClubBookSync] Failed to push proposal ${proposal.uuid}: $error',
           );
         }
-        rethrow;
+        continue;
       }
     }
 
@@ -299,7 +299,7 @@ class SupabaseClubBookSyncRepository {
             '[ClubBookSync] Failed to push progress ${progress.uuid}: $error',
           );
         }
-        rethrow;
+        continue;
       }
     }
 
@@ -393,7 +393,7 @@ class SupabaseClubBookSyncRepository {
             '[ClubBookSync] Failed to push comment ${comment.uuid}: $error',
           );
         }
-        rethrow;
+        continue;
       }
     }
 
@@ -463,7 +463,7 @@ class SupabaseClubBookSyncRepository {
             '[ClubBookSync] Failed to push report ${report.uuid}: $error',
           );
         }
-        rethrow;
+        continue;
       }
     }
 
@@ -535,7 +535,7 @@ class SupabaseClubBookSyncRepository {
             '[ClubBookSync] Failed to push moderation log ${log.uuid}: $error',
           );
         }
-        rethrow;
+        continue;
       }
     }
 

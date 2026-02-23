@@ -691,6 +691,21 @@ class Loans extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+// Table to store the last updatedAt timestamp from the remote server for incremental sync
+class SyncCursors extends Table {
+  // The entity name: 'books', 'reviews', 'timeline', 'sessions', 'wishlist', etc.
+  TextColumn get entity => text()();
+
+  // The MAX(updatedAt) or MAX(createdAt) of the last record received from the server
+  DateTimeColumn get lastRemoteUpdatedAt => dateTime().nullable()();
+
+  // When the last successful sync occurred locally
+  DateTimeColumn get lastSyncedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {entity};
+}
+
 @DriftDatabase(
   tables: [
     LocalUsers,
@@ -713,6 +728,7 @@ class Loans extends Table {
     CommentReports,
     ModerationLogs,
     ReadingSessions,
+    SyncCursors,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -721,7 +737,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 27;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -956,8 +972,11 @@ class AppDatabase extends _$AppDatabase {
 
           if (from < 26) {
             // Migration to v26: Thematic groups — genre filter + color tint
-            await m.addColumn(groups, groups.allowedGenres);
             await m.addColumn(groups, groups.primaryColor);
+          }
+
+          if (from < 27) {
+            await m.createTable(syncCursors);
           }
         },
       );

@@ -1,13 +1,15 @@
 import 'package:drift/drift.dart';
 import '../../data/local/database.dart';
 import '../../services/supabase_loan_service.dart';
+import '../local/sync_cursor_dao.dart';
 import 'dart:developer' as developer;
 
 class SupabaseLoanSyncRepository {
   final AppDatabase _db;
   final SupabaseLoanService _api;
+  final SyncCursorDao _syncCursorDao;
 
-  SupabaseLoanSyncRepository(this._db, this._api);
+  SupabaseLoanSyncRepository(this._db, this._api, this._syncCursorDao);
 
   Future<void> syncLoans(String userId) async {
     try {
@@ -45,32 +47,49 @@ class SupabaseLoanSyncRepository {
     final bookMap = {for (var b in books) b.id: b.uuid};
     final userMap = {for (var u in users) u.id: u.remoteId ?? u.uuid};
 
-    final loansPayload = dirtyLoans.map((l) {
-      final bookUuid = l.bookId != null ? bookMap[l.bookId] : null;
-      final borrowerUuid =
-          l.borrowerUserId != null ? userMap[l.borrowerUserId] : null;
-      final lenderUuid = userMap[l.lenderUserId] ?? userId;
+    final loansPayload = dirtyLoans
+        .map((l) {
+          final bookUuid = l.bookId != null ? bookMap[l.bookId] : null;
+          final borrowerUuid =
+              l.borrowerUserId != null ? userMap[l.borrowerUserId] : null;
+          final lenderUuid = userMap[l.lenderUserId] ?? userId;
 
-      return {
-        'uuid': l.uuid,
-        'shared_book_id': l.sharedBookId,
-        'book_uuid': bookUuid,
-        'borrower_user_id': borrowerUuid,
-        'lender_user_id': lenderUuid,
-        'external_borrower_name': l.externalBorrowerName,
-        'external_borrower_contact': l.externalBorrowerContact,
-        'status': l.status,
-        'requested_at': l.requestedAt.toIso8601String(),
-        'approved_at': l.approvedAt?.toIso8601String(),
-        'due_date': l.dueDate?.toIso8601String(),
-        'lender_returned_at': l.lenderReturnedAt?.toIso8601String(),
-        'borrower_returned_at': l.borrowerReturnedAt?.toIso8601String(),
-        'returned_at': l.returnedAt?.toIso8601String(),
-        'created_at': l.createdAt.toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-        'is_deleted': l.isDeleted,
-      };
-    }).toList();
+          // Bug #6 Fix: Validation guards
+          if (l.sharedBookId == null && bookUuid == null) {
+            developer.log(
+                'Skipping loan ${l.id} push: No sharedBookId and no bookUuid.',
+                name: 'SupabaseLoanSyncRepository');
+            return null;
+          }
+          if (l.borrowerUserId != null && borrowerUuid == null) {
+            developer.log(
+                'Skipping loan ${l.id} push: borrowerUserId is set but borrowerUuid is missing (not synced yet?).',
+                name: 'SupabaseLoanSyncRepository');
+            return null;
+          }
+
+          return {
+            'uuid': l.uuid,
+            'shared_book_id': l.sharedBookId,
+            'book_uuid': bookUuid,
+            'borrower_user_id': borrowerUuid,
+            'lender_user_id': lenderUuid,
+            'external_borrower_name': l.externalBorrowerName,
+            'external_borrower_contact': l.externalBorrowerContact,
+            'status': l.status,
+            'requested_at': l.requestedAt.toIso8601String(),
+            'approved_at': l.approvedAt?.toIso8601String(),
+            'due_date': l.dueDate?.toIso8601String(),
+            'lender_returned_at': l.lenderReturnedAt?.toIso8601String(),
+            'borrower_returned_at': l.borrowerReturnedAt?.toIso8601String(),
+            'returned_at': l.returnedAt?.toIso8601String(),
+            'created_at': l.createdAt.toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+            'is_deleted': l.isDeleted,
+          };
+        })
+        .whereType<Map<String, dynamic>>()
+        .toList();
 
     // 2. Upsert to Supabase
     await _api.upsertLoans(loansPayload);
@@ -91,14 +110,7 @@ class SupabaseLoanSyncRepository {
   }
 
   Future<void> _pullRemoteChanges(String userId) async {
-    final lastSyncedLoan = await (_db.select(_db.loans)
-          ..orderBy([
-            (t) => OrderingTerm(expression: t.syncedAt, mode: OrderingMode.desc)
-          ])
-          ..limit(1))
-        .getSingleOrNull();
-
-    final since = lastSyncedLoan?.syncedAt;
+    final since = await _syncCursorDao.getCursor('loans');
 
     final remoteLoans = await _api.fetchUserLoans(userId: userId, since: since);
 
@@ -145,67 +157,95 @@ class SupabaseLoanSyncRepository {
       }
     }
 
-    await _db.batch((batch) {
-      for (final data in remoteLoans) {
-        final uuid = data['uuid'] as String;
-        final updatedAt = DateTime.parse(data['updated_at'] as String);
+    for (final data in remoteLoans) {
+      final uuid = data['uuid'] as String;
+      final updatedAt = DateTime.parse(data['updated_at'] as String);
 
-        final bookUuid = data['book_uuid'] as String?;
-        final borrowerUuid = data['borrower_user_id'] as String?;
-        final lenderUuid = data['lender_user_id'] as String?;
+      final bookUuid = data['book_uuid'] as String?;
+      final borrowerUuid = data['borrower_user_id'] as String?;
+      final lenderUuid = data['lender_user_id'] as String?;
 
-        final bookId = bookUuid != null ? bookIdMap[bookUuid] : null;
-        final borrowerId =
-            borrowerUuid != null ? userIdMap[borrowerUuid] : null;
-        final lenderId = lenderUuid != null ? userIdMap[lenderUuid] : null;
+      final bookId = bookUuid != null ? bookIdMap[bookUuid] : null;
+      final borrowerId = borrowerUuid != null ? userIdMap[borrowerUuid] : null;
+      final lenderId = lenderUuid != null ? userIdMap[lenderUuid] : null;
 
-        if (lenderId == null) {
-          developer.log(
-            'Loan $uuid ignored: lender UUID $lenderUuid not found locally.',
-            name: 'SupabaseLoanSyncRepository',
-          );
+      if (lenderId == null) {
+        developer.log(
+          'Loan $uuid ignored: lender UUID $lenderUuid not found locally.',
+          name: 'SupabaseLoanSyncRepository',
+        );
+        continue;
+      }
+
+      // Bug #5 Fix: Check if local is dirty before overwriting
+      final existing = await (_db.select(_db.loans)
+            ..where((l) => l.uuid.equals(uuid)))
+          .getSingleOrNull();
+
+      if (existing != null) {
+        if (existing.isDirty) {
+          developer.log('Skipping loan $uuid download: Local changes pending.',
+              name: 'SupabaseLoanSyncRepository');
           continue;
         }
 
-        batch.insert(
-          _db.loans,
-          LoansCompanion(
-            uuid: Value(uuid),
-            sharedBookId: Value(data['shared_book_id'] as int?),
-            bookId: Value(bookId),
-            borrowerUserId: Value(borrowerId),
-            lenderUserId: Value(lenderId),
-            externalBorrowerName:
-                Value(data['external_borrower_name'] as String?),
-            externalBorrowerContact:
-                Value(data['external_borrower_contact'] as String?),
-            status: Value(data['status'] as String),
-            requestedAt: Value(DateTime.parse(data['requested_at'] as String)),
-            approvedAt: Value(data['approved_at'] != null
-                ? DateTime.parse(data['approved_at'])
-                : null),
-            dueDate: Value(data['due_date'] != null
-                ? DateTime.parse(data['due_date'])
-                : null),
-            lenderReturnedAt: Value(data['lender_returned_at'] != null
-                ? DateTime.parse(data['lender_returned_at'])
-                : null),
-            borrowerReturnedAt: Value(data['borrower_returned_at'] != null
-                ? DateTime.parse(data['borrower_returned_at'])
-                : null),
-            returnedAt: Value(data['returned_at'] != null
-                ? DateTime.parse(data['returned_at'])
-                : null),
-            createdAt: Value(DateTime.parse(data['created_at'] as String)),
-            updatedAt: Value(updatedAt),
-            isDeleted: Value(data['is_deleted'] as bool? ?? false),
-            isDirty: const Value(false),
-            syncedAt: Value(DateTime.now()),
-          ),
-          mode: InsertMode.insertOrReplace,
-        );
+        // Bug #14: Conflict resolution (only update if remote is newer)
+        if (existing.updatedAt.isAfter(updatedAt)) {
+          developer.log('Skipping loan $uuid download: Local record is newer.',
+              name: 'SupabaseLoanSyncRepository');
+          continue;
+        }
       }
-    });
+
+      await _db.into(_db.loans).insert(
+            LoansCompanion(
+              uuid: Value(uuid),
+              sharedBookId: Value(data['shared_book_id'] as int?),
+              bookId: Value(bookId),
+              borrowerUserId: Value(borrowerId),
+              lenderUserId: Value(lenderId),
+              externalBorrowerName:
+                  Value(data['external_borrower_name'] as String?),
+              externalBorrowerContact:
+                  Value(data['external_borrower_contact'] as String?),
+              status: Value(data['status'] as String),
+              requestedAt:
+                  Value(DateTime.parse(data['requested_at'] as String)),
+              approvedAt: Value(data['approved_at'] != null
+                  ? DateTime.parse(data['approved_at'])
+                  : null),
+              dueDate: Value(data['due_date'] != null
+                  ? DateTime.parse(data['due_date'])
+                  : null),
+              lenderReturnedAt: Value(data['lender_returned_at'] != null
+                  ? DateTime.parse(data['lender_returned_at'])
+                  : null),
+              borrowerReturnedAt: Value(data['borrower_returned_at'] != null
+                  ? DateTime.parse(data['borrower_returned_at'])
+                  : null),
+              returnedAt: Value(data['returned_at'] != null
+                  ? DateTime.parse(data['returned_at'])
+                  : null),
+              createdAt: Value(DateTime.parse(data['created_at'] as String)),
+              updatedAt: Value(updatedAt),
+              isDeleted: Value(data['is_deleted'] as bool? ?? false),
+              isDirty: const Value(false),
+              syncedAt: Value(DateTime.now()),
+            ),
+            mode: InsertMode.insertOrReplace,
+          );
+    }
+
+    // Update cursor with the max updatedAt from remote
+    final maxUpdatedAt = remoteLoans
+        .map((l) => DateTime.tryParse(l['updated_at'] as String? ?? ''))
+        .whereType<DateTime>()
+        .fold<DateTime?>(
+            null, (max, d) => max == null || d.isAfter(max) ? d : max);
+
+    if (maxUpdatedAt != null) {
+      await _syncCursorDao.updateCursor('loans', maxUpdatedAt);
+    }
   }
 
   Future<int?> _ensureLocalUserId({

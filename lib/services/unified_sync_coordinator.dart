@@ -191,60 +191,69 @@ class UnifiedSyncCoordinator {
     }
   }
 
-  /// Sincronización manual forzada de entidades específicas o todas.
+  bool _isSyncing = false;
+
+  /// Inicia la sincronización de todas las entidades.
+  /// ✅ Bug #7: Idempotente y con guardas contra concurrencia.
+  /// ✅ Bug #15: Sincronización en fases para respetar dependencias.
   Future<void> syncNow({List<SyncEntity>? entities}) async {
-    if (!_state.isConnected && SyncConfig.pauseOnNoConnection) {
-      _log('Sincronización omitida: sin conexión.');
-      return;
-    }
+    if (_isSyncing) return;
 
-    final entitiesToSync = entities ?? SyncEntity.values;
-    _log('Sincronización manual iniciada para: $entitiesToSync');
-
+    _isSyncing = true;
     _updateState(_state.copyWith(isSyncing: true));
 
     try {
-      // Sincronizar en orden de prioridad estricto para manejar dependencias
-      // 1. Usuarios (Base para todo)
-      await _syncEntity(SyncEntity.users);
-
-      // 2. Grupos (Aporta libros compartidos que la línea de tiempo/sesiones pueden necesitar)
-      if (entitiesToSync.contains(SyncEntity.groups)) {
-        await _syncEntity(SyncEntity.groups);
+      if (!_state.isConnected && SyncConfig.pauseOnNoConnection) {
+        _log('Sincronización omitida: sin conexión.');
+        return;
       }
 
-      // 3. Libros (Incluye línea de tiempo, sesiones, reseñas y wishlist de libros personales y de grupo)
-      // SYNC BOOKS BEFORE LOANS so loans can find local book IDs
+      _log('🚀 STARTING UNIFIED SYNC...');
+      final entitiesToSync = entities ?? SyncEntity.values;
+
+      // 1. Sincronizar Usuarios (Base para todo)
+      _log('PHASE 1: Users');
+      await _syncEntity(SyncEntity.users);
+
+      // 2. Sincronizar Grupos y Clubs (Base para compartidos/socios)
+      if (entitiesToSync.contains(SyncEntity.groups) ||
+          entitiesToSync.contains(SyncEntity.clubs)) {
+        _log('PHASE 2: Groups & Clubs');
+        if (entitiesToSync.contains(SyncEntity.groups)) {
+          await _syncEntity(SyncEntity.groups);
+        }
+        if (entitiesToSync.contains(SyncEntity.clubs)) {
+          await _syncEntity(SyncEntity.clubs);
+        }
+      }
+
+      // 3. Sincronizar Libros (Base para sesiones/timeline)
       if (entitiesToSync.contains(SyncEntity.books)) {
+        _log('PHASE 3: Books');
         await _syncEntity(SyncEntity.books);
       }
 
-      // 4. Préstamos (Relaciona libros y usuarios)
+      // 4. Sincronizar Préstamos (Depende de Libros y Usuarios)
       if (entitiesToSync.contains(SyncEntity.loans)) {
+        _log('PHASE 4: Loans');
         await _syncEntity(SyncEntity.loans);
       }
 
-      // 5. Notificaciones y Clubes (Opcionales/Independientes)
+      // 5. Sincronizar Notificaciones (Orden final)
       if (entitiesToSync.contains(SyncEntity.notifications)) {
+        _log('PHASE 5: Notifications');
         await _syncEntity(SyncEntity.notifications);
       }
 
-      if (entitiesToSync.contains(SyncEntity.clubs)) {
-        await _syncEntity(SyncEntity.clubs);
-      }
-
+      _log('✅ UNIFIED SYNC COMPLETED SUCCESSFULLY.');
       _updateState(_state.copyWith(
-        isSyncing: false,
         lastFullSync: DateTime.now(),
         lastError: () => null,
       ));
-
-      _log('🏁 FULL SYNC COMPLETED SUCCESSFULLY');
     } catch (e, st) {
-      _log('❌ Error during sync', error: e, stackTrace: st);
-      _updateState(_state.copyWith(isSyncing: false));
-      rethrow;
+      _log('❌ UNIFIED SYNC FAILED: $e', error: e, stackTrace: st);
     } finally {
+      _isSyncing = false;
       _updateState(_state.copyWith(isSyncing: false));
     }
   }
@@ -319,7 +328,7 @@ class UnifiedSyncCoordinator {
           await _groupSyncController.syncGroups();
           break;
         case SyncEntity.loans:
-          await _loanSyncController.sync(); // Now uses dedicated controller
+          await _loanSyncController.sync();
           break;
         case SyncEntity.notifications:
           await _notificationSyncController.sync();

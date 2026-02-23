@@ -381,12 +381,19 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
   }
 
   /// Mark club as synced
-  Future<void> markClubSynced(String clubUuid, [DateTime? syncedAt]) {
+  Future<void> markClubSynced(String clubUuid,
+      {DateTime? syncedAt, String? remoteId}) {
     return (update(readingClubs)..where((t) => t.uuid.equals(clubUuid)))
         .write(ReadingClubsCompanion(
       isDirty: const Value(false),
       syncedAt: Value(syncedAt ?? DateTime.now()),
+      remoteId: remoteId != null ? Value(remoteId) : const Value.absent(),
     ));
+  }
+
+  /// Get dirty (unsynced) members
+  Future<List<ClubMember>> getDirtyMembers() {
+    return (select(clubMembers)..where((t) => t.isDirty.equals(true))).get();
   }
 
   /// Get all dirty entities for sync (batch query helper)
@@ -400,7 +407,9 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
           .get(),
       'books':
           await (select(clubBooks)..where((t) => t.isDirty.equals(true))).get(),
-      'progress': await (select(clubReadingProgress)).get(),
+      'progress': await (select(clubReadingProgress)
+            ..where((t) => t.isDirty.equals(true)))
+          .get(),
       'proposals': await (select(bookProposals)
             ..where((t) => t.isDirty.equals(true)))
           .get(),

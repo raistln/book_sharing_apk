@@ -219,6 +219,29 @@ class SupabaseClubSyncRepository {
           }
         }
 
+        // Sync club books (Bug #4: Implement downloading of club books)
+        for (final remoteBook in remote.books) {
+          await _clubDao.upsertClubBook(ClubBooksCompanion.insert(
+            uuid: remoteBook.id, // Using remote ID as local UUID for club books
+            remoteId: Value(remoteBook.id),
+            clubId: localClubId,
+            clubUuid: localClubUuid,
+            bookUuid: remoteBook.bookUuid,
+            orderPosition: Value(remoteBook.orderPosition),
+            status: Value(remoteBook.status),
+            sectionMode: Value(remoteBook.sectionMode),
+            totalChapters: remoteBook.totalChapters,
+            sections: remoteBook.sections,
+            startDate: Value(remoteBook.startDate),
+            endDate: Value(remoteBook.endDate),
+            isDeleted: const Value(false),
+            isDirty: const Value(false),
+            syncedAt: Value(now),
+            createdAt: Value(remoteBook.createdAt),
+            updatedAt: Value(remoteBook.updatedAt),
+          ));
+        }
+
         // Reconciliation: Remove members not in remote list
         final remoteMemberIds = remote.members.map((m) => m.id).toSet();
         final localMembers =
@@ -295,7 +318,7 @@ class SupabaseClubSyncRepository {
           }
 
           // Mark as synced
-          await _clubDao.markClubSynced(club.uuid, syncTime);
+          await _clubDao.markClubSynced(club.uuid, syncedAt: syncTime);
           continue;
         }
 
@@ -376,18 +399,18 @@ class SupabaseClubSyncRepository {
         }
 
         // Mark as synced
-        await _clubDao.markClubSynced(club.uuid, syncTime);
+        await _clubDao.markClubSynced(club.uuid,
+            syncedAt: syncTime, remoteId: ensuredRemoteId);
       } catch (error) {
         if (kDebugMode) {
           debugPrint('[ClubSync] Failed to push club ${club.uuid}: $error');
         }
-        rethrow;
+        continue; // ✅ Bug #8: Continue instead of rethrow
       }
     }
 
     // Push dirty members
-    final allDirty = await _clubDao.getAllDirtyEntities();
-    final dirtyMembers = allDirty['members'] as List<ClubMember>? ?? [];
+    final dirtyMembers = await _clubDao.getDirtyMembers();
 
     if (kDebugMode) {
       debugPrint('[ClubSync] Found ${dirtyMembers.length} dirty members');
@@ -495,7 +518,7 @@ class SupabaseClubSyncRepository {
         if (kDebugMode) {
           debugPrint('[ClubSync] Failed to push member ${member.uuid}: $error');
         }
-        rethrow;
+        continue; // ✅ Bug #8: Continue instead of rethrow
       }
     }
   }

@@ -61,6 +61,8 @@ class SupabaseBookService {
       queryParameters: query,
     );
 
+    developer.log('GET ${uri.toString()}', name: 'SupabaseBookService');
+
     final response = await _client.get(
       uri,
       headers: _buildHeaders(
@@ -148,6 +150,8 @@ class SupabaseBookService {
       queryParameters: query,
     );
 
+    developer.log('GET ${uri.toString()}', name: 'SupabaseBookService');
+
     final response = await _client.get(
       uri,
       headers: _buildHeaders(
@@ -183,6 +187,7 @@ class SupabaseBookService {
     bool isAvailable = true,
     bool isPhysical = true,
     bool isDeleted = false,
+    bool isRead = false,
     String? genre,
     int? pageCount,
     int? publicationYear,
@@ -212,6 +217,7 @@ class SupabaseBookService {
       'is_available': isAvailable,
       'is_physical': isPhysical,
       'is_deleted': isDeleted,
+      'is_read': isRead,
       'genre': genre,
       'page_count': pageCount,
       'publication_year': publicationYear,
@@ -267,6 +273,7 @@ class SupabaseBookService {
     bool? isAvailable,
     bool? isPhysical,
     bool? isDeleted,
+    bool? isRead,
     String? genre,
     int? pageCount,
     int? publicationYear,
@@ -295,6 +302,7 @@ class SupabaseBookService {
       if (isAvailable != null) 'is_available': isAvailable,
       if (isPhysical != null) 'is_physical': isPhysical,
       if (isDeleted != null) 'is_deleted': isDeleted,
+      if (isRead != null) 'is_read': isRead,
       if (genre != null) 'genre': genre,
       if (pageCount != null) 'page_count': pageCount,
       if (publicationYear != null) 'publication_year': publicationYear,
@@ -447,6 +455,8 @@ class SupabaseBookService {
     final uri = Uri.parse('${config.url}/rest/v1/reading_timeline_entries')
         .replace(queryParameters: query);
 
+    developer.log('GET ${uri.toString()}', name: 'SupabaseBookService');
+
     final response = await _client.get(
       uri,
       headers: _buildHeaders(
@@ -589,6 +599,8 @@ class SupabaseBookService {
     final uri = Uri.parse('${config.url}/rest/v1/reading_sessions')
         .replace(queryParameters: query);
 
+    developer.log('GET ${uri.toString()}', name: 'SupabaseBookService');
+
     final response = await _client.get(
       uri,
       headers: _buildHeaders(config, accessToken: accessToken),
@@ -685,6 +697,8 @@ class SupabaseBookService {
     final uri = Uri.parse('${config.url}/rest/v1/reading_sessions')
         .replace(queryParameters: {'id': 'eq.$id'});
 
+    developer.log('PATCH ${uri.toString()}', name: 'SupabaseBookService');
+
     final payload = {
       if (startTime != null) 'start_time': startTime.toUtc().toIso8601String(),
       if (endTime != null) 'end_time': endTime.toUtc().toIso8601String(),
@@ -726,6 +740,8 @@ class SupabaseBookService {
 
     final uri = Uri.parse('${config.url}/rest/v1/wishlist_items')
         .replace(queryParameters: query);
+
+    developer.log('GET ${uri.toString()}', name: 'SupabaseBookService');
 
     final response = await _client.get(
       uri,

@@ -164,10 +164,6 @@ class _ReadingTabState extends ConsumerState<ReadingTab> {
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
                 child: Container(
-                  constraints: BoxConstraints(
-                    minHeight: _activeChartIndex == 0 ? 750 : 0,
-                    maxHeight: _activeChartIndex == 0 ? 750 : double.infinity,
-                  ),
                   child: _activeChartIndex == 0
                       ? Consumer(
                           builder: (context, ref, child) {

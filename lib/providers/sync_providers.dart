@@ -98,7 +98,7 @@ final unifiedSyncCoordinatorProvider = Provider<UnifiedSyncCoordinator>((ref) {
   final clubSync = ref.watch(clubSyncControllerProvider.notifier);
 
   // Callback para notificar actividad de usuario
-  final inactivityManager = ref.watch(inactivityManagerProvider);
+  // final inactivityManager = ref.watch(inactivityManagerProvider); // Removed this line
 
   final coordinator = UnifiedSyncCoordinator(
     userSyncController: userSync,
@@ -109,7 +109,8 @@ final unifiedSyncCoordinatorProvider = Provider<UnifiedSyncCoordinator>((ref) {
     clubSyncController: clubSync,
     onUserActivity: () {
       // Registrar actividad en el InactivityManager
-      inactivityManager.registerActivity();
+      // Usamos ref.read para evitar ciclos de dependencia en la inicialización
+      ref.read(inactivityManagerProvider).registerActivity();
     },
   );
 

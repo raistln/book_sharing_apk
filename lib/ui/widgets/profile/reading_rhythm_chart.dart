@@ -39,48 +39,53 @@ class _ReadingRhythmChartState extends State<ReadingRhythmChart> {
         final maxWidth = constraints.maxWidth;
         final chartWidth = maxWidth * _horizontalScale;
 
+        final chartHeight = (widget.data.rows.length * 85.0) +
+            180; // Rows + Header + Bottom Padding
+
         return Stack(
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header minimalista y tranquilo
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Tu viaje lector",
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelMedium
-                            ?.copyWith(
-                              color: Theme.of(context).colorScheme.secondary,
-                              letterSpacing: 1.2,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.data.insight,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.8),
-                              height: 1.3,
-                              fontFamily: 'Serif',
-                            ),
-                      ),
-                    ],
+            SizedBox(
+              height: chartHeight,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header minimalista y tranquilo
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24.0, vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Tu viaje lector",
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelMedium
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.secondary,
+                                letterSpacing: 1.2,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.data.insight,
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.8),
+                                    height: 1.3,
+                                    fontFamily: 'Serif',
+                                  ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                Expanded(
-                  child: GestureDetector(
+                  GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onScaleStart: (d) => _baseScale = _horizontalScale,
                     onScaleUpdate: (d) => setState(() => _horizontalScale =
@@ -114,8 +119,8 @@ class _ReadingRhythmChartState extends State<ReadingRhythmChart> {
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             // Zoom Controls
             Positioned(
@@ -314,44 +319,64 @@ class _ReadingRhythmChartState extends State<ReadingRhythmChart> {
               );
             }),
 
-            // 3. LA PORTADA Y TÍTULO (Flotando al inicio)
+            // 3. LA PORTADA Y TÍTULO (Adaptativo)
             if (firstX != null)
               Positioned(
-                left: firstX,
+                left: (firstX > chartWidth * 0.75)
+                    ? null // Si está muy a la derecha, no fijamos 'left' para que el Row fluya a la izquierda
+                    : firstX,
+                right: (firstX > chartWidth * 0.75)
+                    ? (chartWidth - firstX) // Lo posicionamos desde la derecha
+                    : null,
                 top: 0,
                 child: Row(
-                  children: [
-                    Container(
-                      width: 24, // Portada pequeñita
-                      height: 36,
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(6),
-                          color: Colors.grey.shade200,
-                          image: row.book.coverPath != null
-                              ? DecorationImage(
-                                  image: FileImage(File(row.book.coverPath!)),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
-                          boxShadow: [
-                            BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2))
-                          ]),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      row.book.title,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
-                            fontWeight: FontWeight.w500,
+                  mainAxisSize: MainAxisSize.min,
+                  children: (firstX > chartWidth * 0.75)
+                      ? [
+                          // Título a la izquierda
+                          Flexible(
+                            child: Text(
+                              row.book.title,
+                              textAlign: TextAlign.right,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                    ),
-                  ],
+                          const SizedBox(width: 10),
+                          _buildCover(row.book.coverPath),
+                        ]
+                      : [
+                          // Título a la derecha (normal)
+                          _buildCover(row.book.coverPath),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              row.book.title,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                 ),
               )
           ],
@@ -371,6 +396,28 @@ class _ReadingRhythmChartState extends State<ReadingRhythmChart> {
       Color(0xFFB5B5A6), // Warm Grey
     ];
     return palette[index % palette.length];
+  }
+
+  Widget _buildCover(String? coverPath) {
+    return Container(
+      width: 24,
+      height: 36,
+      decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          color: Colors.grey.shade200,
+          image: coverPath != null
+              ? DecorationImage(
+                  image: FileImage(File(coverPath)),
+                  fit: BoxFit.cover,
+                )
+              : null,
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2))
+          ]),
+    );
   }
 }
 

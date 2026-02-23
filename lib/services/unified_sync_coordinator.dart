@@ -204,21 +204,27 @@ class UnifiedSyncCoordinator {
     _updateState(_state.copyWith(isSyncing: true));
 
     try {
-      // Sincronizar en orden de prioridad
+      // Sincronizar en orden de prioridad estricto para manejar dependencias
+      // 1. Usuarios (Base para todo)
       await _syncEntity(SyncEntity.users);
 
+      // 2. Grupos (Aporta libros compartidos que la línea de tiempo/sesiones pueden necesitar)
       if (entitiesToSync.contains(SyncEntity.groups)) {
         await _syncEntity(SyncEntity.groups);
       }
 
-      if (entitiesToSync.contains(SyncEntity.loans)) {
-        await _syncEntity(SyncEntity.loans);
-      }
-
+      // 3. Libros (Incluye línea de tiempo, sesiones, reseñas y wishlist de libros personales y de grupo)
+      // SYNC BOOKS BEFORE LOANS so loans can find local book IDs
       if (entitiesToSync.contains(SyncEntity.books)) {
         await _syncEntity(SyncEntity.books);
       }
 
+      // 4. Préstamos (Relaciona libros y usuarios)
+      if (entitiesToSync.contains(SyncEntity.loans)) {
+        await _syncEntity(SyncEntity.loans);
+      }
+
+      // 5. Notificaciones y Clubes (Opcionales/Independientes)
       if (entitiesToSync.contains(SyncEntity.notifications)) {
         await _syncEntity(SyncEntity.notifications);
       }
@@ -233,14 +239,13 @@ class UnifiedSyncCoordinator {
         lastError: () => null,
       ));
 
-      _log('Sincronización manual completada exitosamente.');
-    } catch (error, stackTrace) {
-      _log('Error en sincronización manual: $error',
-          error: error, stackTrace: stackTrace);
-      _updateState(_state.copyWith(
-        isSyncing: false,
-        lastError: () => error.toString(),
-      ));
+      _log('🏁 FULL SYNC COMPLETED SUCCESSFULLY');
+    } catch (e, st) {
+      _log('❌ Error during sync', error: e, stackTrace: st);
+      _updateState(_state.copyWith(isSyncing: false));
+      rethrow;
+    } finally {
+      _updateState(_state.copyWith(isSyncing: false));
     }
   }
 
@@ -357,11 +362,6 @@ class UnifiedSyncCoordinator {
 
   void _scheduleRetry(SyncEntity entity) {
     final retries = _retryCount[entity] ?? 0;
-
-    if (retries >= SyncConfig.maxRetries) {
-      _log('Máximo de reintentos alcanzado para $entity.');
-      return;
-    }
 
     _retryCount[entity] = retries + 1;
 
@@ -577,6 +577,11 @@ class UnifiedSyncCoordinator {
         debugPrint('[UnifiedSyncCoordinator] Error: $error');
       }
     }
+  }
+
+  /// Registra actividad del usuario para reiniciar el temporizador de inactividad
+  void recordUserActivity() {
+    _onUserActivity?.call();
   }
 
   void dispose() {

@@ -471,7 +471,8 @@ class SupabaseClubService {
     final config = await _loadConfig();
     final uri = Uri.parse('${config.url}/rest/v1/comment_reports').replace(
       queryParameters: {
-        'select': 'id,comment_id,reported_by_user_id,reason,created_at',
+        'select':
+            'id,comment_id,reported_by_user_id,reason,created_at',
         'comment_id': 'in.(${commentIds.join(',')})',
         'order': 'created_at.asc',
       },

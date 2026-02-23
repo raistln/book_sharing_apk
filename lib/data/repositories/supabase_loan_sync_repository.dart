@@ -160,6 +160,10 @@ class SupabaseLoanSyncRepository {
         final lenderId = lenderUuid != null ? userIdMap[lenderUuid] : null;
 
         if (lenderId == null) {
+          developer.log(
+            'Loan $uuid ignored: lender UUID $lenderUuid not found locally.',
+            name: 'SupabaseLoanSyncRepository',
+          );
           continue;
         }
 

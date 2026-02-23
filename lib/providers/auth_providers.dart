@@ -6,10 +6,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/auth_service.dart';
-import '../services/group_sync_controller.dart';
+import '../models/global_sync_state.dart';
 import '../services/inactivity_service.dart';
-import '../services/sync_service.dart';
+import '../services/unified_sync_coordinator.dart';
 import 'book_providers.dart';
+import 'sync_providers.dart';
 
 enum AuthStatus { loading, needsPin, locked, unlocked }
 
@@ -77,17 +78,11 @@ final isBiometricButtonEnabledProvider = Provider<bool>((ref) {
 class AuthController extends StateNotifier<AuthState> {
   AuthController(
     this._authService,
-    this._userSyncController,
-    this._bookSyncController,
-    this._groupSyncController,
-    this._notificationSyncController,
+    this._syncCoordinator,
   ) : super(AuthState.initial);
 
   final AuthService _authService;
-  final SyncController _userSyncController;
-  final SyncController _bookSyncController;
-  final GroupSyncController _groupSyncController;
-  final SyncController _notificationSyncController;
+  final UnifiedSyncCoordinator _syncCoordinator;
   Timer? _lockTimer;
 
   void _cancelLockTimer() {
@@ -152,6 +147,7 @@ class AuthController extends StateNotifier<AuthState> {
         lockUntil: null,
       );
       _cancelLockTimer();
+      _syncCoordinator.recordUserActivity();
       unawaited(_triggerInitialSync());
       return const AuthAttemptResult.success();
     }
@@ -201,6 +197,7 @@ class AuthController extends StateNotifier<AuthState> {
         lockUntil: null,
       );
       _cancelLockTimer();
+      _syncCoordinator.recordUserActivity();
       unawaited(_triggerInitialSync());
       return true;
     }
@@ -219,8 +216,10 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> configurePin(String pin) async {
     state = state.copyWith(status: AuthStatus.loading);
     await _authService.setPin(pin);
-    _userSyncController.markPendingChanges();
-    await _userSyncController.sync();
+    // Marcamos cambios para subir el nuevo PIN al servidor
+    _syncCoordinator.markPendingChanges(SyncEntity.users);
+    await _syncCoordinator.syncNow(entities: [SyncEntity.users]);
+
     await _authService.unlockSession();
     state = state.copyWith(
       status: AuthStatus.unlocked,
@@ -234,7 +233,7 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> clearPin() async {
     state = state.copyWith(status: AuthStatus.loading);
     await _authService.clearPin();
-    _userSyncController.markPendingChanges();
+    _syncCoordinator.markPendingChanges(SyncEntity.users);
     state = state.copyWith(
       status: AuthStatus.needsPin,
       failedAttempts: 0,
@@ -258,44 +257,14 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<void> _triggerInitialSync() async {
-    _log('Inicio de sincronización completa tras desbloqueo.');
-
+    _log('Iniciando sincronización unificada tras desbloqueo.');
     try {
-      await _userSyncController.sync();
-      _log('Sincronización de usuarios completada.');
+      // syncNow() ya sigue el orden correcto: Usuarios -> Grupos -> Préstamos -> Libros
+      await _syncCoordinator.syncNow();
+      _log('Sincronización inicial completada exitosamente.');
     } catch (error, stackTrace) {
       _log(
-        'Fallo sincronizando usuarios.',
-        error: error,
-        stackTrace: stackTrace,
-        level: 1000,
-      );
-      // Ignore failures, downstream syncs will attempt anyway.
-    }
-
-    _log('Lanzando sincronización de libros.');
-    unawaited(_bookSyncController.sync());
-
-    try {
-      await _groupSyncController.syncGroups();
-      _log('Sincronización de grupos completada.');
-    } catch (error, stackTrace) {
-      // Continue even if group sync fails to avoid blocking other syncs.
-      _log(
-        'Fallo sincronizando grupos.',
-        error: error,
-        stackTrace: stackTrace,
-        level: 1000,
-      );
-    }
-
-    _log('Lanzando sincronización de notificaciones.');
-    try {
-      await _notificationSyncController.sync();
-      _log('Sincronización de notificaciones completada.');
-    } catch (error, stackTrace) {
-      _log(
-        'Fallo sincronizando notificaciones.',
+        'Error en la sincronización inicial tras desbloqueo.',
         error: error,
         stackTrace: stackTrace,
         level: 1000,
@@ -344,17 +313,11 @@ class AuthController extends StateNotifier<AuthState> {
 final authControllerProvider =
     StateNotifierProvider<AuthController, AuthState>((ref) {
   final service = ref.watch(authServiceProvider);
-  final userSyncController = ref.watch(userSyncControllerProvider.notifier);
-  final bookSyncController = ref.watch(bookSyncControllerProvider.notifier);
-  final groupSyncController = ref.watch(groupSyncControllerProvider.notifier);
-  final notificationSyncController =
-      ref.watch(notificationSyncControllerProvider.notifier);
+  final syncCoordinator = ref.watch(unifiedSyncCoordinatorProvider);
+
   return AuthController(
     service,
-    userSyncController,
-    bookSyncController,
-    groupSyncController,
-    notificationSyncController,
+    syncCoordinator,
   );
 });
 
@@ -365,16 +328,6 @@ final inactivityManagerProvider = Provider<InactivityManager>((ref) {
       // No bloqueamos por inactividad.
     },
   );
-
-  ref.listen<AuthState>(authControllerProvider, (previous, next) {
-    if (next.status == AuthStatus.unlocked) {
-      manager.registerActivity();
-    } else if (next.status == AuthStatus.locked ||
-        next.status == AuthStatus.needsPin ||
-        next.status == AuthStatus.loading) {
-      manager.cancel();
-    }
-  });
 
   ref.onDispose(manager.dispose);
   return manager;

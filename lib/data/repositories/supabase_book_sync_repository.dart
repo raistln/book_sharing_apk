@@ -63,28 +63,98 @@ class SupabaseBookSyncRepository {
     }
 
     developer.log(
-      'Descargando libros y reseñas para usuario $ownerRemoteId.',
+      '🔄 Starting syncFromRemote for user $ownerRemoteId',
       name: 'SupabaseBookSyncRepository',
     );
+
+    // Fetch last sync timestamps
+    final lastSyncedBook = await (_bookDao.attachedDatabase
+            .select(_bookDao.attachedDatabase.books)
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.syncedAt, mode: OrderingMode.desc)
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+
+    final lastSyncedReview = await (_bookDao.attachedDatabase
+            .select(_bookDao.attachedDatabase.bookReviews)
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.syncedAt, mode: OrderingMode.desc)
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+
+    final lastSyncedTimeline = await (_timelineDao.db
+            .select(_timelineDao.db.readingTimelineEntries)
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.syncedAt, mode: OrderingMode.desc)
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+
+    final lastSyncedSession = await (_sessionDao.db
+            .select(_sessionDao.db.readingSessions)
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.syncedAt, mode: OrderingMode.desc)
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+
+    final lastSyncedWishlistItem = await (_wishlistDao.db
+            .select(_wishlistDao.db.wishlistItems)
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.syncedAt, mode: OrderingMode.desc)
+          ])
+          ..limit(1))
+        .getSingleOrNull();
 
     final remoteBooks = await _bookService.fetchBooks(
       ownerId: ownerRemoteId,
       accessToken: accessToken,
+      updatedAfter: lastSyncedBook?.syncedAt,
     );
+    developer.log(
+      'Fetched ${remoteBooks.length} remote books (updated after ${lastSyncedBook?.syncedAt})',
+      name: 'SupabaseBookSyncRepository',
+    );
+
     final remoteReviews = await _bookService.fetchReviews(
       accessToken: accessToken,
+      updatedAfter: lastSyncedReview?.syncedAt,
     );
+    developer.log(
+      'Fetched ${remoteReviews.length} remote reviews (updated after ${lastSyncedReview?.syncedAt})',
+      name: 'SupabaseBookSyncRepository',
+    );
+
     final remoteTimeline = await _bookService.fetchTimelineEntries(
       ownerId: ownerRemoteId,
       accessToken: accessToken,
+      updatedAfter: lastSyncedTimeline?.syncedAt,
     );
+    developer.log(
+      'Fetched ${remoteTimeline.length} remote timeline entries (updated after ${lastSyncedTimeline?.syncedAt})',
+      name: 'SupabaseBookSyncRepository',
+    );
+
     final remoteSessions = await _bookService.fetchReadingSessions(
       ownerId: ownerRemoteId,
       accessToken: accessToken,
+      updatedAfter: lastSyncedSession?.syncedAt,
     );
+    developer.log(
+      'Fetched ${remoteSessions.length} remote reading sessions (updated after ${lastSyncedSession?.syncedAt})',
+      name: 'SupabaseBookSyncRepository',
+    );
+
     final remoteWishlist = await _bookService.fetchWishlistItems(
       userId: ownerRemoteId,
       accessToken: accessToken,
+      updatedAfter: lastSyncedWishlistItem?.syncedAt,
+    );
+    developer.log(
+      'Fetched ${remoteWishlist.length} remote wishlist items (updated after ${lastSyncedWishlistItem?.syncedAt})',
+      name: 'SupabaseBookSyncRepository',
     );
 
     final db = _bookDao.attachedDatabase;
@@ -100,6 +170,55 @@ class SupabaseBookSyncRepository {
             existingByRemote ?? await _bookDao.findByUuid(remote.id);
 
         if (existing != null) {
+          // Verify and correct UUID if needed
+          final correctUuid = remote.bookUuid ?? remote.id;
+          if (existing.uuid != correctUuid) {
+            developer.log(
+              'Correcting UUID for book ${existing.title} (ID: ${existing.id}): ${existing.uuid} -> $correctUuid',
+              name: 'SupabaseBookSyncRepository',
+            );
+
+            // Check if target UUID is already taken by another book
+            final conflict = await _bookDao.findByUuid(correctUuid);
+            if (conflict != null && conflict.id != existing.id) {
+              developer.log(
+                'Cannot correct UUID: Target UUID $correctUuid is already used by book ${conflict.id}',
+                name: 'SupabaseBookSyncRepository',
+                level: 900,
+              );
+            } else {
+              // Update Book UUID
+              await _bookDao.updateBookFields(
+                bookId: existing.id,
+                entry: BooksCompanion(
+                  uuid: Value(correctUuid),
+                  syncedAt: Value(now),
+                ),
+              );
+
+              // Update dependent tables (Sessions, Timeline)
+              // We access the database directly to perform batch updates
+              final db = _bookDao.attachedDatabase;
+
+              // Update ReadingSessions
+              await (db.update(db.readingSessions)
+                    ..where((t) => t.bookId.equals(existing.id)))
+                  .write(
+                      ReadingSessionsCompanion(bookUuid: Value(correctUuid)));
+
+              // Update ReadingTimelineEntries
+              await (db.update(db.readingTimelineEntries)
+                    ..where((t) => t.bookId.equals(existing.id)))
+                  .write(ReadingTimelineEntriesCompanion(
+                      bookUuid: Value(correctUuid)));
+
+              developer.log(
+                'Updated dependent tables for book ${existing.id}',
+                name: 'SupabaseBookSyncRepository',
+              );
+            }
+          }
+
           if (existing.isDirty) {
             await _bookDao.updateBookFields(
               bookId: existing.id,
@@ -180,7 +299,7 @@ class SupabaseBookSyncRepository {
           if (finalCheck == null && existingByContent == null) {
             await _bookDao.insertBook(
               BooksCompanion.insert(
-                uuid: remote.id,
+                uuid: remote.bookUuid ?? remote.id,
                 remoteId: Value(remote.id),
                 ownerUserId: Value(owner.id),
                 ownerRemoteId: Value(ownerRemoteId),
@@ -232,7 +351,8 @@ class SupabaseBookSyncRepository {
             await _bookDao.updateBookFields(
               bookId: existingByContent.id,
               entry: BooksCompanion(
-                uuid: Value(remote.id), // Update UUID to match remote
+                uuid: Value(remote.bookUuid ??
+                    remote.id), // Update UUID to match remote
                 remoteId: Value(remote.id), // Update remoteId to match remote
                 syncedAt: Value(now),
                 isDirty: const Value(false),
@@ -320,6 +440,7 @@ class SupabaseBookSyncRepository {
       }
 
       // Sync Timeline Entries
+      int timelineCount = 0;
       for (final remote in remoteTimeline) {
         // Find local book by UUID (timeline entries are linked by book_uuid)
         final book = await _bookDao.findByUuid(remote.bookUuid);
@@ -333,21 +454,22 @@ class SupabaseBookSyncRepository {
         }
 
         final existing = await _timelineDao.findByRemoteId(remote.id);
-
         if (existing != null) {
-          // Update existing if not dirty
-          await _timelineDao.updateEntryFields(
-              existing.id,
-              ReadingTimelineEntriesCompanion(
-                remoteId: Value(remote.id),
-                currentPage: Value(remote.currentPage),
-                percentageRead: Value(remote.percentageRead),
-                eventType: Value(remote.eventType),
-                note: Value(remote.note),
-                eventDate: Value(remote.eventDate),
-                isDeleted: Value(remote.isDeleted),
-                syncedAt: Value(now),
-              ));
+          if (!existing.isDirty) {
+            await _timelineDao.updateEntryFields(
+                existing.id,
+                ReadingTimelineEntriesCompanion(
+                  remoteId: Value(remote.id),
+                  currentPage: Value(remote.currentPage),
+                  percentageRead: Value(remote.percentageRead),
+                  eventType: Value(remote.eventType),
+                  note: Value(remote.note),
+                  eventDate: Value(remote.eventDate),
+                  isDeleted: Value(remote.isDeleted),
+                  syncedAt: Value(now),
+                  updatedAt: Value(remote.updatedAt ?? remote.createdAt),
+                ));
+          }
         } else {
           // Insert new
           await _timelineDao.createEntry(
@@ -361,56 +483,13 @@ class SupabaseBookSyncRepository {
             remoteId: remote.id,
           );
         }
+        timelineCount++;
       }
-
-      // Sync Reading Sessions
-      for (final remote in remoteSessions) {
-        final existing = await _sessionDao.findByRemoteId(remote.id);
-        if (existing != null) {
-          // Update local if not dirty or if remote is newer
-          // (Simplified: update if remote is newer or local is not dirty)
-          if (!existing.isDirty) {
-            await _sessionDao.updateSession(ReadingSessionsCompanion(
-              id: Value(existing.id),
-              remoteId: Value(remote.id),
-              startTime: Value(remote.startTime),
-              endTime: Value(remote.endTime),
-              durationSeconds: Value(remote.durationSeconds),
-              startPage: Value(remote.startPage),
-              endPage: Value(remote.endPage),
-              pagesRead: Value(remote.pagesRead),
-              notes: Value(remote.notes),
-              mood: Value(remote.mood),
-              isDeleted: Value(remote.isDeleted),
-              syncedAt: Value(now),
-              updatedAt: Value(remote.updatedAt ?? remote.createdAt),
-            ));
-          }
-        } else {
-          // Insert new session
-          await _sessionDao.insertSession(ReadingSessionsCompanion.insert(
-            uuid: remote.id,
-            remoteId: Value(remote.id),
-            bookUuid: remote.bookUuid,
-            startTime: remote.startTime,
-            endTime: Value(remote.endTime),
-            durationSeconds: Value(remote.durationSeconds),
-            startPage: Value(remote.startPage),
-            endPage: Value(remote.endPage),
-            pagesRead: Value(remote.pagesRead),
-            notes: Value(remote.notes),
-            mood: Value(remote.mood),
-            isDeleted: Value(remote.isDeleted),
-            createdAt: Value(remote.createdAt),
-            updatedAt: Value(remote.updatedAt ?? remote.createdAt),
-            syncedAt: Value(now),
-            // We need bookId. We'll find it by bookUuid.
-            bookId: (await _bookDao.findByUuid(remote.bookUuid))?.id ?? 0,
-          ));
-        }
-      }
+      developer.log('Processed $timelineCount timeline entries.',
+          name: 'SupabaseBookSyncRepository');
 
       // Sync Wishlist Items
+      int wishlistCount = 0;
       for (final remote in remoteWishlist) {
         final existing = await _wishlistDao.findByRemoteId(remote.id);
         if (existing != null) {
@@ -443,7 +522,68 @@ class SupabaseBookSyncRepository {
             syncedAt: Value(now),
           ));
         }
+        wishlistCount++;
       }
+      developer.log('Processed $wishlistCount wishlist items.',
+          name: 'SupabaseBookSyncRepository');
+
+      // Sync Reading Sessions
+      int sessionCount = 0;
+      for (final remote in remoteSessions) {
+        final existing = await _sessionDao.findByRemoteId(remote.id);
+        if (existing != null) {
+          if (!existing.isDirty) {
+            await _sessionDao.updateSession(ReadingSessionsCompanion(
+              id: Value(existing.id),
+              remoteId: Value(remote.id),
+              startTime: Value(remote.startTime),
+              endTime: Value(remote.endTime),
+              durationSeconds: Value(remote.durationSeconds),
+              startPage: Value(remote.startPage),
+              endPage: Value(remote.endPage),
+              pagesRead: Value(remote.pagesRead),
+              notes: Value(remote.notes),
+              mood: Value(remote.mood),
+              isDeleted: Value(remote.isDeleted),
+              syncedAt: Value(now),
+              updatedAt: Value(remote.updatedAt ?? remote.createdAt),
+            ));
+          }
+        } else {
+          final book = await _bookDao.findByUuid(remote.bookUuid);
+          if (book != null) {
+            await _sessionDao.insertSession(ReadingSessionsCompanion.insert(
+              uuid: remote.id,
+              remoteId: Value(remote.id),
+              bookUuid: remote.bookUuid,
+              startTime: remote.startTime,
+              endTime: Value(remote.endTime),
+              durationSeconds: Value(remote.durationSeconds),
+              startPage: Value(remote.startPage),
+              endPage: Value(remote.endPage),
+              pagesRead: Value(remote.pagesRead),
+              notes: Value(remote.notes),
+              mood: Value(remote.mood),
+              isDeleted: Value(remote.isDeleted),
+              createdAt: Value(remote.createdAt),
+              updatedAt: Value(remote.updatedAt ?? remote.createdAt),
+              syncedAt: Value(now),
+              bookId: book.id,
+            ));
+          } else {
+            developer.log(
+              'Reading session ${remote.id} ignored: book UUID ${remote.bookUuid} not found.',
+              name: 'SupabaseBookSyncRepository',
+              level: 800,
+            );
+          }
+        }
+        sessionCount++;
+      }
+      developer.log(
+        '✅ syncFromRemote COMPLETED: $timelineCount timeline, $wishlistCount wishlist, $sessionCount sessions processed.',
+        name: 'SupabaseBookSyncRepository',
+      );
     });
   }
 
@@ -456,8 +596,14 @@ class SupabaseBookSyncRepository {
     final dirtyReviews = await _bookDao.getDirtyReviews();
     final dirtyBooks = await _bookDao.getDirtyBooks();
     final dirtyTimeline = await _timelineDao.getDirtyEntries();
+    final dirtySessions = await _sessionDao.getDirtySessions();
+    final dirtyWishlist = await _wishlistDao.getDirtyItems();
 
-    if (dirtyReviews.isEmpty && dirtyBooks.isEmpty && dirtyTimeline.isEmpty) {
+    if (dirtyReviews.isEmpty &&
+        dirtyBooks.isEmpty &&
+        dirtyTimeline.isEmpty &&
+        dirtySessions.isEmpty &&
+        dirtyWishlist.isEmpty) {
       return;
     }
 
@@ -469,6 +615,11 @@ class SupabaseBookSyncRepository {
       );
       return;
     }
+
+    developer.log(
+      '📤 Starting pushLocalChanges for user $ownerRemoteId',
+      name: 'SupabaseBookSyncRepository',
+    );
 
     // 1. Push Books
     if (dirtyBooks.isNotEmpty) {
@@ -501,6 +652,7 @@ class SupabaseBookSyncRepository {
               isAvailable: book.status == 'available',
               isPhysical: book.isPhysical,
               isDeleted: book.isDeleted == true,
+              isRead: book.isRead,
               genre: book.genre,
               pageCount: book.pageCount,
               publicationYear: book.publicationYear,
@@ -721,10 +873,25 @@ class SupabaseBookSyncRepository {
     }
 
     // 4. Push Reading Sessions
-    final dirtySessions = await _sessionDao.getDirtySessions();
     if (dirtySessions.isNotEmpty) {
-      developer.log('Pushing ${dirtySessions.length} dirty sessions...');
+      developer.log(
+        'Pushing ${dirtySessions.length} dirty sessions...',
+        name: 'SupabaseBookSyncRepository',
+      );
+      int sessionCreated = 0;
+      int sessionUpdated = 0;
+
       for (final session in dirtySessions) {
+        // Ensure the book is synced first
+        final book = await _bookDao.findById(session.bookId);
+        if (book == null || book.remoteId == null) {
+          developer.log(
+            'Skipping session ${session.uuid}: Associated book not synced/found.',
+            name: 'SupabaseBookSyncRepository',
+          );
+          continue;
+        }
+
         try {
           if (session.remoteId == null) {
             final remoteId = await _bookService.createReadingSession(
@@ -750,6 +917,7 @@ class SupabaseBookSyncRepository {
               syncedAt: Value(DateTime.now()),
               isDirty: const Value(false),
             ));
+            sessionCreated++;
           } else {
             await _bookService.updateReadingSession(
               id: session.remoteId!,
@@ -770,17 +938,31 @@ class SupabaseBookSyncRepository {
               syncedAt: Value(DateTime.now()),
               isDirty: const Value(false),
             ));
+            sessionUpdated++;
           }
         } catch (e) {
-          developer.log('Error syncing session ${session.id}: $e');
+          developer.log(
+            'Error syncing session ${session.id}: $e',
+            name: 'SupabaseBookSyncRepository',
+          );
         }
       }
+      developer.log(
+        'Pushed sessions: $sessionCreated created, $sessionUpdated updated.',
+        name: 'SupabaseBookSyncRepository',
+      );
     }
 
     // 5. Push Wishlist Items
-    final dirtyWishlist = await _wishlistDao.getDirtyItems();
     if (dirtyWishlist.isNotEmpty) {
-      developer.log('Pushing ${dirtyWishlist.length} dirty wishlist items...');
+      developer.log(
+        'Pushing ${dirtyWishlist.length} dirty wishlist items...',
+        name: 'SupabaseBookSyncRepository',
+      );
+      int wishlistCreated = 0;
+      int wishlistUpdated = 0;
+      int wishlistDeleted = 0;
+
       for (final item in dirtyWishlist) {
         try {
           if (item.remoteId == null) {
@@ -805,18 +987,15 @@ class SupabaseBookSyncRepository {
                 isDirty: const Value(false),
               ),
             );
+            wishlistCreated++;
           } else {
-            // Wishlist update is usually just about deletion or notes,
-            // but we use create with UPSERT or just specialized delete.
-            // Our service has deleteWishlistItem, but sync usually wants full mirror.
-            // For now, if it's item.isDeleted we call delete.
             if (item.isDeleted == true) {
               await _bookService.deleteWishlistItem(
                 id: item.remoteId!,
                 accessToken: accessToken,
               );
+              wishlistDeleted++;
             } else {
-              // Create with same ID to update (UPSERT in Supabase)
               await _bookService.createWishlistItem(
                 id: item.remoteId!,
                 uuid: item.uuid,
@@ -830,6 +1009,7 @@ class SupabaseBookSyncRepository {
                 updatedAt: item.updatedAt,
                 accessToken: accessToken,
               );
+              wishlistUpdated++;
             }
             await _wishlistDao.updateItemFields(
               item.id,
@@ -840,9 +1020,16 @@ class SupabaseBookSyncRepository {
             );
           }
         } catch (e) {
-          developer.log('Error syncing wishlist item ${item.id}: $e');
+          developer.log(
+            'Error syncing wishlist item ${item.id}: $e',
+            name: 'SupabaseBookSyncRepository',
+          );
         }
       }
+      developer.log(
+        'Pushed wishlist items: $wishlistCreated created, $wishlistUpdated updated, $wishlistDeleted deleted.',
+        name: 'SupabaseBookSyncRepository',
+      );
     }
   }
 }

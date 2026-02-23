@@ -8,9 +8,27 @@ class ReleaseNotesService {
   static const _seenVersionKey = 'last_seen_release_version';
 
   // La versión actual de la aplicación que queremos destacar
-  static const currentVersion = '1.3.0';
+  static const currentVersion = '1.8.0';
 
   final List<ReleaseNote> _releaseNotes = [
+    ReleaseNote(
+      version: '1.8.0',
+      date: DateTime(2026, 2, 22),
+      changes: [
+        'Nueva Pestaña de Lectura: Panel centralizado para el seguimiento de lecturas, objetivos y estadísticas.',
+        'Reordenación de Navegación: Nueva estructura de pestañas (Lectura, Biblioteca, Préstamos, Configuración).',
+        'Modo Enfoque (Zen Mode): Integración con "No Molestar" y retroalimentación háptica en sesiones.',
+        'Perfil de Usuario Premium: Pantalla completa dedicada con biografía y libros favoritos.',
+        'Sincronización en la Nube: Sincronización bidireccional para Sesiones de Lectura y Lista de Deseos.',
+        'Clubes de Lectura: Ahora puedes unirte a clubes directamente mediante código UUID.',
+        'Mantenimiento Automatizado: Limpieza automática de registros antiguos y logs del sistema.',
+        'Dashboard Dinámico: Mejoras en el ritmo de lectura con soporte para más libros y rangos automáticos.',
+        'Backups Mejorados: Copias de seguridad automáticas en la carpeta pública de Descargas.',
+        'Estantería Virtual: Personalización estética de paredes y baldas de libros.',
+      ],
+      thankYouMessage:
+          '¡Gracias a todos los que seguís compartiendo vuestras lecturas! Esta actualización v1.8 supone un gran salto en la experiencia de usuario. ¡A disfrutar!',
+    ),
     ReleaseNote(
       version: '1.3.0',
       date: DateTime(2026, 2, 9),

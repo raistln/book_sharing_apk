@@ -518,6 +518,15 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                   suffixIcon: Icon(Icons.search, size: 20),
                 ),
                 onChanged: (value) => _residenceController.text = value,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return null;
+                  }
+                  if (!_provinces.contains(value.trim())) {
+                    return 'Seleccione una provincia válida de la lista';
+                  }
+                  return null;
+                },
               );
             },
             optionsViewBuilder: (context, onSelected, options) {

@@ -5,7 +5,9 @@ enum SyncEntity {
   groups,
   loans,
   notifications,
-  clubs;
+  clubs,
+  sessions,
+  timeline;
 
   @override
   String toString() => name;

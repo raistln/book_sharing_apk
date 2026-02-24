@@ -101,10 +101,11 @@ class SupabaseClubBookSyncRepository {
         }
 
         final provisionalRemoteId = book.remoteId ?? book.uuid;
+        String ensuredRemoteId = provisionalRemoteId;
 
         if (book.remoteId == null) {
           // Create new
-          await _clubService.createClubBook(
+          ensuredRemoteId = await _clubService.createClubBook(
             id: provisionalRemoteId,
             clubId: club.remoteId!,
             bookUuid: book.bookUuid,
@@ -136,7 +137,7 @@ class SupabaseClubBookSyncRepository {
 
           if (!updated) {
             // Recreate if not found
-            await _clubService.createClubBook(
+            ensuredRemoteId = await _clubService.createClubBook(
               id: provisionalRemoteId,
               clubId: club.remoteId!,
               bookUuid: book.bookUuid,
@@ -157,6 +158,15 @@ class SupabaseClubBookSyncRepository {
             }
           }
         }
+        await (_clubDao.update(_clubDao.clubBooks)
+              ..where((t) => t.id.equals(book.id)))
+            .write(
+          ClubBooksCompanion(
+            remoteId: Value(ensuredRemoteId),
+            isDirty: const Value(false),
+            syncedAt: Value(DateTime.now()),
+          ),
+        );
       } catch (error) {
         if (kDebugMode) {
           debugPrint(
@@ -189,10 +199,11 @@ class SupabaseClubBookSyncRepository {
         }
 
         final provisionalRemoteId = proposal.remoteId ?? proposal.uuid;
+        String ensuredRemoteId = provisionalRemoteId;
 
         if (proposal.remoteId == null) {
           // Create new
-          await _clubService.createBookProposal(
+          ensuredRemoteId = await _clubService.createBookProposal(
             id: provisionalRemoteId,
             clubId: club.remoteId!,
             bookUuid: proposal.bookUuid,
@@ -223,7 +234,7 @@ class SupabaseClubBookSyncRepository {
 
           if (!updated) {
             // Recreate if not found
-            await _clubService.createBookProposal(
+            ensuredRemoteId = await _clubService.createBookProposal(
               id: provisionalRemoteId,
               clubId: club.remoteId!,
               bookUuid: proposal.bookUuid,
@@ -244,6 +255,15 @@ class SupabaseClubBookSyncRepository {
             }
           }
         }
+        await (_clubDao.update(_clubDao.bookProposals)
+              ..where((t) => t.id.equals(proposal.id)))
+            .write(
+          BookProposalsCompanion(
+            remoteId: Value(ensuredRemoteId),
+            isDirty: const Value(false),
+            syncedAt: Value(DateTime.now()),
+          ),
+        );
       } catch (error) {
         if (kDebugMode) {
           debugPrint(
@@ -277,17 +297,55 @@ class SupabaseClubBookSyncRepository {
           continue;
         }
 
+        final club = await _clubDao.getClubByUuid(progress.clubUuid);
+        if (club == null || club.remoteId == null) {
+          if (kDebugMode) {
+            debugPrint(
+              '[ClubBookSync] Skipping progress ${progress.uuid}: club lacks remoteId',
+            );
+          }
+          continue;
+        }
+
+        String? userRemoteId = progress.userRemoteId;
+        if (userRemoteId == null || userRemoteId.isEmpty) {
+          final user = await (_clubDao.select(_clubDao.localUsers)
+                ..where((u) => u.id.equals(progress.userId)))
+              .getSingleOrNull();
+          userRemoteId = user?.remoteId;
+        }
+
+        if (userRemoteId == null || userRemoteId.isEmpty) {
+          if (kDebugMode) {
+            debugPrint(
+              '[ClubBookSync] Skipping progress ${progress.uuid}: user lacks remoteId',
+            );
+          }
+          continue;
+        }
+
         // Upsert progress (Supabase handles insert or update)
-        await _clubService.upsertReadingProgress(
+        final ensuredRemoteId = await _clubService.upsertReadingProgress(
           id: progress.remoteId ?? progress.uuid,
+          clubId: club.remoteId!,
           bookId: clubBook.remoteId!,
-          userId: progress.userRemoteId ?? '',
+          userId: userRemoteId,
           currentSection: progress.currentSection,
           currentChapter: progress.currentChapter,
           progressStatus: progress.status,
           createdAt: progress.createdAt,
           updatedAt: progress.updatedAt,
           accessToken: accessToken,
+        );
+
+        await (_clubDao.update(_clubDao.clubReadingProgress)
+              ..where((t) => t.id.equals(progress.id)))
+            .write(
+          ClubReadingProgressCompanion(
+            remoteId: Value(ensuredRemoteId),
+            isDirty: const Value(false),
+            syncedAt: Value(DateTime.now()),
+          ),
         );
 
         if (kDebugMode) {
@@ -327,6 +385,14 @@ class SupabaseClubBookSyncRepository {
               debugPrint('[ClubBookSync] Deleted comment ${comment.uuid}');
             }
           }
+          await (_clubDao.update(_clubDao.sectionComments)
+                ..where((t) => t.id.equals(comment.id)))
+              .write(
+            SectionCommentsCompanion(
+              isDirty: const Value(false),
+              syncedAt: Value(DateTime.now()),
+            ),
+          );
           continue;
         }
 
@@ -342,10 +408,11 @@ class SupabaseClubBookSyncRepository {
         }
 
         final provisionalRemoteId = comment.remoteId ?? comment.uuid;
+        String ensuredRemoteId = provisionalRemoteId;
 
         if (comment.remoteId == null) {
           // Create new
-          await _clubService.createSectionComment(
+          ensuredRemoteId = await _clubService.createSectionComment(
             id: provisionalRemoteId,
             bookId: clubBook.remoteId!,
             sectionNumber: comment.sectionNumber,
@@ -371,7 +438,7 @@ class SupabaseClubBookSyncRepository {
 
           if (!updated) {
             // Recreate if not found
-            await _clubService.createSectionComment(
+            ensuredRemoteId = await _clubService.createSectionComment(
               id: provisionalRemoteId,
               bookId: clubBook.remoteId!,
               sectionNumber: comment.sectionNumber,
@@ -387,6 +454,15 @@ class SupabaseClubBookSyncRepository {
             }
           }
         }
+        await (_clubDao.update(_clubDao.sectionComments)
+              ..where((t) => t.id.equals(comment.id)))
+            .write(
+          SectionCommentsCompanion(
+            remoteId: Value(ensuredRemoteId),
+            isDirty: const Value(false),
+            syncedAt: Value(DateTime.now()),
+          ),
+        );
       } catch (error) {
         if (kDebugMode) {
           debugPrint(

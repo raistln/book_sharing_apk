@@ -134,7 +134,7 @@ class SupabaseBookService {
     final config = await _loadConfig();
     final query = <String, String>{
       'select':
-          'id,book_id,author_id,rating,review,is_deleted,created_at,updated_at',
+          'id,book_uuid,author_id,rating,review,is_deleted,created_at,updated_at',
       'order': 'updated_at.asc',
     };
 
@@ -269,6 +269,26 @@ class SupabaseBookService {
     );
   }
 
+  Future<bool> deleteBook({
+    required String id,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
+      queryParameters: {'id': 'eq.$id'},
+    );
+
+    final response = await _client.delete(
+      uri,
+      headers: _buildHeaders(
+        config,
+        accessToken: accessToken,
+      ),
+    );
+
+    return response.statusCode >= 200 && response.statusCode < 300;
+  }
+
   Future<bool> updateBook({
     required String id,
     String? groupId,
@@ -301,26 +321,25 @@ class SupabaseBookService {
 
     final payload = {
       if (groupId != null) 'group_id': groupId,
-      if (title != null) 'title': title,
-      if (author != null) 'author': author,
-      if (isbn != null) 'isbn': isbn,
-      if (coverUrl != null) 'cover_url': coverUrl,
+      // ✅ Estos SIEMPRE se envían (pueden ser null para limpiarlos)
+      'title': title,
+      'author': author,
+      'isbn': isbn,
+      'cover_url': coverUrl,
+      'genre': genre,
+      'page_count': pageCount,
+      'publication_year': publicationYear,
+      'reading_status': readingStatus,
+      'description': description,
+      'barcode': barcode,
+      'read_at': readAt?.toUtc().toIso8601String(),
+      'is_borrowed_external': isBorrowedExternal ?? false,
+      'external_lender_name': externalLenderName,
       if (visibility != null) 'visibility': visibility,
       if (isAvailable != null) 'is_available': isAvailable,
       if (isPhysical != null) 'is_physical': isPhysical,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (isRead != null) 'is_read': isRead,
-      if (genre != null) 'genre': genre,
-      if (pageCount != null) 'page_count': pageCount,
-      if (publicationYear != null) 'publication_year': publicationYear,
-      if (readingStatus != null) 'reading_status': readingStatus,
-      if (description != null) 'description': description,
-      if (barcode != null) 'barcode': barcode,
-      if (readAt != null) 'read_at': readAt.toUtc().toIso8601String(),
-      if (isBorrowedExternal != null)
-        'is_borrowed_external': isBorrowedExternal,
-      if (externalLenderName != null)
-        'external_lender_name': externalLenderName,
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
 
@@ -345,7 +364,7 @@ class SupabaseBookService {
 
   Future<String> createReview({
     required String id,
-    required String bookId,
+    required String bookUuid,
     required String authorId,
     required int rating,
     String? review,
@@ -360,7 +379,7 @@ class SupabaseBookService {
 
     final payload = {
       'id': id,
-      'book_id': bookId,
+      'book_uuid': bookUuid,
       'author_id': authorId,
       'rating': rating,
       'review': review,
@@ -1015,7 +1034,7 @@ class SupabaseTimelineEntryRecord {
 class SupabaseBookReviewRecord {
   const SupabaseBookReviewRecord({
     required this.id,
-    required this.bookId,
+    required this.bookUuid,
     required this.authorId,
     required this.rating,
     this.review,
@@ -1025,7 +1044,7 @@ class SupabaseBookReviewRecord {
   });
 
   final String id;
-  final String bookId;
+  final String bookUuid;
   final String authorId;
   final int rating;
   final String? review;
@@ -1043,7 +1062,7 @@ class SupabaseBookReviewRecord {
 
     return SupabaseBookReviewRecord(
       id: json['id'] as String,
-      bookId: json['book_id'] as String,
+      bookUuid: json['book_uuid'] as String,
       authorId: json['author_id'] as String,
       rating: (json['rating'] as num).toInt(),
       review: json['review'] as String?,

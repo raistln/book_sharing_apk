@@ -20,8 +20,8 @@ import '../data/repositories/supabase_user_sync_repository.dart';
 import '../data/repositories/user_repository.dart';
 import '../data/repositories/wishlist_repository.dart';
 import '../services/book_export_service.dart';
-import '../services/loan_export_service.dart';
 import '../services/cover_image_service.dart';
+import '../services/loan_export_service.dart';
 import '../services/group_sync_controller.dart';
 import '../services/loan_controller.dart';
 import '../services/sync_service.dart';
@@ -83,12 +83,12 @@ final bookRepositoryProvider = Provider<BookRepository>((ref) {
   final dao = ref.watch(bookDaoProvider);
   final groupDao = ref.watch(groupDaoProvider);
   final groupSyncController = ref.watch(groupSyncControllerProvider.notifier);
-  final syncController = ref.watch(bookSyncControllerProvider.notifier);
+  final syncCoordinator = ref.watch(unifiedSyncCoordinatorProvider);
   return BookRepository(
     dao,
     groupDao: groupDao,
     groupSyncController: groupSyncController,
-    bookSyncController: syncController,
+    syncCoordinator: syncCoordinator,
   );
 });
 
@@ -100,9 +100,11 @@ final groupDaoProvider = Provider<GroupDao>((ref) {
 final readingTimelineServiceProvider = Provider<ReadingTimelineService>((ref) {
   final timelineDao = ref.watch(timelineEntryDaoProvider);
   final bookDao = ref.watch(bookDaoProvider);
+  final syncCoordinator = ref.watch(unifiedSyncCoordinatorProvider);
   return ReadingTimelineService(
     timelineDao: timelineDao,
     bookDao: bookDao,
+    syncCoordinator: syncCoordinator,
   );
 });
 
@@ -266,7 +268,8 @@ final loanRepositoryProvider = Provider<LoanRepository>((ref) {
 
 final wishlistRepositoryProvider = Provider<WishlistRepository>((ref) {
   final dao = ref.watch(wishlistDaoProvider);
-  return WishlistRepository(dao);
+  final syncCoordinator = ref.watch(unifiedSyncCoordinatorProvider);
+  return WishlistRepository(dao, syncCoordinator: syncCoordinator);
 });
 
 final wishlistItemsProvider =
@@ -279,10 +282,10 @@ final wishlistItemsProvider =
 
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
   final dao = ref.watch(notificationDaoProvider);
-  final syncController = ref.watch(notificationSyncControllerProvider.notifier);
+  final syncCoordinator = ref.watch(unifiedSyncCoordinatorProvider);
   final repository = NotificationRepository(
     notificationDao: dao,
-    notificationSyncController: syncController,
+    syncCoordinator: syncCoordinator,
   );
 
   // Ejecuta la limpieza local de notificaciones caducadas en segundo plano.
@@ -431,6 +434,7 @@ final syncCursorDaoProvider = Provider<SyncCursorDao>((ref) {
 final supabaseBookSyncRepositoryProvider =
     Provider<SupabaseBookSyncRepository>((ref) {
   final bookDao = ref.watch(bookDaoProvider);
+  final groupDao = ref.watch(groupDaoProvider);
   final bookService = ref.watch(supabaseBookServiceProvider);
   final timelineDao = ref.watch(timelineEntryDaoProvider);
   final sessionDao = ref.watch(readingSessionDaoProvider);
@@ -438,6 +442,7 @@ final supabaseBookSyncRepositoryProvider =
   final syncCursorDao = ref.watch(syncCursorDaoProvider); // ← NUEVO
   return SupabaseBookSyncRepository(
     bookDao: bookDao,
+    groupDao: groupDao,
     bookService: bookService,
     timelineDao: timelineDao,
     sessionDao: sessionDao,

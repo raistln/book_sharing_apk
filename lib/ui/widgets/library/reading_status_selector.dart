@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/local/database.dart';
+import '../../../models/global_sync_state.dart';
 import '../../../models/reading_status.dart';
 import '../../../providers/book_providers.dart';
+import '../../../providers/sync_providers.dart';
 
 /// Widget for selecting and changing reading status
 class ReadingStatusSelector extends ConsumerWidget {
@@ -102,6 +104,13 @@ class ReadingStatusSelector extends ConsumerWidget {
       // Refresh book data
       ref.invalidate(bookStreamProvider(book.id));
       ref.invalidate(readingTimelineProvider(book.id));
+
+      ref
+          .read(unifiedSyncCoordinatorProvider)
+          .markPendingChanges(SyncEntity.books);
+      ref
+          .read(unifiedSyncCoordinatorProvider)
+          .markPendingChanges(SyncEntity.timeline);
 
       if (!context.mounted) return;
 

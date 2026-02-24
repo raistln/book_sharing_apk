@@ -147,7 +147,7 @@ CREATE TABLE public.group_invitations (
 -- SHARED BOOKS
 CREATE TABLE public.shared_books (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  group_id UUID NOT NULL REFERENCES public.groups(id) ON DELETE CASCADE,
+  group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE,
   owner_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   book_uuid TEXT,
   title TEXT NOT NULL,
@@ -162,9 +162,23 @@ CREATE TABLE public.shared_books (
   description TEXT,
   barcode TEXT,
   read_at TIMESTAMPTZ,
+  is_borrowed_external BOOLEAN NOT NULL DEFAULT false,
+  external_lender_name TEXT,
   visibility TEXT NOT NULL DEFAULT 'group' CHECK (visibility IN ('private', 'group', 'public')),
   is_available BOOLEAN NOT NULL DEFAULT true,
   is_physical BOOLEAN NOT NULL DEFAULT true,
+  is_deleted BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- BOOK REVIEWS
+CREATE TABLE public.book_reviews (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  book_uuid TEXT NOT NULL,
+  author_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 4),
+  review TEXT,
   is_deleted BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

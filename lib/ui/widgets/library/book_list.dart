@@ -8,6 +8,8 @@ import '../../../../providers/book_providers.dart';
 import '../../../../design_system/literary_shadows.dart';
 import '../../../../design_system/literary_animations.dart';
 import '../../../../models/book_genre.dart';
+import '../../../../models/global_sync_state.dart';
+import '../../../../providers/sync_providers.dart';
 
 class BookList extends StatelessWidget {
   const BookList({
@@ -377,9 +379,15 @@ class BookListTile extends ConsumerWidget {
   }
 
   void _toggleReadStatus(WidgetRef ref, Book book) {
-    ref.read(bookDaoProvider).toggleReadStatus(book.id, !book.isRead);
+    if (book.isRead) return;
+    ref.read(bookDaoProvider).toggleReadStatus(book.id, true);
     // Invalidate provider to refresh UI
     ref.invalidate(bookListProvider);
+
+    // Trigger sync
+    ref
+        .read(unifiedSyncCoordinatorProvider)
+        .markPendingChanges(SyncEntity.books);
   }
 
   Color _getStatusColor(String status, ThemeData theme) {

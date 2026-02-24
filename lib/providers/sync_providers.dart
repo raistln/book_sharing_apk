@@ -139,6 +139,16 @@ final isFullySyncedProvider = Provider<bool>((ref) {
   );
 });
 
+/// Provider para verificar si hay una sincronización en curso.
+final isSyncingProvider = Provider<bool>((ref) {
+  final asyncState = ref.watch(globalSyncStateProvider);
+  return asyncState.maybeWhen(
+    data: (state) => state.isSyncing,
+    loading: () => true,
+    orElse: () => false,
+  );
+});
+
 /// Provider para verificar si hay errores de sincronización.
 final hasSyncErrorsProvider = Provider<bool>((ref) {
   final asyncState = ref.watch(globalSyncStateProvider);

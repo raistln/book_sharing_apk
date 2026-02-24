@@ -592,7 +592,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
               const SizedBox(height: 12),
               SwitchListTile(
                 title: const Text('Estado de lectura'),
-                subtitle: Text(_isRead ? 'Leído' : 'No leído'),
+                subtitle: Text(_isRead
+                    ? 'Leído · Para quitarlo, usa este switch'
+                    : 'No leído · Solo aquí puedes desmarcarlo'),
                 value: _isRead,
                 onChanged: (value) => setState(() => _isRead = value),
                 secondary: Icon(

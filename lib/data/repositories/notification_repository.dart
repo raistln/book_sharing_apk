@@ -2,26 +2,25 @@ import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:drift/drift.dart';
-import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../services/sync_service.dart';
 import '../local/database.dart';
 import '../local/notification_dao.dart';
 import '../models/in_app_notification_status.dart';
 import '../models/in_app_notification_type.dart';
+import '../../models/global_sync_state.dart';
+import '../../services/unified_sync_coordinator.dart';
 
 class NotificationRepository {
   NotificationRepository({
     required NotificationDao notificationDao,
-    SyncController? notificationSyncController,
+    this.syncCoordinator,
     Uuid? uuid,
   })  : _notificationDao = notificationDao,
-        _notificationSyncController = notificationSyncController,
         _uuid = uuid ?? const Uuid();
 
   final NotificationDao _notificationDao;
-  final SyncController? _notificationSyncController;
+  final UnifiedSyncCoordinator? syncCoordinator;
   final Uuid _uuid;
   bool _isDisposed = false;
 
@@ -30,68 +29,8 @@ class NotificationRepository {
   }
 
   void _scheduleSync() {
-    if (_isDisposed) {
-      return;
-    }
-    final controller = _notificationSyncController;
-    if (controller == null) {
-      developer.log('[_scheduleSync] No sync controller available',
-          name: 'NotificationRepository');
-      return;
-    }
-
-    if (!controller.mounted) {
-      developer.log('[_scheduleSync] Controller not mounted',
-          name: 'NotificationRepository');
-      return;
-    }
-
-    try {
-      controller.markPendingChanges();
-      developer.log('[_scheduleSync] Marked pending changes',
-          name: 'NotificationRepository');
-    } on StateError catch (error) {
-      if (controller.mounted) {
-        rethrow;
-      }
-      if (kDebugMode) {
-        debugPrint(
-            'NotificationRepository: pending changes skipped after dispose — $error');
-      }
-      return;
-    }
-
-    unawaited(Future<void>(() async {
-      if (_isDisposed) {
-        return;
-      }
-      if (!controller.mounted) {
-        return;
-      }
-      try {
-        developer.log('[_scheduleSync] Starting sync...',
-            name: 'NotificationRepository');
-        await controller.sync();
-        developer.log('[_scheduleSync] Sync completed',
-            name: 'NotificationRepository');
-      } on StateError catch (error) {
-        if (controller.mounted) {
-          rethrow;
-        }
-        if (kDebugMode) {
-          debugPrint(
-              'NotificationRepository: sync skipped after dispose — $error');
-        }
-      } catch (error, stackTrace) {
-        developer.log(
-          '[_scheduleSync] Sync failed: $error',
-          name: 'NotificationRepository',
-          error: error,
-          stackTrace: stackTrace,
-          level: 1000,
-        );
-      }
-    }));
+    if (_isDisposed) return;
+    syncCoordinator?.markPendingChanges(SyncEntity.notifications);
   }
 
   Future<int> createNotification({

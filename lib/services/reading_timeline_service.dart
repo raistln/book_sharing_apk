@@ -2,16 +2,20 @@ import '../data/local/database.dart';
 import '../data/local/timeline_entry_dao.dart';
 import '../data/local/book_dao.dart';
 import '../models/reading_status.dart';
+import '../models/global_sync_state.dart';
+import 'unified_sync_coordinator.dart';
 
 /// Service for managing reading timeline and automatic event creation
 class ReadingTimelineService {
   ReadingTimelineService({
     required this.timelineDao,
     required this.bookDao,
+    this.syncCoordinator,
   });
 
   final TimelineEntryDao timelineDao;
   final BookDao bookDao;
+  final UnifiedSyncCoordinator? syncCoordinator;
 
   /// Handle reading status change and create appropriate timeline events
   Future<void> onReadingStatusChanged({
@@ -30,15 +34,11 @@ class ReadingTimelineService {
       case ReadingStatus.reading:
         // Starting to read
         await _createStartEvent(book, userId, now);
-        // Ensure isRead is false when starting (first time)
-        await bookDao.toggleReadStatus(book.id, false);
         break;
 
       case ReadingStatus.paused:
         // Pausing
         await _createPauseEvent(book, userId, now);
-        // Ensure isRead is false when paused (if it wasn't already)
-        await bookDao.toggleReadStatus(book.id, false);
         break;
 
       case ReadingStatus.finished:
@@ -50,7 +50,6 @@ class ReadingTimelineService {
 
       case ReadingStatus.abandoned:
         // Abandoning - no specific event, just status change
-        await bookDao.toggleReadStatus(book.id, false);
         break;
 
       case ReadingStatus.rereading:
@@ -62,9 +61,11 @@ class ReadingTimelineService {
 
       case ReadingStatus.pending:
         // Resetting to pending - no event needed
-        await bookDao.toggleReadStatus(book.id, false);
         break;
     }
+
+    syncCoordinator?.markPendingChanges(SyncEntity.books);
+    syncCoordinator?.markPendingChanges(SyncEntity.timeline);
   }
 
   /// Create a start event
@@ -158,6 +159,9 @@ class ReadingTimelineService {
       final resumeStatus = book.isRead ? 'rereading' : 'reading';
       await bookDao.updateReadingStatus(book.id, resumeStatus);
     }
+
+    syncCoordinator?.markPendingChanges(SyncEntity.books);
+    syncCoordinator?.markPendingChanges(SyncEntity.timeline);
 
     return entry;
   }

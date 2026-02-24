@@ -8,8 +8,9 @@ import '../../models/book_genre.dart';
 import '../local/book_dao.dart';
 import '../local/database.dart';
 import '../local/group_dao.dart';
+import '../../models/global_sync_state.dart';
 import '../../services/group_sync_controller.dart';
-import '../../services/sync_service.dart';
+import '../../services/unified_sync_coordinator.dart';
 
 class BookRepository {
   BookRepository(
@@ -17,7 +18,7 @@ class BookRepository {
     required GroupDao groupDao,
     GroupSyncController? groupSyncController,
     Uuid? uuid,
-    this.bookSyncController,
+    this.syncCoordinator,
   })  : _groupDao = groupDao,
         _groupSyncController = groupSyncController,
         _uuid = uuid ?? const Uuid();
@@ -26,7 +27,7 @@ class BookRepository {
   final GroupDao _groupDao;
   final GroupSyncController? _groupSyncController;
   final Uuid _uuid;
-  final SyncController? bookSyncController;
+  final UnifiedSyncCoordinator? syncCoordinator;
 
   void _markGroupSyncPending() {
     final controller = _groupSyncController;
@@ -36,10 +37,9 @@ class BookRepository {
   }
 
   void _scheduleSync() {
-    final controller = bookSyncController;
-    if (controller != null && controller.mounted) {
-      controller.markPendingChanges();
-      unawaited(controller.sync());
+    final coordinator = syncCoordinator;
+    if (coordinator != null) {
+      coordinator.markPendingChanges(SyncEntity.books);
     }
   }
 
@@ -294,7 +294,7 @@ class BookRepository {
 
     // Don't use copyWith here - it would overwrite changes from the format null values are converted to Value(null)
     // instead of Value.absent(). This allows us to actually set fields to null.
-    var companion = book.toCompanion(false);
+    var companion = book.toCompanion(true);
 
     // Enforce readAt logic
     if (book.isRead) {
@@ -412,6 +412,9 @@ class BookRepository {
       return;
     }
 
+    final book = await _bookDao.findById(bookId);
+    if (book == null) return;
+
     final shouldShare = _shouldShare(status, isPhysical);
     developer.log(
         '[_autoShareBook] Processing book $bookId (status: $status, isPhysical: $isPhysical, shouldShare: $shouldShare)',
@@ -478,6 +481,17 @@ class BookRepository {
             entry: SharedBooksCompanion(
               visibility: Value(visibility),
               isAvailable: Value(isAvailable),
+              isPhysical: Value(isPhysical),
+              isRead: Value(book.isRead),
+              readingStatus: Value(book.readingStatus),
+              description: Value(book.description),
+              barcode: Value(book.barcode),
+              readAt: Value(book.readAt),
+              isBorrowedExternal: Value(book.isBorrowedExternal),
+              externalLenderName: Value(book.externalLenderName),
+              genre: Value(book.genre),
+              pageCount: Value(book.pageCount),
+              publicationYear: Value(book.publicationYear),
               isDirty: const Value(true),
               syncedAt: const Value(null),
               updatedAt: Value(timestamp),
@@ -501,6 +515,17 @@ class BookRepository {
                 : const Value.absent(),
             isAvailable: Value(isAvailable),
             visibility: Value(visibility),
+            isPhysical: Value(isPhysical),
+            isRead: Value(book.isRead),
+            readingStatus: Value(book.readingStatus),
+            description: Value(book.description),
+            barcode: Value(book.barcode),
+            readAt: Value(book.readAt),
+            isBorrowedExternal: Value(book.isBorrowedExternal),
+            externalLenderName: Value(book.externalLenderName),
+            genre: Value(book.genre),
+            pageCount: Value(book.pageCount),
+            publicationYear: Value(book.publicationYear),
             isDirty: const Value(true),
             isDeleted: const Value(false),
             syncedAt: const Value(null),

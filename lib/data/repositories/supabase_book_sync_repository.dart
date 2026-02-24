@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import '../local/database.dart';
 import '../local/book_dao.dart';
+import '../local/group_dao.dart';
 import '../local/timeline_entry_dao.dart';
 import '../local/reading_session_dao.dart';
 import '../local/wishlist_dao.dart';
@@ -13,12 +14,14 @@ import '../../services/supabase_book_service.dart';
 class SupabaseBookSyncRepository {
   SupabaseBookSyncRepository({
     required BookDao bookDao,
+    required GroupDao groupDao,
     required TimelineEntryDao timelineDao,
     required ReadingSessionDao sessionDao,
     required WishlistDao wishlistDao,
     required SyncCursorDao syncCursorDao, // ← NUEVO
     SupabaseBookService? bookService,
   })  : _bookDao = bookDao,
+        _groupDao = groupDao,
         _timelineDao = timelineDao,
         _sessionDao = sessionDao,
         _wishlistDao = wishlistDao,
@@ -26,6 +29,7 @@ class SupabaseBookSyncRepository {
         _bookService = bookService ?? SupabaseBookService();
 
   final BookDao _bookDao;
+  final GroupDao _groupDao;
   final TimelineEntryDao _timelineDao;
   final ReadingSessionDao _sessionDao;
   final WishlistDao _wishlistDao;
@@ -43,7 +47,10 @@ class SupabaseBookSyncRepository {
     if (visibility == 'archived') {
       return 'archived';
     }
-
+    // Si no tiene visibilidad, es privado
+    if (visibility == null) {
+      return 'private';
+    }
     // Para libros públicos/ grupales, usar isAvailable
     if (isAvailable == true) {
       return 'available';
@@ -369,10 +376,10 @@ class SupabaseBookSyncRepository {
       }
 
       for (final remote in remoteReviews) {
-        final book = await _bookDao.findByRemoteId(remote.bookId);
+        final book = await _bookDao.findByUuid(remote.bookUuid);
         if (book == null) {
           developer.log(
-            'Reseña remota ${remote.id} ignorada: libro ${remote.bookId} no encontrado localmente.',
+            'Reseña remota ${remote.id} ignorada: libro ${remote.bookUuid} no encontrado localmente.',
             name: 'SupabaseBookSyncRepository',
             level: 800,
           );
@@ -751,6 +758,35 @@ class SupabaseBookSyncRepository {
 
       for (final book in dirtyBooks) {
         try {
+          // Check if this book is in any active group
+          final sharedBooks = await _groupDao.findSharedBooksByBookId(book.id);
+          final isShared = sharedBooks.any((sb) => sb.isDeleted == false);
+
+          if (isShared) {
+            // It's a group book now. We should NOT have a personal row.
+            if (book.remoteId != null) {
+              // Delete the personal row from Supabase
+              developer.log(
+                'Libro ${book.title} está compartido. Eliminando fila personal remota.',
+                name: 'SupabaseBookSyncRepository',
+              );
+              await _bookService.deleteBook(
+                id: book.remoteId!,
+                accessToken: accessToken,
+              );
+            }
+            // Update local book to indicate it's synced but has no personal remote row
+            await _bookDao.updateBookFields(
+              bookId: book.id,
+              entry: BooksCompanion(
+                remoteId: const Value(null),
+                syncedAt: Value(DateTime.now()),
+                isDirty: const Value(false),
+              ),
+            );
+            continue; // Skip the rest of the personal sync logic
+          }
+
           // If book has a remoteId, it's an update. If not, check if it exists by UUID just in case.
           // But usually we trust remoteId.
 
@@ -818,6 +854,7 @@ class SupabaseBookSyncRepository {
               description: book.description,
               barcode: book.barcode,
               readAt: book.readAt,
+              visibility: 'private', // ✅ Ensure visibility is preserved
               isBorrowedExternal: book.isBorrowedExternal,
               externalLenderName: book.externalLenderName,
               updatedAt: book.updatedAt,
@@ -853,9 +890,9 @@ class SupabaseBookSyncRepository {
       for (final review in dirtyReviews) {
         // Ensure we have a remote book ID
         final book = await _bookDao.findById(review.bookId);
-        final bookRemoteId = book?.remoteId;
+        final bookUuid = book?.uuid;
 
-        if (book == null || bookRemoteId == null) {
+        if (book == null || bookUuid == null) {
           developer.log(
             'Skipping review ${review.id}: Associated book not synced/found.',
             name: 'SupabaseBookSyncRepository',
@@ -868,7 +905,7 @@ class SupabaseBookSyncRepository {
             // CREATE
             final remoteId = await _bookService.createReview(
               id: review.uuid,
-              bookId: bookRemoteId,
+              bookUuid: bookUuid,
               authorId: ownerRemoteId,
               rating: review.rating,
               review: review.review,

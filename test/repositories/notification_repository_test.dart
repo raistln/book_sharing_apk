@@ -26,7 +26,7 @@ void main() {
       // Pass null for sync controller since we're testing repository logic only
       repository = NotificationRepository(
         notificationDao: notificationDao,
-        notificationSyncController: null,
+        syncCoordinator: null,
       );
     });
 

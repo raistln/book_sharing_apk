@@ -46,7 +46,16 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
 
   Future<int> insertBook(BooksCompanion entry) => into(books).insert(entry);
 
-  Future<bool> updateBook(BooksCompanion entry) => update(books).replace(entry);
+  Future<bool> updateBook(BooksCompanion entry) async {
+    // Necesitamos el id para hacer el WHERE
+    final id = entry.id;
+    if (!id.present) return false;
+
+    final rowsAffected = await (update(books)
+          ..where((tbl) => tbl.id.equals(id.value)))
+        .write(entry);
+    return rowsAffected > 0;
+  }
 
   Future<int> updateBookFields(
       {required int bookId, required BooksCompanion entry}) {
@@ -78,21 +87,45 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
   }
 
   Future<void> toggleReadStatus(int bookId, bool isRead) async {
+    final now = DateTime.now();
     await (update(books)..where((b) => b.id.equals(bookId))).write(
       BooksCompanion(
         isRead: Value(isRead),
-        readAt: Value(isRead ? DateTime.now() : null),
+        readAt: Value(isRead ? now : null),
         isDirty: const Value(true),
+        updatedAt: Value(now),
+      ),
+    );
+    await (update(attachedDatabase.sharedBooks)
+          ..where((b) => b.bookId.equals(bookId) & b.isDeleted.equals(false)))
+        .write(
+      SharedBooksCompanion(
+        isRead: Value(isRead),
+        readAt: Value(isRead ? now : null),
+        isDirty: const Value(true),
+        syncedAt: const Value(null),
+        updatedAt: Value(now),
       ),
     );
   }
 
   Future<void> updateReadingStatus(int bookId, String status) async {
+    final now = DateTime.now();
     await (update(books)..where((b) => b.id.equals(bookId))).write(
       BooksCompanion(
         readingStatus: Value(status),
         isDirty: const Value(true),
-        updatedAt: Value(DateTime.now()),
+        updatedAt: Value(now),
+      ),
+    );
+    await (update(attachedDatabase.sharedBooks)
+          ..where((b) => b.bookId.equals(bookId) & b.isDeleted.equals(false)))
+        .write(
+      SharedBooksCompanion(
+        readingStatus: Value(status),
+        isDirty: const Value(true),
+        syncedAt: const Value(null),
+        updatedAt: Value(now),
       ),
     );
   }

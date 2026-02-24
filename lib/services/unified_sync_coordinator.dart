@@ -188,6 +188,10 @@ class UnifiedSyncCoordinator {
       case SyncEntity.clubs:
         _clubSyncController.markPendingChanges();
         break;
+      case SyncEntity.sessions:
+      case SyncEntity.timeline:
+        _bookSyncController.markPendingChanges();
+        break;
     }
   }
 
@@ -335,6 +339,10 @@ class UnifiedSyncCoordinator {
           break;
         case SyncEntity.clubs:
           await _clubSyncController.sync();
+          break;
+        case SyncEntity.sessions:
+        case SyncEntity.timeline:
+          await _bookSyncController.sync();
           break;
       }
 

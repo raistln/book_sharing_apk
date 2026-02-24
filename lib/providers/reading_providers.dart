@@ -6,6 +6,8 @@ import '../data/local/reading_session_dao.dart';
 import '../data/repositories/reading_repository.dart';
 import 'book_providers.dart';
 import 'reading_list_provider.dart';
+import 'sync_providers.dart';
+import '../models/global_sync_state.dart';
 
 /// DAO Provider
 final readingSessionDaoProvider = Provider<ReadingSessionDao>((ref) {
@@ -156,6 +158,13 @@ class ReadingSessionController
       _ref.invalidate(monthlyStatsProvider);
       _ref.invalidate(readingBooksProvider);
       _ref.invalidate(readingTimelineProvider(currentSession.bookId));
+
+      _ref
+          .read(unifiedSyncCoordinatorProvider)
+          .markPendingChanges(SyncEntity.sessions);
+      _ref
+          .read(unifiedSyncCoordinatorProvider)
+          .markPendingChanges(SyncEntity.timeline);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -215,6 +224,16 @@ class ReadingSessionController
       _ref.invalidate(monthlyStatsProvider);
       _ref.invalidate(readingBooksProvider);
       _ref.invalidate(readingTimelineProvider(bookId));
+
+      _ref
+          .read(unifiedSyncCoordinatorProvider)
+          .markPendingChanges(SyncEntity.books);
+      _ref
+          .read(unifiedSyncCoordinatorProvider)
+          .markPendingChanges(SyncEntity.sessions);
+      _ref
+          .read(unifiedSyncCoordinatorProvider)
+          .markPendingChanges(SyncEntity.timeline);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }

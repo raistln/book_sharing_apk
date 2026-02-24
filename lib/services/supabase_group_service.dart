@@ -90,15 +90,22 @@ class SupabaseSharedBookRecord {
   SupabaseSharedBookRecord({
     required this.id,
     required this.groupId,
-    required this.bookUuid,
+    this.bookUuid,
     required this.ownerId,
     required this.title,
     this.author,
     this.isbn,
     this.coverUrl,
     this.isRead,
+    this.readingStatus,
+    this.description,
+    this.barcode,
+    this.readAt,
+    this.isBorrowedExternal = false,
+    this.externalLenderName,
     required this.visibility,
     required this.isAvailable,
+    this.isPhysical = true,
     required this.isDeleted,
     this.genre,
     this.pageCount,
@@ -117,8 +124,15 @@ class SupabaseSharedBookRecord {
   final String? isbn;
   final String? coverUrl;
   final bool? isRead;
+  final String? readingStatus;
+  final String? description;
+  final String? barcode;
+  final DateTime? readAt;
+  final bool isBorrowedExternal;
+  final String? externalLenderName;
   final String visibility;
   final bool isAvailable;
+  final bool isPhysical;
   final bool isDeleted;
   final String? genre;
   final int? pageCount;
@@ -142,10 +156,17 @@ class SupabaseSharedBookRecord {
       isbn: json['isbn'] as String?,
       coverUrl: json['cover_url'] as String?,
       isRead: json['is_read'] as bool?,
+      readingStatus: json['reading_status'] as String?,
+      description: json['description'] as String?,
+      barcode: json['barcode'] as String?,
+      readAt: tryParse(json['read_at'] as String?),
+      isBorrowedExternal: (json['is_borrowed_external'] as bool?) ?? false,
+      externalLenderName: json['external_lender_name'] as String?,
       visibility: (json['visibility'] as String?) ?? 'group',
       isAvailable: json['is_available'] is bool
           ? json['is_available'] as bool
           : (json['is_available'] as num?)?.toInt() == 1,
+      isPhysical: (json['is_physical'] as bool?) ?? true,
       isDeleted: json['is_deleted'] is bool
           ? json['is_deleted'] as bool
           : (json['is_deleted'] as num?)?.toInt() == 1,
@@ -172,16 +193,18 @@ class SupabaseLoanRecord {
     required this.lenderUserId,
     required this.status,
     required this.requestedAt,
-    required this.approvedAt,
-    required this.dueDate,
-    required this.borrowerReturnedAt,
-    required this.lenderReturnedAt,
-    required this.returnedAt,
+    this.approvedAt,
+    this.dueDate,
+    this.borrowerReturnedAt,
+    this.lenderReturnedAt,
+    this.returnedAt,
     required this.isDeleted,
     required this.createdAt,
-    required this.updatedAt,
+    this.updatedAt,
     this.borrowerUsername,
     this.lenderUsername,
+    this.externalBorrowerName,
+    this.externalBorrowerContact,
   });
 
   final String id;
@@ -200,6 +223,8 @@ class SupabaseLoanRecord {
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final String? externalBorrowerName;
+  final String? externalBorrowerContact;
 
   factory SupabaseLoanRecord.fromJson(Map<String, dynamic> json) {
     DateTime? tryParse(String? value) =>
@@ -229,6 +254,8 @@ class SupabaseLoanRecord {
       createdAt: DateTime.parse(
           (json['created_at'] ?? json['requested_at']) as String),
       updatedAt: tryParse(json['updated_at'] as String?),
+      externalBorrowerName: json['external_borrower_name'] as String?,
+      externalBorrowerContact: json['external_borrower_contact'] as String?,
     );
   }
 }
@@ -318,8 +345,8 @@ class SupabaseGroupService {
       queryParameters: {
         'select': 'id,name,description,owner_id,created_at,'
             'group_members(id,user_id,role,created_at,profiles(username)),'
-            'shared_books(id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,is_deleted,genre,page_count,publication_year,created_at,updated_at,'
-            'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at,'
+            'shared_books(id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,reading_status,description,barcode,read_at,is_borrowed_external,external_lender_name,visibility,is_available,is_physical,is_deleted,genre,page_count,publication_year,created_at,updated_at,'
+            'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,external_borrower_name,external_borrower_contact,created_at,updated_at,'
             'borrower:profiles!borrower_user_id(username),lender:profiles!lender_user_id(username))),'
             'group_invitations(id,group_id,inviter_id,accepted_user_id,role,code,status,expires_at,responded_at,created_at,updated_at)',
       },
@@ -359,8 +386,8 @@ class SupabaseGroupService {
     final config = await _loadConfig();
     final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
       queryParameters: {
-        'select': 'id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,visibility,is_available,is_deleted,created_at,updated_at,page_count,publication_year,'
-            'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,created_at,updated_at,'
+        'select': 'id,group_id,book_uuid,owner_id,title,author,isbn,cover_url,is_read,reading_status,description,barcode,read_at,is_borrowed_external,external_lender_name,visibility,is_available,is_physical,is_deleted,created_at,updated_at,page_count,publication_year,'
+            'loans(id,shared_book_id,borrower_user_id,lender_user_id,status,requested_at,approved_at,due_date,borrower_returned_at,lender_returned_at,returned_at,is_deleted,external_borrower_name,external_borrower_contact,created_at,updated_at,'
             'borrower:profiles!borrower_user_id(username),lender:profiles!lender_user_id(username))',
         'group_id': 'eq.$groupId',
         'order': 'created_at.desc',
@@ -387,10 +414,6 @@ class SupabaseGroupService {
       debugPrint(
         '[SupabaseGroupService] GET /shared_books (group=$groupId) -> ${payload.length} items (status=${response.statusCode})',
       );
-      if (payload.isEmpty && response.body.isNotEmpty) {
-        debugPrint(
-            '[SupabaseGroupService] Raw body: ${_truncateForLog(response.body)}');
-      }
     }
     return payload
         .whereType<Map<String, dynamic>>()
@@ -413,6 +436,14 @@ class SupabaseGroupService {
     String? genre,
     int? pageCount,
     int? publicationYear,
+    bool? isRead,
+    String? readingStatus,
+    String? description,
+    String? barcode,
+    DateTime? readAt,
+    bool isPhysical = true,
+    bool isBorrowedExternal = false,
+    String? externalLenderName,
     required DateTime createdAt,
     required DateTime updatedAt,
     String? accessToken,
@@ -431,7 +462,15 @@ class SupabaseGroupService {
       'cover_url': coverUrl,
       'visibility': visibility,
       'is_available': isAvailable,
+      'is_physical': isPhysical,
       'is_deleted': isDeleted,
+      'is_read': isRead,
+      'reading_status': readingStatus,
+      'description': description,
+      'barcode': barcode,
+      'read_at': readAt?.toUtc().toIso8601String(),
+      'is_borrowed_external': isBorrowedExternal,
+      'external_lender_name': externalLenderName,
       'genre': genre,
       'page_count': pageCount,
       'publication_year': publicationYear,
@@ -477,12 +516,24 @@ class SupabaseGroupService {
     required String groupId,
     required String bookUuid,
     required String ownerId,
+    String? title,
+    String? author,
+    String? isbn,
+    String? coverUrl,
     required String visibility,
     required bool isAvailable,
     required bool isDeleted,
     String? genre,
     int? pageCount,
     int? publicationYear,
+    bool? isRead,
+    String? readingStatus,
+    String? description,
+    String? barcode,
+    DateTime? readAt,
+    bool? isPhysical,
+    bool? isBorrowedExternal,
+    String? externalLenderName,
     required DateTime updatedAt,
     String? accessToken,
   }) async {
@@ -497,9 +548,21 @@ class SupabaseGroupService {
       'group_id': groupId,
       'book_uuid': bookUuid,
       'owner_id': ownerId,
+      'title': title,
+      'author': author,
+      'isbn': isbn,
+      'cover_url': coverUrl,
       'visibility': visibility,
       'is_available': isAvailable,
+      'is_physical': isPhysical,
       'is_deleted': isDeleted,
+      'is_read': isRead,
+      'reading_status': readingStatus,
+      'description': description,
+      'barcode': barcode,
+      'read_at': readAt?.toUtc().toIso8601String(),
+      'is_borrowed_external': isBorrowedExternal,
+      'external_lender_name': externalLenderName,
       'genre': genre,
       'page_count': pageCount,
       'publication_year': publicationYear,
@@ -641,7 +704,9 @@ class SupabaseGroupService {
     DateTime? borrowerReturnedAt,
     DateTime? lenderReturnedAt,
     DateTime? returnedAt,
-    required bool isDeleted,
+    bool isDeleted = false,
+    String? externalBorrowerName,
+    String? externalBorrowerContact,
     required DateTime updatedAt,
     String? accessToken,
   }) async {
@@ -660,6 +725,8 @@ class SupabaseGroupService {
       'lender_returned_at': lenderReturnedAt?.toUtc().toIso8601String(),
       'returned_at': returnedAt?.toUtc().toIso8601String(),
       'is_deleted': isDeleted,
+      'external_borrower_name': externalBorrowerName,
+      'external_borrower_contact': externalBorrowerContact,
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
 
@@ -688,13 +755,6 @@ class SupabaseGroupService {
   void dispose() {
     _client.close();
   }
-}
-
-String _truncateForLog(String value, {int maxLength = 400}) {
-  if (value.length <= maxLength) {
-    return value;
-  }
-  return '${value.substring(0, maxLength)}…';
 }
 
 class SupabaseGroupServiceException implements Exception {

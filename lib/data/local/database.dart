@@ -223,9 +223,21 @@ class SharedBooks extends Table {
   TextColumn get visibility =>
       text().withDefault(const Constant('group')).withLength(min: 1, max: 32)();
   BoolColumn get isAvailable => boolean().withDefault(const Constant(true))();
+  BoolColumn get isPhysical => boolean().withDefault(const Constant(true))();
 
   // Metadata
+  BoolColumn get isRead => boolean().withDefault(const Constant(false))();
+  TextColumn get readingStatus => text().nullable()();
+  TextColumn get description => text().nullable()();
+  TextColumn get barcode => text().nullable()();
+  DateTimeColumn get readAt => dateTime().nullable()();
+  BoolColumn get isBorrowedExternal =>
+      boolean().withDefault(const Constant(false))();
+  TextColumn get externalLenderName => text().nullable()();
+
   TextColumn get genre => text().nullable()();
+  IntColumn get pageCount => integer().nullable()();
+  IntColumn get publicationYear => integer().nullable()();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
@@ -1004,6 +1016,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(bookReviews).go();
       await delete(books).go();
       await delete(wishlistItems).go();
+      await delete(syncCursors).go();
       await delete(localUsers).go();
     });
   }

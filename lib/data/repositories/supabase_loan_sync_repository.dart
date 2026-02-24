@@ -32,6 +32,8 @@ class SupabaseLoanSyncRepository {
 
     // Resolve dependencies
     final bookIds = dirtyLoans.map((l) => l.bookId).whereType<int>().toSet();
+    final sharedBookIds =
+        dirtyLoans.map((l) => l.sharedBookId).whereType<int>().toSet();
     final userIds = dirtyLoans
         .map((l) => [l.borrowerUserId, l.lenderUserId])
         .expand((i) => i)
@@ -43,67 +45,84 @@ class SupabaseLoanSyncRepository {
     final users = await (_db.select(_db.localUsers)
           ..where((u) => u.id.isIn(userIds)))
         .get();
+    final sharedBooks = sharedBookIds.isEmpty
+        ? const <SharedBook>[]
+        : await (_db.select(_db.sharedBooks)
+              ..where((s) => s.id.isIn(sharedBookIds)))
+            .get();
 
     final bookMap = {for (var b in books) b.id: b.uuid};
     final userMap = {for (var u in users) u.id: u.remoteId ?? u.uuid};
+    final sharedBookMap = {
+      for (var s in sharedBooks) s.id: s.remoteId ?? s.uuid
+    };
 
-    final loansPayload = dirtyLoans
-        .map((l) {
-          final bookUuid = l.bookId != null ? bookMap[l.bookId] : null;
-          final borrowerUuid =
-              l.borrowerUserId != null ? userMap[l.borrowerUserId] : null;
-          final lenderUuid = userMap[l.lenderUserId] ?? userId;
+    final loansPayload = <Map<String, dynamic>>[];
+    final pushedLoanIds = <int>[];
 
-          // Bug #6 Fix: Validation guards
-          if (l.sharedBookId == null && bookUuid == null) {
-            developer.log(
-                'Skipping loan ${l.id} push: No sharedBookId and no bookUuid.',
-                name: 'SupabaseLoanSyncRepository');
-            return null;
-          }
-          if (l.borrowerUserId != null && borrowerUuid == null) {
-            developer.log(
-                'Skipping loan ${l.id} push: borrowerUserId is set but borrowerUuid is missing (not synced yet?).',
-                name: 'SupabaseLoanSyncRepository');
-            return null;
-          }
+    for (final loan in dirtyLoans) {
+      final bookUuid = loan.bookId != null ? bookMap[loan.bookId] : null;
+      final borrowerUuid =
+          loan.borrowerUserId != null ? userMap[loan.borrowerUserId] : null;
+      final lenderUuid = userMap[loan.lenderUserId] ?? userId;
 
-          return {
-            'uuid': l.uuid,
-            'shared_book_id': l.sharedBookId,
-            'book_uuid': bookUuid,
-            'borrower_user_id': borrowerUuid,
-            'lender_user_id': lenderUuid,
-            'external_borrower_name': l.externalBorrowerName,
-            'external_borrower_contact': l.externalBorrowerContact,
-            'status': l.status,
-            'requested_at': l.requestedAt.toIso8601String(),
-            'approved_at': l.approvedAt?.toIso8601String(),
-            'due_date': l.dueDate?.toIso8601String(),
-            'lender_returned_at': l.lenderReturnedAt?.toIso8601String(),
-            'borrower_returned_at': l.borrowerReturnedAt?.toIso8601String(),
-            'returned_at': l.returnedAt?.toIso8601String(),
-            'created_at': l.createdAt.toIso8601String(),
-            'updated_at': DateTime.now().toIso8601String(),
-            'is_deleted': l.isDeleted,
-          };
-        })
-        .whereType<Map<String, dynamic>>()
-        .toList();
+      final sharedBookRemoteId =
+          loan.sharedBookId != null ? sharedBookMap[loan.sharedBookId] : null;
 
-    // 2. Upsert to Supabase
+      if (loan.sharedBookId == null && bookUuid == null) {
+        developer.log(
+            'Skipping loan ${loan.id} push: No sharedBookId and no bookUuid.',
+            name: 'SupabaseLoanSyncRepository');
+        continue;
+      }
+      if (loan.sharedBookId != null && sharedBookRemoteId == null) {
+        developer.log(
+            'Skipping loan ${loan.id} push: sharedBookId not synced yet.',
+            name: 'SupabaseLoanSyncRepository');
+        continue;
+      }
+      if (loan.borrowerUserId != null && borrowerUuid == null) {
+        developer.log(
+            'Skipping loan ${loan.id} push: borrowerUserId is set but borrowerUuid is missing (not synced yet?).',
+            name: 'SupabaseLoanSyncRepository');
+        continue;
+      }
+
+      loansPayload.add({
+        'uuid': loan.uuid,
+        'shared_book_id': sharedBookRemoteId,
+        'book_uuid': bookUuid,
+        'borrower_user_id': borrowerUuid,
+        'lender_user_id': lenderUuid,
+        'external_borrower_name': loan.externalBorrowerName,
+        'external_borrower_contact': loan.externalBorrowerContact,
+        'status': loan.status,
+        'requested_at': loan.requestedAt.toIso8601String(),
+        'approved_at': loan.approvedAt?.toIso8601String(),
+        'due_date': loan.dueDate?.toIso8601String(),
+        'lender_returned_at': loan.lenderReturnedAt?.toIso8601String(),
+        'borrower_returned_at': loan.borrowerReturnedAt?.toIso8601String(),
+        'returned_at': loan.returnedAt?.toIso8601String(),
+        'created_at': loan.createdAt.toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+        'is_deleted': loan.isDeleted,
+      });
+      pushedLoanIds.add(loan.id);
+    }
+
+    if (loansPayload.isEmpty) return;
+
     await _api.upsertLoans(loansPayload);
 
-    // 3. Mark as clean locally
     await _db.batch((batch) {
-      for (final loan in dirtyLoans) {
+      for (final loanId in pushedLoanIds) {
         batch.update(
           _db.loans,
           LoansCompanion(
             isDirty: const Value(false),
             syncedAt: Value(DateTime.now()),
           ),
-          where: (t) => t.id.equals(loan.id),
+          where: (t) => t.id.equals(loanId),
         );
       }
     });
@@ -119,9 +138,13 @@ class SupabaseLoanSyncRepository {
     // Collect UUIDs to resolve
     final bookUuids = <String>{};
     final userUuids = <String>{};
+    final sharedBookRemoteIds = <String>{};
 
     for (var data in remoteLoans) {
       if (data['book_uuid'] != null) bookUuids.add(data['book_uuid'] as String);
+      if (data['shared_book_id'] != null) {
+        sharedBookRemoteIds.add(data['shared_book_id'] as String);
+      }
       if (data['borrower_user_id'] != null) {
         userUuids.add(data['borrower_user_id'] as String);
       }
@@ -140,9 +163,15 @@ class SupabaseLoanSyncRepository {
     final users = await (_db.select(_db.localUsers)
           ..where((u) => u.remoteId.isIn(userUuids)))
         .get();
+    final sharedBooks = sharedBookRemoteIds.isEmpty
+        ? const <SharedBook>[]
+        : await (_db.select(_db.sharedBooks)
+              ..where((s) => s.remoteId.isIn(sharedBookRemoteIds)))
+            .get();
 
     final bookIdMap = {for (var b in books) b.uuid: b.id};
     final userIdMap = {for (var u in users) u.remoteId: u.id};
+    final sharedBookIdMap = {for (var s in sharedBooks) s.remoteId: s.id};
 
     final missingUserUuids = userUuids
         .where((uuid) => uuid.isNotEmpty && !userIdMap.containsKey(uuid))
@@ -162,10 +191,14 @@ class SupabaseLoanSyncRepository {
       final updatedAt = DateTime.parse(data['updated_at'] as String);
 
       final bookUuid = data['book_uuid'] as String?;
+      final sharedBookRemoteId = data['shared_book_id'] as String?;
       final borrowerUuid = data['borrower_user_id'] as String?;
       final lenderUuid = data['lender_user_id'] as String?;
 
       final bookId = bookUuid != null ? bookIdMap[bookUuid] : null;
+      final sharedBookId = sharedBookRemoteId != null
+          ? sharedBookIdMap[sharedBookRemoteId]
+          : null;
       final borrowerId = borrowerUuid != null ? userIdMap[borrowerUuid] : null;
       final lenderId = lenderUuid != null ? userIdMap[lenderUuid] : null;
 
@@ -197,10 +230,17 @@ class SupabaseLoanSyncRepository {
         }
       }
 
+      final Value<bool?> wasReadValue =
+          existing != null ? Value(existing.wasRead) : const Value.absent();
+      final Value<DateTime?> markedReadAtValue = existing != null
+          ? Value(existing.markedReadAt)
+          : const Value.absent();
+
       await _db.into(_db.loans).insert(
             LoansCompanion(
               uuid: Value(uuid),
-              sharedBookId: Value(data['shared_book_id'] as int?),
+              remoteId: Value(uuid),
+              sharedBookId: Value(sharedBookId),
               bookId: Value(bookId),
               borrowerUserId: Value(borrowerId),
               lenderUserId: Value(lenderId),
@@ -226,6 +266,8 @@ class SupabaseLoanSyncRepository {
               returnedAt: Value(data['returned_at'] != null
                   ? DateTime.parse(data['returned_at'])
                   : null),
+              wasRead: wasReadValue,
+              markedReadAt: markedReadAtValue,
               createdAt: Value(DateTime.parse(data['created_at'] as String)),
               updatedAt: Value(updatedAt),
               isDeleted: Value(data['is_deleted'] as bool? ?? false),

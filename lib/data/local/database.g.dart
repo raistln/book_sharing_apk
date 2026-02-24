@@ -4690,11 +4690,81 @@ class $SharedBooksTable extends SharedBooks
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'CHECK ("is_available" IN (0, 1))'),
       defaultValue: const Constant(true));
+  static const VerificationMeta _isPhysicalMeta =
+      const VerificationMeta('isPhysical');
+  @override
+  late final GeneratedColumn<bool> isPhysical = GeneratedColumn<bool>(
+      'is_physical', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_physical" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _isReadMeta = const VerificationMeta('isRead');
+  @override
+  late final GeneratedColumn<bool> isRead = GeneratedColumn<bool>(
+      'is_read', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_read" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _readingStatusMeta =
+      const VerificationMeta('readingStatus');
+  @override
+  late final GeneratedColumn<String> readingStatus = GeneratedColumn<String>(
+      'reading_status', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _descriptionMeta =
+      const VerificationMeta('description');
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+      'description', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _barcodeMeta =
+      const VerificationMeta('barcode');
+  @override
+  late final GeneratedColumn<String> barcode = GeneratedColumn<String>(
+      'barcode', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _readAtMeta = const VerificationMeta('readAt');
+  @override
+  late final GeneratedColumn<DateTime> readAt = GeneratedColumn<DateTime>(
+      'read_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _isBorrowedExternalMeta =
+      const VerificationMeta('isBorrowedExternal');
+  @override
+  late final GeneratedColumn<bool> isBorrowedExternal = GeneratedColumn<bool>(
+      'is_borrowed_external', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_borrowed_external" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _externalLenderNameMeta =
+      const VerificationMeta('externalLenderName');
+  @override
+  late final GeneratedColumn<String> externalLenderName =
+      GeneratedColumn<String>('external_lender_name', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _genreMeta = const VerificationMeta('genre');
   @override
   late final GeneratedColumn<String> genre = GeneratedColumn<String>(
       'genre', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _pageCountMeta =
+      const VerificationMeta('pageCount');
+  @override
+  late final GeneratedColumn<int> pageCount = GeneratedColumn<int>(
+      'page_count', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _publicationYearMeta =
+      const VerificationMeta('publicationYear');
+  @override
+  late final GeneratedColumn<int> publicationYear = GeneratedColumn<int>(
+      'publication_year', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
   @override
@@ -4750,7 +4820,17 @@ class $SharedBooksTable extends SharedBooks
         ownerRemoteId,
         visibility,
         isAvailable,
+        isPhysical,
+        isRead,
+        readingStatus,
+        description,
+        barcode,
+        readAt,
+        isBorrowedExternal,
+        externalLenderName,
         genre,
+        pageCount,
+        publicationYear,
         isDirty,
         isDeleted,
         syncedAt,
@@ -4830,9 +4910,61 @@ class $SharedBooksTable extends SharedBooks
           isAvailable.isAcceptableOrUnknown(
               data['is_available']!, _isAvailableMeta));
     }
+    if (data.containsKey('is_physical')) {
+      context.handle(
+          _isPhysicalMeta,
+          isPhysical.isAcceptableOrUnknown(
+              data['is_physical']!, _isPhysicalMeta));
+    }
+    if (data.containsKey('is_read')) {
+      context.handle(_isReadMeta,
+          isRead.isAcceptableOrUnknown(data['is_read']!, _isReadMeta));
+    }
+    if (data.containsKey('reading_status')) {
+      context.handle(
+          _readingStatusMeta,
+          readingStatus.isAcceptableOrUnknown(
+              data['reading_status']!, _readingStatusMeta));
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+          _descriptionMeta,
+          description.isAcceptableOrUnknown(
+              data['description']!, _descriptionMeta));
+    }
+    if (data.containsKey('barcode')) {
+      context.handle(_barcodeMeta,
+          barcode.isAcceptableOrUnknown(data['barcode']!, _barcodeMeta));
+    }
+    if (data.containsKey('read_at')) {
+      context.handle(_readAtMeta,
+          readAt.isAcceptableOrUnknown(data['read_at']!, _readAtMeta));
+    }
+    if (data.containsKey('is_borrowed_external')) {
+      context.handle(
+          _isBorrowedExternalMeta,
+          isBorrowedExternal.isAcceptableOrUnknown(
+              data['is_borrowed_external']!, _isBorrowedExternalMeta));
+    }
+    if (data.containsKey('external_lender_name')) {
+      context.handle(
+          _externalLenderNameMeta,
+          externalLenderName.isAcceptableOrUnknown(
+              data['external_lender_name']!, _externalLenderNameMeta));
+    }
     if (data.containsKey('genre')) {
       context.handle(
           _genreMeta, genre.isAcceptableOrUnknown(data['genre']!, _genreMeta));
+    }
+    if (data.containsKey('page_count')) {
+      context.handle(_pageCountMeta,
+          pageCount.isAcceptableOrUnknown(data['page_count']!, _pageCountMeta));
+    }
+    if (data.containsKey('publication_year')) {
+      context.handle(
+          _publicationYearMeta,
+          publicationYear.isAcceptableOrUnknown(
+              data['publication_year']!, _publicationYearMeta));
     }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
@@ -4885,8 +5017,28 @@ class $SharedBooksTable extends SharedBooks
           .read(DriftSqlType.string, data['${effectivePrefix}visibility'])!,
       isAvailable: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_available'])!,
+      isPhysical: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_physical'])!,
+      isRead: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_read'])!,
+      readingStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}reading_status']),
+      description: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}description']),
+      barcode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}barcode']),
+      readAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}read_at']),
+      isBorrowedExternal: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool, data['${effectivePrefix}is_borrowed_external'])!,
+      externalLenderName: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}external_lender_name']),
       genre: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}genre']),
+      pageCount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}page_count']),
+      publicationYear: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}publication_year']),
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -4918,7 +5070,17 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
   final String? ownerRemoteId;
   final String visibility;
   final bool isAvailable;
+  final bool isPhysical;
+  final bool isRead;
+  final String? readingStatus;
+  final String? description;
+  final String? barcode;
+  final DateTime? readAt;
+  final bool isBorrowedExternal;
+  final String? externalLenderName;
   final String? genre;
+  final int? pageCount;
+  final int? publicationYear;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -4936,7 +5098,17 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
       this.ownerRemoteId,
       required this.visibility,
       required this.isAvailable,
+      required this.isPhysical,
+      required this.isRead,
+      this.readingStatus,
+      this.description,
+      this.barcode,
+      this.readAt,
+      required this.isBorrowedExternal,
+      this.externalLenderName,
       this.genre,
+      this.pageCount,
+      this.publicationYear,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -4960,8 +5132,32 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
     }
     map['visibility'] = Variable<String>(visibility);
     map['is_available'] = Variable<bool>(isAvailable);
+    map['is_physical'] = Variable<bool>(isPhysical);
+    map['is_read'] = Variable<bool>(isRead);
+    if (!nullToAbsent || readingStatus != null) {
+      map['reading_status'] = Variable<String>(readingStatus);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    if (!nullToAbsent || barcode != null) {
+      map['barcode'] = Variable<String>(barcode);
+    }
+    if (!nullToAbsent || readAt != null) {
+      map['read_at'] = Variable<DateTime>(readAt);
+    }
+    map['is_borrowed_external'] = Variable<bool>(isBorrowedExternal);
+    if (!nullToAbsent || externalLenderName != null) {
+      map['external_lender_name'] = Variable<String>(externalLenderName);
+    }
     if (!nullToAbsent || genre != null) {
       map['genre'] = Variable<String>(genre);
+    }
+    if (!nullToAbsent || pageCount != null) {
+      map['page_count'] = Variable<int>(pageCount);
+    }
+    if (!nullToAbsent || publicationYear != null) {
+      map['publication_year'] = Variable<int>(publicationYear);
     }
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
@@ -4990,8 +5186,31 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
           : Value(ownerRemoteId),
       visibility: Value(visibility),
       isAvailable: Value(isAvailable),
+      isPhysical: Value(isPhysical),
+      isRead: Value(isRead),
+      readingStatus: readingStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(readingStatus),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      barcode: barcode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(barcode),
+      readAt:
+          readAt == null && nullToAbsent ? const Value.absent() : Value(readAt),
+      isBorrowedExternal: Value(isBorrowedExternal),
+      externalLenderName: externalLenderName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(externalLenderName),
       genre:
           genre == null && nullToAbsent ? const Value.absent() : Value(genre),
+      pageCount: pageCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pageCount),
+      publicationYear: publicationYear == null && nullToAbsent
+          ? const Value.absent()
+          : Value(publicationYear),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -5017,7 +5236,18 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
       ownerRemoteId: serializer.fromJson<String?>(json['ownerRemoteId']),
       visibility: serializer.fromJson<String>(json['visibility']),
       isAvailable: serializer.fromJson<bool>(json['isAvailable']),
+      isPhysical: serializer.fromJson<bool>(json['isPhysical']),
+      isRead: serializer.fromJson<bool>(json['isRead']),
+      readingStatus: serializer.fromJson<String?>(json['readingStatus']),
+      description: serializer.fromJson<String?>(json['description']),
+      barcode: serializer.fromJson<String?>(json['barcode']),
+      readAt: serializer.fromJson<DateTime?>(json['readAt']),
+      isBorrowedExternal: serializer.fromJson<bool>(json['isBorrowedExternal']),
+      externalLenderName:
+          serializer.fromJson<String?>(json['externalLenderName']),
       genre: serializer.fromJson<String?>(json['genre']),
+      pageCount: serializer.fromJson<int?>(json['pageCount']),
+      publicationYear: serializer.fromJson<int?>(json['publicationYear']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -5040,7 +5270,17 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
       'ownerRemoteId': serializer.toJson<String?>(ownerRemoteId),
       'visibility': serializer.toJson<String>(visibility),
       'isAvailable': serializer.toJson<bool>(isAvailable),
+      'isPhysical': serializer.toJson<bool>(isPhysical),
+      'isRead': serializer.toJson<bool>(isRead),
+      'readingStatus': serializer.toJson<String?>(readingStatus),
+      'description': serializer.toJson<String?>(description),
+      'barcode': serializer.toJson<String?>(barcode),
+      'readAt': serializer.toJson<DateTime?>(readAt),
+      'isBorrowedExternal': serializer.toJson<bool>(isBorrowedExternal),
+      'externalLenderName': serializer.toJson<String?>(externalLenderName),
       'genre': serializer.toJson<String?>(genre),
+      'pageCount': serializer.toJson<int?>(pageCount),
+      'publicationYear': serializer.toJson<int?>(publicationYear),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -5061,7 +5301,17 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
           Value<String?> ownerRemoteId = const Value.absent(),
           String? visibility,
           bool? isAvailable,
+          bool? isPhysical,
+          bool? isRead,
+          Value<String?> readingStatus = const Value.absent(),
+          Value<String?> description = const Value.absent(),
+          Value<String?> barcode = const Value.absent(),
+          Value<DateTime?> readAt = const Value.absent(),
+          bool? isBorrowedExternal,
+          Value<String?> externalLenderName = const Value.absent(),
           Value<String?> genre = const Value.absent(),
+          Value<int?> pageCount = const Value.absent(),
+          Value<int?> publicationYear = const Value.absent(),
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -5080,7 +5330,22 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
             ownerRemoteId.present ? ownerRemoteId.value : this.ownerRemoteId,
         visibility: visibility ?? this.visibility,
         isAvailable: isAvailable ?? this.isAvailable,
+        isPhysical: isPhysical ?? this.isPhysical,
+        isRead: isRead ?? this.isRead,
+        readingStatus:
+            readingStatus.present ? readingStatus.value : this.readingStatus,
+        description: description.present ? description.value : this.description,
+        barcode: barcode.present ? barcode.value : this.barcode,
+        readAt: readAt.present ? readAt.value : this.readAt,
+        isBorrowedExternal: isBorrowedExternal ?? this.isBorrowedExternal,
+        externalLenderName: externalLenderName.present
+            ? externalLenderName.value
+            : this.externalLenderName,
         genre: genre.present ? genre.value : this.genre,
+        pageCount: pageCount.present ? pageCount.value : this.pageCount,
+        publicationYear: publicationYear.present
+            ? publicationYear.value
+            : this.publicationYear,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -5105,7 +5370,27 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
           data.visibility.present ? data.visibility.value : this.visibility,
       isAvailable:
           data.isAvailable.present ? data.isAvailable.value : this.isAvailable,
+      isPhysical:
+          data.isPhysical.present ? data.isPhysical.value : this.isPhysical,
+      isRead: data.isRead.present ? data.isRead.value : this.isRead,
+      readingStatus: data.readingStatus.present
+          ? data.readingStatus.value
+          : this.readingStatus,
+      description:
+          data.description.present ? data.description.value : this.description,
+      barcode: data.barcode.present ? data.barcode.value : this.barcode,
+      readAt: data.readAt.present ? data.readAt.value : this.readAt,
+      isBorrowedExternal: data.isBorrowedExternal.present
+          ? data.isBorrowedExternal.value
+          : this.isBorrowedExternal,
+      externalLenderName: data.externalLenderName.present
+          ? data.externalLenderName.value
+          : this.externalLenderName,
       genre: data.genre.present ? data.genre.value : this.genre,
+      pageCount: data.pageCount.present ? data.pageCount.value : this.pageCount,
+      publicationYear: data.publicationYear.present
+          ? data.publicationYear.value
+          : this.publicationYear,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -5128,7 +5413,17 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
           ..write('ownerRemoteId: $ownerRemoteId, ')
           ..write('visibility: $visibility, ')
           ..write('isAvailable: $isAvailable, ')
+          ..write('isPhysical: $isPhysical, ')
+          ..write('isRead: $isRead, ')
+          ..write('readingStatus: $readingStatus, ')
+          ..write('description: $description, ')
+          ..write('barcode: $barcode, ')
+          ..write('readAt: $readAt, ')
+          ..write('isBorrowedExternal: $isBorrowedExternal, ')
+          ..write('externalLenderName: $externalLenderName, ')
           ..write('genre: $genre, ')
+          ..write('pageCount: $pageCount, ')
+          ..write('publicationYear: $publicationYear, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -5139,24 +5434,35 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      uuid,
-      remoteId,
-      groupId,
-      groupUuid,
-      bookId,
-      bookUuid,
-      ownerUserId,
-      ownerRemoteId,
-      visibility,
-      isAvailable,
-      genre,
-      isDirty,
-      isDeleted,
-      syncedAt,
-      createdAt,
-      updatedAt);
+  int get hashCode => Object.hashAll([
+        id,
+        uuid,
+        remoteId,
+        groupId,
+        groupUuid,
+        bookId,
+        bookUuid,
+        ownerUserId,
+        ownerRemoteId,
+        visibility,
+        isAvailable,
+        isPhysical,
+        isRead,
+        readingStatus,
+        description,
+        barcode,
+        readAt,
+        isBorrowedExternal,
+        externalLenderName,
+        genre,
+        pageCount,
+        publicationYear,
+        isDirty,
+        isDeleted,
+        syncedAt,
+        createdAt,
+        updatedAt
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5172,7 +5478,17 @@ class SharedBook extends DataClass implements Insertable<SharedBook> {
           other.ownerRemoteId == this.ownerRemoteId &&
           other.visibility == this.visibility &&
           other.isAvailable == this.isAvailable &&
+          other.isPhysical == this.isPhysical &&
+          other.isRead == this.isRead &&
+          other.readingStatus == this.readingStatus &&
+          other.description == this.description &&
+          other.barcode == this.barcode &&
+          other.readAt == this.readAt &&
+          other.isBorrowedExternal == this.isBorrowedExternal &&
+          other.externalLenderName == this.externalLenderName &&
           other.genre == this.genre &&
+          other.pageCount == this.pageCount &&
+          other.publicationYear == this.publicationYear &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -5192,7 +5508,17 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
   final Value<String?> ownerRemoteId;
   final Value<String> visibility;
   final Value<bool> isAvailable;
+  final Value<bool> isPhysical;
+  final Value<bool> isRead;
+  final Value<String?> readingStatus;
+  final Value<String?> description;
+  final Value<String?> barcode;
+  final Value<DateTime?> readAt;
+  final Value<bool> isBorrowedExternal;
+  final Value<String?> externalLenderName;
   final Value<String?> genre;
+  final Value<int?> pageCount;
+  final Value<int?> publicationYear;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -5210,7 +5536,17 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
     this.ownerRemoteId = const Value.absent(),
     this.visibility = const Value.absent(),
     this.isAvailable = const Value.absent(),
+    this.isPhysical = const Value.absent(),
+    this.isRead = const Value.absent(),
+    this.readingStatus = const Value.absent(),
+    this.description = const Value.absent(),
+    this.barcode = const Value.absent(),
+    this.readAt = const Value.absent(),
+    this.isBorrowedExternal = const Value.absent(),
+    this.externalLenderName = const Value.absent(),
     this.genre = const Value.absent(),
+    this.pageCount = const Value.absent(),
+    this.publicationYear = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -5229,7 +5565,17 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
     this.ownerRemoteId = const Value.absent(),
     this.visibility = const Value.absent(),
     this.isAvailable = const Value.absent(),
+    this.isPhysical = const Value.absent(),
+    this.isRead = const Value.absent(),
+    this.readingStatus = const Value.absent(),
+    this.description = const Value.absent(),
+    this.barcode = const Value.absent(),
+    this.readAt = const Value.absent(),
+    this.isBorrowedExternal = const Value.absent(),
+    this.externalLenderName = const Value.absent(),
     this.genre = const Value.absent(),
+    this.pageCount = const Value.absent(),
+    this.publicationYear = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -5253,7 +5599,17 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
     Expression<String>? ownerRemoteId,
     Expression<String>? visibility,
     Expression<bool>? isAvailable,
+    Expression<bool>? isPhysical,
+    Expression<bool>? isRead,
+    Expression<String>? readingStatus,
+    Expression<String>? description,
+    Expression<String>? barcode,
+    Expression<DateTime>? readAt,
+    Expression<bool>? isBorrowedExternal,
+    Expression<String>? externalLenderName,
     Expression<String>? genre,
+    Expression<int>? pageCount,
+    Expression<int>? publicationYear,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -5272,7 +5628,19 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
       if (ownerRemoteId != null) 'owner_remote_id': ownerRemoteId,
       if (visibility != null) 'visibility': visibility,
       if (isAvailable != null) 'is_available': isAvailable,
+      if (isPhysical != null) 'is_physical': isPhysical,
+      if (isRead != null) 'is_read': isRead,
+      if (readingStatus != null) 'reading_status': readingStatus,
+      if (description != null) 'description': description,
+      if (barcode != null) 'barcode': barcode,
+      if (readAt != null) 'read_at': readAt,
+      if (isBorrowedExternal != null)
+        'is_borrowed_external': isBorrowedExternal,
+      if (externalLenderName != null)
+        'external_lender_name': externalLenderName,
       if (genre != null) 'genre': genre,
+      if (pageCount != null) 'page_count': pageCount,
+      if (publicationYear != null) 'publication_year': publicationYear,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -5293,7 +5661,17 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
       Value<String?>? ownerRemoteId,
       Value<String>? visibility,
       Value<bool>? isAvailable,
+      Value<bool>? isPhysical,
+      Value<bool>? isRead,
+      Value<String?>? readingStatus,
+      Value<String?>? description,
+      Value<String?>? barcode,
+      Value<DateTime?>? readAt,
+      Value<bool>? isBorrowedExternal,
+      Value<String?>? externalLenderName,
       Value<String?>? genre,
+      Value<int?>? pageCount,
+      Value<int?>? publicationYear,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -5311,7 +5689,17 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
       ownerRemoteId: ownerRemoteId ?? this.ownerRemoteId,
       visibility: visibility ?? this.visibility,
       isAvailable: isAvailable ?? this.isAvailable,
+      isPhysical: isPhysical ?? this.isPhysical,
+      isRead: isRead ?? this.isRead,
+      readingStatus: readingStatus ?? this.readingStatus,
+      description: description ?? this.description,
+      barcode: barcode ?? this.barcode,
+      readAt: readAt ?? this.readAt,
+      isBorrowedExternal: isBorrowedExternal ?? this.isBorrowedExternal,
+      externalLenderName: externalLenderName ?? this.externalLenderName,
       genre: genre ?? this.genre,
+      pageCount: pageCount ?? this.pageCount,
+      publicationYear: publicationYear ?? this.publicationYear,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -5356,8 +5744,38 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
     if (isAvailable.present) {
       map['is_available'] = Variable<bool>(isAvailable.value);
     }
+    if (isPhysical.present) {
+      map['is_physical'] = Variable<bool>(isPhysical.value);
+    }
+    if (isRead.present) {
+      map['is_read'] = Variable<bool>(isRead.value);
+    }
+    if (readingStatus.present) {
+      map['reading_status'] = Variable<String>(readingStatus.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (barcode.present) {
+      map['barcode'] = Variable<String>(barcode.value);
+    }
+    if (readAt.present) {
+      map['read_at'] = Variable<DateTime>(readAt.value);
+    }
+    if (isBorrowedExternal.present) {
+      map['is_borrowed_external'] = Variable<bool>(isBorrowedExternal.value);
+    }
+    if (externalLenderName.present) {
+      map['external_lender_name'] = Variable<String>(externalLenderName.value);
+    }
     if (genre.present) {
       map['genre'] = Variable<String>(genre.value);
+    }
+    if (pageCount.present) {
+      map['page_count'] = Variable<int>(pageCount.value);
+    }
+    if (publicationYear.present) {
+      map['publication_year'] = Variable<int>(publicationYear.value);
     }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
@@ -5391,7 +5809,17 @@ class SharedBooksCompanion extends UpdateCompanion<SharedBook> {
           ..write('ownerRemoteId: $ownerRemoteId, ')
           ..write('visibility: $visibility, ')
           ..write('isAvailable: $isAvailable, ')
+          ..write('isPhysical: $isPhysical, ')
+          ..write('isRead: $isRead, ')
+          ..write('readingStatus: $readingStatus, ')
+          ..write('description: $description, ')
+          ..write('barcode: $barcode, ')
+          ..write('readAt: $readAt, ')
+          ..write('isBorrowedExternal: $isBorrowedExternal, ')
+          ..write('externalLenderName: $externalLenderName, ')
           ..write('genre: $genre, ')
+          ..write('pageCount: $pageCount, ')
+          ..write('publicationYear: $publicationYear, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -21541,7 +21969,17 @@ typedef $$SharedBooksTableCreateCompanionBuilder = SharedBooksCompanion
   Value<String?> ownerRemoteId,
   Value<String> visibility,
   Value<bool> isAvailable,
+  Value<bool> isPhysical,
+  Value<bool> isRead,
+  Value<String?> readingStatus,
+  Value<String?> description,
+  Value<String?> barcode,
+  Value<DateTime?> readAt,
+  Value<bool> isBorrowedExternal,
+  Value<String?> externalLenderName,
   Value<String?> genre,
+  Value<int?> pageCount,
+  Value<int?> publicationYear,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -21561,7 +21999,17 @@ typedef $$SharedBooksTableUpdateCompanionBuilder = SharedBooksCompanion
   Value<String?> ownerRemoteId,
   Value<String> visibility,
   Value<bool> isAvailable,
+  Value<bool> isPhysical,
+  Value<bool> isRead,
+  Value<String?> readingStatus,
+  Value<String?> description,
+  Value<String?> barcode,
+  Value<DateTime?> readAt,
+  Value<bool> isBorrowedExternal,
+  Value<String?> externalLenderName,
   Value<String?> genre,
+  Value<int?> pageCount,
+  Value<int?> publicationYear,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -21682,8 +22130,41 @@ class $$SharedBooksTableFilterComposer
   ColumnFilters<bool> get isAvailable => $composableBuilder(
       column: $table.isAvailable, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<bool> get isPhysical => $composableBuilder(
+      column: $table.isPhysical, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isRead => $composableBuilder(
+      column: $table.isRead, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get readingStatus => $composableBuilder(
+      column: $table.readingStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get barcode => $composableBuilder(
+      column: $table.barcode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get readAt => $composableBuilder(
+      column: $table.readAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isBorrowedExternal => $composableBuilder(
+      column: $table.isBorrowedExternal,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get externalLenderName => $composableBuilder(
+      column: $table.externalLenderName,
+      builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get genre => $composableBuilder(
       column: $table.genre, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get pageCount => $composableBuilder(
+      column: $table.pageCount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get publicationYear => $composableBuilder(
+      column: $table.publicationYear,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -21837,8 +22318,42 @@ class $$SharedBooksTableOrderingComposer
   ColumnOrderings<bool> get isAvailable => $composableBuilder(
       column: $table.isAvailable, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get isPhysical => $composableBuilder(
+      column: $table.isPhysical, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isRead => $composableBuilder(
+      column: $table.isRead, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get readingStatus => $composableBuilder(
+      column: $table.readingStatus,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get barcode => $composableBuilder(
+      column: $table.barcode, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get readAt => $composableBuilder(
+      column: $table.readAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isBorrowedExternal => $composableBuilder(
+      column: $table.isBorrowedExternal,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get externalLenderName => $composableBuilder(
+      column: $table.externalLenderName,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get genre => $composableBuilder(
       column: $table.genre, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get pageCount => $composableBuilder(
+      column: $table.pageCount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get publicationYear => $composableBuilder(
+      column: $table.publicationYear,
+      builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
@@ -21949,8 +22464,38 @@ class $$SharedBooksTableAnnotationComposer
   GeneratedColumn<bool> get isAvailable => $composableBuilder(
       column: $table.isAvailable, builder: (column) => column);
 
+  GeneratedColumn<bool> get isPhysical => $composableBuilder(
+      column: $table.isPhysical, builder: (column) => column);
+
+  GeneratedColumn<bool> get isRead =>
+      $composableBuilder(column: $table.isRead, builder: (column) => column);
+
+  GeneratedColumn<String> get readingStatus => $composableBuilder(
+      column: $table.readingStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => column);
+
+  GeneratedColumn<String> get barcode =>
+      $composableBuilder(column: $table.barcode, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get readAt =>
+      $composableBuilder(column: $table.readAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isBorrowedExternal => $composableBuilder(
+      column: $table.isBorrowedExternal, builder: (column) => column);
+
+  GeneratedColumn<String> get externalLenderName => $composableBuilder(
+      column: $table.externalLenderName, builder: (column) => column);
+
   GeneratedColumn<String> get genre =>
       $composableBuilder(column: $table.genre, builder: (column) => column);
+
+  GeneratedColumn<int> get pageCount =>
+      $composableBuilder(column: $table.pageCount, builder: (column) => column);
+
+  GeneratedColumn<int> get publicationYear => $composableBuilder(
+      column: $table.publicationYear, builder: (column) => column);
 
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
@@ -22110,7 +22655,17 @@ class $$SharedBooksTableTableManager extends RootTableManager<
             Value<String?> ownerRemoteId = const Value.absent(),
             Value<String> visibility = const Value.absent(),
             Value<bool> isAvailable = const Value.absent(),
+            Value<bool> isPhysical = const Value.absent(),
+            Value<bool> isRead = const Value.absent(),
+            Value<String?> readingStatus = const Value.absent(),
+            Value<String?> description = const Value.absent(),
+            Value<String?> barcode = const Value.absent(),
+            Value<DateTime?> readAt = const Value.absent(),
+            Value<bool> isBorrowedExternal = const Value.absent(),
+            Value<String?> externalLenderName = const Value.absent(),
             Value<String?> genre = const Value.absent(),
+            Value<int?> pageCount = const Value.absent(),
+            Value<int?> publicationYear = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -22129,7 +22684,17 @@ class $$SharedBooksTableTableManager extends RootTableManager<
             ownerRemoteId: ownerRemoteId,
             visibility: visibility,
             isAvailable: isAvailable,
+            isPhysical: isPhysical,
+            isRead: isRead,
+            readingStatus: readingStatus,
+            description: description,
+            barcode: barcode,
+            readAt: readAt,
+            isBorrowedExternal: isBorrowedExternal,
+            externalLenderName: externalLenderName,
             genre: genre,
+            pageCount: pageCount,
+            publicationYear: publicationYear,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -22148,7 +22713,17 @@ class $$SharedBooksTableTableManager extends RootTableManager<
             Value<String?> ownerRemoteId = const Value.absent(),
             Value<String> visibility = const Value.absent(),
             Value<bool> isAvailable = const Value.absent(),
+            Value<bool> isPhysical = const Value.absent(),
+            Value<bool> isRead = const Value.absent(),
+            Value<String?> readingStatus = const Value.absent(),
+            Value<String?> description = const Value.absent(),
+            Value<String?> barcode = const Value.absent(),
+            Value<DateTime?> readAt = const Value.absent(),
+            Value<bool> isBorrowedExternal = const Value.absent(),
+            Value<String?> externalLenderName = const Value.absent(),
             Value<String?> genre = const Value.absent(),
+            Value<int?> pageCount = const Value.absent(),
+            Value<int?> publicationYear = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -22167,7 +22742,17 @@ class $$SharedBooksTableTableManager extends RootTableManager<
             ownerRemoteId: ownerRemoteId,
             visibility: visibility,
             isAvailable: isAvailable,
+            isPhysical: isPhysical,
+            isRead: isRead,
+            readingStatus: readingStatus,
+            description: description,
+            barcode: barcode,
+            readAt: readAt,
+            isBorrowedExternal: isBorrowedExternal,
+            externalLenderName: externalLenderName,
             genre: genre,
+            pageCount: pageCount,
+            publicationYear: publicationYear,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,

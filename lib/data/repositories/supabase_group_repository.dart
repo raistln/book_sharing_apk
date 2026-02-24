@@ -220,6 +220,7 @@ class SupabaseGroupSyncRepository {
                   await _bookDao.findByUuid(remoteShared.bookUuid!);
 
               if (finalCheck == null && existingByContent == null) {
+                // ✅ FIX: Incluir todos los campos de lectura al insertar desde shared_books
                 await _bookDao.insertBook(
                   BooksCompanion.insert(
                     uuid: remoteShared.bookUuid!,
@@ -238,20 +239,32 @@ class SupabaseGroupSyncRepository {
                     coverPath: Value(remoteShared.coverUrl),
                     status: Value(
                         remoteShared.isAvailable ? 'available' : 'loaned'),
-                    description: const Value(null),
+                    description: Value(remoteShared
+                        .description), // ← antes era const Value(null)
+                    isPhysical: Value(remoteShared.isPhysical), // ← AÑADIDO
+                    isRead: Value(remoteShared.isRead ?? false), // ← AÑADIDO
+                    readingStatus: Value(
+                        remoteShared.readingStatus ?? 'pending'), // ← AÑADIDO
+                    barcode: Value(remoteShared.barcode), // ← AÑADIDO
+                    readAt: Value(remoteShared.readAt), // ← AÑADIDO
+                    isBorrowedExternal:
+                        Value(remoteShared.isBorrowedExternal), // ← AÑADIDO
+                    externalLenderName:
+                        Value(remoteShared.externalLenderName), // ← AÑADIDO
+                    genre: Value(remoteShared.genre), // ← AÑADIDO
+                    pageCount: Value(remoteShared.pageCount),
+                    publicationYear: Value(remoteShared.publicationYear),
                     isDeleted: const Value(false),
                     isDirty: const Value(false),
                     createdAt: Value(remoteShared.createdAt),
                     updatedAt:
                         Value(remoteShared.updatedAt ?? remoteShared.createdAt),
                     syncedAt: Value(now),
-                    pageCount: Value(remoteShared.pageCount),
-                    publicationYear: Value(remoteShared.publicationYear),
                   ),
                 );
                 if (kDebugMode) {
                   debugPrint(
-                      '[GroupSync] Created book ${remoteShared.bookUuid} from shared_books data (${remoteShared.title})');
+                      '[GroupSync] Created book ${remoteShared.bookUuid} from shared_books data (${remoteShared.title}), isRead=${remoteShared.isRead}, readingStatus=${remoteShared.readingStatus}');
                 }
               } else if (finalCheck != null) {
                 if (kDebugMode) {
@@ -322,7 +335,7 @@ class SupabaseGroupSyncRepository {
                 debugPrint(
                     '[GroupSync] Skipping update for shared book ${existingShared.id} (local isDirty=true)');
               }
-              // Skip update to preserve local availability changes
+              // Skip shared_books update to preserve local availability changes
             } else {
               await _groupDao.updateSharedBookFields(
                 sharedBookId: existingShared.id,
@@ -335,6 +348,16 @@ class SupabaseGroupSyncRepository {
                   ownerRemoteId: sharedOwnerRemoteValue,
                   visibility: sharedVisibilityValue,
                   isAvailable: sharedAvailableValue,
+                  isPhysical: Value(remoteShared.isPhysical),
+                  isRead: Value(remoteShared.isRead ?? false),
+                  readingStatus: Value(remoteShared.readingStatus),
+                  description: Value(remoteShared.description),
+                  barcode: Value(remoteShared.barcode),
+                  readAt: Value(remoteShared.readAt),
+                  isBorrowedExternal: Value(remoteShared.isBorrowedExternal),
+                  externalLenderName: Value(remoteShared.externalLenderName),
+                  pageCount: Value(remoteShared.pageCount),
+                  publicationYear: Value(remoteShared.publicationYear),
                   isDeleted: Value(remoteShared.isDeleted),
                   genre: Value(remoteShared.genre),
                   isDirty: const Value(false),
@@ -347,6 +370,29 @@ class SupabaseGroupSyncRepository {
                     '[GroupSync] Updated shared book ${remoteShared.id} for group $localGroupUuid');
               }
             }
+
+            // ✅ FIX: Siempre sincronizar los campos de lectura en la tabla books local,
+            // incluso si el shared_book estaba dirty (los campos de lectura son del propietario
+            // y deben reflejar el estado remoto).
+            await _bookDao.updateBookFields(
+              bookId: localBook.id,
+              entry: BooksCompanion(
+                isRead: Value(remoteShared.isRead ?? false),
+                readingStatus: Value(remoteShared.readingStatus ?? 'pending'),
+                readAt: Value(remoteShared.readAt),
+                isPhysical: Value(remoteShared.isPhysical),
+                description: Value(remoteShared.description),
+                barcode: Value(remoteShared.barcode),
+                isBorrowedExternal: Value(remoteShared.isBorrowedExternal),
+                externalLenderName: Value(remoteShared.externalLenderName),
+                genre: Value(remoteShared.genre),
+              ),
+            );
+            if (kDebugMode) {
+              debugPrint(
+                  '[GroupSync] Synced reading fields to books table for book ${localBook.id}: isRead=${remoteShared.isRead}, readingStatus=${remoteShared.readingStatus}');
+            }
+
             localSharedId = existingShared.id;
           } else {
             final insertShared = SharedBooksCompanion.insert(
@@ -360,6 +406,16 @@ class SupabaseGroupSyncRepository {
               ownerRemoteId: sharedOwnerRemoteValue,
               visibility: sharedVisibilityValue,
               isAvailable: sharedAvailableValue,
+              isPhysical: Value(remoteShared.isPhysical),
+              isRead: Value(remoteShared.isRead ?? false),
+              readingStatus: Value(remoteShared.readingStatus),
+              description: Value(remoteShared.description),
+              barcode: Value(remoteShared.barcode),
+              readAt: Value(remoteShared.readAt),
+              isBorrowedExternal: Value(remoteShared.isBorrowedExternal),
+              externalLenderName: Value(remoteShared.externalLenderName),
+              pageCount: Value(remoteShared.pageCount),
+              publicationYear: Value(remoteShared.publicationYear),
               isDeleted: Value(remoteShared.isDeleted),
               genre: Value(remoteShared.genre),
               isDirty: const Value(false),
@@ -450,8 +506,6 @@ class SupabaseGroupSyncRepository {
               borrowerReturnedAt: borrowerReturnedAtValue,
               lenderReturnedAt: lenderReturnedAtValue,
               returnedAt: returnedAtValue,
-              // Note: externalBorrowerName/Contact not available in SupabaseLoanRecord
-              // These fields will be set when the loan is created locally
               isDeleted: const Value(false),
               isDirty: const Value(false),
               syncedAt: Value(now),
@@ -509,9 +563,6 @@ class SupabaseGroupSyncRepository {
               '[GroupSync] WARNING: Remote shared books list is empty for group ${remote.id}, but local has ${localSharedBooks.length} items. Skipping pruning to prevent accidental loss.',
             );
           }
-          // We only prune if we trust the empty result. In Supabase, if select returns [],
-          // it could be a real empty group or an RLS/Network issue.
-          // For now, we play it safe.
           continue;
         }
 
@@ -638,9 +689,14 @@ class SupabaseGroupSyncRepository {
               visibility: shared.visibility,
               isAvailable: shared.isAvailable,
               isDeleted: shared.isDeleted,
-              genre: book?.genre ?? shared.genre,
-              pageCount: book?.pageCount,
-              publicationYear: book?.publicationYear,
+              isPhysical: shared.isPhysical,
+              isRead: shared.isRead,
+              readingStatus: shared.readingStatus,
+              description: shared.description,
+              barcode: shared.barcode,
+              readAt: shared.readAt,
+              isBorrowedExternal: shared.isBorrowedExternal,
+              externalLenderName: shared.externalLenderName,
               createdAt: shared.createdAt,
               updatedAt: shared.updatedAt,
               accessToken: accessToken,
@@ -655,12 +711,21 @@ class SupabaseGroupSyncRepository {
               groupId: groupRemoteId,
               bookUuid: remoteBookId,
               ownerId: ownerRemoteId,
+              title: book?.title,
+              author: book?.author,
+              isbn: book?.isbn,
+              coverUrl: book?.coverPath,
               visibility: shared.visibility,
               isAvailable: shared.isAvailable,
               isDeleted: shared.isDeleted,
-              genre: book?.genre ?? shared.genre,
-              pageCount: book?.pageCount,
-              publicationYear: book?.publicationYear,
+              isPhysical: shared.isPhysical,
+              isRead: shared.isRead,
+              readingStatus: shared.readingStatus,
+              description: shared.description,
+              barcode: shared.barcode,
+              readAt: shared.readAt,
+              isBorrowedExternal: shared.isBorrowedExternal,
+              externalLenderName: shared.externalLenderName,
               updatedAt: shared.updatedAt,
               accessToken: accessToken,
             );
@@ -678,9 +743,14 @@ class SupabaseGroupSyncRepository {
                 visibility: shared.visibility,
                 isAvailable: shared.isAvailable,
                 isDeleted: shared.isDeleted,
-                genre: book?.genre ?? shared.genre,
-                pageCount: book?.pageCount,
-                publicationYear: book?.publicationYear,
+                isPhysical: shared.isPhysical,
+                isRead: shared.isRead,
+                readingStatus: shared.readingStatus,
+                description: shared.description,
+                barcode: shared.barcode,
+                readAt: shared.readAt,
+                isBorrowedExternal: shared.isBorrowedExternal,
+                externalLenderName: shared.externalLenderName,
                 createdAt: shared.createdAt,
                 updatedAt: shared.updatedAt,
                 accessToken: accessToken,
@@ -798,6 +868,8 @@ class SupabaseGroupSyncRepository {
               lenderReturnedAt: loan.lenderReturnedAt,
               returnedAt: loan.returnedAt,
               isDeleted: loan.isDeleted,
+              externalBorrowerName: loan.externalBorrowerName,
+              externalBorrowerContact: loan.externalBorrowerContact,
               updatedAt: loan.updatedAt,
               accessToken: accessToken,
             );

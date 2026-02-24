@@ -471,8 +471,7 @@ class SupabaseClubService {
     final config = await _loadConfig();
     final uri = Uri.parse('${config.url}/rest/v1/comment_reports').replace(
       queryParameters: {
-        'select':
-            'id,comment_id,reported_by_user_id,reason,created_at',
+        'select': 'id,comment_id,reported_by_user_id,reason,created_at',
         'comment_id': 'in.(${commentIds.join(',')})',
         'order': 'created_at.asc',
       },
@@ -959,6 +958,7 @@ class SupabaseClubService {
 
   Future<String> upsertReadingProgress({
     required String id,
+    required String clubId,
     required String bookId,
     required String userId,
     required int currentSection,
@@ -973,6 +973,7 @@ class SupabaseClubService {
 
     final payload = <String, dynamic>{
       'id': id,
+      'club_id': clubId,
       'book_id': bookId,
       'user_id': userId,
       'current_section': currentSection,
@@ -982,13 +983,18 @@ class SupabaseClubService {
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
 
+    final headers = _buildHeaders(
+      config,
+      accessToken: accessToken,
+      preferRepresentation: true,
+    );
+    headers['Prefer'] = '${headers['Prefer']}, resolution=merge-duplicates';
+
     final response = await _client.post(
-      uri,
-      headers: _buildHeaders(
-        config,
-        accessToken: accessToken,
-        preferRepresentation: true,
+      uri.replace(
+        queryParameters: {'on_conflict': 'club_id,book_id,user_id'},
       ),
+      headers: headers,
       body: jsonEncode(payload),
     );
 

@@ -92,31 +92,38 @@ class SupabaseClubSyncRepository {
         String localClubUuid;
 
         if (existingClub != null) {
-          // Update existing club
-          await _clubDao.upsertClub(ReadingClubsCompanion(
-            id: Value(existingClub.id),
-            uuid: Value(existingClub.uuid),
-            name: Value(remote.name),
-            description: Value(remote.description),
-            city: Value(remote.city),
-            meetingPlace: Value(remote.meetingPlace),
-            frequency: Value(remote.frequency),
-            frequencyDays: Value(remote.frequencyDays),
-            visibility: Value(remote.visibility),
-            nextBooksVisible: Value(remote.nextBooksVisible),
-            ownerUserId: Value(ownerUser.id),
-            ownerRemoteId: Value(remote.ownerId),
-            isDeleted: const Value(false),
-            isDirty: const Value(false),
-            syncedAt: Value(now),
-            updatedAt: Value(remote.updatedAt),
-          ));
-
           localClubId = existingClub.id;
           localClubUuid = existingClub.uuid;
 
-          if (kDebugMode) {
-            debugPrint('[ClubSync] Updated club ${remote.id}');
+          if (existingClub.isDirty) {
+            if (kDebugMode) {
+              debugPrint(
+                '[ClubSync] Skipping update for dirty club ${existingClub.uuid}',
+              );
+            }
+          } else {
+            await _clubDao.upsertClub(ReadingClubsCompanion(
+              id: Value(existingClub.id),
+              uuid: Value(existingClub.uuid),
+              name: Value(remote.name),
+              description: Value(remote.description),
+              city: Value(remote.city),
+              meetingPlace: Value(remote.meetingPlace),
+              frequency: Value(remote.frequency),
+              frequencyDays: Value(remote.frequencyDays),
+              visibility: Value(remote.visibility),
+              nextBooksVisible: Value(remote.nextBooksVisible),
+              ownerUserId: Value(ownerUser.id),
+              ownerRemoteId: Value(remote.ownerId),
+              isDeleted: const Value(false),
+              isDirty: const Value(false),
+              syncedAt: Value(now),
+              updatedAt: Value(remote.updatedAt),
+            ));
+
+            if (kDebugMode) {
+              debugPrint('[ClubSync] Updated club ${remote.id}');
+            }
           }
         } else {
           // Create new club
@@ -174,25 +181,32 @@ class SupabaseClubSyncRepository {
           final existingMember = await _findMemberByRemoteId(remoteMember.id);
 
           if (existingMember != null) {
-            // Update existing member
-            await _clubDao.upsertClubMember(ClubMembersCompanion(
-              id: Value(existingMember.id),
-              uuid: Value(existingMember.uuid),
-              clubId: Value(localClubId),
-              clubUuid: Value(localClubUuid),
-              memberUserId: Value(localMember.id),
-              memberRemoteId: Value(remoteMember.memberId),
-              role: Value(remoteMember.role),
-              status: Value(remoteMember.status),
-              lastActivity: Value(remoteMember.lastActivity),
-              isDeleted: const Value(false),
-              isDirty: const Value(false),
-              syncedAt: Value(now),
-              updatedAt: Value(remoteMember.updatedAt),
-            ));
+            if (existingMember.isDirty) {
+              if (kDebugMode) {
+                debugPrint(
+                  '[ClubSync] Skipping update for dirty member ${existingMember.uuid}',
+                );
+              }
+            } else {
+              await _clubDao.upsertClubMember(ClubMembersCompanion(
+                id: Value(existingMember.id),
+                uuid: Value(existingMember.uuid),
+                clubId: Value(localClubId),
+                clubUuid: Value(localClubUuid),
+                memberUserId: Value(localMember.id),
+                memberRemoteId: Value(remoteMember.memberId),
+                role: Value(remoteMember.role),
+                status: Value(remoteMember.status),
+                lastActivity: Value(remoteMember.lastActivity),
+                isDeleted: const Value(false),
+                isDirty: const Value(false),
+                syncedAt: Value(now),
+                updatedAt: Value(remoteMember.updatedAt),
+              ));
 
-            if (kDebugMode) {
-              debugPrint('[ClubSync] Updated member ${remoteMember.id}');
+              if (kDebugMode) {
+                debugPrint('[ClubSync] Updated member ${remoteMember.id}');
+              }
             }
           } else {
             // Create new member
@@ -221,8 +235,19 @@ class SupabaseClubSyncRepository {
 
         // Sync club books (Bug #4: Implement downloading of club books)
         for (final remoteBook in remote.books) {
+          final existingBook =
+              await _clubDao.getClubBookByRemoteId(remoteBook.id);
+          if (existingBook != null && existingBook.isDirty) {
+            if (kDebugMode) {
+              debugPrint(
+                '[ClubSync] Skipping update for dirty club book ${existingBook.uuid}',
+              );
+            }
+            continue;
+          }
+
           await _clubDao.upsertClubBook(ClubBooksCompanion.insert(
-            uuid: remoteBook.id, // Using remote ID as local UUID for club books
+            uuid: remoteBook.id,
             remoteId: Value(remoteBook.id),
             clubId: localClubId,
             clubUuid: localClubUuid,
@@ -433,6 +458,12 @@ class SupabaseClubSyncRepository {
           }
 
           // Mark as synced (will be cleaned up later)
+          await (_clubDao.update(_clubDao.clubMembers)
+                ..where((t) => t.id.equals(member.id)))
+              .write(ClubMembersCompanion(
+            isDirty: const Value(false),
+            syncedAt: Value(syncTime),
+          ));
           continue;
         }
 
@@ -514,6 +545,13 @@ class SupabaseClubSyncRepository {
             }
           }
         }
+        await (_clubDao.update(_clubDao.clubMembers)
+              ..where((t) => t.id.equals(member.id)))
+            .write(ClubMembersCompanion(
+          remoteId: Value(ensuredRemoteId),
+          isDirty: const Value(false),
+          syncedAt: Value(syncTime),
+        ));
       } catch (error) {
         if (kDebugMode) {
           debugPrint('[ClubSync] Failed to push member ${member.uuid}: $error');

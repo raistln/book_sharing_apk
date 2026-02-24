@@ -19,6 +19,7 @@ import '../../../../providers/theme_providers.dart';
 import '../../../../services/backup_scheduler_service.dart';
 import '../../../../utils/database_reset.dart';
 import '../../../../providers/loan_providers.dart' as loan;
+import '../../../../providers/sync_providers.dart';
 import '../../../../utils/file_export_helper.dart';
 import '../../../widgets/library/export_handler.dart';
 import '../../../widgets/import_books_dialog.dart';
@@ -385,26 +386,45 @@ class SettingsTab extends ConsumerWidget {
   }
 
   Widget _buildSyncStatusBanner(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(groupSyncControllerProvider);
+    final state = ref.watch(globalSyncStateProvider);
     final theme = Theme.of(context);
 
-    final statusText = state.isSyncing
-        ? 'Sincronizando grupos con Supabase...'
-        : state.lastError != null
-            ? 'Último error de sincronización: ${state.lastError}'
-            : state.lastSyncedAt != null
-                ? 'Última sincronización: ${DateFormat.yMd().add_Hm().format(state.lastSyncedAt!)}'
-                : 'Aún no se ha sincronizado con Supabase.';
+    final statusText = state.when(
+      data: (data) => data.isSyncing
+          ? 'Sincronizando con Supabase...'
+          : data.lastFullSync != null
+              ? 'Última sincronización: ${DateFormat.yMd().add_Hm().format(data.lastFullSync!)}'
+              : 'Aún no se ha sincronizado con Supabase.',
+      loading: () => 'Sincronizando con Supabase...',
+      error: (error, _) => 'Último error de sincronización',
+    );
 
-    final color = state.isSyncing
+    final String? errorText = state.whenOrNull(
+      data: (data) =>
+          data.hasErrors ? 'Se encontraron errores recientemente' : null,
+      error: (error, _) => error.toString(),
+    );
+
+    final isSyncing = state.maybeWhen(
+      data: (data) => data.isSyncing,
+      loading: () => true,
+      orElse: () => false,
+    );
+
+    final hasPendingChanges = state.maybeWhen(
+      data: (data) => data.pendingChangesCount > 0,
+      orElse: () => false,
+    );
+
+    final color = isSyncing
         ? theme.colorScheme.primaryContainer
-        : state.lastError != null
+        : errorText != null
             ? theme.colorScheme.errorContainer
             : theme.colorScheme.surfaceContainerHighest;
 
-    final icon = state.isSyncing
+    final icon = isSyncing
         ? const Icon(Icons.sync, color: Colors.white)
-        : state.lastError != null
+        : errorText != null
             ? const Icon(Icons.error_outline, color: Colors.white)
             : const Icon(Icons.cloud_done_outlined, color: Colors.white);
 
@@ -435,7 +455,15 @@ class SettingsTab extends ConsumerWidget {
                   style:
                       theme.textTheme.bodyMedium?.copyWith(color: Colors.white),
                 ),
-                if (state.hasPendingChanges && !state.isSyncing) ...[
+                if (errorText != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    errorText,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.error),
+                  ),
+                ],
+                if (hasPendingChanges && !isSyncing) ...[
                   const SizedBox(height: 8),
                   Text(
                     'Hay cambios pendientes por sincronizar.',
@@ -452,7 +480,7 @@ class SettingsTab extends ConsumerWidget {
   }
 
   Widget _buildSyncActionsCard(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(groupSyncControllerProvider);
+    final isSyncing = ref.watch(isSyncingProvider);
     final theme = Theme.of(context);
 
     return Card(
@@ -466,15 +494,15 @@ class SettingsTab extends ConsumerWidget {
                 Icon(Icons.groups_outlined, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Sincronización de grupos',
+                  'Sincronización manual',
                   style: theme.textTheme.titleMedium,
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Text(
-              'Trae de Supabase la información más reciente de tus grupos, miembros y libros compartidos. '
-              'Este paso es necesario antes de habilitar la colaboración en la app.',
+              'Fuerza la subida y bajada de libros, préstamos y clubes con Supabase. '
+              'Normalmente esto ocurre de forma automática en segundo plano.',
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
@@ -483,30 +511,18 @@ class SettingsTab extends ConsumerWidget {
               runSpacing: 8,
               children: [
                 FilledButton.icon(
-                  onPressed: state.isSyncing
-                      ? null
-                      : () => _handleSyncGroups(context, ref),
-                  icon: state.isSyncing
+                  onPressed:
+                      isSyncing ? null : () => _handleSyncGroups(context, ref),
+                  icon: isSyncing
                       ? const SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.sync_outlined),
-                  label: Text(state.isSyncing
-                      ? 'Sincronizando...'
-                      : 'Sincronizar ahora'),
+                  label: Text(
+                      isSyncing ? 'Sincronizando...' : 'Sincronizar ahora'),
                 ),
-                if (state.lastError != null)
-                  OutlinedButton.icon(
-                    onPressed: state.isSyncing
-                        ? null
-                        : () => ref
-                            .read(groupSyncControllerProvider.notifier)
-                            .clearError(),
-                    icon: const Icon(Icons.clear_all_outlined),
-                    label: const Text('Limpiar error'),
-                  ),
               ],
             ),
           ],
@@ -516,25 +532,24 @@ class SettingsTab extends ConsumerWidget {
   }
 
   Future<void> _handleSyncGroups(BuildContext context, WidgetRef ref) async {
-    final controller = ref.read(groupSyncControllerProvider.notifier);
-    await controller.syncGroups();
-    if (!context.mounted) return;
+    final coordinator = ref.read(unifiedSyncCoordinatorProvider);
+    try {
+      await coordinator.syncNow();
+      if (!context.mounted) return;
 
-    final state = ref.read(groupSyncControllerProvider);
-    if (state.lastError != null) {
       _showFeedbackSnackBar(
         context: context,
-        message: 'Error de sincronización: ${state.lastError}',
+        message: 'Sincronización completada.',
+        isError: false,
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      _showFeedbackSnackBar(
+        context: context,
+        message: 'Error de sincronización: $error',
         isError: true,
       );
-      return;
     }
-
-    _showFeedbackSnackBar(
-      context: context,
-      message: 'Sincronización completada.',
-      isError: false,
-    );
   }
 
   Future<void> _handleResetDatabase(BuildContext context, WidgetRef ref) async {

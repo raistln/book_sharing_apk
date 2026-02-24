@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../providers/book_providers.dart';
+import '../../providers/sync_providers.dart';
 
 /// Banner that shows the sync status of groups
 ///
@@ -16,13 +16,18 @@ class SyncBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final syncState = ref.watch(groupSyncControllerProvider);
+    final syncStateAsync = ref.watch(globalSyncStateProvider);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
+    final syncState = syncStateAsync.value;
+    if (syncState == null) {
+      return const SizedBox.shrink();
+    }
+
     final isSyncing = syncState.isSyncing;
-    final hasError = syncState.lastError != null;
-    final hasPending = syncState.hasPendingChanges;
+    final hasError = syncState.hasErrors;
+    final hasPending = syncState.pendingChangesCount > 0;
 
     if (!isSyncing && !hasError && !hasPending) {
       return const SizedBox.shrink();
@@ -37,12 +42,12 @@ class SyncBanner extends ConsumerWidget {
       background = colors.primaryContainer;
       foreground = colors.onPrimaryContainer;
       icon = Icons.sync_outlined;
-      message = 'Sincronizando grupos...';
+      message = 'Sincronizando...';
     } else if (hasError) {
       background = colors.errorContainer;
       foreground = colors.onErrorContainer;
       icon = Icons.error_outline;
-      final error = syncState.lastError!;
+      final error = syncState.lastError ?? 'Se ha encontrado un error.';
       message = error.length > 140 ? '${error.substring(0, 137)}…' : error;
     } else {
       background = colors.surfaceContainerHigh;
@@ -72,9 +77,12 @@ class SyncBanner extends ConsumerWidget {
           ),
           IconButton(
             onPressed: () =>
-                ref.read(groupSyncControllerProvider.notifier).clearError(),
+                // Dejamos que el proximo sync limpie el error,
+                // no podemos limpiar el error global porque no hay un metodo claro en estado global de lectura.
+                // Como alternativa, podemos ocultarlo o reintentar.
+                unawaited(_performSync(context, ref)),
             icon: Icon(Icons.close, color: foreground),
-            tooltip: 'Descartar',
+            tooltip: 'Reintentar',
           ),
         ],
       );
@@ -142,6 +150,6 @@ class SyncBanner extends ConsumerWidget {
 
 /// Helper function to perform sync
 Future<void> _performSync(BuildContext context, WidgetRef ref) async {
-  final controller = ref.read(groupSyncControllerProvider.notifier);
-  await controller.syncGroups();
+  final coordinator = ref.read(unifiedSyncCoordinatorProvider);
+  await coordinator.syncNow();
 }

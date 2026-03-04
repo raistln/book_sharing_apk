@@ -13,6 +13,7 @@ import '../../../widgets/empty_state.dart';
 import '../../../widgets/community/group_card.dart';
 import '../../../dialogs/group_form_dialog.dart';
 import '../../../widgets/info_pop.dart';
+import '../../../widgets/community/join_by_code_dialog.dart';
 
 class LendingGroupsTab extends ConsumerWidget {
   const LendingGroupsTab({super.key});
@@ -52,31 +53,35 @@ class LendingGroupsTab extends ConsumerWidget {
         }),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          child: Row(
             children: [
-              FilledButton.icon(
-                onPressed: activeUser == null || isGroupBusy
-                    ? null
-                    : () => _handleCreateGroup(context, ref, activeUser),
-                icon: const Icon(Icons.group_add_outlined),
-                label: const Text('Crear grupo'),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: activeUser == null || isGroupBusy
+                      ? null
+                      : () => _handleCreateGroup(context, ref, activeUser),
+                  icon: const Icon(Icons.group_add_outlined),
+                  label: const Text('Crear grupo'),
+                ),
               ),
-              OutlinedButton.icon(
-                onPressed: activeUser == null || isGroupBusy
-                    ? null
-                    : () => _handleJoinGroupByCode(context, ref, activeUser),
-                icon: const Icon(Icons.qr_code_2_outlined),
-                label: const Text('Unirse por código'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: activeUser == null || isGroupBusy
+                      ? null
+                      : () => _handleJoinGroupByCode(context, ref, activeUser),
+                  icon: const Icon(Icons.qr_code_2_outlined),
+                  label: const Text('Unirse por código'),
+                ),
               ),
-              if (isGroupBusy)
+              if (isGroupBusy) ...[
+                const SizedBox(width: 12),
                 const SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(strokeWidth: 2.5),
                 ),
+              ],
             ],
           ),
         ),
@@ -327,115 +332,11 @@ Future<void> _showJoinGroupByCodeDialog(
   return showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => _JoinGroupByCodeDialog(onJoin: onJoin),
+    builder: (_) => JoinByCodeDialog(
+      onJoin: onJoin,
+      title: 'Unirse a grupo',
+      labelText: 'Código de grupo',
+      successMessage: '¡Te has unido al grupo exitosamente!',
+    ),
   );
-}
-
-class _JoinGroupByCodeDialog extends StatefulWidget {
-  const _JoinGroupByCodeDialog({required this.onJoin});
-
-  final Future<void> Function(String code) onJoin;
-
-  @override
-  State<_JoinGroupByCodeDialog> createState() => _JoinGroupByCodeDialogState();
-}
-
-class _JoinGroupByCodeDialogState extends State<_JoinGroupByCodeDialog> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _codeController;
-  bool _isSubmitting = false;
-  String? _errorText;
-
-  @override
-  void initState() {
-    super.initState();
-    _codeController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _codeController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Unirse a grupo'),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _codeController,
-              decoration: InputDecoration(
-                labelText: 'Código de grupo',
-                border: const OutlineInputBorder(),
-                errorText: _errorText,
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Por favor ingresa un código de grupo';
-                }
-                return null;
-              },
-              autofocus: true,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: _isSubmitting ? null : (_) => _handleSubmit(),
-              onChanged: (_) {
-                if (_errorText != null) {
-                  setState(() => _errorText = null);
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: _isSubmitting ? null : _handleSubmit,
-          child: _isSubmitting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Unirse'),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _handleSubmit() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-      _errorText = null;
-    });
-
-    try {
-      final code = _codeController.text.trim();
-      await widget.onJoin(code);
-      if (mounted) {
-        Navigator.of(context).pop();
-        InfoPop.success(context, '¡Te has unido al grupo exitosamente!');
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-          _errorText =
-              'El código no es válido o ya expiró. Verifícalo e intenta de nuevo.';
-        });
-      }
-    }
-  }
 }

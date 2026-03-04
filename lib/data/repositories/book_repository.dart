@@ -64,7 +64,8 @@ class BookRepository {
     final hasFilter = allowedGenres.isNotEmpty;
 
     for (final book in books) {
-      if (!_shouldShare(book.status, book.isPhysical)) {
+      if (!_shouldShare(
+          book.status, book.isPhysical, book.isBorrowedExternal)) {
         developer.log(
           '[shareExistingBooksWithGroup] Skipping book ${book.id} (status: ${book.status}, physical: ${book.isPhysical})',
           name: 'BookRepository',
@@ -162,6 +163,7 @@ class BookRepository {
     bool isPhysical = true,
     int? pageCount,
     int? publicationYear,
+    bool isBorrowedExternal = false,
   }) async {
     // Check for duplicates
     Book? existingBook;
@@ -220,6 +222,7 @@ class BookRepository {
         isPhysical: Value(isPhysical),
         pageCount: Value(pageCount),
         publicationYear: Value(publicationYear),
+        isBorrowedExternal: Value(isBorrowedExternal),
       ),
     );
     await _autoShareBook(
@@ -231,6 +234,7 @@ class BookRepository {
       ownerUserId: owner?.id,
       ownerRemoteId: owner?.remoteId,
       bookGenre: genre,
+      isBorrowedExternal: isBorrowedExternal,
     );
     _scheduleSync();
     return bookId;
@@ -323,6 +327,7 @@ class BookRepository {
         ownerUserId: book.ownerUserId,
         ownerRemoteId: book.ownerRemoteId,
         bookGenre: book.genre,
+        isBorrowedExternal: book.isBorrowedExternal,
       );
     }
     _scheduleSync();
@@ -371,9 +376,12 @@ class BookRepository {
 
   Future<Book?> findById(int id) => _bookDao.findById(id);
 
-  bool _shouldShare(String status, bool isPhysical) {
+  bool _shouldShare(String status, bool isPhysical, bool isBorrowedExternal) {
     // Non-physical books (digital) are never shared
     if (!isPhysical) return false;
+
+    // Books borrowed from external lenders are never shared
+    if (isBorrowedExternal) return false;
 
     // Don't share private or archived books
     // Only share available and loaned books
@@ -405,6 +413,7 @@ class BookRepository {
     int? ownerUserId,
     String? ownerRemoteId,
     String? bookGenre,
+    bool isBorrowedExternal = false,
   }) async {
     if (ownerUserId == null) {
       developer.log('[_autoShareBook] ownerUserId is null, skipping.',
@@ -415,9 +424,9 @@ class BookRepository {
     final book = await _bookDao.findById(bookId);
     if (book == null) return;
 
-    final shouldShare = _shouldShare(status, isPhysical);
+    final shouldShare = _shouldShare(status, isPhysical, isBorrowedExternal);
     developer.log(
-        '[_autoShareBook] Processing book $bookId (status: $status, isPhysical: $isPhysical, shouldShare: $shouldShare)',
+        '[_autoShareBook] Processing book $bookId (status: $status, isPhysical: $isPhysical, isBorrowedExternal: $isBorrowedExternal, shouldShare: $shouldShare)',
         name: 'BookRepository');
 
     if (!shouldShare) {
@@ -493,6 +502,7 @@ class BookRepository {
               pageCount: Value(book.pageCount),
               publicationYear: Value(book.publicationYear),
               isDirty: const Value(true),
+              isDeleted: const Value(false),
               syncedAt: const Value(null),
               updatedAt: Value(timestamp),
             ),

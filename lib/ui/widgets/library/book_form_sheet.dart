@@ -18,6 +18,8 @@ import '../../../services/google_books_api_controller.dart';
 import '../../../services/google_books_client.dart';
 import '../../../services/open_library_client.dart';
 import '../../../utils/isbn_utils.dart';
+import '../../../providers/reading_providers.dart';
+import '../../../providers/reading_list_provider.dart';
 import '../barcode_scanner_sheet.dart';
 import '../cover_preview.dart';
 import 'library_utils.dart';
@@ -751,6 +753,11 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         );
 
         await repository.updateBook(updated);
+
+        // Invalidate stats providers to ensure ReadingTab updates
+        ref.invalidate(weeklyStatsProvider);
+        ref.invalidate(monthlyStatsProvider);
+        ref.invalidate(readingBooksProvider);
       } else {
         await repository.addBook(
           title: title,
@@ -768,6 +775,11 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           pageCount: _parsePageCount(),
           publicationYear: _parsePublicationYear(),
         );
+
+        // Invalidate stats providers to ensure ReadingTab updates
+        ref.invalidate(weeklyStatsProvider);
+        ref.invalidate(monthlyStatsProvider);
+        ref.invalidate(readingBooksProvider);
       }
 
       final initialPath = _initialCoverPath;
@@ -872,6 +884,12 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       if (existingCover != null) {
         await coverService.deleteCover(existingCover);
       }
+
+      // Invalidate stats providers
+      ref.invalidate(weeklyStatsProvider);
+      ref.invalidate(monthlyStatsProvider);
+      ref.invalidate(readingBooksProvider);
+
       if (!context.mounted) return;
       navigator.pop(true); // Return true to indicate deletion
     } catch (err) {

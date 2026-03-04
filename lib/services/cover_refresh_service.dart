@@ -95,6 +95,7 @@ class CoverRefreshService {
   Future<CoverRefreshResult> refreshMissingMetadata({
     int? ownerUserId,
     bool skipComplete = true,
+    bool force = false,
     Duration? delayBetweenRequests,
     void Function(int current, int total, String bookTitle)? onProgress,
   }) async {
@@ -106,8 +107,10 @@ class CoverRefreshService {
     final books =
         await _bookRepository.fetchActiveBooks(ownerUserId: ownerUserId);
 
-    // Filter books that are missing metadata
+    // Filter books that are missing metadata or if force is true
     final targetBooks = books.where((book) {
+      if (force) return true;
+
       // Si skipComplete está activado, saltar libros completos
       if (skipComplete && _hasCompleteMetadata(book)) {
         return false;

@@ -62,12 +62,39 @@ class SupabaseClubBookSyncRepository {
           debugPrint('[ClubBookSync] Updated club book ${remote.id}');
         }
       } else {
-        // Note: Creating new club books from remote is handled during
-        // club creation in SupabaseClubSyncRepository
+        // Bug G Fix: Crear el club book si no existe localmente
+        final club = await _clubDao.getClubByUuid(remote.clubId);
+        if (club == null) {
+          if (kDebugMode) {
+            debugPrint(
+              '[ClubBookSync] Missing club ${remote.clubId} for book ${remote.id}, skipping',
+            );
+          }
+          continue;
+        }
+
+        await _clubDao.upsertClubBook(ClubBooksCompanion.insert(
+          uuid: remote.id,
+          remoteId: Value(remote.id),
+          clubId: club.id,
+          clubUuid: remote.clubId, // En el record, clubId es el UUID remoto
+          bookUuid: remote.bookUuid,
+          orderPosition: Value(remote.orderPosition),
+          status: Value(remote.status),
+          sectionMode: Value(remote.sectionMode),
+          totalChapters: remote.totalChapters,
+          sections: remote.sections,
+          startDate: Value(remote.startDate),
+          endDate: Value(remote.endDate),
+          isDeleted: const Value(false),
+          isDirty: const Value(false),
+          syncedAt: Value(now),
+          createdAt: Value(remote.createdAt),
+          updatedAt: Value(remote.updatedAt),
+        ));
+
         if (kDebugMode) {
-          debugPrint(
-            '[ClubBookSync] Club book ${remote.id} not found locally, skipping update',
-          );
+          debugPrint('[ClubBookSync] Created missing club book ${remote.id}');
         }
       }
     }

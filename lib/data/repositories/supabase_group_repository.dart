@@ -374,6 +374,8 @@ class SupabaseGroupSyncRepository {
             // ✅ FIX: Siempre sincronizar los campos de lectura en la tabla books local,
             // incluso si el shared_book estaba dirty (los campos de lectura son del propietario
             // y deben reflejar el estado remoto).
+            // ✅ FIX Bug E: También propagar isAvailable → books.status para evitar
+            // que la UI muestre un libro disponible cuando está prestado.
             await _bookDao.updateBookFields(
               bookId: localBook.id,
               entry: BooksCompanion(
@@ -386,6 +388,8 @@ class SupabaseGroupSyncRepository {
                 isBorrowedExternal: Value(remoteShared.isBorrowedExternal),
                 externalLenderName: Value(remoteShared.externalLenderName),
                 genre: Value(remoteShared.genre),
+                status:
+                    Value(remoteShared.isAvailable ? 'available' : 'loaned'),
               ),
             );
             if (kDebugMode) {
@@ -514,11 +518,21 @@ class SupabaseGroupSyncRepository {
 
             if (existingLoan != null) {
               if (existingLoan.isDirty) {
+                // ✅ FIX Bug C: Comparar timestamps antes de saltar.
+                // Si el remoto es más nuevo, el remoto gana aunque local esté dirty.
+                final remoteUpdatedAt =
+                    remoteLoan.updatedAt ?? remoteLoan.createdAt;
+                if (!remoteUpdatedAt.isAfter(existingLoan.updatedAt)) {
+                  if (kDebugMode) {
+                    debugPrint(
+                        '[GroupSync] Skipping DIRTY loan ${existingLoan.uuid}: local is newer or equal.');
+                  }
+                  continue;
+                }
                 if (kDebugMode) {
                   debugPrint(
-                      '[GroupSync] Skipping update for DIRTY local loan ${existingLoan.uuid}');
+                      '[GroupSync] Overwriting DIRTY loan ${existingLoan.uuid}: remote is newer.');
                 }
-                continue;
               }
               await _groupDao.updateLoanFields(
                 loanId: existingLoan.id,
@@ -792,89 +806,51 @@ class SupabaseGroupSyncRepository {
             '[GroupSync] Uploading ${dirtyLoans.length} loan(s) to Supabase');
       }
 
-      for (final loan in dirtyLoans) {
-        try {
-          final sharedBook =
-              await _groupDao.findSharedBookById(loan.sharedBookId!);
-          if (sharedBook == null || sharedBook.remoteId == null) {
-            if (kDebugMode) {
-              debugPrint(
-                  '[GroupSync] Skipping loan ${loan.uuid}: shared book ${loan.sharedBookId} missing remoteId (book found: ${sharedBook != null})');
-            }
-            continue;
-          }
-
-          final lender = await _userDao.getById(loan.lenderUserId);
-          if (lender == null || lender.remoteId == null) {
-            if (kDebugMode) {
-              debugPrint(
-                  '[GroupSync] Skipping loan ${loan.uuid}: lender ${loan.lenderUserId} missing remoteId (lender found: ${lender != null})');
-            }
-            continue;
-          }
-
-          String? borrowerRemoteId;
-          if (loan.borrowerUserId != null) {
-            final borrower = await _userDao.getById(loan.borrowerUserId!);
-            if (borrower == null || borrower.remoteId == null) {
+      final db = _groupDao.attachedDatabase;
+      await db.transaction(() async {
+        for (final loan in dirtyLoans) {
+          try {
+            final sharedBook =
+                await _groupDao.findSharedBookById(loan.sharedBookId!);
+            if (sharedBook == null || sharedBook.remoteId == null) {
               if (kDebugMode) {
                 debugPrint(
-                    '[GroupSync] Skipping loan ${loan.uuid}: borrower ${loan.borrowerUserId} missing remoteId');
+                    '[GroupSync] Skipping loan ${loan.uuid}: shared book ${loan.sharedBookId} missing remoteId (book found: ${sharedBook != null})');
               }
               continue;
             }
-            borrowerRemoteId = borrower.remoteId;
-          }
 
-          final provisionalRemoteId = loan.remoteId ?? loan.uuid;
-          var ensuredRemoteId = provisionalRemoteId;
+            final lender = await _userDao.getById(loan.lenderUserId);
+            if (lender == null || lender.remoteId == null) {
+              if (kDebugMode) {
+                debugPrint(
+                    '[GroupSync] Skipping loan ${loan.uuid}: lender ${loan.lenderUserId} missing remoteId (lender found: ${lender != null})');
+              }
+              continue;
+            }
 
-          if (kDebugMode) {
-            debugPrint(
-                '[GroupSync] Syncing loan ${loan.uuid} (manual: ${loan.externalBorrowerName != null})');
-          }
+            String? borrowerRemoteId;
+            if (loan.borrowerUserId != null) {
+              final borrower = await _userDao.getById(loan.borrowerUserId!);
+              if (borrower == null || borrower.remoteId == null) {
+                if (kDebugMode) {
+                  debugPrint(
+                      '[GroupSync] Skipping loan ${loan.uuid}: borrower ${loan.borrowerUserId} missing remoteId');
+                }
+                continue;
+              }
+              borrowerRemoteId = borrower.remoteId;
+            }
 
-          if (loan.remoteId == null) {
-            ensuredRemoteId = await _groupService.createLoan(
-              id: provisionalRemoteId,
-              sharedBookId: sharedBook.remoteId!,
-              borrowerUserId: borrowerRemoteId,
-              lenderUserId: lender.remoteId!,
-              externalBorrowerName: loan.externalBorrowerName,
-              externalBorrowerContact: loan.externalBorrowerContact,
-              status: loan.status,
-              requestedAt: loan.requestedAt,
-              approvedAt: loan.approvedAt,
-              dueDate: loan.dueDate,
-              borrowerReturnedAt: loan.borrowerReturnedAt,
-              lenderReturnedAt: loan.lenderReturnedAt,
-              returnedAt: loan.returnedAt,
-              isDeleted: loan.isDeleted,
-              createdAt: loan.createdAt,
-              updatedAt: loan.updatedAt,
-              accessToken: accessToken,
-            );
+            final provisionalRemoteId = loan.remoteId ?? loan.uuid;
+            var ensuredRemoteId = provisionalRemoteId;
+
             if (kDebugMode) {
               debugPrint(
-                  '[GroupSync] Created remote loan ${loan.uuid} -> $ensuredRemoteId');
+                  '[GroupSync] Syncing loan ${loan.uuid} (manual: ${loan.externalBorrowerName != null})');
             }
-          } else {
-            final updated = await _groupService.updateLoan(
-              id: provisionalRemoteId,
-              status: loan.status,
-              approvedAt: loan.approvedAt,
-              dueDate: loan.dueDate,
-              borrowerReturnedAt: loan.borrowerReturnedAt,
-              lenderReturnedAt: loan.lenderReturnedAt,
-              returnedAt: loan.returnedAt,
-              isDeleted: loan.isDeleted,
-              externalBorrowerName: loan.externalBorrowerName,
-              externalBorrowerContact: loan.externalBorrowerContact,
-              updatedAt: loan.updatedAt,
-              accessToken: accessToken,
-            );
 
-            if (!updated) {
+            if (loan.remoteId == null) {
               ensuredRemoteId = await _groupService.createLoan(
                 id: provisionalRemoteId,
                 sharedBookId: sharedBook.remoteId!,
@@ -896,26 +872,68 @@ class SupabaseGroupSyncRepository {
               );
               if (kDebugMode) {
                 debugPrint(
-                    '[GroupSync] Remote loan ${loan.uuid} missing, recreated as $ensuredRemoteId');
+                    '[GroupSync] Created remote loan ${loan.uuid} -> $ensuredRemoteId');
+              }
+            } else {
+              final updated = await _groupService.updateLoan(
+                id: provisionalRemoteId,
+                status: loan.status,
+                approvedAt: loan.approvedAt,
+                dueDate: loan.dueDate,
+                borrowerReturnedAt: loan.borrowerReturnedAt,
+                lenderReturnedAt: loan.lenderReturnedAt,
+                returnedAt: loan.returnedAt,
+                isDeleted: loan.isDeleted,
+                externalBorrowerName: loan.externalBorrowerName,
+                externalBorrowerContact: loan.externalBorrowerContact,
+                updatedAt: loan.updatedAt,
+                accessToken: accessToken,
+              );
+
+              if (!updated) {
+                ensuredRemoteId = await _groupService.createLoan(
+                  id: provisionalRemoteId,
+                  sharedBookId: sharedBook.remoteId!,
+                  borrowerUserId: borrowerRemoteId,
+                  lenderUserId: lender.remoteId!,
+                  externalBorrowerName: loan.externalBorrowerName,
+                  externalBorrowerContact: loan.externalBorrowerContact,
+                  status: loan.status,
+                  requestedAt: loan.requestedAt,
+                  approvedAt: loan.approvedAt,
+                  dueDate: loan.dueDate,
+                  borrowerReturnedAt: loan.borrowerReturnedAt,
+                  lenderReturnedAt: loan.lenderReturnedAt,
+                  returnedAt: loan.returnedAt,
+                  isDeleted: loan.isDeleted,
+                  createdAt: loan.createdAt,
+                  updatedAt: loan.updatedAt,
+                  accessToken: accessToken,
+                );
+                if (kDebugMode) {
+                  debugPrint(
+                      '[GroupSync] Remote loan ${loan.uuid} missing, recreated as $ensuredRemoteId');
+                }
               }
             }
-          }
 
-          await _groupDao.updateLoanFields(
-            loanId: loan.id,
-            entry: LoansCompanion(
-              remoteId: Value(ensuredRemoteId),
-              isDirty: const Value(false),
-              syncedAt: Value(syncTime),
-            ),
-          );
-        } catch (error) {
-          if (kDebugMode) {
-            debugPrint('[GroupSync] Failed to push loan ${loan.uuid}: $error');
+            await _groupDao.updateLoanFields(
+              loanId: loan.id,
+              entry: LoansCompanion(
+                remoteId: Value(ensuredRemoteId),
+                isDirty: const Value(false),
+                syncedAt: Value(syncTime),
+              ),
+            );
+          } catch (error) {
+            if (kDebugMode) {
+              debugPrint(
+                  '[GroupSync] Failed to push loan ${loan.uuid}: $error');
+            }
+            rethrow; // Re-lanzar para que falle la transacción
           }
-          // Don't rethrow, continue with other loans
         }
-      }
+      });
     }
   }
 

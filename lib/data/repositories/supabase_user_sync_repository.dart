@@ -199,8 +199,7 @@ class SupabaseUserSyncRepository {
           name: 'SupabaseUserSyncRepository',
           level: 1000,
         );
-        // ✅ No relanzar: continúa con el siguiente usuario sucio
-        continue;
+        throw SupabaseUserSyncException('Error sincronizando usuario ${user.username}: $error');
       }
     }
   }

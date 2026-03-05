@@ -55,10 +55,15 @@ class _LibraryTabState extends ConsumerState<LibraryTab>
   }
 
   List<Book> _filterBooks(List<Book> books,
-      {required bool isBorrowedExternal}) {
+      {required bool isMyBooks, required int activeUserId}) {
     // 1. Separate based on tab requirement
-    var filtered =
-        books.where((b) => b.isBorrowedExternal == isBorrowedExternal).toList();
+    var filtered = books.where((b) {
+      if (isMyBooks) {
+        return b.ownerUserId == activeUserId && !b.isBorrowedExternal;
+      } else {
+        return b.ownerUserId != activeUserId || b.isBorrowedExternal;
+      }
+    }).toList();
 
     // 2. Apply common filters
     if (_readStatusFilter != null) {
@@ -115,6 +120,7 @@ class _LibraryTabState extends ConsumerState<LibraryTab>
   @override
   Widget build(BuildContext context) {
     final booksAsync = ref.watch(bookListProvider);
+    final activeUser = ref.watch(activeUserProvider).value;
     final theme = Theme.of(context);
 
     // Common Header Actions
@@ -214,9 +220,12 @@ class _LibraryTabState extends ConsumerState<LibraryTab>
           Expanded(
             child: booksAsync.when(
               data: (books) {
-                final myBooks = _filterBooks(books, isBorrowedExternal: false);
-                final borrowedBooks =
-                    _filterBooks(books, isBorrowedExternal: true);
+                if (activeUser == null) return const SizedBox();
+
+                final myBooks = _filterBooks(books,
+                    isMyBooks: true, activeUserId: activeUser.id);
+                final borrowedBooks = _filterBooks(books,
+                    isMyBooks: false, activeUserId: activeUser.id);
 
                 return TabBarView(
                   controller: _tabController,
@@ -231,7 +240,7 @@ class _LibraryTabState extends ConsumerState<LibraryTab>
                       context,
                       borrowedBooks,
                       emptyMessage:
-                          'Aquí aparecerán los libros que te presten amigos fuera de la app.',
+                          'Aquí aparecerán los libros que te presten amigos, ya sea por la app o fuera de ella.',
                       isMyBooksTab: false,
                     ),
                   ],

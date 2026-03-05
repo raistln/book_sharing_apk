@@ -132,8 +132,12 @@ class BookRepository {
     // No need to mark pending here to avoid duplicate syncs
   }
 
-  Stream<List<Book>> watchAll({int? ownerUserId}) =>
-      _bookDao.watchActiveBooks(ownerUserId: ownerUserId);
+  Stream<List<Book>> watchAll({int? ownerUserId}) {
+    if (ownerUserId != null) {
+      return _bookDao.watchBooksIncludingLoans(ownerUserId);
+    }
+    return _bookDao.watchActiveBooks();
+  }
 
   Future<List<Book>> fetchActiveBooks({int? ownerUserId}) =>
       _bookDao.getActiveBooks(ownerUserId: ownerUserId);

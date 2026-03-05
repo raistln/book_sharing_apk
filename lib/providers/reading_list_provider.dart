@@ -11,7 +11,7 @@ final readingBooksProvider = StreamProvider.autoDispose<List<Book>>((ref) {
     return const Stream.empty();
   }
 
-  return dao.watchActiveBooks(ownerUserId: activeUser.id).map((books) {
+  return dao.watchBooksIncludingLoans(activeUser.id).map((books) {
     final filtered = books.where((book) {
       final status = book.readingStatus;
       return status == 'reading' || status == 'rereading' || status == 'paused';

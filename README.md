@@ -28,6 +28,16 @@ Una aplicación móvil moderna y completa construida con **Flutter** para gestio
 
 La aplicación combina la potencia de Flutter con un backend robusto en Supabase, ofreciendo sincronización en tiempo real, notificaciones push y una experiencia de usuario fluida y moderna.
 
+## 🚀 Novedades (Versión 1.8.0)
+
+- **Nueva Pestaña de Lectura:** Seguimiento centralizado de tus lecturas actuales, objetivos, sesiones y estadísticas.
+- **Navegación Intuitiva:** Rediseño estructural con nuevas pestañas principales para un flujo más natural.
+- **Modo Enfoque (Zen Mode):** Integración con 'No Molestar' (DND) y retroalimentación háptica para una concentración total.
+- **Sincronización Avanzada:** Tus sesiones de lectura y listas de deseos (Wishlist) ahora se sincronizan en la nube.
+- **Perfil Premium:** Perfil en pantalla completa con biografía, ubicación y exposición de libros favoritos.
+- **Clubes de Lectura Flexibles:** Unión simplificada con códigos (UUID) y una interfaz más limpia.
+- **Dashboard Dinámico:** Mejora del ritmo de lectura con soporte para tus últimos préstamos y libros, adaptándose a tu actividad.
+
 ---
 
 ## ✨ Características Principales
@@ -51,13 +61,15 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 - **Gestión de Miembros:** Administra roles, permisos y membresías de tus grupos
 - **Grupo Personal Automático:** Sistema de préstamos manuales para personas fuera de la plataforma
 
-### 📖 Clubes de Lectura (Beta)
+### 📖 Clubes de Lectura
 - **Lectura por Secciones:** Divide los libros en partes y fomenta la discusión organizada por capítulos
 - **Hilos de Discusión:** Espacios dedicados para debatir y comentar cada sección del libro sin spoilers
 - **Propuestas y Votaciones:** Sistema democrático para elegir la próxima lectura del club
 - **Seguimiento de Progreso:** Visualiza el avance de todos los miembros y mantén el ritmo de lectura
 - **Configuración Versátil:** Gestión de periodicidad personalizada (días entre secciones), lugares de reunión y descripciones
 - **Integración con Biblioteca:** Pasa fácilmente los libros del club a tu biblioteca personal una vez finalizados
+- **Ingreso Simplificado:** Únete mediante códigos (UUID) con una interfaz limpia y depurada
+
 
 ### 🔄 Sistema Profesional de Préstamos
 - **Flujo Digital Completo:** Solicita, aprueba y gestiona préstamos directamente desde la app
@@ -75,10 +87,11 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 - **Datos Locales:** Base de datos SQLite local con sincronización opcional a la nube
 
 ### 📊 Estadísticas e Insights
+- **Nueva Pestaña de Lectura:** Panel centralizado para seguimientos de lecturas, objetivos y sesiones rápidas.
 - **Dashboard Visual:** Gráficos interactivos sobre tu progreso de lectura y estado de la colección
 - **Métricas de Préstamo:** Descubre qué libros son los más solicitados en tus grupos
-- **Calendario y Ritmo de Lectura Dinámico:** Nuevo diseño para el seguimiento de hábitos con calendario de actividad y gráfico de ritmo que ajusta automáticamente su rango de fechas según tu historial. Soporte para zoom táctil mejorado.
-- **Interfaz Estandarizada:** Alineación visual perfecta y tipografía coherente en todas las pestañas de navegación (Lectura, Biblioteca, Préstamos).
+- **Calendario y Ritmo de Lectura Dinámico:** Seguimiento de hábitos con calendario de actividad y gráfico de ritmo interactivo y zoom táctil mejorado.
+- **Interfaz Estandarizada:** Alineación visual perfecta y tipografía coherente en todas las pestañas.
 - **Estadísticas de Grupo:** Analiza la actividad y popularidad de libros en cada comunidad
 
 ### 💾 Herramientas y Exportación
@@ -230,7 +243,6 @@ Consulta `docs/future_iterations.md` para ver las características planificadas,
 - 🌐 Soporte multiidioma completo
 - 📚 Integración con más APIs de libros
 - 🎯 Recomendaciones personalizadas basadas en IA
-- 📖 Clubes de lectura con discusiones
 - 🏆 Sistema de logros y gamificación
 
 ---

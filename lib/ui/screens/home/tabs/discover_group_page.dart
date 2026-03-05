@@ -15,6 +15,7 @@ import '../../../../services/onboarding_service.dart';
 import '../../../widgets/coach_mark_target.dart';
 import '../../../widgets/empty_state.dart';
 import 'discover_book_detail_page.dart';
+import '../../../widgets/community/group_stats_chips.dart';
 import '../../../../models/book_genre.dart';
 import '../../../widgets/library/book_text_list.dart';
 import '../../../widgets/community/group_card.dart';
@@ -320,7 +321,6 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                                 controller.setOwnerFilter(userId),
                             activeUserId: activeUser?.id,
                           ),
-                          const SizedBox(width: 8),
                           FilterChip(
                             label: const Text('Incluir no disponibles'),
                             selected: state.includeUnavailable,
@@ -332,6 +332,21 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                     ),
                   ],
                 ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: PremiumGroupStats(
+                groupId: group.id,
+                members: membersAsync.asData?.value,
+                sharedBooks: state.items,
+                loans: loansAsync.asData?.value,
+                currentUserId: activeUser?.id,
+                accentColor: group.primaryColor != null
+                    ? Color(int.parse(
+                        'FF${group.primaryColor!.replaceFirst('#', '')}',
+                        radix: 16))
+                    : null,
               ),
             ),
             if (kDebugMode) ...[

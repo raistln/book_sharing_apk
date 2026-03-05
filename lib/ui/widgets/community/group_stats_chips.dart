@@ -2,191 +2,157 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/local/group_dao.dart';
-import '../../../providers/book_providers.dart';
 
-class GroupStatsChips extends ConsumerWidget {
-  const GroupStatsChips({
+class PremiumGroupStats extends ConsumerWidget {
+  const PremiumGroupStats({
     super.key,
     required this.groupId,
-    required this.membersAsync,
-    required this.sharedBooksAsync,
-    required this.loansAsync,
-    required this.invitationsAsync,
+    this.members,
+    this.sharedBooks,
+    this.loans,
+    this.currentUserId,
+    this.accentColor,
   });
 
   final int groupId;
-  final AsyncValue<List<dynamic>> membersAsync;
-  final AsyncValue<List<dynamic>> sharedBooksAsync;
-  final AsyncValue<List<dynamic>> loansAsync;
-  final AsyncValue<List<dynamic>> invitationsAsync;
+  final List<GroupMemberDetail>? members;
+  final List<SharedBookDetail>? sharedBooks;
+  final List<LoanDetail>? loans;
+  final int? currentUserId;
+  final Color? accentColor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeUser = ref.watch(activeUserProvider).value;
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final primary = accentColor ?? colorScheme.primary;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _StatBlock(
-                icon: Icons.people_outline,
-                label: 'Miembros',
-                value: membersAsync.when(
-                  data: (items) => '${items.length}',
-                  loading: () => '...',
-                  error: (_, __) => '!',
-                ),
-                color: Colors.blue,
-              ),
-              _buildVerticalDivider(context),
-              _StatBlock(
-                icon: Icons.menu_book_outlined,
-                label: 'Libros',
-                value: sharedBooksAsync.when(
-                  data: (items) => '${items.length}',
-                  loading: () => '...',
-                  error: (_, __) => '!',
-                ),
-                color: Colors.orange,
-              ),
-              _buildVerticalDivider(context),
-              _StatBlock(
-                icon: Icons.check_circle_outline,
-                label: 'Disponibles',
-                value: _calculateAvailable(loansAsync, sharedBooksAsync),
-                color: Colors.green,
-              ),
-            ],
-          ),
-          if (activeUser != null) ...[
-            const Divider(height: 24),
-            Row(
-              children: [
-                Icon(
-                  Icons.person_outline,
-                  size: 16,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Has aportado ',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                sharedBooksAsync.when(
-                  data: (books) {
-                    final myBooks = (books as List<SharedBookDetail>)
-                        .where((detail) =>
-                            detail.sharedBook.ownerUserId == activeUser.id)
-                        .length;
-                    return Text(
-                      '$myBooks libros',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                    );
-                  },
-                  loading: () => const Text('...'),
-                  error: (_, __) => const Text('!'),
-                ),
-              ],
+    // Calculate stats if provided, otherwise show placeholders
+    final membersCount = members?.length ?? 0;
+    final booksCount = sharedBooks?.length ?? 0;
+
+    final myBooksCount = sharedBooks
+            ?.where((sb) => sb.sharedBook.ownerUserId == currentUserId)
+            .length ??
+        0;
+
+    final activeLoansCount = loans
+            ?.where((l) =>
+                l.loan.status == 'active' || l.loan.status == 'requested')
+            .length ??
+        0;
+
+    final availableBooksCount = sharedBooks
+            ?.where((sb) =>
+                sb.sharedBook.isAvailable &&
+                !(loans?.any((l) =>
+                        l.loan.sharedBookId == sb.sharedBook.id &&
+                        (l.loan.status == 'active' ||
+                            l.loan.status == 'requested')) ??
+                    false))
+            .length ??
+        0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GridView.count(
+          crossAxisCount: 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.1,
+          children: [
+            _StatCard(
+              label: 'Miembros',
+              value: '$membersCount',
+              icon: Icons.people_outline,
+              color: primary,
+              theme: theme,
+            ),
+            _StatCard(
+              label: 'Libros',
+              value: '$booksCount',
+              icon: Icons.menu_book_outlined,
+              color: Colors.orange,
+              theme: theme,
+            ),
+            _StatCard(
+              label: 'Libres',
+              value: '$availableBooksCount',
+              icon: Icons.check_circle_outline,
+              color: Colors.green,
+              theme: theme,
             ),
           ],
+        ),
+        if (currentUserId != null) ...[
+          const SizedBox(height: 16),
+          _ContributionBanner(
+            count: myBooksCount,
+            total: booksCount,
+            activeLoans: activeLoansCount,
+            color: primary,
+            theme: theme,
+          ),
         ],
-      ),
-    );
-  }
-
-  String _calculateAvailable(
-    AsyncValue<List<dynamic>> loansAsync,
-    AsyncValue<List<dynamic>> sharedBooksAsync,
-  ) {
-    if (loansAsync.hasValue && sharedBooksAsync.hasValue) {
-      final loans = loansAsync.value as List<LoanDetail>;
-      final sharedBooks = sharedBooksAsync.value as List<SharedBookDetail>;
-
-      final activeLoans = loans.where((detail) =>
-          detail.loan.status == 'requested' || detail.loan.status == 'active');
-
-      final loanedBookIds = activeLoans
-          .map((detail) => detail.sharedBook?.id)
-          .whereType<int>()
-          .toSet();
-
-      final available = sharedBooks
-          .where((detail) =>
-              detail.sharedBook.isAvailable &&
-              !loanedBookIds.contains(detail.sharedBook.id))
-          .length;
-
-      return '$available';
-    }
-    return '...';
-  }
-
-  Widget _buildVerticalDivider(BuildContext context) {
-    return Container(
-      height: 32,
-      width: 1,
-      color:
-          Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+      ],
     );
   }
 }
 
-class _StatBlock extends StatelessWidget {
-  const _StatBlock({
-    required this.icon,
+class _StatCard extends StatelessWidget {
+  const _StatCard({
     required this.label,
     required this.value,
+    required this.icon,
     required this.color,
+    required this.theme,
   });
 
-  final IconData icon;
   final String label;
   final String value;
+  final IconData icon;
   final Color color;
+  final ThemeData theme;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Expanded(
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color ?? theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: color.withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 4),
-              Text(
-                value,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 20, color: color),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
           ),
           Text(
             label,
@@ -195,6 +161,82 @@ class _StatBlock extends StatelessWidget {
               fontSize: 10,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ContributionBanner extends StatelessWidget {
+  const _ContributionBanner({
+    required this.count,
+    required this.total,
+    required this.activeLoans,
+    required this.color,
+    required this.theme,
+  });
+
+  final int count;
+  final int total;
+  final int activeLoans;
+  final Color color;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withValues(alpha: 0.15),
+            color.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.stars, size: 20, color: color),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tu aporte al grupo',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                Text(
+                  'Has compartido $count libros y hay $activeLoans en préstamo.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (count > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${((count / (total > 0 ? total : 1)) * 100).toInt()}%',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
         ],
       ),
     );

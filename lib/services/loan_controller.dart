@@ -181,6 +181,8 @@ class LoanController extends StateNotifier<LoanActionState> {
     required String lenderName,
     required DateTime dueDate,
     String? lenderContact,
+    String? isbn,
+    String? coverPath,
   }) async {
     state = state.copyWith(
         isLoading: true, lastError: () => null, lastSuccess: () => null);
@@ -192,6 +194,8 @@ class LoanController extends StateNotifier<LoanActionState> {
         lenderName: lenderName,
         dueDate: dueDate,
         lenderContact: lenderContact,
+        isbn: isbn,
+        coverPath: coverPath,
       );
       // Evento crítico: sincronizar inmediatamente
       await _syncCoordinator.syncOnCriticalEvent(SyncEvent.loanCreated);

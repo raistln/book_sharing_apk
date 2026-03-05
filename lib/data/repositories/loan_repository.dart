@@ -749,6 +749,8 @@ class LoanRepository {
     required String lenderName,
     required DateTime dueDate,
     String? lenderContact,
+    String? isbn,
+    String? coverPath,
   }) async {
     final now = DateTime.now();
 
@@ -761,11 +763,11 @@ class LoanRepository {
           author: author.trim().isEmpty
               ? const Value.absent()
               : Value(author.trim()),
+          isbn: isbn != null ? Value(isbn) : const Value.absent(),
+          coverPath:
+              coverPath != null ? Value(coverPath) : const Value.absent(),
           ownerUserId: Value(user.id),
-          status: const Value('loaned'), // Status 'loaned' or 'private'
-          // We use 'loaned' to imply it's not available for lending, but 'private' might be better if supported.
-          // stick to 'loaned' as it's standard for "not available".
-          // And isBorrowedExternal = true distinguishes it.
+          status: const Value('loaned'),
           isBorrowedExternal: const Value(true),
           externalLenderName: Value(lenderName),
           isDirty: const Value(true),

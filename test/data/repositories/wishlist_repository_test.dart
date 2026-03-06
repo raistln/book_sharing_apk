@@ -33,7 +33,7 @@ void main() {
 
   group('WishlistRepository', () {
     test('watchWishlist delegates to wishlistDao', () {
-      final stream = Stream<List<WishlistItem>>.empty();
+      const stream = Stream<List<WishlistItem>>.empty();
       when(() => wishlistDao.watchForUser(1)).thenAnswer((_) => stream);
 
       final result = repository.watchWishlist(1);

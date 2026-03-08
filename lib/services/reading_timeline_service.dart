@@ -29,38 +29,42 @@ class ReadingTimelineService {
 
     final now = DateTime.now();
 
-    // Handle transitions
     switch (newStatus) {
       case ReadingStatus.reading:
-        // Starting to read
         await _createStartEvent(book, userId, now);
+        // Safety net: si por alguna razón llega aquí con is_read=true
+        // (datos externos, migración, etc.), lo corregimos.
+        if (book.isRead) {
+          await bookDao.toggleReadStatus(book.id, false);
+        }
         break;
 
       case ReadingStatus.paused:
-        // Pausing
         await _createPauseEvent(book, userId, now);
         break;
 
       case ReadingStatus.finished:
-        // Finishing
         await _createFinishEvent(book, userId, now);
-        // Update isRead flag for backwards compatibility
         await bookDao.toggleReadStatus(book.id, true);
         break;
 
       case ReadingStatus.abandoned:
-        // Abandoning - no specific event, just status change
+        // Si abandona una relectura, is_read se mantiene true (ya lo leyó una vez).
+        // Si abandona una lectura inicial, is_read debe quedar false.
+        if (!book.isRead) {
+          await bookDao.toggleReadStatus(book.id, false);
+        }
         break;
 
       case ReadingStatus.rereading:
-        // Starting to reread
         await _createStartEvent(book, userId, now, isRereading: true);
-        // isRead remains true since it was already read once
+        // isRead permanece true: ya lo leyó al menos una vez.
         await bookDao.toggleReadStatus(book.id, true);
         break;
 
       case ReadingStatus.pending:
-        // Resetting to pending - no event needed
+        // Resetear a pendiente limpia el flag is_read.
+        await bookDao.toggleReadStatus(book.id, false);
         break;
     }
 
@@ -75,10 +79,8 @@ class ReadingTimelineService {
     DateTime eventDate, {
     bool isRereading = false,
   }) async {
-    // Check if a start event already exists for this reading session
     final existingStart = await timelineDao.getFirstEntry(book.id);
 
-    // If rereading or no existing start, create new start event
     if (isRereading || existingStart == null) {
       await timelineDao.createEntry(
         bookId: book.id,
@@ -97,7 +99,6 @@ class ReadingTimelineService {
     int userId,
     DateTime eventDate,
   ) async {
-    // Get latest progress to capture current state
     final latest = await timelineDao.getLatestEntry(book.id);
 
     await timelineDao.createEntry(
@@ -136,7 +137,6 @@ class ReadingTimelineService {
     String? note,
     DateTime? eventDate,
   }) async {
-    // Calculate percentage if page count is known
     int? percentageRead;
     if (currentPage != null && book.pageCount != null && book.pageCount! > 0) {
       percentageRead = ((currentPage / book.pageCount!) * 100).round();
@@ -153,8 +153,8 @@ class ReadingTimelineService {
       eventDate: eventDate ?? DateTime.now(),
     );
 
-    // If adding progress while paused, automatically switch back to the correct active status.
-    // A book with isRead==true was paused during a reread → restore 'rereading'.
+    // Si añade progreso mientras estaba en pausa, reanudar al estado activo correcto.
+    // is_read=true → estaba releyendo; is_read=false → estaba leyendo por primera vez.
     if (book.readingStatus == 'paused') {
       final resumeStatus = book.isRead ? 'rereading' : 'reading';
       await bookDao.updateReadingStatus(book.id, resumeStatus);

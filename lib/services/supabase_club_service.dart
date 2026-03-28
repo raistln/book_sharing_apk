@@ -600,6 +600,8 @@ class SupabaseClubService {
     required String id,
     required String name,
     required String description,
+    required String city,
+    required String visibility,
     String? meetingPlace,
     required String frequency,
     required int frequencyDays,
@@ -615,6 +617,8 @@ class SupabaseClubService {
     final payload = <String, dynamic>{
       'name': name,
       'description': description,
+      'city': city,
+      'visibility': visibility,
       'meeting_place': meetingPlace,
       'frequency': frequency,
       'frequency_days': frequencyDays,
@@ -1183,6 +1187,83 @@ class SupabaseClubService {
 
     if (response.statusCode == 404) return false;
     if (response.statusCode >= 200 && response.statusCode < 300) return true;
+
+    throw SupabaseClubServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+    );
+  }
+
+  // =====================================================================
+  // BUG J FIX: Fetch book proposals for a club
+  // =====================================================================
+
+  Future<List<SupabaseBookProposalRecord>> fetchBookProposals({
+    required String clubId,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/book_proposals').replace(
+      queryParameters: {
+        'select':
+            'id,club_id,book_uuid,proposed_by_user_id,title,author,isbn,cover_url,votes,status,closing_date,created_at,updated_at',
+        'club_id': 'eq.$clubId',
+        'order': 'created_at.asc',
+      },
+    );
+
+    final response = await _client.get(
+      uri,
+      headers: _buildHeaders(config, accessToken: accessToken),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final payload =
+          jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+      return payload
+          .whereType<Map<String, dynamic>>()
+          .map(SupabaseBookProposalRecord.fromJson)
+          .toList(growable: false);
+    }
+
+    throw SupabaseClubServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+    );
+  }
+
+  // =====================================================================
+  // BUG K FIX: Fetch reading progress for a club's books
+  // =====================================================================
+
+  Future<List<SupabaseReadingProgressRecord>> fetchReadingProgress({
+    required List<String> bookIds,
+    String? accessToken,
+  }) async {
+    if (bookIds.isEmpty) return [];
+
+    final config = await _loadConfig();
+    final uri =
+        Uri.parse('${config.url}/rest/v1/club_reading_progress').replace(
+      queryParameters: {
+        'select':
+            'id,book_id,user_id,current_section,current_chapter,progress_status,created_at,updated_at',
+        'book_id': 'in.(${bookIds.join(',')})',
+        'order': 'updated_at.asc',
+      },
+    );
+
+    final response = await _client.get(
+      uri,
+      headers: _buildHeaders(config, accessToken: accessToken),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final payload =
+          jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+      return payload
+          .whereType<Map<String, dynamic>>()
+          .map(SupabaseReadingProgressRecord.fromJson)
+          .toList(growable: false);
+    }
 
     throw SupabaseClubServiceException(
       'Error ${response.statusCode}: ${response.body}',

@@ -1,10 +1,8 @@
 name: Keep Supabase Warm
-
 on:
   schedule:
     - cron: "0 4 * * 1" # Every Monday at 04:00 UTC
   workflow_dispatch:
-
 jobs:
   ping:
     name: Ping Supabase REST endpoint
@@ -25,4 +23,4 @@ jobs:
             --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
             --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             --header "Accept: application/json" \
-            "${SUPABASE_URL}/rest/v1/local_users?select=id&limit=1"
+            "${SUPABASE_URL}/rest/v1/"

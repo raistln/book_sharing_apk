@@ -17,7 +17,7 @@ import '../../../../utils/group_utils.dart';
 import '../../../../design_system/literary_shadows.dart';
 import '../../../../design_system/evocative_texts.dart';
 import '../../../../ui/utils/library_transition.dart';
-import 'group_stats_table.dart';
+import 'group_stats_chips.dart';
 import 'group_menu.dart';
 import '../../screens/home/tabs/discover_group_page.dart';
 
@@ -282,11 +282,13 @@ class _GroupCardState extends ConsumerState<GroupCard> {
               const SizedBox(height: 12),
               // Hide stats and shared books for personal loans group
               if (!isPersonalGroup) ...[
-                GroupStatsTable(
+                PremiumGroupStats(
+                  groupId: group.id,
                   members: members,
                   sharedBooks: sharedBooksAsync.asData?.value ?? [],
-                  loansAsync: loansAsync,
+                  loans: loansAsync.asData?.value ?? [],
                   currentUserId: activeUser?.id,
+                  accentColor: tintColor,
                 ),
                 const SizedBox(height: 16),
                 // Prominent Discovery Button

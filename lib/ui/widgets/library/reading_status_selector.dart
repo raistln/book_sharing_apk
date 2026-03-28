@@ -18,10 +18,23 @@ class ReadingStatusSelector extends ConsumerWidget {
   final Book book;
   final int userId;
 
+  /// Devuelve los estados visibles según si el libro ya fue leído alguna vez.
+  ///
+  /// - Si [isRead] es false: se muestra `reading`, se oculta `rereading`.
+  /// - Si [isRead] es true:  se muestra `rereading`, se oculta `reading`.
+  List<ReadingStatus> _visibleStatuses(bool isRead) {
+    return ReadingStatus.values.where((status) {
+      if (isRead && status == ReadingStatus.reading) return false;
+      if (!isRead && status == ReadingStatus.rereading) return false;
+      return true;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final currentStatus = ReadingStatus.fromValue(book.readingStatus);
+    final visibleStatuses = _visibleStatuses(book.isRead);
 
     return Card(
       child: Padding(
@@ -48,7 +61,7 @@ class ReadingStatusSelector extends ConsumerWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: ReadingStatus.values.map((status) {
+              children: visibleStatuses.map((status) {
                 final isSelected = status == currentStatus;
                 return FilterChip(
                   selected: isSelected,
@@ -90,10 +103,10 @@ class ReadingStatusSelector extends ConsumerWidget {
     final bookDao = ref.read(bookDaoProvider);
 
     try {
-      // Update book status in database
+      // Actualizar el estado en BD
       await bookDao.updateReadingStatus(book.id, newStatus.value);
 
-      // Handle timeline events
+      // Gestionar eventos de timeline e is_read
       await timelineService.onReadingStatusChanged(
         book: book,
         oldStatus: oldStatus,
@@ -101,7 +114,7 @@ class ReadingStatusSelector extends ConsumerWidget {
         userId: userId,
       );
 
-      // Refresh book data
+      // Refrescar datos
       ref.invalidate(bookStreamProvider(book.id));
       ref.invalidate(readingTimelineProvider(book.id));
 
@@ -114,7 +127,6 @@ class ReadingStatusSelector extends ConsumerWidget {
 
       if (!context.mounted) return;
 
-      // Show feedback
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Estado cambiado a: ${newStatus.label}'),

@@ -301,6 +301,88 @@ void main() {
         expect(result, isFalse);
       });
     });
+    group('Sync and Shared Book Management', () {
+      test('isPhysical transition management', () async {
+        // 0. Setup group and membership
+        final group = await _insertGroup(groupDao, name: 'Test Group');
+        await _insertMember(groupDao, group: group, userId: owner.id);
+
+        // 1. Add a physical book
+        final bookId = await bookRepository.addBook(
+          title: 'Physical Book',
+          author: 'Author',
+          owner: owner,
+          isPhysical: true,
+        );
+
+        // 2. Verify shared_books entry exists (auto-shared)
+        final sharedBooks = await groupDao.findSharedBooksByBookId(bookId);
+        expect(sharedBooks.length, 1,
+            reason: 'Physical book should be auto-shared');
+        expect(sharedBooks.first.isDeleted, isFalse);
+
+        // 3. Update to digital (non-physical)
+        final book = await bookRepository.findById(bookId);
+        final digitalBook = book!.copyWith(isPhysical: false);
+        await bookRepository.updateBook(digitalBook);
+
+        // 4. Verify shared_books entry is soft-deleted
+        final sharedAfterDigital =
+            await groupDao.findSharedBooksByBookId(bookId);
+        expect(sharedAfterDigital.first.isDeleted, isTrue,
+            reason: 'Digital book should have its shared entry soft-deleted');
+
+        // 5. Update back to physical
+        final physicalAgain = digitalBook.copyWith(isPhysical: true);
+        await bookRepository.updateBook(physicalAgain);
+
+        // 6. Verify shared_books entry is restored or recreated
+        final sharedFinal = await groupDao.findSharedBooksByBookId(bookId);
+        expect(sharedFinal.any((s) => !s.isDeleted), isTrue,
+            reason: 'Updating back to physical should restore shared status');
+      });
+
+      test('isBorrowedExternal filtering management', () async {
+        // 0. Setup group and membership
+        final group = await _insertGroup(groupDao, name: 'Test Group');
+        await _insertMember(groupDao, group: group, userId: owner.id);
+
+        // 1. Add an external borrowed book
+        final bookId = await bookRepository.addBook(
+          title: 'Borrowed Book',
+          author: 'Lender',
+          owner: owner,
+          isBorrowedExternal: true,
+        );
+
+        // 2. Verify shared_books entry DOES NOT exist
+        final sharedBooks = await groupDao.findSharedBooksByBookId(bookId);
+        expect(sharedBooks.isEmpty, isTrue,
+            reason: 'Borrowed book should NOT be auto-shared');
+
+        // 3. Update to NOT borrowed
+        final book = await bookRepository.findById(bookId);
+        final ownedBook = book!.copyWith(isBorrowedExternal: false);
+        await bookRepository.updateBook(ownedBook);
+
+        // 4. Verify shared_books entry exists now
+        final sharedAfterUpdate =
+            await groupDao.findSharedBooksByBookId(bookId);
+        expect(sharedAfterUpdate.any((s) => !s.isDeleted), isTrue,
+            reason:
+                'Book should be shared after isBorrowedExternal is set to false');
+
+        // 5. Update back to borrowed
+        final borrowedAgain = ownedBook.copyWith(isBorrowedExternal: true);
+        await bookRepository.updateBook(borrowedAgain);
+
+        // 6. Verify shared_books entry is soft-deleted
+        final sharedFinal = await groupDao.findSharedBooksByBookId(bookId);
+        expect(sharedFinal.every((s) => s.isDeleted), isTrue,
+            reason:
+                'Book should have its shared entry soft-deleted after being marked as borrowed');
+      });
+    });
   });
 }
 
@@ -343,4 +425,38 @@ Future<Book> _insertBook(BookDao bookDao,
     ),
   );
   return (await bookDao.findById(bookId))!;
+}
+
+Future<Group> _insertGroup(GroupDao groupDao, {required String name}) async {
+  final now = DateTime(2024, 1, 1, 12);
+  final groupId = await groupDao.insertGroup(
+    GroupsCompanion.insert(
+      uuid: 'group-$name',
+      name: name,
+      remoteId: drift.Value('remote-$name'),
+      isDirty: const drift.Value(false),
+      isDeleted: const drift.Value(false),
+      createdAt: drift.Value(now),
+      updatedAt: drift.Value(now),
+    ),
+  );
+  return (await groupDao.findGroupById(groupId))!;
+}
+
+Future<void> _insertMember(GroupDao groupDao,
+    {required Group group, required int userId}) async {
+  final now = DateTime(2024, 1, 1, 12);
+  await groupDao.insertMember(
+    GroupMembersCompanion.insert(
+      uuid: 'member-${group.id}-$userId',
+      groupId: group.id,
+      groupUuid: group.uuid,
+      memberUserId: userId,
+      remoteId: drift.Value('remote-member-${group.id}-$userId'),
+      isDirty: const drift.Value(false),
+      isDeleted: const drift.Value(false),
+      createdAt: drift.Value(now),
+      updatedAt: drift.Value(now),
+    ),
+  );
 }

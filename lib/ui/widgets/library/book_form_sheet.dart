@@ -16,79 +16,14 @@ import '../../../providers/permission_providers.dart';
 import '../../../services/cover_image_service_base.dart';
 import '../../../services/google_books_api_controller.dart';
 import '../../../services/google_books_client.dart';
-import '../../../services/open_library_client.dart';
 import '../../../utils/isbn_utils.dart';
+import '../../../providers/reading_providers.dart';
+import '../../../providers/reading_list_provider.dart';
 import '../barcode_scanner_sheet.dart';
-import '../cover_preview.dart';
+import 'cover_field.dart';
 import 'library_utils.dart';
 
-/// Book source enum for search results
-enum BookSource { openLibrary, googleBooks }
-
-/// Book candidate model for search results
-class BookCandidate {
-  const BookCandidate({
-    required this.title,
-    this.author,
-    this.isbn,
-    this.description,
-    this.coverUrl,
-    this.categories = const [],
-    this.pageCount,
-    this.publicationYear,
-    this.workKey,
-    this.editionKey,
-    required this.source,
-  });
-
-  factory BookCandidate.fromOpenLibrary(OpenLibraryBookResult result) {
-    return BookCandidate(
-      title: result.title,
-      author: result.author,
-      isbn: result.isbn,
-      coverUrl: result.coverUrl,
-      categories: result.subjects,
-      pageCount: result.pageCount,
-      publicationYear: _extractYear(result.publishedDate),
-      workKey: result.key,
-      editionKey: result.editionKey,
-      source: BookSource.openLibrary,
-    );
-  }
-
-  factory BookCandidate.fromGoogleBooks(GoogleBooksVolume volume) {
-    return BookCandidate(
-      title: volume.title,
-      author: volume.primaryAuthor,
-      isbn: volume.isbn,
-      description: volume.description,
-      coverUrl: volume.thumbnailUrl,
-      categories: volume.categories,
-      pageCount: volume.pageCount,
-      publicationYear: _extractYear(volume.publishedDate),
-      source: BookSource.googleBooks,
-    );
-  }
-
-  final String title;
-  final String? author;
-  final String? isbn;
-  final String? description;
-  final String? coverUrl;
-  final List<String> categories;
-  final int? pageCount;
-  final int? publicationYear;
-  final String? workKey;
-  final String? editionKey;
-  final BookSource source;
-
-  /// Extracts year from date string (e.g., "2020-01-15" -> 2020)
-  static int? _extractYear(String? dateString) {
-    if (dateString == null || dateString.isEmpty) return null;
-    final match = RegExp(r'\d{4}').firstMatch(dateString);
-    return match != null ? int.tryParse(match.group(0)!) : null;
-  }
-}
+// BookSource and BookCandidate moved to library_utils.dart
 
 /// Book form sheet for creating/editing books
 class BookFormSheet extends ConsumerStatefulWidget {
@@ -751,6 +686,11 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         );
 
         await repository.updateBook(updated);
+
+        // Invalidate stats providers to ensure ReadingTab updates
+        ref.invalidate(weeklyStatsProvider);
+        ref.invalidate(monthlyStatsProvider);
+        ref.invalidate(readingBooksProvider);
       } else {
         await repository.addBook(
           title: title,
@@ -768,6 +708,11 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
           pageCount: _parsePageCount(),
           publicationYear: _parsePublicationYear(),
         );
+
+        // Invalidate stats providers to ensure ReadingTab updates
+        ref.invalidate(weeklyStatsProvider);
+        ref.invalidate(monthlyStatsProvider);
+        ref.invalidate(readingBooksProvider);
       }
 
       final initialPath = _initialCoverPath;
@@ -872,6 +817,12 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
       if (existingCover != null) {
         await coverService.deleteCover(existingCover);
       }
+
+      // Invalidate stats providers
+      ref.invalidate(weeklyStatsProvider);
+      ref.invalidate(monthlyStatsProvider);
+      ref.invalidate(readingBooksProvider);
+
       if (!context.mounted) return;
       navigator.pop(true); // Return true to indicate deletion
     } catch (err) {
@@ -1419,86 +1370,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
   }
 }
 
-/// Cover field widget for book form
-class CoverField extends StatelessWidget {
-  const CoverField({
-    super.key,
-    required this.coverPath,
-    required this.pickingSupported,
-    this.onPick,
-    this.onPickFromCamera,
-    this.onRemove,
-  });
-
-  final String? coverPath;
-  final bool pickingSupported;
-  final Future<void> Function()? onPick;
-  final Future<void> Function()? onPickFromCamera;
-  final Future<void> Function()? onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        buildCoverPreview(
-          coverPath,
-          size: 72,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                coverPath == null ? 'Sin portada' : 'Portada seleccionada',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                coverPath ??
-                    'Añade una imagen para identificar mejor tus libros.',
-                style: Theme.of(context).textTheme.bodySmall,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: [
-                  if (pickingSupported) ...[
-                    FilledButton.tonalIcon(
-                      onPressed: onPick,
-                      icon: const Icon(Icons.photo_library_outlined, size: 20),
-                      label: const Text('Galería'),
-                    ),
-                    FilledButton.tonalIcon(
-                      onPressed: onPickFromCamera,
-                      icon: const Icon(Icons.camera_alt_outlined, size: 20),
-                      label: const Text('Cámara'),
-                    ),
-                  ],
-                  if (!pickingSupported)
-                    const Chip(
-                      avatar: Icon(Icons.info_outline, size: 18),
-                      label: Text('Portadas no disponibles en esta plataforma'),
-                    ),
-                  if (coverPath != null && onRemove != null)
-                    OutlinedButton.icon(
-                      onPressed: onRemove,
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Eliminar'),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
+// CoverField moved to cover_field.dart
 
 class _GenreMultiSelectDialog extends StatefulWidget {
   const _GenreMultiSelectDialog({required this.initialSelection});

@@ -4,7 +4,7 @@ import 'database.dart';
 
 part 'book_dao.g.dart';
 
-@DriftAccessor(tables: [LocalUsers, Books, BookReviews])
+@DriftAccessor(tables: [LocalUsers, Books, BookReviews, Loans, SharedBooks])
 class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
   BookDao(super.db);
 
@@ -19,6 +19,62 @@ class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
     }
 
     return query.watch();
+  }
+
+  /// Returns books owned by the user, OR books the user is currently borrowing via the app.
+  Stream<List<Book>> watchBooksIncludingLoans(int userId) {
+    final activeStatuses = ['approved', 'active'];
+    const completedStatus = 'completed';
+
+    final isOwner = books.ownerUserId.equals(userId);
+
+    // Subquery for active/approved manual loans
+    final activeManualLoanBooks = selectOnly(loans)
+      ..addColumns([loans.bookId])
+      ..where(loans.borrowerUserId.equals(userId) &
+          loans.status.isIn(activeStatuses) &
+          loans.isDeleted.equals(false) &
+          loans.bookId.isNotNull());
+
+    // Subquery for active/approved shared loans
+    final activeSharedLoanBooks = selectOnly(loans).join(
+        [innerJoin(sharedBooks, sharedBooks.id.equalsExp(loans.sharedBookId))])
+      ..addColumns([sharedBooks.bookId])
+      ..where(loans.borrowerUserId.equals(userId) &
+          loans.status.isIn(activeStatuses) &
+          loans.isDeleted.equals(false) &
+          loans.sharedBookId.isNotNull());
+
+    // Subquery for completed manual loans
+    final completedManualLoanBooks = selectOnly(loans)
+      ..addColumns([loans.bookId])
+      ..where(loans.borrowerUserId.equals(userId) &
+          loans.status.equals(completedStatus) &
+          loans.isDeleted.equals(false) &
+          loans.bookId.isNotNull());
+
+    // Subquery for completed shared loans
+    final completedSharedLoanBooks = selectOnly(loans).join(
+        [innerJoin(sharedBooks, sharedBooks.id.equalsExp(loans.sharedBookId))])
+      ..addColumns([sharedBooks.bookId])
+      ..where(loans.borrowerUserId.equals(userId) &
+          loans.status.equals(completedStatus) &
+          loans.isDeleted.equals(false) &
+          loans.sharedBookId.isNotNull());
+
+    // Main query
+    final mainQuery = select(books)
+      ..where((tbl) =>
+          (tbl.isDeleted.equals(false) | tbl.isDeleted.isNull()) &
+          (isOwner |
+              tbl.id.isInQuery(activeManualLoanBooks) |
+              tbl.id.isInQuery(activeSharedLoanBooks) |
+              ((tbl.isRead.equals(true) |
+                      tbl.readingStatus.equals('finished')) &
+                  (tbl.id.isInQuery(completedManualLoanBooks) |
+                      tbl.id.isInQuery(completedSharedLoanBooks)))));
+
+    return mainQuery.watch();
   }
 
   Future<List<Book>> getActiveBooks({int? ownerUserId}) {

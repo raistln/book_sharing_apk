@@ -40,7 +40,7 @@ class _ReadingRhythmChartState extends State<ReadingRhythmChart> {
         final chartWidth = maxWidth * _horizontalScale;
 
         final chartHeight = (widget.data.rows.length * 85.0) +
-            180; // Rows + Header + Bottom Padding
+            250; // Rows + Header + Bottom Padding + Zoom controls
 
         return Stack(
           children: [

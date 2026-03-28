@@ -184,6 +184,8 @@ CREATE TABLE public.book_reviews (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_book_reviews_uuid ON public.book_reviews(book_uuid);
+
 -- READING TIMELINE
 CREATE TABLE public.reading_timeline_entries (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

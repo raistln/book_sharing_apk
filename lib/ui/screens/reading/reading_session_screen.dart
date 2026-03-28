@@ -168,7 +168,9 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
     );
 
     if (result != null && mounted) {
-      if (result.finishBook) {
+      if (result.isCancelled) {
+        await controller.cancelSession();
+      } else if (result.finishBook) {
         // Mark as finished
         await controller.finishBook(
           result.page,
@@ -369,9 +371,10 @@ class _EndSessionResult {
   final String? notes;
   final bool viewBook;
   final bool finishBook;
+  final bool isCancelled;
 
   _EndSessionResult(this.page, this.notes, this.viewBook,
-      {this.finishBook = false});
+      {this.finishBook = false, this.isCancelled = false});
 }
 
 class _EndSessionDialog extends StatefulWidget {
@@ -413,11 +416,22 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.auto_awesome, color: Colors.amber),
-          SizedBox(width: 8),
-          Text('Sesión completada'),
+          const Icon(Icons.auto_awesome, color: Colors.amber),
+          const SizedBox(width: 8),
+          const Text('Sesión completada'),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(
+              context,
+              _EndSessionResult(0, null, false, isCancelled: true),
+            ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            visualDensity: VisualDensity.compact,
+          ),
         ],
       ),
       content: SingleChildScrollView(

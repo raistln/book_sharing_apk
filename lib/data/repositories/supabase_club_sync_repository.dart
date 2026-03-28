@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
+import '../local/book_dao.dart';
 import '../local/club_dao.dart';
 import '../local/database.dart';
 import '../local/user_dao.dart';
@@ -11,13 +12,16 @@ class SupabaseClubSyncRepository {
   SupabaseClubSyncRepository({
     required ClubDao clubDao,
     required UserDao userDao,
+    required BookDao bookDao,
     SupabaseClubService? clubService,
   })  : _clubDao = clubDao,
         _userDao = userDao,
+        _bookDao = bookDao,
         _clubService = clubService ?? SupabaseClubService();
 
   final ClubDao _clubDao;
   final UserDao _userDao;
+  final BookDao _bookDao;
   final SupabaseClubService _clubService;
 
   // =====================================================================
@@ -29,6 +33,11 @@ class SupabaseClubSyncRepository {
     final remoteCommentsByClub = <String, List<SupabaseSectionCommentRecord>>{};
     final remoteReportsByClub = <String, List<SupabaseCommentReportRecord>>{};
     final remoteLogsByClub = <String, List<SupabaseModerationLogRecord>>{};
+    // Bug J Fix: Añadir fetch de book proposals
+    final remoteProposalsByClub = <String, List<SupabaseBookProposalRecord>>{};
+    // Bug K Fix: Añadir fetch de reading progress
+    final remoteProgressByClub =
+        <String, List<SupabaseReadingProgressRecord>>{};
 
     for (final remote in remoteClubs) {
       final bookIds =
@@ -51,6 +60,20 @@ class SupabaseClubSyncRepository {
         accessToken: accessToken,
       );
       remoteLogsByClub[remote.id] = logs;
+
+      // Bug J Fix: Fetch proposals para este club
+      final proposals = await _clubService.fetchBookProposals(
+        clubId: remote.id,
+        accessToken: accessToken,
+      );
+      remoteProposalsByClub[remote.id] = proposals;
+
+      // Bug K Fix: Fetch reading progress para los books de este club
+      final progress = await _clubService.fetchReadingProgress(
+        bookIds: bookIds,
+        accessToken: accessToken,
+      );
+      remoteProgressByClub[remote.id] = progress;
     }
 
     final db = _clubDao.db;
@@ -265,6 +288,30 @@ class SupabaseClubSyncRepository {
             createdAt: Value(remoteBook.createdAt),
             updatedAt: Value(remoteBook.updatedAt),
           ));
+
+          // Bug D Fix: Propagar status de ClubBook a books.readingStatus
+          final localBook = await _bookDao.findByUuid(remoteBook.bookUuid);
+          if (localBook != null) {
+            String? newReadingStatus;
+            if (remoteBook.status == 'activo') {
+              newReadingStatus = 'reading';
+            } else if (remoteBook.status == 'completado') {
+              newReadingStatus = 'finished';
+            } else if (remoteBook.status == 'proximo') {
+              newReadingStatus = 'pending';
+            }
+
+            if (newReadingStatus != null &&
+                localBook.readingStatus != newReadingStatus) {
+              await _bookDao.updateReadingStatus(
+                  localBook.id, newReadingStatus);
+              if (kDebugMode) {
+                debugPrint(
+                  '[ClubSync] Propagated status $newReadingStatus to book ${localBook.uuid}',
+                );
+              }
+            }
+          }
         }
 
         // Reconciliation: Remove members not in remote list
@@ -306,6 +353,23 @@ class SupabaseClubSyncRepository {
           localClubId: localClubId,
           localClubUuid: localClubUuid,
           remoteLogs: remoteLogs,
+          syncedAt: now,
+        );
+
+        // Bug J Fix: Sync book proposals
+        final remoteProposals = remoteProposalsByClub[remote.id] ?? [];
+        await _syncBookProposals(
+          localClubId: localClubId,
+          localClubUuid: localClubUuid,
+          remoteProposals: remoteProposals,
+          syncedAt: now,
+        );
+
+        // Bug K Fix: Sync reading progress
+        final remoteProgress = remoteProgressByClub[remote.id] ?? [];
+        await _syncReadingProgress(
+          localClubUuid: localClubUuid,
+          remoteProgress: remoteProgress,
           syncedAt: now,
         );
       }
@@ -391,6 +455,8 @@ class SupabaseClubSyncRepository {
             id: provisionalRemoteId,
             name: club.name,
             description: club.description,
+            city: club.city,
+            visibility: club.visibility,
             meetingPlace: club.meetingPlace,
             frequency: club.frequency,
             frequencyDays: club.frequencyDays ?? 7,
@@ -595,6 +661,154 @@ class SupabaseClubSyncRepository {
     }
 
     return user;
+  }
+
+  // Bug J Fix: Sync book proposals from remote
+  Future<void> _syncBookProposals({
+    required int localClubId,
+    required String localClubUuid,
+    required List<SupabaseBookProposalRecord> remoteProposals,
+    required DateTime syncedAt,
+  }) async {
+    for (final remote in remoteProposals) {
+      final existing = await (_clubDao.select(_clubDao.bookProposals)
+            ..where((t) => t.uuid.equals(remote.id)))
+          .getSingleOrNull();
+
+      if (existing != null && existing.isDirty) {
+        continue; // Local changes pending
+      }
+
+      if (existing != null) {
+        await (_clubDao.update(_clubDao.bookProposals)
+              ..where((t) => t.id.equals(existing.id)))
+            .write(BookProposalsCompanion(
+          clubId: Value(localClubId),
+          clubUuid: Value(localClubUuid),
+          bookUuid: Value(remote.bookUuid),
+          proposedByRemoteId: Value(remote.proposedByUserId),
+          title: Value(remote.title),
+          author: Value(remote.author),
+          isbn: Value(remote.isbn),
+          coverUrl: Value(remote.coverUrl),
+          votes: Value(remote.votes),
+          status: Value(remote.status),
+          closingDate: Value(remote.closingDate),
+          remoteId: Value(remote.id),
+          isDirty: const Value(false),
+          syncedAt: Value(syncedAt),
+          updatedAt: Value(remote.updatedAt),
+        ));
+      } else {
+        // Ensure proposer exists locally
+        final proposer = await _ensureLocalUser(
+          remoteId: remote.proposedByUserId,
+          createdAtFallback: remote.createdAt,
+        );
+        if (proposer == null) continue;
+
+        await _clubDao.into(_clubDao.bookProposals).insertOnConflictUpdate(
+              BookProposalsCompanion(
+                uuid: Value(remote.id),
+                remoteId: Value(remote.id),
+                clubId: Value(localClubId),
+                clubUuid: Value(localClubUuid),
+                bookUuid: Value(remote.bookUuid),
+                proposedByUserId: Value(proposer.id),
+                proposedByRemoteId: Value(remote.proposedByUserId),
+                title: Value(remote.title),
+                author: Value(remote.author),
+                isbn: Value(remote.isbn),
+                coverUrl: Value(remote.coverUrl),
+                votes: Value(remote.votes),
+                status: Value(remote.status),
+                closingDate: Value(remote.closingDate),
+                isDirty: const Value(false),
+                syncedAt: Value(syncedAt),
+                createdAt: Value(remote.createdAt),
+                updatedAt: Value(remote.updatedAt),
+              ),
+            );
+      }
+
+      if (kDebugMode) {
+        debugPrint('[ClubSync] Synced book proposal ${remote.id}');
+      }
+    }
+  }
+
+  // Bug K Fix: Sync reading progress from remote
+  Future<void> _syncReadingProgress({
+    required String localClubUuid,
+    required List<SupabaseReadingProgressRecord> remoteProgress,
+    required DateTime syncedAt,
+  }) async {
+    final club = await _clubDao.getClubByUuid(localClubUuid);
+    if (club == null) return;
+
+    for (final remote in remoteProgress) {
+      // Ensure user exists locally
+      final user = await _ensureLocalUser(
+        remoteId: remote.userId,
+        createdAtFallback: remote.createdAt,
+      );
+      if (user == null) continue;
+
+      // Find local club book by remote id
+      final clubBook = await _clubDao.getClubBookByRemoteId(remote.bookId);
+      if (clubBook == null) continue;
+
+      final existing = await (_clubDao.select(_clubDao.clubReadingProgress)
+            ..where((t) =>
+                t.clubUuid.equals(localClubUuid) &
+                t.bookUuid.equals(clubBook.uuid) &
+                t.userId.equals(user.id)))
+          .getSingleOrNull();
+
+      if (existing != null && existing.isDirty) {
+        continue; // Local changes pending
+      }
+
+      if (existing != null) {
+        await (_clubDao.update(_clubDao.clubReadingProgress)
+              ..where((t) => t.id.equals(existing.id)))
+            .write(ClubReadingProgressCompanion(
+          currentSection: Value(remote.currentSection),
+          currentChapter: Value(remote.currentChapter),
+          status: Value(remote.progressStatus),
+          remoteId: Value(remote.id),
+          isDirty: const Value(false),
+          syncedAt: Value(syncedAt),
+          updatedAt: Value(remote.updatedAt),
+        ));
+      } else {
+        await _clubDao
+            .into(_clubDao.clubReadingProgress)
+            .insertOnConflictUpdate(
+              ClubReadingProgressCompanion(
+                uuid: Value(remote.id),
+                remoteId: Value(remote.id),
+                clubId: Value(club.id),
+                clubUuid: Value(localClubUuid),
+                bookId: Value(clubBook.id),
+                bookUuid: Value(clubBook.uuid),
+                userId: Value(user.id),
+                userRemoteId: Value(remote.userId),
+                currentSection: Value(remote.currentSection),
+                currentChapter: Value(remote.currentChapter),
+                status: Value(remote.progressStatus),
+                isDirty: const Value(false),
+                syncedAt: Value(syncedAt),
+                createdAt: Value(remote.createdAt),
+                updatedAt: Value(remote.updatedAt),
+              ),
+            );
+      }
+
+      if (kDebugMode) {
+        debugPrint('[ClubSync] Synced reading progress ${remote.id}');
+      }
+    }
   }
 
   Future<ReadingClub?> _findClubByRemoteId(String remoteId) async {

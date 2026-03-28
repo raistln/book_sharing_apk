@@ -11,169 +11,208 @@ class LoanStatsCard extends ConsumerWidget {
     final statsAsync = ref.watch(loanStatisticsProvider);
     final theme = Theme.of(context);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.bar_chart, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'Estadísticas de Préstamos',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            statsAsync.when(
-              data: (stats) {
-                final loansMade30d = stats['loansMade30Days'] as int? ?? 0;
-                final loansMade1y = stats['loansMadeYear'] as int? ?? 0;
-                final loansRequested30d =
-                    stats['loansRequested30Days'] as int? ?? 0;
-                final loansRequested1y =
-                    stats['loansRequestedYear'] as int? ?? 0;
+    return statsAsync.when(
+      data: (stats) {
+        final loansMade30d = stats['loansMade30Days'] as int? ?? 0;
+        final loansMade1y = stats['loansMadeYear'] as int? ?? 0;
+        final loansRequested30d = stats['loansRequested30Days'] as int? ?? 0;
+        final loansRequested1y = stats['loansRequestedYear'] as int? ?? 0;
 
-                return Column(
-                  children: [
-                    _buildStatSection(
-                      context,
-                      title: 'Préstamos realizados',
-                      icon: Icons.outbox,
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Resumen de Actividad',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _PremiumStatCard(
+                      title: 'Préstamos',
+                      subtitle: 'Realizados',
+                      icon: Icons.outbox_rounded,
                       color: Colors.orange,
                       count30d: loansMade30d,
                       count1y: loansMade1y,
-                      isFirst: true,
+                      theme: theme,
                     ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Divider(height: 1),
-                    ),
-                    _buildStatSection(
-                      context,
-                      title: 'Solicitudes recibidas',
-                      icon: Icons.inbox,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _PremiumStatCard(
+                      title: 'Solicitudes',
+                      subtitle: 'Aceptados',
+                      icon: Icons.inbox_rounded,
                       color: Colors.purple,
                       count30d: loansRequested30d,
                       count1y: loansRequested1y,
-                      isFirst: false,
+                      theme: theme,
                     ),
-                  ],
-                );
-              },
-              loading: () => const Center(
-                  child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: CircularProgressIndicator(),
-              )),
-              error: (e, st) => Text('Error al cargar estadísticas: $e'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatSection(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Color color,
-    required int count30d,
-    required int count1y,
-    required bool isFirst,
-  }) {
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(isFirst ? Icons.arrow_upward : Icons.arrow_downward,
-                size: 16, color: color),
-            const SizedBox(width: 8),
-            Text(title,
-                style: theme.textTheme.labelLarge
-                    ?.copyWith(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: theme.dividerColor),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: _buildTimeBox(
-                  context,
-                  count: count30d,
-                  label: 'Últimos 30d',
-                  showBorder: true,
-                ),
-              ),
-              Expanded(
-                child: _buildTimeBox(
-                  context,
-                  count: count1y,
-                  label: 'Último año',
-                  showBorder: false,
-                ),
+                  ),
+                ],
               ),
             ],
           ),
+        );
+      },
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
         ),
-      ],
+      ),
+      error: (e, st) => Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Text('Error al cargar estadísticas: $e'),
+      ),
     );
   }
+}
 
-  Widget _buildTimeBox(
-    BuildContext context, {
-    required int count,
-    required String label,
-    required bool showBorder,
-  }) {
-    final theme = Theme.of(context);
+class _PremiumStatCard extends StatelessWidget {
+  const _PremiumStatCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.count30d,
+    required this.count1y,
+    required this.theme,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final int count30d;
+  final int count1y;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      decoration: showBorder
-          ? BoxDecoration(
-              border: Border(right: BorderSide(color: theme.dividerColor)),
-            )
-          : null,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color ?? theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: color.withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 20, color: color),
+              ),
+              if (count30d > 0)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '+$count30d',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 9,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Text(
-            count.toString(),
-            style: theme.textTheme.titleMedium?.copyWith(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.bold,
+              height: 1.1,
             ),
           ),
           Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
+            subtitle,
+            style: theme.textTheme.labelSmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 10,
             ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _buildMetric(
+                label: '30 d',
+                value: '$count30d',
+                theme: theme,
+              ),
+              _buildMetric(
+                label: 'Total año',
+                value: '$count1y',
+                theme: theme,
+                isSecondary: true,
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMetric({
+    required String label,
+    required String value,
+    required ThemeData theme,
+    bool isSecondary = false,
+  }) {
+    return Column(
+      crossAxisAlignment:
+          isSecondary ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: isSecondary ? theme.colorScheme.onSurfaceVariant : color,
+            height: 1,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            fontSize: 8,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

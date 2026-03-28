@@ -749,6 +749,8 @@ class LoanRepository {
     required String lenderName,
     required DateTime dueDate,
     String? lenderContact,
+    String? isbn,
+    String? coverPath,
   }) async {
     final now = DateTime.now();
 
@@ -761,11 +763,11 @@ class LoanRepository {
           author: author.trim().isEmpty
               ? const Value.absent()
               : Value(author.trim()),
+          isbn: isbn != null ? Value(isbn) : const Value.absent(),
+          coverPath:
+              coverPath != null ? Value(coverPath) : const Value.absent(),
           ownerUserId: Value(user.id),
-          status: const Value('loaned'), // Status 'loaned' or 'private'
-          // We use 'loaned' to imply it's not available for lending, but 'private' might be better if supported.
-          // stick to 'loaned' as it's standard for "not available".
-          // And isBorrowedExternal = true distinguishes it.
+          status: const Value('loaned'),
           isBorrowedExternal: const Value(true),
           externalLenderName: Value(lenderName),
           isDirty: const Value(true),
@@ -890,32 +892,39 @@ class LoanRepository {
     final thirtyDaysAgo = now.subtract(const Duration(days: 30));
     final oneYearAgo = now.subtract(const Duration(days: 365));
 
-    // Filter out rejected and cancelled loans for all counts
-    final validLoans = allLoans.where((l) {
+    // Filter to only include SUCCESSFUL/ACCEPTED loans (active, completed, expired)
+    // Pending requests ('requested') are excluded from these totals as per user feedback.
+    final acceptedLoans = allLoans.where((l) {
       final status = l.loan.status;
-      return status != 'rejected' && status != 'cancelled';
+      return status == 'active' || status == 'completed' || status == 'expired';
     }).toList();
 
-    // Loans MADE (as lender)
-    final loansMade = validLoans.where((l) {
+    // Loans MADE (as lender) - Successful ones
+    final loansMade = acceptedLoans.where((l) {
       final isLender = l.loan.lenderUserId == userId;
       // Exclude if it's an external loan received (book.isBorrowedExternal == true)
       final isExternalReceived = l.book?.isBorrowedExternal == true;
       return isLender && !isExternalReceived;
     }).toList();
-    final loansMade30Days =
-        loansMade.where((l) => l.loan.createdAt.isAfter(thirtyDaysAgo)).length;
-    final loansMadeYear =
-        loansMade.where((l) => l.loan.createdAt.isAfter(oneYearAgo)).length;
+    final loansMade30Days = loansMade
+        .where((l) =>
+            (l.loan.approvedAt ?? l.loan.createdAt).isAfter(thirtyDaysAgo))
+        .length;
+    final loansMadeYear = loansMade
+        .where(
+            (l) => (l.loan.approvedAt ?? l.loan.createdAt).isAfter(oneYearAgo))
+        .length;
 
-    // Loans REQUESTED (as borrower)
+    // Loans REQUESTED (as borrower) - Successful ones
     final loansRequested =
-        validLoans.where((l) => l.loan.borrowerUserId == userId).toList();
+        acceptedLoans.where((l) => l.loan.borrowerUserId == userId).toList();
     final loansRequested30Days = loansRequested
-        .where((l) => l.loan.createdAt.isAfter(thirtyDaysAgo))
+        .where((l) =>
+            (l.loan.approvedAt ?? l.loan.createdAt).isAfter(thirtyDaysAgo))
         .length;
     final loansRequestedYear = loansRequested
-        .where((l) => l.loan.createdAt.isAfter(oneYearAgo))
+        .where(
+            (l) => (l.loan.approvedAt ?? l.loan.createdAt).isAfter(oneYearAgo))
         .length;
 
     // Most loaned book (as lender)

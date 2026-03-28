@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/clubs_provider.dart';
 import '../../../providers/book_providers.dart';
 import '../../dialogs/create_club_dialog.dart';
+import '../../widgets/community/join_by_code_dialog.dart';
 import 'club_detail_page.dart';
 
 class ClubsListPage extends ConsumerWidget {
@@ -94,7 +95,7 @@ class ClubsListPage extends ConsumerWidget {
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _JoinClubByCodeDialog(
+      builder: (_) => JoinByCodeDialog(
         onJoin: (code) async {
           final clubService = ref.read(clubServiceProvider);
           await clubService.joinClubByUuid(
@@ -103,115 +104,11 @@ class ClubsListPage extends ConsumerWidget {
             userRemoteId: user.remoteId!,
           );
         },
+        title: 'Unirse a Club',
+        labelText: 'ID del Club',
+        helperText: 'Ingresa el código UUID del club',
+        successMessage: '¡Te has unido al club!',
       ),
     );
-  }
-}
-
-class _JoinClubByCodeDialog extends StatefulWidget {
-  const _JoinClubByCodeDialog({required this.onJoin});
-
-  final Future<void> Function(String code) onJoin;
-
-  @override
-  State<_JoinClubByCodeDialog> createState() => _JoinClubByCodeDialogState();
-}
-
-class _JoinClubByCodeDialogState extends State<_JoinClubByCodeDialog> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _codeController;
-  bool _isSubmitting = false;
-  String? _errorText;
-
-  @override
-  void initState() {
-    super.initState();
-    _codeController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _codeController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Unirse a Club'),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _codeController,
-              decoration: InputDecoration(
-                labelText: 'ID del Club',
-                border: const OutlineInputBorder(),
-                errorText: _errorText,
-                helperText: 'Ingresa el código UUID del club',
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Por favor ingresa un código';
-                }
-                return null;
-              },
-              autofocus: true,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: _isSubmitting ? null : (_) => _handleSubmit(),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: _isSubmitting ? null : _handleSubmit,
-          child: _isSubmitting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Unirse'),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _handleSubmit() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-      _errorText = null;
-    });
-
-    try {
-      final code = _codeController.text.trim();
-      await widget.onJoin(code);
-      if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('¡Te has unido al club!')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-          _errorText = e.toString().contains('Exception:')
-              ? e.toString().split('Exception:').last.trim()
-              : 'Código no válido o ya eres miembro.';
-        });
-      }
-    }
   }
 }

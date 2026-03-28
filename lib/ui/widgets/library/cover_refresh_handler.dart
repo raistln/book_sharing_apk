@@ -25,18 +25,22 @@ class CoverRefreshHandler {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(context, null),
             child: const Text('Cancelar'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), // Normal
+            child: const Text('Solo faltantes'),
+          ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Actualizar'),
+            onPressed: () => Navigator.pop(context, true), // Force
+            child: const Text('Forzar todo'),
           ),
         ],
       ),
     );
 
-    if (confirmed != true || !ctx.mounted) return;
+    if (confirmed == null || !ctx.mounted) return;
 
     // Show progress dialog
     showDialog(
@@ -56,6 +60,7 @@ class CoverRefreshHandler {
     try {
       final result = await coverRefreshService.refreshMissingMetadata(
         ownerUserId: activeUser?.id,
+        force: confirmed,
       );
 
       if (!ctx.mounted) return;

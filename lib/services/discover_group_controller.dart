@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/local/database.dart';
 import '../data/local/group_dao.dart';
+import '../models/grouped_shared_book.dart';
 
 const _discoverBasePageSize = 20;
 const _discoverMinPageSize = 10;
@@ -18,6 +19,7 @@ const _discoverLargeDatasetThreshold = 60;
 class DiscoverGroupState {
   const DiscoverGroupState({
     required this.items,
+    required this.groupedItems,
     required this.isLoadingInitial,
     required this.isLoadingMore,
     required this.hasMore,
@@ -38,6 +40,7 @@ class DiscoverGroupState {
 
   factory DiscoverGroupState.initial() => const DiscoverGroupState(
         items: <SharedBookDetail>[],
+        groupedItems: <GroupedSharedBook>[],
         isLoadingInitial: false,
         isLoadingMore: false,
         hasMore: true,
@@ -57,6 +60,7 @@ class DiscoverGroupState {
       );
 
   final List<SharedBookDetail> items;
+  final List<GroupedSharedBook> groupedItems;
   final bool isLoadingInitial;
   final bool isLoadingMore;
   final bool hasMore;
@@ -76,6 +80,7 @@ class DiscoverGroupState {
 
   DiscoverGroupState copyWith({
     List<SharedBookDetail>? items,
+    List<GroupedSharedBook>? groupedItems,
     bool? isLoadingInitial,
     bool? isLoadingMore,
     bool? hasMore,
@@ -95,6 +100,7 @@ class DiscoverGroupState {
   }) {
     return DiscoverGroupState(
       items: items ?? this.items,
+      groupedItems: groupedItems ?? this.groupedItems,
       isLoadingInitial: isLoadingInitial ?? this.isLoadingInitial,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       hasMore: hasMore ?? this.hasMore,
@@ -157,8 +163,12 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     if (cached != null) {
       _pageSize = cached.pageSize;
       pageSize = cached.pageSize;
+      // Always recompute groupedItems from cached flat list so the UI is
+      // never left with stale / empty grouped data on a cache hit.
+      final cachedGrouped = _groupItems(cached.items);
       state = state.copyWith(
         items: cached.items,
+        groupedItems: cachedGrouped,
         hasMore: cached.hasMore,
         isLoadingInitial: false,
         isLoadingMore: false,
@@ -238,8 +248,10 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
       final isLargeDataset =
           hasMore || filteredResults.length >= _discoverLargeDatasetThreshold;
 
+      final groupedResults = _groupItems(filteredResults);
       state = state.copyWith(
         items: filteredResults,
+        groupedItems: groupedResults,
         hasMore: hasMore,
         isLoadingInitial: false,
         isLoadingMore: false,
@@ -324,6 +336,7 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
           .where((detail) => !invalidatedIds.contains(detail.sharedBook.id))
           .toList();
       final updatedItems = [...state.items, ...newResults];
+      final groupedItems = _groupItems(updatedItems);
       final hasMore = results.length == pageSize;
       final nextPageSize = _computeNextPageSize(
         currentPageSize: pageSize,
@@ -337,6 +350,7 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
 
       state = state.copyWith(
         items: updatedItems,
+        groupedItems: groupedItems,
         hasMore: hasMore,
         isLoadingMore: false,
         lastLoadedAt: completedAt,
@@ -376,6 +390,7 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     state = state.copyWith(
       searchQuery: trimmed,
       items: <SharedBookDetail>[],
+      groupedItems: <GroupedSharedBook>[],
       hasMore: true,
       error: null,
       lastLoadedAt: null,
@@ -396,6 +411,7 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     state = state.copyWith(
       includeUnavailable: value,
       items: <SharedBookDetail>[],
+      groupedItems: <GroupedSharedBook>[],
       hasMore: true,
       error: null,
       lastLoadedAt: null,
@@ -415,6 +431,7 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     state = state.copyWith(
       ownerUserIdFilter: userId,
       items: <SharedBookDetail>[],
+      groupedItems: <GroupedSharedBook>[],
       hasMore: true,
       error: null,
       lastLoadedAt: null,
@@ -435,6 +452,7 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     state = state.copyWith(
       genreFilter: genre, // Use ObjectSentinel inside copyWith if needed
       items: <SharedBookDetail>[],
+      groupedItems: <GroupedSharedBook>[],
       hasMore: true,
       error: null,
       lastLoadedAt: null,
@@ -460,6 +478,7 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     state = state.copyWith(
       hideRead: value,
       items: <SharedBookDetail>[],
+      groupedItems: <GroupedSharedBook>[],
       hasMore: true,
       error: null,
       lastLoadedAt: null,
@@ -480,6 +499,7 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     state = state.copyWith(
       sortOption: option,
       items: <SharedBookDetail>[],
+      groupedItems: <GroupedSharedBook>[],
       hasMore: true,
       error: null,
       lastLoadedAt: null,
@@ -500,8 +520,10 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     final updatedItems = state.items
         .where((detail) => !ids.contains(detail.sharedBook.id))
         .toList(growable: false);
+    final groupedItems = _groupItems(updatedItems);
     state = state.copyWith(
       items: updatedItems,
+      groupedItems: groupedItems,
       hasMore: true,
       invalidatedSharedBookIds: {...state.invalidatedSharedBookIds, ...ids},
     );
@@ -542,8 +564,10 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     }
 
     final mergedItems = _mergeDetails(state.items, updates);
+    final groupedItems = _groupItems(mergedItems);
     state = state.copyWith(
       items: mergedItems,
+      groupedItems: groupedItems,
       invalidatedSharedBookIds: {...state.invalidatedSharedBookIds}
         ..removeAll(updatedIds),
     );
@@ -618,6 +642,28 @@ class DiscoverGroupController extends StateNotifier<DiscoverGroupState> {
     }
 
     return currentPageSize;
+  }
+
+  List<GroupedSharedBook> _groupItems(List<SharedBookDetail> details) {
+    if (details.isEmpty) return [];
+
+    final Map<String, List<SharedBookDetail>> groups = {};
+
+    for (final detail in details) {
+      final title = (detail.book?.title ?? '').toLowerCase().trim();
+      if (title.isEmpty) continue;
+
+      groups.putIfAbsent(title, () => []).add(detail);
+    }
+
+    return groups.entries.map((e) {
+      // Pick the first book metadata as the representative one
+      final representative = e.value.first.book;
+      return GroupedSharedBook(
+        book: representative,
+        allCopies: e.value,
+      );
+    }).toList();
   }
 }
 

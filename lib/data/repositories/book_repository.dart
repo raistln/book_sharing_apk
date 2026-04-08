@@ -85,10 +85,11 @@ class BookRepository {
         }
       }
 
-      // Check if already shared
-      final existing = await _groupDao.findSharedBookByGroupAndBook(
+      // Check if already shared by THIS user
+      final existing = await _groupDao.findSharedBookByGroupBookAndOwner(
         groupId: group.id,
         bookId: book.id,
+        ownerUserId: owner.id,
       );
 
       if (existing != null) {
@@ -466,9 +467,11 @@ class BookRepository {
           if (parsedGenre == null || !allowedGenres.contains(parsedGenre)) {
             // Book doesn't match the group's theme.
             // If it was previously shared, soft-delete it.
-            final existing = await _groupDao.findSharedBookByGroupAndBook(
+            // Check if THIS user already shared it
+            final existing = await _groupDao.findSharedBookByGroupBookAndOwner(
               groupId: group.id,
               bookId: bookId,
+              ownerUserId: ownerUserId,
             );
             if (existing != null && !existing.isDeleted) {
               await _groupDao.softDeleteSharedBook(
@@ -482,9 +485,10 @@ class BookRepository {
         }
         // -----------------------------------------------------------------
 
-        final existing = await _groupDao.findSharedBookByGroupAndBook(
+        final existing = await _groupDao.findSharedBookByGroupBookAndOwner(
           groupId: group.id,
           bookId: bookId,
+          ownerUserId: ownerUserId,
         );
         if (existing != null) {
           final (visibility, isAvailable) =

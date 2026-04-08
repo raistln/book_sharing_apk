@@ -373,6 +373,21 @@ class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
         .getSingleOrNull();
   }
 
+  Future<SharedBook?> findSharedBookByGroupBookAndOwner({
+    required int groupId,
+    required int bookId,
+    required int ownerUserId,
+  }) {
+    return (select(sharedBooks)
+          ..where(
+            (tbl) =>
+                tbl.groupId.equals(groupId) &
+                tbl.bookId.equals(bookId) &
+                tbl.ownerUserId.equals(ownerUserId),
+          ))
+        .getSingleOrNull();
+  }
+
   Future<List<SharedBook>> findSharedBooksByBookId(int bookId) {
     return (select(sharedBooks)..where((tbl) => tbl.bookId.equals(bookId)))
         .get();

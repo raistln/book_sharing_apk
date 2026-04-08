@@ -86,6 +86,7 @@ void main() {
         updatedAt: DateTime.now(),
         isPhysical: true,
         isBorrowedExternal: false,
+        isOnShelf: false,
         isDirty: false,
         isDeleted: false,
       );
@@ -126,6 +127,7 @@ void main() {
         updatedAt: DateTime.now(),
         isPhysical: true,
         isBorrowedExternal: false,
+        isOnShelf: false,
         isDirty: false,
         isDeleted: false,
       );
@@ -155,6 +157,7 @@ void main() {
         updatedAt: DateTime.now().subtract(const Duration(hours: 1)),
         isPhysical: true,
         isBorrowedExternal: false,
+        isOnShelf: false,
         isDirty: false,
         isDeleted: false,
       );

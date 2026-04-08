@@ -27,6 +27,7 @@ Book _makeBook({
       status: 'available',
       readingStatus: 'pending',
       isBorrowedExternal: false,
+      isOnShelf: false,
       createdAt: DateTime(2024),
       updatedAt: DateTime(2024),
       isDirty: false,

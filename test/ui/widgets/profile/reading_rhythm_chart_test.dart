@@ -25,6 +25,7 @@ void main() {
         updatedAt: now,
         isPhysical: true,
         isBorrowedExternal: false,
+        isOnShelf: false,
         isDirty: false,
         isDeleted: false,
       );

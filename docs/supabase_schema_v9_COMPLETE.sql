@@ -167,6 +167,8 @@ CREATE TABLE public.shared_books (
   visibility TEXT NOT NULL DEFAULT 'group' CHECK (visibility IN ('private', 'group', 'public')),
   is_available BOOLEAN NOT NULL DEFAULT true,
   is_physical BOOLEAN NOT NULL DEFAULT true,
+  is_on_shelf BOOLEAN NOT NULL DEFAULT false,
+  is_on_shelf_at TIMESTAMPTZ,
   is_deleted BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

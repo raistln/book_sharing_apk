@@ -228,6 +228,8 @@ class BookRepository {
         pageCount: Value(pageCount),
         publicationYear: Value(publicationYear),
         isBorrowedExternal: Value(isBorrowedExternal),
+        isOnShelf: Value(readingStatus == 'finished'),
+        isOnShelfAt: readingStatus == 'finished' ? Value(now) : const Value.absent(),
       ),
     );
     await _autoShareBook(
@@ -321,6 +323,14 @@ class BookRepository {
       isDirty: const Value(true),
     );
 
+    // Automatic bookshelf entry: if transitioning to 'finished'
+    if (book.readingStatus == 'finished') {
+      companion = companion.copyWith(
+        isOnShelf: const Value(true),
+        isOnShelfAt: Value(now),
+      );
+    }
+
     final result = await _bookDao.updateBook(companion);
     if (result) {
       await _autoShareBook(
@@ -380,6 +390,21 @@ class BookRepository {
   }
 
   Future<Book?> findById(int id) => _bookDao.findById(id);
+
+  /// Manually adds or removes a book from the virtual bookshelf.
+  Future<void> toggleBookshelfPresence(int bookId, bool onShelf) async {
+    final now = DateTime.now();
+    await _bookDao.updateBookFields(
+      bookId: bookId,
+      entry: BooksCompanion(
+        isOnShelf: Value(onShelf),
+        isOnShelfAt: onShelf ? Value(now) : const Value(null),
+        isDirty: const Value(true),
+        updatedAt: Value(now),
+      ),
+    );
+    _scheduleSync();
+  }
 
   bool _shouldShare(String status, bool isPhysical, bool isBorrowedExternal) {
     // Non-physical books (digital) are never shared

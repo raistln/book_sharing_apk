@@ -92,10 +92,8 @@ class BookWithRating {
 final _finishedBooksProvider =
     FutureProvider.autoDispose<List<BookWithRating>>((ref) async {
   final books = await ref.watch(bookListProvider.future);
-  // Filter to finished books
-  final finished = books.where((b) {
-    return b.readingStatus.toLowerCase() == 'finished' || b.isRead;
-  }).toList();
+  // Filter to books manually selected for the shelf
+  final onShelf = books.where((b) => b.isOnShelf).toList();
 
   // Fetch ratings
   final activeUser = ref.watch(activeUserProvider).value;
@@ -103,7 +101,7 @@ final _finishedBooksProvider =
 
   final bookDao = ref.read(bookDaoProvider);
 
-  for (final book in finished) {
+  for (final book in onShelf) {
     int? rating;
     if (activeUser != null) {
       final review = await bookDao.findReviewForUser(
@@ -160,8 +158,8 @@ final sortedBookshelfBooksProvider =
     switch (sortOrder) {
       case BookShelfSortOrder.recent:
         result.sort((a, b) {
-          final aDate = a.book.readAt ?? a.book.updatedAt;
-          final bDate = b.book.readAt ?? b.book.updatedAt;
+          final aDate = a.book.isOnShelfAt ?? a.book.readAt ?? a.book.updatedAt;
+          final bDate = b.book.isOnShelfAt ?? b.book.readAt ?? b.book.updatedAt;
           return bDate.compareTo(aDate);
         });
         break;
@@ -195,4 +193,14 @@ final sortedBookshelfBooksProvider =
 
     return result;
   });
+});
+
+/// Provider for the Bookshelf Editor: Returns all non-deleted library books
+/// sorted alphabetically by title.
+final allLibraryBooksProvider =
+    FutureProvider.autoDispose<List<Book>>((ref) async {
+  final books = await ref.watch(bookListProvider.future);
+  final result = List<Book>.from(books);
+  result.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+  return result;
 });

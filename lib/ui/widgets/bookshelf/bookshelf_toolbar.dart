@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/bookshelf_models.dart';
 import '../../../providers/bookshelf_providers.dart';
+import 'bookshelf_editor_sheet.dart';
 
 class BookshelfToolbar extends ConsumerWidget {
   final ShelfThemeConfig themeConfig;
@@ -83,6 +84,13 @@ class BookshelfToolbar extends ConsumerWidget {
                     Icon(Icons.palette_outlined, color: themeConfig.textColor),
                 tooltip: 'Personalizar estantería',
               ),
+
+              // Manual Edit button
+              IconButton(
+                onPressed: () => _showBookshelfEditor(context),
+                icon: Icon(Icons.edit_note, color: themeConfig.textColor),
+                tooltip: 'Gestionar títulos',
+              ),
             ],
           ),
         ),
@@ -112,6 +120,15 @@ class BookshelfToolbar extends ConsumerWidget {
           ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+
+  void _showBookshelfEditor(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const BookshelfEditorSheet(),
     );
   }
 

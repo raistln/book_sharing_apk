@@ -243,6 +243,8 @@ class SupabaseGroupSyncRepository {
                         .description), // ← antes era const Value(null)
                     isPhysical: Value(remoteShared.isPhysical), // ← AÑADIDO
                     isRead: Value(remoteShared.isRead ?? false), // ← AÑADIDO
+                    isOnShelf: Value(remoteShared.isOnShelf), // ← AÑADIDO
+                    isOnShelfAt: Value(remoteShared.isOnShelfAt), // ← AÑADIDO
                     readingStatus: Value(
                         remoteShared.readingStatus ?? 'pending'), // ← AÑADIDO
                     barcode: Value(remoteShared.barcode), // ← AÑADIDO
@@ -383,6 +385,8 @@ class SupabaseGroupSyncRepository {
                 readingStatus: Value(remoteShared.readingStatus ?? 'pending'),
                 readAt: Value(remoteShared.readAt),
                 isPhysical: Value(remoteShared.isPhysical),
+                isOnShelf: Value(remoteShared.isOnShelf),
+                isOnShelfAt: Value(remoteShared.isOnShelfAt),
                 description: Value(remoteShared.description),
                 barcode: Value(remoteShared.barcode),
                 isBorrowedExternal: Value(remoteShared.isBorrowedExternal),
@@ -709,6 +713,8 @@ class SupabaseGroupSyncRepository {
               description: shared.description,
               barcode: shared.barcode,
               readAt: shared.readAt,
+              isOnShelf: book?.isOnShelf ?? false,
+              isOnShelfAt: book?.isOnShelfAt,
               isBorrowedExternal: shared.isBorrowedExternal,
               externalLenderName: shared.externalLenderName,
               createdAt: shared.createdAt,
@@ -738,6 +744,8 @@ class SupabaseGroupSyncRepository {
               description: shared.description,
               barcode: shared.barcode,
               readAt: shared.readAt,
+              isOnShelf: book?.isOnShelf ?? false,
+              isOnShelfAt: book?.isOnShelfAt,
               isBorrowedExternal: shared.isBorrowedExternal,
               externalLenderName: shared.externalLenderName,
               updatedAt: shared.updatedAt,
@@ -763,6 +771,8 @@ class SupabaseGroupSyncRepository {
                 description: shared.description,
                 barcode: shared.barcode,
                 readAt: shared.readAt,
+                isOnShelf: book?.isOnShelf ?? false,
+                isOnShelfAt: book?.isOnShelfAt,
                 isBorrowedExternal: shared.isBorrowedExternal,
                 externalLenderName: shared.externalLenderName,
                 createdAt: shared.createdAt,

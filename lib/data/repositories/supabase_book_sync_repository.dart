@@ -274,6 +274,8 @@ class SupabaseBookSyncRepository {
               externalLenderName: Value(remote.externalLenderName),
               isRead: Value(remote.isRead),
               isDeleted: Value(remote.isDeleted),
+              isOnShelf: Value(remote.isOnShelf),
+              isOnShelfAt: Value(remote.isOnShelfAt),
               genre: Value(remote.genre),
               pageCount: Value(remote.pageCount),
               publicationYear: Value(remote.publicationYear),
@@ -335,6 +337,8 @@ class SupabaseBookSyncRepository {
                 externalLenderName: Value(remote.externalLenderName),
                 isRead: Value(remote.isRead),
                 isDeleted: Value(remote.isDeleted),
+                isOnShelf: Value(remote.isOnShelf),
+                isOnShelfAt: Value(remote.isOnShelfAt),
                 genre: Value(remote.genre),
                 pageCount: Value(remote.pageCount),
                 publicationYear: Value(remote.publicationYear),
@@ -819,6 +823,8 @@ class SupabaseBookSyncRepository {
               readAt: book.readAt,
               isBorrowedExternal: book.isBorrowedExternal,
               externalLenderName: book.externalLenderName,
+              isOnShelf: book.isOnShelf,
+              isOnShelfAt: book.isOnShelfAt,
               createdAt: book.createdAt,
               updatedAt: book.updatedAt,
               upsert:
@@ -857,6 +863,8 @@ class SupabaseBookSyncRepository {
               visibility: 'private', // ✅ Ensure visibility is preserved
               isBorrowedExternal: book.isBorrowedExternal,
               externalLenderName: book.externalLenderName,
+              isOnShelf: book.isOnShelf,
+              isOnShelfAt: book.isOnShelfAt,
               updatedAt: book.updatedAt,
               accessToken: accessToken,
             );

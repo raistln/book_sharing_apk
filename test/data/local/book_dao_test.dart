@@ -121,4 +121,24 @@ void main() {
     final activeBooks = await activeBooksStream.first;
     expect(activeBooks.where((b) => b.id == insertedBook.id).isEmpty, isTrue);
   });
+
+  test('isOnShelf and isOnShelfAt are correctly persisted', () async {
+    final now = DateTime.now();
+    final book = BooksCompanion(
+      uuid: const Value('uuid-shelf'),
+      title: const Value('Shelf Book'),
+      isOnShelf: const Value(true),
+      isOnShelfAt: Value(now),
+      ownerUserId: Value(testUser.id),
+      createdAt: Value(now),
+      updatedAt: Value(now),
+    );
+
+    final id = await bookDao.insertBook(book);
+    final fromDb = await bookDao.findById(id);
+
+    expect(fromDb?.isOnShelf, isTrue);
+    final diff = fromDb!.isOnShelfAt!.difference(now).inSeconds.abs();
+    expect(diff <= 1, isTrue);
+  });
 }

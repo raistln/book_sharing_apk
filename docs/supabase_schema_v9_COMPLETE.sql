@@ -179,7 +179,7 @@ CREATE TABLE public.book_reviews (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   book_uuid TEXT NOT NULL,
   author_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 4),
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
   review TEXT,
   is_deleted BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

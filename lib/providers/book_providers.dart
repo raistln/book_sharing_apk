@@ -541,27 +541,30 @@ final readingTimelineProvider = StreamProvider.autoDispose
   return dao.watchEntriesForBook(bookId);
 });
 
-final readingInsightProvider = FutureProvider.autoDispose
-    .family<ReadingInsight?, int>((ref, bookId) async {
-  final bookAsync = await ref.watch(bookStreamProvider(bookId).future);
-  if (bookAsync == null) return null;
-
-  final timeline = await ref.watch(readingTimelineProvider(bookId).future);
-  if (timeline.isEmpty) return null;
-
-  // Calculate user average (simplified - could be cached)
+final userAveragePagesPerDayProvider =
+    FutureProvider.autoDispose<double>((ref) async {
   final allBooks = await ref.watch(bookListProvider.future);
   final finishedBooks = allBooks.where((b) => b.isRead).toList();
 
   final timelineDao = ref.watch(timelineEntryDaoProvider);
-  final userAverage =
-      await ReadingRhythmAnalyzer.calculateUserAveragePagesPerDay(
+  return ReadingRhythmAnalyzer.calculateUserAveragePagesPerDay(
     finishedBooks: finishedBooks,
     getTimeline: (id) => timelineDao.getEntriesForBook(id),
   );
+});
+
+final readingInsightProvider = FutureProvider.autoDispose
+    .family<ReadingInsight?, int>((ref, bookId) async {
+  final book = await ref.watch(bookStreamProvider(bookId).future);
+  if (book == null) return null;
+
+  final timeline = await ref.watch(readingTimelineProvider(bookId).future);
+  if (timeline.isEmpty) return null;
+
+  final userAverage = await ref.watch(userAveragePagesPerDayProvider.future);
 
   return ReadingRhythmAnalyzer.generateInsight(
-    book: bookAsync,
+    book: book,
     timeline: timeline,
     userAveragePagesPerDay: userAverage,
   );
@@ -572,12 +575,14 @@ class BookReadingStats {
   final DateTime? endDate;
   final double pagesPerDay;
   final int maxPagesInSameDay;
+  final int totalDays;
 
   const BookReadingStats({
     this.startDate,
     this.endDate,
     this.pagesPerDay = 0.0,
     this.maxPagesInSameDay = 0,
+    this.totalDays = 0,
   });
 
   static BookReadingStats? calculate(List<ReadingSession> sessions) {
@@ -586,10 +591,10 @@ class BookReadingStats {
     DateTime? startDate;
     DateTime? endDate;
     int maxPages = 0;
-    
+
     // Group by day to calculate pages per day
     final pagesByDate = <String, int>{};
-    
+
     for (final session in sessions) {
       if (startDate == null || session.startTime.isBefore(startDate)) {
         startDate = session.startTime;
@@ -599,22 +604,24 @@ class BookReadingStats {
           endDate = session.endTime;
         }
       }
-      
-      final dateKey = '${session.startTime.year}-${session.startTime.month}-${session.startTime.day}';
+
+      final dateKey =
+          '${session.startTime.year}-${session.startTime.month}-${session.startTime.day}';
       final pages = session.pagesRead ?? 0;
       pagesByDate[dateKey] = (pagesByDate[dateKey] ?? 0) + pages;
     }
-    
+
     for (final dailyPages in pagesByDate.values) {
       if (dailyPages > maxPages) {
         maxPages = dailyPages;
       }
     }
-    
+
     final totalDays = pagesByDate.keys.length;
     double pagesPerDay = 0.0;
     if (totalDays > 0) {
-      final totalPages = pagesByDate.values.fold<int>(0, (sum, pages) => sum + pages);
+      final totalPages =
+          pagesByDate.values.fold<int>(0, (sum, pages) => sum + pages);
       pagesPerDay = totalPages / totalDays;
     }
 
@@ -623,12 +630,13 @@ class BookReadingStats {
       endDate: endDate,
       pagesPerDay: pagesPerDay,
       maxPagesInSameDay: maxPages,
+      totalDays: totalDays,
     );
   }
 }
 
-final bookReadingStatsProvider = StreamProvider.autoDispose
-    .family<BookReadingStats?, int>((ref, bookId) {
+final bookReadingStatsProvider =
+    StreamProvider.autoDispose.family<BookReadingStats?, int>((ref, bookId) {
   final sessionDao = ref.watch(readingSessionDaoProvider);
 
   return sessionDao.watchSessionsForBook(bookId).map((sessions) {

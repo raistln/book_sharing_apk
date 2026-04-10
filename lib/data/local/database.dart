@@ -132,7 +132,7 @@ class BookReviews extends Table {
   TextColumn get authorRemoteId => text().nullable()();
 
   IntColumn get rating =>
-      integer().customConstraint('NOT NULL CHECK (rating BETWEEN 1 AND 4)')();
+      integer().customConstraint('NOT NULL CHECK (rating BETWEEN 1 AND 5)')();
   TextColumn get review => text().nullable()();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
@@ -753,7 +753,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 29;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1007,6 +1007,12 @@ class AppDatabase extends _$AppDatabase {
               "UPDATE books SET is_on_shelf = 1, is_on_shelf_at = updated_at "
               "WHERE reading_status = 'finished' AND is_deleted = 0",
             );
+          }
+
+          if (from < 29) {
+            // Migration to v29: Add finishedButTough(5) recommendation level
+            // Altering table applies the new CHECK (rating BETWEEN 1 AND 5) constraint
+            await m.alterTable(TableMigration(bookReviews));
           }
         },
       );

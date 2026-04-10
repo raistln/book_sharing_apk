@@ -264,7 +264,8 @@ class _BookDetailsContentState extends ConsumerState<_BookDetailsContent> {
             userId: ref.watch(activeUserProvider).value?.id ?? 0,
           ),
 
-          if (['reading', 'rereading', 'finished'].contains(book.readingStatus)) ...[
+          if (['reading', 'rereading', 'finished']
+              .contains(book.readingStatus)) ...[
             const SizedBox(height: 16),
             _ReadingStatsChips(bookId: book.id),
           ],
@@ -519,38 +520,52 @@ class _ReadingStatsChips extends ConsumerWidget {
         if (stats == null) return const SizedBox.shrink();
 
         final format = DateFormat.yMMMd();
-        return Center(
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (stats.startDate != null)
+              if (stats.startDate != null) ...[
                 _buildStatChip(
                   context,
                   Icons.play_circle_outline,
-                  'Inicio: ${format.format(stats.startDate!)}',
+                  format.format(stats.startDate!),
                   Colors.green,
                 ),
-              if (stats.endDate != null)
+                const SizedBox(width: 8),
+              ],
+              if (stats.endDate != null) ...[
                 _buildStatChip(
                   context,
                   Icons.check_circle_outline,
-                  'Fin: ${format.format(stats.endDate!)}',
+                  format.format(stats.endDate!),
                   Colors.teal,
                 ),
-              if (stats.pagesPerDay > 0)
+                const SizedBox(width: 8),
+              ],
+              if (stats.pagesPerDay > 0) ...[
                 _buildStatChip(
                   context,
                   Icons.speed,
-                  'Ritmo: ${stats.pagesPerDay.toStringAsFixed(1)} págs/día',
+                  '${stats.pagesPerDay.toStringAsFixed(1)} p/día',
                   Colors.orange,
                 ),
+                const SizedBox(width: 8),
+              ],
+              if (stats.totalDays > 0) ...[
+                _buildStatChip(
+                  context,
+                  Icons.calendar_today_outlined,
+                  '${stats.totalDays} días',
+                  Colors.indigo,
+                ),
+                const SizedBox(width: 8),
+              ],
               if (stats.maxPagesInSameDay > 0)
                 _buildStatChip(
                   context,
                   Icons.local_fire_department_outlined,
-                  'Récord: ${stats.maxPagesInSameDay} págs',
+                  '${stats.maxPagesInSameDay} p',
                   Colors.deepOrange,
                 ),
             ],

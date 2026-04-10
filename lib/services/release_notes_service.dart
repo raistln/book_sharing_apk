@@ -8,9 +8,22 @@ class ReleaseNotesService {
   static const _seenVersionKey = 'last_seen_release_version';
 
   // La versión actual de la aplicación que queremos destacar
-  static const currentVersion = '1.8.0';
+  static const currentVersion = '1.9.0';
 
   final List<ReleaseNote> _releaseNotes = [
+    ReleaseNote(
+      version: '1.9.0',
+      date: DateTime(2026, 4, 10),
+      changes: [
+        'Préstamos en grupos: elige a quién pedirle un libro cuando varios miembros tienen el mismo ejemplar.',
+        'Estantería editable: reorganiza y gestiona el estado de tus libros directamente desde su ficha.',
+        'Estadísticas de lectura: fechas, progreso y ritmo lector en cada libro activo o terminado.',
+        'Nueva valoración "Lo terminé, pero me costó": para esos libros que acabas por cabezonería.',
+        'Correcciones y ajustes menores de estabilidad.',
+      ],
+      thankYouMessage:
+          'Gracias por seguir leyendo con PassTheBook. Cada versión nace de querer que compartir libros sea tan sencillo como recomendarlos.',
+    ),
     ReleaseNote(
       version: '1.8.0',
       date: DateTime(2026, 2, 22),

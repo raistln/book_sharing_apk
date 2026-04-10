@@ -4,10 +4,20 @@ enum RecommendationLevel {
   notRecommended(1),
   fineButNotForMe(2),
   recommendToSimilar(3),
-  mustRead(4);
+  mustRead(4),
+  finishedButTough(5);
 
   final int value;
   const RecommendationLevel(this.value);
+
+  // Use this list for UI order
+  static const List<RecommendationLevel> orderedValues = [
+    RecommendationLevel.notRecommended,
+    RecommendationLevel.fineButNotForMe,
+    RecommendationLevel.finishedButTough,
+    RecommendationLevel.recommendToSimilar,
+    RecommendationLevel.mustRead,
+  ];
 
   static RecommendationLevel fromValue(int value) {
     return RecommendationLevel.values.firstWhere(
@@ -26,6 +36,8 @@ enum RecommendationLevel {
         return 'Lo recomiendo a gente como yo';
       case RecommendationLevel.mustRead:
         return 'Todo el mundo debería leerlo';
+      case RecommendationLevel.finishedButTough:
+        return 'Lo terminé, pero me costó';
     }
   }
 
@@ -39,6 +51,8 @@ enum RecommendationLevel {
         return 'Recomendado';
       case RecommendationLevel.mustRead:
         return 'Imprescindible';
+      case RecommendationLevel.finishedButTough:
+        return 'Terminado con esfuerzo';
     }
   }
 
@@ -52,6 +66,8 @@ enum RecommendationLevel {
         return Icons.thumb_up_alt;
       case RecommendationLevel.mustRead:
         return Icons.favorite;
+      case RecommendationLevel.finishedButTough:
+        return Icons.fitness_center;
     }
   }
 
@@ -65,6 +81,8 @@ enum RecommendationLevel {
         return Colors.blue.shade400;
       case RecommendationLevel.mustRead:
         return Colors.purple.shade400;
+      case RecommendationLevel.finishedButTough:
+        return Colors.amber.shade800;
     }
   }
 }

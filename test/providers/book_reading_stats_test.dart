@@ -32,9 +32,11 @@ void main() {
       expect(stats.endDate, DateTime(2026, 4, 10, 11, 0));
       expect(stats.pagesPerDay, 30.0);
       expect(stats.maxPagesInSameDay, 30);
+      expect(stats.totalDays, 1);
     });
 
-    test('calculates max pages per day across multiple sessions on same day', () {
+    test('calculates max pages per day across multiple sessions on same day',
+        () {
       final sessions = [
         ReadingSession(
           id: 1,
@@ -85,6 +87,7 @@ void main() {
       expect(stats.pagesPerDay, 30.0);
       // Max pages in same day: day 10 had 35 pages.
       expect(stats.maxPagesInSameDay, 35);
+      expect(stats.totalDays, 2);
     });
   });
 }

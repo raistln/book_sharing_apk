@@ -1943,7 +1943,7 @@ class $BookReviewsTable extends BookReviews
       'rating', aliasedName, false,
       type: DriftSqlType.int,
       requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL CHECK (rating BETWEEN 1 AND 4)');
+      $customConstraints: 'NOT NULL CHECK (rating BETWEEN 1 AND 5)');
   static const VerificationMeta _reviewMeta = const VerificationMeta('review');
   @override
   late final GeneratedColumn<String> review = GeneratedColumn<String>(

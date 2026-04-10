@@ -264,6 +264,11 @@ class _BookDetailsContentState extends ConsumerState<_BookDetailsContent> {
             userId: ref.watch(activeUserProvider).value?.id ?? 0,
           ),
 
+          if (['reading', 'rereading', 'finished'].contains(book.readingStatus)) ...[
+            const SizedBox(height: 16),
+            _ReadingStatsChips(bookId: book.id),
+          ],
+
           const SizedBox(height: 24),
 
           ReadingTimelineWidget(
@@ -500,3 +505,72 @@ class _ReviewTile extends ConsumerWidget {
 }
 
 // Remove _RatingStars class as it's no longer used
+
+class _ReadingStatsChips extends ConsumerWidget {
+  const _ReadingStatsChips({required this.bookId});
+  final int bookId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(bookReadingStatsProvider(bookId));
+
+    return statsAsync.when(
+      data: (stats) {
+        if (stats == null) return const SizedBox.shrink();
+
+        final format = DateFormat.yMMMd();
+        return Center(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              if (stats.startDate != null)
+                _buildStatChip(
+                  context,
+                  Icons.play_circle_outline,
+                  'Inicio: ${format.format(stats.startDate!)}',
+                  Colors.green,
+                ),
+              if (stats.endDate != null)
+                _buildStatChip(
+                  context,
+                  Icons.check_circle_outline,
+                  'Fin: ${format.format(stats.endDate!)}',
+                  Colors.teal,
+                ),
+              if (stats.pagesPerDay > 0)
+                _buildStatChip(
+                  context,
+                  Icons.speed,
+                  'Ritmo: ${stats.pagesPerDay.toStringAsFixed(1)} págs/día',
+                  Colors.orange,
+                ),
+              if (stats.maxPagesInSameDay > 0)
+                _buildStatChip(
+                  context,
+                  Icons.local_fire_department_outlined,
+                  'Récord: ${stats.maxPagesInSameDay} págs',
+                  Colors.deepOrange,
+                ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildStatChip(
+      BuildContext context, IconData icon, String label, MaterialColor color) {
+    return Chip(
+      avatar: Icon(icon, size: 16, color: color),
+      label: Text(label, style: TextStyle(fontSize: 12, color: color.shade700)),
+      backgroundColor: color.shade50,
+      side: BorderSide(color: color.shade200),
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+    );
+  }
+}

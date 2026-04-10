@@ -567,6 +567,75 @@ final readingInsightProvider = FutureProvider.autoDispose
   );
 });
 
+class BookReadingStats {
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final double pagesPerDay;
+  final int maxPagesInSameDay;
+
+  const BookReadingStats({
+    this.startDate,
+    this.endDate,
+    this.pagesPerDay = 0.0,
+    this.maxPagesInSameDay = 0,
+  });
+
+  static BookReadingStats? calculate(List<ReadingSession> sessions) {
+    if (sessions.isEmpty) return null;
+
+    DateTime? startDate;
+    DateTime? endDate;
+    int maxPages = 0;
+    
+    // Group by day to calculate pages per day
+    final pagesByDate = <String, int>{};
+    
+    for (final session in sessions) {
+      if (startDate == null || session.startTime.isBefore(startDate)) {
+        startDate = session.startTime;
+      }
+      if (session.endTime != null) {
+        if (endDate == null || session.endTime!.isAfter(endDate)) {
+          endDate = session.endTime;
+        }
+      }
+      
+      final dateKey = '${session.startTime.year}-${session.startTime.month}-${session.startTime.day}';
+      final pages = session.pagesRead ?? 0;
+      pagesByDate[dateKey] = (pagesByDate[dateKey] ?? 0) + pages;
+    }
+    
+    for (final dailyPages in pagesByDate.values) {
+      if (dailyPages > maxPages) {
+        maxPages = dailyPages;
+      }
+    }
+    
+    final totalDays = pagesByDate.keys.length;
+    double pagesPerDay = 0.0;
+    if (totalDays > 0) {
+      final totalPages = pagesByDate.values.fold<int>(0, (sum, pages) => sum + pages);
+      pagesPerDay = totalPages / totalDays;
+    }
+
+    return BookReadingStats(
+      startDate: startDate,
+      endDate: endDate,
+      pagesPerDay: pagesPerDay,
+      maxPagesInSameDay: maxPages,
+    );
+  }
+}
+
+final bookReadingStatsProvider = StreamProvider.autoDispose
+    .family<BookReadingStats?, int>((ref, bookId) {
+  final sessionDao = ref.watch(readingSessionDaoProvider);
+
+  return sessionDao.watchSessionsForBook(bookId).map((sessions) {
+    return BookReadingStats.calculate(sessions);
+  });
+});
+
 final bookExportServiceProvider = Provider<BookExportService>((ref) {
   return const BookExportService();
 });

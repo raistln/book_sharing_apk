@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:book_sharing_app/l10n/app_localizations_custom.dart';
 import '../../../widgets/info_pop.dart';
 
 import '../../../../providers/auth_providers.dart';
@@ -16,7 +17,9 @@ import '../../../../providers/cover_refresh_providers.dart';
 import '../../../../providers/api_providers.dart';
 import '../../../../providers/settings_providers.dart';
 import '../../../../providers/theme_providers.dart';
+import '../../../../providers/locale_providers.dart';
 import '../../../../services/backup_scheduler_service.dart';
+import '../../../../services/locale_persistence_service.dart';
 import '../../../../utils/database_reset.dart';
 import '../../../../providers/loan_providers.dart' as loan;
 import '../../../../providers/sync_providers.dart';
@@ -264,11 +267,23 @@ class SettingsTab extends ConsumerWidget {
                 _buildSyncStatusBanner(context, ref),
                 const SizedBox(height: 16),
                 Text(
-                  'Apariencia',
+                  AppLocalizations.of(context).settingsAppearance,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 12),
                 const _ThemeSection(),
+                const SizedBox(height: 24),
+                Text(
+                  AppLocalizations.of(context).settingsLanguageTitle,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  AppLocalizations.of(context).settingsLanguageDescription,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                const _LanguageSection(),
 
                 const SizedBox(height: 16),
                 Text(
@@ -845,6 +860,7 @@ class _ThemeSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final preferenceAsync = ref.watch(themeSettingsProvider);
     final notifier = ref.read(themeSettingsProvider.notifier);
 
@@ -862,7 +878,7 @@ class _ThemeSection extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'No pudimos cargar la preferencia de tema.',
+                l10n.themePreferenceLoadError,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -874,7 +890,7 @@ class _ThemeSection extends ConsumerWidget {
               FilledButton.icon(
                 onPressed: () => ref.invalidate(themeSettingsProvider),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
+                label: Text(l10n.retry),
               ),
             ],
           ),
@@ -886,9 +902,9 @@ class _ThemeSection extends ConsumerWidget {
             value: value,
             label: Text(
               switch (value) {
-                ThemePreference.system => 'Usar tema del sistema',
-                ThemePreference.light => 'Modo claro',
-                ThemePreference.dark => 'Modo oscuro',
+                ThemePreference.system => l10n.themeSystem,
+                ThemePreference.light => l10n.themeLight,
+                ThemePreference.dark => l10n.themeDark,
               },
             ),
             icon: Icon(
@@ -922,6 +938,92 @@ class _ThemeSection extends ConsumerWidget {
                   showSelectedIcon: false,
                 ),
               ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LanguageSection extends ConsumerWidget {
+  const _LanguageSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final preferenceAsync = ref.watch(localeSettingsProvider);
+    final notifier = ref.read(localeSettingsProvider.notifier);
+
+    return preferenceAsync.when(
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (error, __) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.settingsLanguageLoadError,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: Theme.of(context).colorScheme.error),
+              ),
+              const SizedBox(height: 8),
+              Text('$error'),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () => ref.invalidate(localeSettingsProvider),
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.retry),
+              ),
+            ],
+          ),
+        ),
+      ),
+      data: (preference) {
+        final segments = AppLanguagePreference.values.map((value) {
+          return ButtonSegment<AppLanguagePreference>(
+            value: value,
+            label: Text(
+              switch (value) {
+                AppLanguagePreference.system => l10n.languageSystem,
+                AppLanguagePreference.spanish => l10n.languageSpanish,
+                AppLanguagePreference.english => l10n.languageEnglish,
+              },
+            ),
+            icon: Icon(
+              switch (value) {
+                AppLanguagePreference.system => Icons.phone_android_outlined,
+                AppLanguagePreference.spanish => Icons.translate_outlined,
+                AppLanguagePreference.english => Icons.translate_outlined,
+              },
+            ),
+          );
+        }).toList(growable: false);
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SegmentedButton<AppLanguagePreference>(
+              segments: segments,
+              selected: {preference},
+              onSelectionChanged: (selection) {
+                if (selection.isEmpty) {
+                  return;
+                }
+                final selected = selection.first;
+                if (selected != preference) {
+                  notifier.update(selected);
+                }
+              },
+              showSelectedIcon: false,
             ),
           ),
         );

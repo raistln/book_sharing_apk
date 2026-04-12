@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:book_sharing_app/l10n/app_localizations_custom.dart';
 
 import 'providers/auth_providers.dart';
 import 'providers/book_providers.dart';
+import 'providers/locale_providers.dart';
 import 'providers/notification_providers.dart';
 import 'providers/sync_providers.dart';
 import 'providers/theme_providers.dart';
@@ -132,24 +134,36 @@ class _BookSharingAppState extends ConsumerState<BookSharingApp>
     final theme = ref.watch(lightThemeProvider);
     final darkTheme = ref.watch(darkThemeProvider);
     final mode = ref.watch(themeModeProvider);
+    final locale = ref.watch(appLocaleProvider);
+    final fallbackL10n = AppLocalizations.supportedLocales.first;
 
     return MaterialApp(
       restorationScopeId: 'app',
       navigatorKey: navigatorKey,
-      title: 'Book Sharing App',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
       theme: theme,
       darkTheme: darkTheme,
       themeMode: mode,
+      locale: locale,
+      localeResolutionCallback: (locale, supportedLocales) {
+        if (locale == null) {
+          return fallbackL10n;
+        }
+        for (final supported in supportedLocales) {
+          if (supported.languageCode == locale.languageCode) {
+            return supported;
+          }
+        }
+        return fallbackL10n;
+      },
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('en'),
-        Locale('es'),
-      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) {
         return CoachMarkOverlayHost(child: child ?? const SizedBox.shrink());
       },

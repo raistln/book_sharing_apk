@@ -103,7 +103,7 @@ if (existing.isDirty) {
 ```
 LocalUsers              — Usuarios del dispositivo (pinHash, pinSalt, pinUpdatedAt incluidos)
 Books                   — Biblioteca personal
-BookReviews             — Reseñas (rating 1-4, constraint CHECK en DB)
+BookReviews             — Reseñas (rating 1-5, constraint CHECK en DB)
 ReadingTimelineEntries  — Eventos de lectura (bookUuid nullable en DB)
 ReadingSessions         — Sesiones cronometradas
 Groups                  — Grupos (allowedGenres TEXT nullable, primaryColor TEXT nullable)

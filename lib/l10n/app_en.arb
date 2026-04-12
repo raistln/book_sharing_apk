@@ -1,0 +1,16 @@
+{
+  "@@locale": "en",
+  "appTitle": "Book Sharing App",
+  "retry": "Retry",
+  "settingsAppearance": "Appearance",
+  "settingsLanguageTitle": "Language",
+  "settingsLanguageDescription": "Choose the app language or use the system one.",
+  "settingsLanguageLoadError": "We couldn't load the language preference.",
+  "themePreferenceLoadError": "We couldn't load the theme preference.",
+  "themeSystem": "Use system theme",
+  "themeLight": "Light mode",
+  "themeDark": "Dark mode",
+  "languageSystem": "System",
+  "languageSpanish": "Spanish",
+  "languageEnglish": "English"
+}

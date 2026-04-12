@@ -1,0 +1,16 @@
+{
+  "@@locale": "es",
+  "appTitle": "Book Sharing App",
+  "retry": "Reintentar",
+  "settingsAppearance": "Apariencia",
+  "settingsLanguageTitle": "Idioma",
+  "settingsLanguageDescription": "Elige el idioma de la app o usa el del sistema.",
+  "settingsLanguageLoadError": "No pudimos cargar la preferencia de idioma.",
+  "themePreferenceLoadError": "No pudimos cargar la preferencia de tema.",
+  "themeSystem": "Usar tema del sistema",
+  "themeLight": "Modo claro",
+  "themeDark": "Modo oscuro",
+  "languageSystem": "Sistema",
+  "languageSpanish": "Español",
+  "languageEnglish": "English"
+}

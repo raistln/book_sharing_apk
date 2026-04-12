@@ -67,3 +67,6 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: 2.4.1
   matcher: ^0.12.16
+
+flutter:
+  generate: true

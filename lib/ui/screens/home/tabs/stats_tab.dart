@@ -7,6 +7,8 @@ import '../../../../services/stats_service.dart';
 import '../../../widgets/loans/active_loans_list.dart';
 import '../../read_books_screen.dart';
 import 'discover_book_detail_page.dart';
+import '../../../../data/local/group_dao.dart';
+import '../../../../models/grouped_shared_book.dart';
 import '../../../../ui/utils/library_transition.dart';
 
 /// Stats tab showing library statistics
@@ -288,7 +290,15 @@ class _RecommendationSection extends ConsumerWidget {
                         LibraryPageRoute(
                           page: DiscoverBookDetailPage(
                             group: detail.group,
-                            sharedBookId: detail.sharedBook.id,
+                            sharedBook: GroupedSharedBook(
+                              book: detail.book,
+                              allCopies: [
+                                SharedBookDetail(
+                                  sharedBook: detail.sharedBook,
+                                  book: detail.book,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );

@@ -14,7 +14,7 @@ class RecommendationSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      children: RecommendationLevel.values.map((level) {
+      children: RecommendationLevel.orderedValues.map((level) {
         final isSelected = selectedLevel == level;
         return Padding(
           padding: const EdgeInsets.only(bottom: 8.0),

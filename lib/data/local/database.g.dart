@@ -765,6 +765,22 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
   late final GeneratedColumn<int> publicationYear = GeneratedColumn<int>(
       'publication_year', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _isOnShelfMeta =
+      const VerificationMeta('isOnShelf');
+  @override
+  late final GeneratedColumn<bool> isOnShelf = GeneratedColumn<bool>(
+      'is_on_shelf', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_on_shelf" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _isOnShelfAtMeta =
+      const VerificationMeta('isOnShelfAt');
+  @override
+  late final GeneratedColumn<DateTime> isOnShelfAt = GeneratedColumn<DateTime>(
+      'is_on_shelf_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _isDirtyMeta =
       const VerificationMeta('isDirty');
   @override
@@ -830,6 +846,8 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
         isPhysical,
         pageCount,
         publicationYear,
+        isOnShelf,
+        isOnShelfAt,
         isDirty,
         isDeleted,
         syncedAt,
@@ -949,6 +967,18 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
           publicationYear.isAcceptableOrUnknown(
               data['publication_year']!, _publicationYearMeta));
     }
+    if (data.containsKey('is_on_shelf')) {
+      context.handle(
+          _isOnShelfMeta,
+          isOnShelf.isAcceptableOrUnknown(
+              data['is_on_shelf']!, _isOnShelfMeta));
+    }
+    if (data.containsKey('is_on_shelf_at')) {
+      context.handle(
+          _isOnShelfAtMeta,
+          isOnShelfAt.isAcceptableOrUnknown(
+              data['is_on_shelf_at']!, _isOnShelfAtMeta));
+    }
     if (data.containsKey('is_dirty')) {
       context.handle(_isDirtyMeta,
           isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
@@ -1020,6 +1050,10 @@ class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
           .read(DriftSqlType.int, data['${effectivePrefix}page_count']),
       publicationYear: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}publication_year']),
+      isOnShelf: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_on_shelf'])!,
+      isOnShelfAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}is_on_shelf_at']),
       isDirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
       isDeleted: attachedDatabase.typeMapping
@@ -1061,6 +1095,8 @@ class Book extends DataClass implements Insertable<Book> {
   final bool isPhysical;
   final int? pageCount;
   final int? publicationYear;
+  final bool isOnShelf;
+  final DateTime? isOnShelfAt;
   final bool isDirty;
   final bool isDeleted;
   final DateTime? syncedAt;
@@ -1088,6 +1124,8 @@ class Book extends DataClass implements Insertable<Book> {
       required this.isPhysical,
       this.pageCount,
       this.publicationYear,
+      required this.isOnShelf,
+      this.isOnShelfAt,
       required this.isDirty,
       required this.isDeleted,
       this.syncedAt,
@@ -1143,6 +1181,10 @@ class Book extends DataClass implements Insertable<Book> {
     if (!nullToAbsent || publicationYear != null) {
       map['publication_year'] = Variable<int>(publicationYear);
     }
+    map['is_on_shelf'] = Variable<bool>(isOnShelf);
+    if (!nullToAbsent || isOnShelfAt != null) {
+      map['is_on_shelf_at'] = Variable<DateTime>(isOnShelfAt);
+    }
     map['is_dirty'] = Variable<bool>(isDirty);
     map['is_deleted'] = Variable<bool>(isDeleted);
     if (!nullToAbsent || syncedAt != null) {
@@ -1197,6 +1239,10 @@ class Book extends DataClass implements Insertable<Book> {
       publicationYear: publicationYear == null && nullToAbsent
           ? const Value.absent()
           : Value(publicationYear),
+      isOnShelf: Value(isOnShelf),
+      isOnShelfAt: isOnShelfAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isOnShelfAt),
       isDirty: Value(isDirty),
       isDeleted: Value(isDeleted),
       syncedAt: syncedAt == null && nullToAbsent
@@ -1233,6 +1279,8 @@ class Book extends DataClass implements Insertable<Book> {
       isPhysical: serializer.fromJson<bool>(json['isPhysical']),
       pageCount: serializer.fromJson<int?>(json['pageCount']),
       publicationYear: serializer.fromJson<int?>(json['publicationYear']),
+      isOnShelf: serializer.fromJson<bool>(json['isOnShelf']),
+      isOnShelfAt: serializer.fromJson<DateTime?>(json['isOnShelfAt']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
@@ -1265,6 +1313,8 @@ class Book extends DataClass implements Insertable<Book> {
       'isPhysical': serializer.toJson<bool>(isPhysical),
       'pageCount': serializer.toJson<int?>(pageCount),
       'publicationYear': serializer.toJson<int?>(publicationYear),
+      'isOnShelf': serializer.toJson<bool>(isOnShelf),
+      'isOnShelfAt': serializer.toJson<DateTime?>(isOnShelfAt),
       'isDirty': serializer.toJson<bool>(isDirty),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
@@ -1295,6 +1345,8 @@ class Book extends DataClass implements Insertable<Book> {
           bool? isPhysical,
           Value<int?> pageCount = const Value.absent(),
           Value<int?> publicationYear = const Value.absent(),
+          bool? isOnShelf,
+          Value<DateTime?> isOnShelfAt = const Value.absent(),
           bool? isDirty,
           bool? isDeleted,
           Value<DateTime?> syncedAt = const Value.absent(),
@@ -1327,6 +1379,8 @@ class Book extends DataClass implements Insertable<Book> {
         publicationYear: publicationYear.present
             ? publicationYear.value
             : this.publicationYear,
+        isOnShelf: isOnShelf ?? this.isOnShelf,
+        isOnShelfAt: isOnShelfAt.present ? isOnShelfAt.value : this.isOnShelfAt,
         isDirty: isDirty ?? this.isDirty,
         isDeleted: isDeleted ?? this.isDeleted,
         syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -1369,6 +1423,9 @@ class Book extends DataClass implements Insertable<Book> {
       publicationYear: data.publicationYear.present
           ? data.publicationYear.value
           : this.publicationYear,
+      isOnShelf: data.isOnShelf.present ? data.isOnShelf.value : this.isOnShelf,
+      isOnShelfAt:
+          data.isOnShelfAt.present ? data.isOnShelfAt.value : this.isOnShelfAt,
       isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -1401,6 +1458,8 @@ class Book extends DataClass implements Insertable<Book> {
           ..write('isPhysical: $isPhysical, ')
           ..write('pageCount: $pageCount, ')
           ..write('publicationYear: $publicationYear, ')
+          ..write('isOnShelf: $isOnShelf, ')
+          ..write('isOnShelfAt: $isOnShelfAt, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -1433,6 +1492,8 @@ class Book extends DataClass implements Insertable<Book> {
         isPhysical,
         pageCount,
         publicationYear,
+        isOnShelf,
+        isOnShelfAt,
         isDirty,
         isDeleted,
         syncedAt,
@@ -1464,6 +1525,8 @@ class Book extends DataClass implements Insertable<Book> {
           other.isPhysical == this.isPhysical &&
           other.pageCount == this.pageCount &&
           other.publicationYear == this.publicationYear &&
+          other.isOnShelf == this.isOnShelf &&
+          other.isOnShelfAt == this.isOnShelfAt &&
           other.isDirty == this.isDirty &&
           other.isDeleted == this.isDeleted &&
           other.syncedAt == this.syncedAt &&
@@ -1493,6 +1556,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
   final Value<bool> isPhysical;
   final Value<int?> pageCount;
   final Value<int?> publicationYear;
+  final Value<bool> isOnShelf;
+  final Value<DateTime?> isOnShelfAt;
   final Value<bool> isDirty;
   final Value<bool> isDeleted;
   final Value<DateTime?> syncedAt;
@@ -1520,6 +1585,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.isPhysical = const Value.absent(),
     this.pageCount = const Value.absent(),
     this.publicationYear = const Value.absent(),
+    this.isOnShelf = const Value.absent(),
+    this.isOnShelfAt = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -1548,6 +1615,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     this.isPhysical = const Value.absent(),
     this.pageCount = const Value.absent(),
     this.publicationYear = const Value.absent(),
+    this.isOnShelf = const Value.absent(),
+    this.isOnShelfAt = const Value.absent(),
     this.isDirty = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -1577,6 +1646,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
     Expression<bool>? isPhysical,
     Expression<int>? pageCount,
     Expression<int>? publicationYear,
+    Expression<bool>? isOnShelf,
+    Expression<DateTime>? isOnShelfAt,
     Expression<bool>? isDirty,
     Expression<bool>? isDeleted,
     Expression<DateTime>? syncedAt,
@@ -1607,6 +1678,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
       if (isPhysical != null) 'is_physical': isPhysical,
       if (pageCount != null) 'page_count': pageCount,
       if (publicationYear != null) 'publication_year': publicationYear,
+      if (isOnShelf != null) 'is_on_shelf': isOnShelf,
+      if (isOnShelfAt != null) 'is_on_shelf_at': isOnShelfAt,
       if (isDirty != null) 'is_dirty': isDirty,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -1637,6 +1710,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
       Value<bool>? isPhysical,
       Value<int?>? pageCount,
       Value<int?>? publicationYear,
+      Value<bool>? isOnShelf,
+      Value<DateTime?>? isOnShelfAt,
       Value<bool>? isDirty,
       Value<bool>? isDeleted,
       Value<DateTime?>? syncedAt,
@@ -1664,6 +1739,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
       isPhysical: isPhysical ?? this.isPhysical,
       pageCount: pageCount ?? this.pageCount,
       publicationYear: publicationYear ?? this.publicationYear,
+      isOnShelf: isOnShelf ?? this.isOnShelf,
+      isOnShelfAt: isOnShelfAt ?? this.isOnShelfAt,
       isDirty: isDirty ?? this.isDirty,
       isDeleted: isDeleted ?? this.isDeleted,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -1738,6 +1815,12 @@ class BooksCompanion extends UpdateCompanion<Book> {
     if (publicationYear.present) {
       map['publication_year'] = Variable<int>(publicationYear.value);
     }
+    if (isOnShelf.present) {
+      map['is_on_shelf'] = Variable<bool>(isOnShelf.value);
+    }
+    if (isOnShelfAt.present) {
+      map['is_on_shelf_at'] = Variable<DateTime>(isOnShelfAt.value);
+    }
     if (isDirty.present) {
       map['is_dirty'] = Variable<bool>(isDirty.value);
     }
@@ -1780,6 +1863,8 @@ class BooksCompanion extends UpdateCompanion<Book> {
           ..write('isPhysical: $isPhysical, ')
           ..write('pageCount: $pageCount, ')
           ..write('publicationYear: $publicationYear, ')
+          ..write('isOnShelf: $isOnShelf, ')
+          ..write('isOnShelfAt: $isOnShelfAt, ')
           ..write('isDirty: $isDirty, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('syncedAt: $syncedAt, ')
@@ -1858,7 +1943,7 @@ class $BookReviewsTable extends BookReviews
       'rating', aliasedName, false,
       type: DriftSqlType.int,
       requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL CHECK (rating BETWEEN 1 AND 4)');
+      $customConstraints: 'NOT NULL CHECK (rating BETWEEN 1 AND 5)');
   static const VerificationMeta _reviewMeta = const VerificationMeta('review');
   @override
   late final GeneratedColumn<String> review = GeneratedColumn<String>(
@@ -18917,6 +19002,8 @@ typedef $$BooksTableCreateCompanionBuilder = BooksCompanion Function({
   Value<bool> isPhysical,
   Value<int?> pageCount,
   Value<int?> publicationYear,
+  Value<bool> isOnShelf,
+  Value<DateTime?> isOnShelfAt,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -18945,6 +19032,8 @@ typedef $$BooksTableUpdateCompanionBuilder = BooksCompanion Function({
   Value<bool> isPhysical,
   Value<int?> pageCount,
   Value<int?> publicationYear,
+  Value<bool> isOnShelf,
+  Value<DateTime?> isOnShelfAt,
   Value<bool> isDirty,
   Value<bool> isDeleted,
   Value<DateTime?> syncedAt,
@@ -19120,6 +19209,12 @@ class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
   ColumnFilters<int> get publicationYear => $composableBuilder(
       column: $table.publicationYear,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isOnShelf => $composableBuilder(
+      column: $table.isOnShelf, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get isOnShelfAt => $composableBuilder(
+      column: $table.isOnShelfAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnFilters(column));
@@ -19338,6 +19433,12 @@ class $$BooksTableOrderingComposer
       column: $table.publicationYear,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get isOnShelf => $composableBuilder(
+      column: $table.isOnShelf, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get isOnShelfAt => $composableBuilder(
+      column: $table.isOnShelfAt, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isDirty => $composableBuilder(
       column: $table.isDirty, builder: (column) => ColumnOrderings(column));
 
@@ -19442,6 +19543,12 @@ class $$BooksTableAnnotationComposer
 
   GeneratedColumn<int> get publicationYear => $composableBuilder(
       column: $table.publicationYear, builder: (column) => column);
+
+  GeneratedColumn<bool> get isOnShelf =>
+      $composableBuilder(column: $table.isOnShelf, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get isOnShelfAt => $composableBuilder(
+      column: $table.isOnShelfAt, builder: (column) => column);
 
   GeneratedColumn<bool> get isDirty =>
       $composableBuilder(column: $table.isDirty, builder: (column) => column);
@@ -19636,6 +19743,8 @@ class $$BooksTableTableManager extends RootTableManager<
             Value<bool> isPhysical = const Value.absent(),
             Value<int?> pageCount = const Value.absent(),
             Value<int?> publicationYear = const Value.absent(),
+            Value<bool> isOnShelf = const Value.absent(),
+            Value<DateTime?> isOnShelfAt = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -19664,6 +19773,8 @@ class $$BooksTableTableManager extends RootTableManager<
             isPhysical: isPhysical,
             pageCount: pageCount,
             publicationYear: publicationYear,
+            isOnShelf: isOnShelf,
+            isOnShelfAt: isOnShelfAt,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,
@@ -19692,6 +19803,8 @@ class $$BooksTableTableManager extends RootTableManager<
             Value<bool> isPhysical = const Value.absent(),
             Value<int?> pageCount = const Value.absent(),
             Value<int?> publicationYear = const Value.absent(),
+            Value<bool> isOnShelf = const Value.absent(),
+            Value<DateTime?> isOnShelfAt = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
             Value<DateTime?> syncedAt = const Value.absent(),
@@ -19720,6 +19833,8 @@ class $$BooksTableTableManager extends RootTableManager<
             isPhysical: isPhysical,
             pageCount: pageCount,
             publicationYear: publicationYear,
+            isOnShelf: isOnShelf,
+            isOnShelfAt: isOnShelfAt,
             isDirty: isDirty,
             isDeleted: isDeleted,
             syncedAt: syncedAt,

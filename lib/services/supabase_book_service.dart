@@ -48,7 +48,7 @@ class SupabaseBookService {
     final config = await _loadConfig();
     final query = <String, String>{
       'select':
-          'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_physical,is_read,reading_status,description,barcode,read_at,is_borrowed_external,external_lender_name,is_deleted,genre,page_count,publication_year,created_at,updated_at',
+          'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_physical,is_read,reading_status,description,barcode,read_at,is_borrowed_external,external_lender_name,is_on_shelf,is_on_shelf_at,is_deleted,genre,page_count,publication_year,created_at,updated_at',
       'owner_id': 'eq.$ownerId',
       'order': 'updated_at.asc',
     };
@@ -93,7 +93,7 @@ class SupabaseBookService {
     final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
       queryParameters: {
         'select':
-            'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_physical,is_read,reading_status,description,barcode,read_at,is_borrowed_external,external_lender_name,is_deleted,genre,page_count,publication_year,created_at,updated_at',
+            'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_physical,is_read,reading_status,description,barcode,read_at,is_borrowed_external,external_lender_name,is_on_shelf,is_on_shelf_at,is_deleted,genre,page_count,publication_year,created_at,updated_at',
         'id': 'eq.$id',
         'limit': '1',
       },
@@ -199,6 +199,8 @@ class SupabaseBookService {
     DateTime? readAt,
     bool isBorrowedExternal = false,
     String? externalLenderName,
+    bool isOnShelf = false,
+    DateTime? isOnShelfAt,
     bool upsert = false,
     String? accessToken,
   }) async {
@@ -228,6 +230,8 @@ class SupabaseBookService {
       'read_at': readAt?.toUtc().toIso8601String(),
       'is_borrowed_external': isBorrowedExternal,
       'external_lender_name': externalLenderName,
+      'is_on_shelf': isOnShelf,
+      'is_on_shelf_at': isOnShelfAt?.toUtc().toIso8601String(),
       'created_at': createdAt.toUtc().toIso8601String(),
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
@@ -312,6 +316,8 @@ class SupabaseBookService {
     DateTime? readAt,
     bool? isBorrowedExternal,
     String? externalLenderName,
+    bool? isOnShelf,
+    DateTime? isOnShelfAt,
     String? accessToken,
   }) async {
     final config = await _loadConfig();
@@ -335,6 +341,8 @@ class SupabaseBookService {
       'read_at': readAt?.toUtc().toIso8601String(),
       'is_borrowed_external': isBorrowedExternal ?? false,
       'external_lender_name': externalLenderName,
+      if (isOnShelf != null) 'is_on_shelf': isOnShelf,
+      if (isOnShelfAt != null) 'is_on_shelf_at': isOnShelfAt.toUtc().toIso8601String(),
       if (visibility != null) 'visibility': visibility,
       if (isAvailable != null) 'is_available': isAvailable,
       if (isPhysical != null) 'is_physical': isPhysical,
@@ -916,6 +924,8 @@ class SupabaseBookRecord {
     this.readAt,
     this.isBorrowedExternal = false,
     this.externalLenderName,
+    this.isOnShelf = false,
+    this.isOnShelfAt,
   });
 
   final String id;
@@ -936,6 +946,8 @@ class SupabaseBookRecord {
   final DateTime? readAt;
   final bool isBorrowedExternal;
   final String? externalLenderName;
+  final bool isOnShelf;
+  final DateTime? isOnShelfAt;
   final bool isDeleted;
   final String? genre;
   final int? pageCount;
@@ -976,6 +988,8 @@ class SupabaseBookRecord {
       readAt: parseDate(json['read_at']),
       isBorrowedExternal: (json['is_borrowed_external'] as bool?) ?? false,
       externalLenderName: json['external_lender_name'] as String?,
+      isOnShelf: (json['is_on_shelf'] as bool?) ?? false,
+      isOnShelfAt: parseDate(json['is_on_shelf_at']),
     );
   }
 }

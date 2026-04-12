@@ -28,15 +28,13 @@ Una aplicación móvil moderna y completa construida con **Flutter** para gestio
 
 La aplicación combina la potencia de Flutter con un backend robusto en Supabase, ofreciendo sincronización en tiempo real, notificaciones push y una experiencia de usuario fluida y moderna.
 
-## 🚀 Novedades (Versión 1.8.0)
+## 🚀 Novedades (Versión 1.9.0)
 
-- **Nueva Pestaña de Lectura:** Seguimiento centralizado de tus lecturas actuales, objetivos, sesiones y estadísticas.
-- **Navegación Intuitiva:** Rediseño estructural con nuevas pestañas principales para un flujo más natural.
-- **Modo Enfoque (Zen Mode):** Integración con 'No Molestar' (DND) y retroalimentación háptica para una concentración total.
-- **Sincronización Avanzada:** Tus sesiones de lectura y listas de deseos (Wishlist) ahora se sincronizan en la nube.
-- **Perfil Premium:** Perfil en pantalla completa con biografía, ubicación y exposición de libros favoritos.
-- **Clubes de Lectura Flexibles:** Unión simplificada con códigos (UUID) y una interfaz más limpia.
-- **Dashboard Dinámico:** Mejora del ritmo de lectura con soporte para tus últimos préstamos y libros, adaptándose a tu actividad.
+- **Préstamos Multi-Dueño:** Ahora puedes elegir específicamente a quién pedir prestado un libro cuando varios miembros del grupo tienen el mismo ejemplar disponible.
+- **Estantería Editable:** Gestiona y reorganiza el estado de tus libros personales directamente desde la ficha de detalles.
+- **Estadísticas de Lectura Detalladas:** Nuevo desglose de métricas por libro (fechas de inicio/fin, páginas por día, récord de lectura y días totales de lectura).
+- **Nueva Valoración Literaria:** Añadido el nivel de recomendación *"Lo terminé, pero me costó"* para esos libros que exigen un esfuerzo extra.
+- **Optimización de Interfaz:** Ajustes visuales en el dashboard de lectura y correcciones de estabilidad en la sincronización.
 
 ---
 
@@ -47,8 +45,9 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 - **Búsqueda Multifuente:** Integración con **Google Books API** y **Open Library** para obtener metadatos precisos automáticamente
 - **Colecciones Personalizadas:** Organiza tus libros por estado de lectura, autores, géneros o valoraciones personales
 - **Portadas Dinámicas:** Sistema automático de gestión de portadas con caché inteligente
-- **Reseñas y Valoraciones:** Añade tus propias reseñas y calificaciones con sistema de 4 niveles
-- **Lista de Deseos (Wishlist):** Guarda libros que te interesan para el futuro y pásalos a tu biblioteca personal con un solo toque cuando los consigas
+- **Intercambio Sencillo de "Ya lo tengo":** Pasa fácilmente los libros desde tu wishlist a tu biblioteca personal con un solo toque
+- **Reseñas y Valoraciones Literarias:** Sistema de valoración único con niveles que incluyen desde el entusiasmo total hasta el esfuerzo de *"Lo terminé, pero me costó"*
+- **Portadas Dinámicas:** Sistema automático de gestión de portadas con caché inteligente
 - **Interfaz Literaria:** Diseño cuidado con tipografías clásicas (Georgia), géneros visualmente organizados y scroll optimizado para lectura de reseñas
 - **Filtros Avanzados:** Busca y filtra por título, autor, ISBN, estado de disponibilidad y más
 - **Perfil de Usuario Premium:** Gestión completa de perfil en pantalla dedicada, con personalización de avatar, biografía, libros favoritos y ubicación por provincias.
@@ -73,6 +72,7 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 
 ### 🔄 Sistema Profesional de Préstamos
 - **Flujo Digital Completo:** Solicita, aprueba y gestiona préstamos directamente desde la app
+- **Elección de Prestador:** Selecciona específicamente a qué miembro del grupo pedirle el libro cuando hay múltiples copias disponibles
 - **Notificaciones en Tiempo Real:** Recibe alertas instantáneas sobre solicitudes, aprobaciones y devoluciones
 - **Gestión de Estados:** Control total sobre préstamos pendientes, activos, devueltos o rechazados
 - **Préstamos Manuales:** Registra préstamos a personas fuera de la plataforma
@@ -88,6 +88,7 @@ La aplicación combina la potencia de Flutter con un backend robusto en Supabase
 
 ### 📊 Estadísticas e Insights
 - **Nueva Pestaña de Lectura:** Panel centralizado para seguimientos de lecturas, objetivos y sesiones rápidas.
+- **Métricas por Libro:** Visualiza estadísticas específicas de cada libro (páginas por día, duración total, etc.) para entender mejor tu ritmo.
 - **Dashboard Visual:** Gráficos interactivos sobre tu progreso de lectura y estado de la colección
 - **Métricas de Préstamo:** Descubre qué libros son los más solicitados en tus grupos
 - **Calendario y Ritmo de Lectura Dinámico:** Seguimiento de hábitos con calendario de actividad y gráfico de ritmo interactivo y zoom táctil mejorado.

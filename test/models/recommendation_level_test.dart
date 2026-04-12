@@ -9,11 +9,12 @@ void main() {
       expect(RecommendationLevel.fromValue(2), RecommendationLevel.fineButNotForMe);
       expect(RecommendationLevel.fromValue(3), RecommendationLevel.recommendToSimilar);
       expect(RecommendationLevel.fromValue(4), RecommendationLevel.mustRead);
+      expect(RecommendationLevel.fromValue(5), RecommendationLevel.finishedButTough);
     });
 
     test('fromValue returns recommendToSimilar as fallback for invalid values', () {
       expect(RecommendationLevel.fromValue(0), RecommendationLevel.recommendToSimilar);
-      expect(RecommendationLevel.fromValue(5), RecommendationLevel.recommendToSimilar);
+      expect(RecommendationLevel.fromValue(6), RecommendationLevel.recommendToSimilar);
       expect(RecommendationLevel.fromValue(99), RecommendationLevel.recommendToSimilar);
     });
 
@@ -22,6 +23,7 @@ void main() {
       expect(RecommendationLevel.fineButNotForMe.label, 'Está bien, pero no es para mí');
       expect(RecommendationLevel.recommendToSimilar.label, 'Lo recomiendo a gente como yo');
       expect(RecommendationLevel.mustRead.label, 'Todo el mundo debería leerlo');
+      expect(RecommendationLevel.finishedButTough.label, 'Lo terminé, pero me costó');
     });
 
     test('shortLabel returns correct short labels', () {
@@ -29,6 +31,7 @@ void main() {
       expect(RecommendationLevel.fineButNotForMe.shortLabel, 'Ni fu ni fa');
       expect(RecommendationLevel.recommendToSimilar.shortLabel, 'Recomendado');
       expect(RecommendationLevel.mustRead.shortLabel, 'Imprescindible');
+      expect(RecommendationLevel.finishedButTough.shortLabel, 'Terminado con esfuerzo');
     });
 
     test('icon returns correct icons', () {
@@ -36,6 +39,7 @@ void main() {
       expect(RecommendationLevel.fineButNotForMe.icon, Icons.sentiment_neutral);
       expect(RecommendationLevel.recommendToSimilar.icon, Icons.thumb_up_alt);
       expect(RecommendationLevel.mustRead.icon, Icons.favorite);
+      expect(RecommendationLevel.finishedButTough.icon, Icons.fitness_center);
     });
 
     test('color returns correct colors', () {
@@ -43,6 +47,7 @@ void main() {
       expect(RecommendationLevel.fineButNotForMe.color, Colors.orange.shade400);
       expect(RecommendationLevel.recommendToSimilar.color, Colors.blue.shade400);
       expect(RecommendationLevel.mustRead.color, Colors.purple.shade400);
+      expect(RecommendationLevel.finishedButTough.color, Colors.amber.shade800);
     });
   });
 }

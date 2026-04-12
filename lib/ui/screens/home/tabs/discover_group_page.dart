@@ -11,6 +11,7 @@ import '../../../../providers/book_providers.dart';
 import '../../../../services/coach_marks/coach_mark_controller.dart';
 import '../../../../services/coach_marks/coach_mark_models.dart';
 import '../../../../services/discover_group_controller.dart';
+import '../../../../models/grouped_shared_book.dart';
 import '../../../../services/onboarding_service.dart';
 import '../../../widgets/coach_mark_target.dart';
 import '../../../widgets/empty_state.dart';
@@ -408,7 +409,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
       );
     }
 
-    final filtered = state.items;
+    final filtered = state.groupedItems;
 
     if (filtered.isNotEmpty && !_discoverTargetsReady) {
       _discoverTargetsReady = true;
@@ -430,7 +431,6 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
       }
       final status = detail.loan.status;
       if (status != 'requested' && status != 'active') {
-        // FIXED: accepted -> active
         continue;
       }
       final entry = activeLoansBySharedBookId[shared.id];
@@ -528,24 +528,21 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final detail = filtered[index];
-                // Use a specialized Grid Item widget or adapt existing logic
-                // For simplicity, reusing a similar card structure but adapted for Grid
-                return _buildGridItem(context, detail, theme, ownerNames,
+                final groupedBook = filtered[index];
+                return _buildGridItem(context, groupedBook, theme, ownerNames,
                     activeLoansBySharedBookId);
               },
             )
           : BookTextList(
               books: filtered.map((d) => d.book).whereType<Book>().toList(),
               onBookTap: (book) {
-                // We need to find the sharedBookId for this book in state.items
-                final detail =
-                    state.items.firstWhere((d) => d.book?.id == book.id);
+                final groupedBook =
+                    state.groupedItems.firstWhere((g) => g.book?.id == book.id);
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => DiscoverBookDetailPage(
                       group: widget.group,
-                      sharedBookId: detail.sharedBook.id,
+                      sharedBook: groupedBook,
                     ),
                   ),
                 );
@@ -556,18 +553,28 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
 
   Widget _buildGridItem(
     BuildContext context,
-    SharedBookDetail detail,
+    GroupedSharedBook groupedBook,
     ThemeData theme,
     Map<int, String> ownerNames,
     Map<int, LoanDetail> activeLoansBySharedBookId,
   ) {
-    final book = detail.book;
+    final book = groupedBook.book;
     final title = book?.title ?? 'Libro sin título';
     final author = (book?.author ?? '').trim();
-    final activeLoan = activeLoansBySharedBookId[detail.sharedBook.id];
+    
+    final isAnyAvailable = groupedBook.isAnyAvailable;
+    
+    LoanDetail? activeLoan;
+    for (final copy in groupedBook.allCopies) {
+      if (activeLoansBySharedBookId.containsKey(copy.sharedBook.id)) {
+        activeLoan = activeLoansBySharedBookId[copy.sharedBook.id];
+        break; 
+      }
+    }
+
     final statusDisplay = _resolveStatusDisplay(
       theme: theme,
-      sharedBook: detail.sharedBook,
+      sharedBook: groupedBook.allCopies.first.sharedBook.copyWith(isAvailable: isAnyAvailable),
       loanDetail: activeLoan,
     );
 
@@ -579,7 +586,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
             MaterialPageRoute(
               builder: (_) => DiscoverBookDetailPage(
                 group: widget.group,
-                sharedBookId: detail.sharedBook.id,
+                sharedBook: groupedBook,
               ),
             ),
           );
@@ -600,7 +607,6 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Background (Standardized Purple Gradient)
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -614,8 +620,6 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                   ),
                 ),
               ),
-
-              // Subtle overlay to ensure text readability if needed
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -628,8 +632,6 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                   ),
                 ),
               ),
-
-              // Content Overlay (Always visible, centered/large)
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -662,9 +664,6 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                   ],
                 ),
               ),
-
-              // Status Chip (Small, top right or bottom? User said "solo se vea nombre y autor",
-              // but status is critical. Let's keep it subtle at the bottom or top)
               Positioned(
                 bottom: 8,
                 left: 0,
@@ -673,6 +672,12 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                   child: _DiscoverStatusChip(display: statusDisplay),
                 ),
               ),
+              if (groupedBook.count > 1)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: _OwnerCountBadge(count: groupedBook.count),
+                ),
             ],
           ),
         ),
@@ -682,7 +687,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
 
   int _loanStatusPriority(String status) {
     switch (status) {
-      case 'active': // FIXED: accepted -> active
+      case 'active':
         return 2;
       case 'requested':
         return 1;
@@ -742,6 +747,46 @@ class _DiscoverStatusChip extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _OwnerCountBadge extends StatelessWidget {
+  const _OwnerCountBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiary,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.people, size: 10, color: Colors.white),
+          const SizedBox(width: 3),
+          Text(
+            '$count',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 10,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -877,9 +922,12 @@ class _MemberSelector extends StatelessWidget {
             ),
           );
         },
-        loading: () =>
-            const SizedBox(width: 100, child: LinearProgressIndicator()),
-        error: (_, __) => const Text('Error'),
+        loading: () => const SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        error: (_, __) => const Icon(Icons.error_outline, size: 24),
       ),
     );
   }
@@ -900,24 +948,26 @@ class _DiscoverSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: controller,
-      builder: (context, value, _) {
-        final hasText = value.text.isNotEmpty;
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        final query = controller.text;
+        final hasText = query.isNotEmpty;
+
         Widget? suffix;
         if (isLoading) {
           suffix = const Padding(
             padding: EdgeInsets.all(12),
             child: SizedBox(
-              width: 16,
-              height: 16,
+              width: 20,
+              height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
           );
         } else if (hasText) {
           suffix = IconButton(
-            onPressed: onClear,
             icon: const Icon(Icons.clear),
+            onPressed: onClear,
           );
         }
 

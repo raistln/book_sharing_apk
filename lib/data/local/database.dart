@@ -105,6 +105,10 @@ class Books extends Table {
   BoolColumn get isPhysical => boolean().withDefault(const Constant(true))();
   IntColumn get pageCount => integer().nullable()();
   IntColumn get publicationYear => integer().nullable()();
+  
+  // Bookshelf custom visibility and ordering
+  BoolColumn get isOnShelf => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get isOnShelfAt => dateTime().nullable()();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
@@ -128,7 +132,7 @@ class BookReviews extends Table {
   TextColumn get authorRemoteId => text().nullable()();
 
   IntColumn get rating =>
-      integer().customConstraint('NOT NULL CHECK (rating BETWEEN 1 AND 4)')();
+      integer().customConstraint('NOT NULL CHECK (rating BETWEEN 1 AND 5)')();
   TextColumn get review => text().nullable()();
 
   BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
@@ -749,7 +753,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 27;
+  int get schemaVersion => 29;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -989,6 +993,26 @@ class AppDatabase extends _$AppDatabase {
 
           if (from < 27) {
             await m.createTable(syncCursors);
+          }
+
+          if (from < 28) {
+            // Migration to v28: Manual Bookshelf Management
+            // 1. Add isOnShelf and isOnShelfAt to Books
+            await m.addColumn(books, books.isOnShelf);
+            await m.addColumn(books, books.isOnShelfAt);
+
+            // 2. Data Migration: Automatically add ONLY 'finished' books to the shelf
+            // per user request. 'isRead' books that are not 'finished' are not auto-added.
+            await customStatement(
+              "UPDATE books SET is_on_shelf = 1, is_on_shelf_at = updated_at "
+              "WHERE reading_status = 'finished' AND is_deleted = 0",
+            );
+          }
+
+          if (from < 29) {
+            // Migration to v29: Add finishedButTough(5) recommendation level
+            // Altering table applies the new CHECK (rating BETWEEN 1 AND 5) constraint
+            await m.alterTable(TableMigration(bookReviews));
           }
         },
       );

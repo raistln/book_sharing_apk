@@ -20,6 +20,7 @@ void main() {
         isRead: false,
         isBorrowedExternal: false,
         isPhysical: true,
+        isOnShelf: false,
       );
 
       final insight = await ReadingRhythmAnalyzer.generateInsight(
@@ -46,6 +47,7 @@ void main() {
         isRead: false,
         isBorrowedExternal: false,
         isPhysical: true,
+        isOnShelf: false,
       );
 
       final timeline = <ReadingTimelineEntry>[
@@ -91,6 +93,7 @@ void main() {
         isRead: false,
         isBorrowedExternal: false,
         isPhysical: true,
+        isOnShelf: false,
       );
 
       final timeline = <ReadingTimelineEntry>[

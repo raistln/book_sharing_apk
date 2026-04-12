@@ -284,6 +284,7 @@ void main() {
           readingStatus: 'pending',
           isRead: false,
           isBorrowedExternal: false,
+          isOnShelf: false,
           ownerUserId: owner.id,
           ownerRemoteId: owner.remoteId ?? 'remote-owner',
           isDirty: false,

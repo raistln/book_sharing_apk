@@ -12,6 +12,11 @@ class ReadingRhythmAnalyzer {
   }) async {
     if (timeline.isEmpty) return null;
 
+    // Libro ya terminado: mostrar mensaje de conclusión antes de cualquier análisis
+    if (book.readingStatus == 'finished' || book.isRead) {
+      return _finishedInsight(timeline);
+    }
+
     // Calculate rhythm metrics
     final rhythm = _analyzeRhythm(timeline, book.pageCount);
 
@@ -77,6 +82,44 @@ class ReadingRhythmAnalyzer {
       icon: Icons.trending_flat,
       color: Colors.blue,
     );
+  }
+
+  /// Genera el insight de libro terminado según cuánto tardaste
+  static ReadingInsight _finishedInsight(List<ReadingTimelineEntry> timeline) {
+    // Buscar primera entrada de inicio y la de fin para calcular duración
+    final sorted = List<ReadingTimelineEntry>.from(timeline)
+      ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
+
+    final startEntry = sorted.firstWhere(
+      (e) => e.eventType == 'start',
+      orElse: () => sorted.first,
+    );
+    final finishEntry = sorted.lastWhere(
+      (e) => e.eventType == 'finish',
+      orElse: () => sorted.last,
+    );
+
+    final days = finishEntry.eventDate.difference(startEntry.eventDate).inDays;
+
+    if (days <= 3) {
+      return const ReadingInsight(
+        text: "¡Lo leíste de un tirón! Otra aventura vivida.",
+        icon: Icons.bolt,
+        color: Colors.orange,
+      );
+    } else if (days <= 14) {
+      return const ReadingInsight(
+        text: "Un viaje completado. Cada página, un paso más.",
+        icon: Icons.check_circle_outline,
+        color: Colors.green,
+      );
+    } else {
+      return const ReadingInsight(
+        text: "Terminado. Las historias que duran también dejan huella.",
+        icon: Icons.bookmark_added_outlined,
+        color: Colors.teal,
+      );
+    }
   }
 
   /// Analyze reading rhythm from timeline

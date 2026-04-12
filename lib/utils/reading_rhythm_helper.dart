@@ -7,13 +7,22 @@ class ReadingRhythmHelper {
   /// [entries] is a map where key is bookId and value is list of timeline entries for that book.
   static ReadingRhythmData processData(
       List<Book> books, Map<int, List<ReadingTimelineEntry>> entries) {
-    // 1. Filter books: only those with status 'reading', 'finished', 'abandoned', 'paused'
-    // AND that have at least one timeline entry (or a readAt date for legacy books).
+    // 1. Filter books: only those actively being read or with real reading history.
+    // A book marked as finished/read without timeline entries (e.g. added directly as read)
+    // is excluded — the chart only shows books that have been actually tracked.
     final relevantBooks = books.where((b) {
       final status = b.readingStatus.toLowerCase();
-      return ['reading', 'finished', 'abandoned', 'paused', 'rereading']
-              .contains(status) ||
-          b.isRead;
+      final hasEntries = (entries[b.id] ?? []).isNotEmpty;
+
+      // Active books (currently being read): always include
+      if (['reading', 'paused', 'rereading'].contains(status)) return true;
+
+      // Finished or abandoned: only if there is real timeline history
+      if (['finished', 'abandoned'].contains(status) || b.isRead) {
+        return hasEntries;
+      }
+
+      return false;
     }).toList();
 
     // 2. Sort by most recent activity.
@@ -83,14 +92,8 @@ class ReadingRhythmHelper {
     List<RhythmSegment> segments = [];
 
     if (entries.isEmpty) {
-      // Legacy handling: if book is read but has no entries, create a mock segment
-      if (book.isRead && book.readAt != null) {
-        // Assume it took a week if we don't know, or just a point in time
-        final end = book.readAt!;
-        final start = end.subtract(const Duration(
-            days: 14)); // Arbitrary 2 weeks estimate for visualization
-        segments.add(RhythmSegment(start: start, end: end, isPause: false));
-      }
+      // No timeline entries: no segment. Books added directly as read
+      // without any tracked history are not shown in the chart.
       return segments;
     }
 

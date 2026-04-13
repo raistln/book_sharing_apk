@@ -572,75 +572,78 @@ final readingInsightProvider = FutureProvider.autoDispose
 
 class BookReadingStats {
   final DateTime? startDate;
-  final DateTime? endDate;
-  final double pagesPerDay;
-  final int maxPagesInSameDay;
+  final DateTime? finishDate;
   final int totalDays;
+  final int totalPages;
+  final double pagesPerDay;
 
   const BookReadingStats({
     this.startDate,
-    this.endDate,
-    this.pagesPerDay = 0.0,
-    this.maxPagesInSameDay = 0,
+    this.finishDate,
     this.totalDays = 0,
+    this.totalPages = 0,
+    this.pagesPerDay = 0.0,
   });
 
-  static BookReadingStats? calculate(List<ReadingSession> sessions) {
-    if (sessions.isEmpty) return null;
+  /// Fuente de verdad: el timeline.
+  /// Las ReadingSessions son opcionales (cronómetro), el timeline lo tienen
+  /// todos los libros con cualquier tipo de seguimiento.
+  static BookReadingStats? fromTimeline(List<ReadingTimelineEntry> entries) {
+    if (entries.isEmpty) return null;
 
-    DateTime? startDate;
-    DateTime? endDate;
-    int maxPages = 0;
+    final sorted = List<ReadingTimelineEntry>.from(entries)
+      ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
 
-    // Group by day to calculate pages per day
-    final pagesByDate = <String, int>{};
+    // Inicio: primera entrada 'start', o la primera de todas si no hay
+    final startEntry = sorted.firstWhere(
+      (e) => e.eventType == 'start',
+      orElse: () => sorted.first,
+    );
 
-    for (final session in sessions) {
-      if (startDate == null || session.startTime.isBefore(startDate)) {
-        startDate = session.startTime;
-      }
-      if (session.endTime != null) {
-        if (endDate == null || session.endTime!.isAfter(endDate)) {
-          endDate = session.endTime;
-        }
-      }
-
-      final dateKey =
-          '${session.startTime.year}-${session.startTime.month}-${session.startTime.day}';
-      final pages = session.pagesRead ?? 0;
-      pagesByDate[dateKey] = (pagesByDate[dateKey] ?? 0) + pages;
-    }
-
-    for (final dailyPages in pagesByDate.values) {
-      if (dailyPages > maxPages) {
-        maxPages = dailyPages;
+    // Fin: última entrada 'finish' (null si sigue leyendo)
+    ReadingTimelineEntry? finishEntry;
+    for (final e in sorted.reversed) {
+      if (e.eventType == 'finish') {
+        finishEntry = e;
+        break;
       }
     }
 
-    final totalDays = pagesByDate.keys.length;
-    double pagesPerDay = 0.0;
-    if (totalDays > 0) {
-      final totalPages =
-          pagesByDate.values.fold<int>(0, (sum, pages) => sum + pages);
-      pagesPerDay = totalPages / totalDays;
+    final startDate = startEntry.eventDate;
+    final finishDate = finishEntry?.eventDate;
+    final endForCalc = finishDate ?? DateTime.now();
+    final totalDays = endForCalc.difference(startDate).inDays.clamp(1, 99999);
+
+    // Páginas: diferencia entre la última entrada con página conocida y el inicio
+    ReadingTimelineEntry? lastWithPage;
+    for (final e in sorted.reversed) {
+      if (e.currentPage != null && e.currentPage! > 0) {
+        lastWithPage = e;
+        break;
+      }
     }
+
+    final firstPage = startEntry.currentPage ?? 0;
+    final lastPage = lastWithPage?.currentPage ?? 0;
+    final totalPages = (lastPage - firstPage).abs();
+    final pagesPerDay = totalPages > 0 ? totalPages / totalDays : 0.0;
 
     return BookReadingStats(
       startDate: startDate,
-      endDate: endDate,
-      pagesPerDay: pagesPerDay,
-      maxPagesInSameDay: maxPages,
+      finishDate: finishDate,
       totalDays: totalDays,
+      totalPages: totalPages,
+      pagesPerDay: pagesPerDay,
     );
   }
 }
 
 final bookReadingStatsProvider =
     StreamProvider.autoDispose.family<BookReadingStats?, int>((ref, bookId) {
-  final sessionDao = ref.watch(readingSessionDaoProvider);
+  final timelineDao = ref.watch(timelineEntryDaoProvider);
 
-  return sessionDao.watchSessionsForBook(bookId).map((sessions) {
-    return BookReadingStats.calculate(sessions);
+  return timelineDao.watchEntriesForBook(bookId).map((entries) {
+    return BookReadingStats.fromTimeline(entries);
   });
 });
 

@@ -520,55 +520,74 @@ class _ReadingStatsChips extends ConsumerWidget {
         if (stats == null) return const SizedBox.shrink();
 
         final format = DateFormat.yMMMd();
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (stats.startDate != null) ...[
-                _buildStatChip(
-                  context,
-                  Icons.play_circle_outline,
-                  format.format(stats.startDate!),
-                  Colors.green,
-                ),
-                const SizedBox(width: 8),
-              ],
-              if (stats.endDate != null) ...[
-                _buildStatChip(
-                  context,
-                  Icons.check_circle_outline,
-                  format.format(stats.endDate!),
-                  Colors.teal,
-                ),
-                const SizedBox(width: 8),
-              ],
-              if (stats.pagesPerDay > 0) ...[
-                _buildStatChip(
-                  context,
-                  Icons.speed,
-                  '${stats.pagesPerDay.toStringAsFixed(1)} p/día',
-                  Colors.orange,
-                ),
-                const SizedBox(width: 8),
-              ],
-              if (stats.totalDays > 0) ...[
-                _buildStatChip(
-                  context,
-                  Icons.calendar_today_outlined,
-                  '${stats.totalDays} días',
-                  Colors.indigo,
-                ),
-                const SizedBox(width: 8),
-              ],
-              if (stats.maxPagesInSameDay > 0)
-                _buildStatChip(
-                  context,
-                  Icons.local_fire_department_outlined,
-                  '${stats.maxPagesInSameDay} p',
-                  Colors.deepOrange,
-                ),
-            ],
+        final items = <_StatItem>[
+          if (stats.startDate != null)
+            _StatItem(
+              icon: Icons.play_circle_outline,
+              label: 'Empezado',
+              value: format.format(stats.startDate!),
+              color: Colors.green,
+            ),
+          if (stats.finishDate != null)
+            _StatItem(
+              icon: Icons.check_circle_outline,
+              label: 'Terminado',
+              value: format.format(stats.finishDate!),
+              color: Colors.teal,
+            ),
+          if (stats.totalDays > 0)
+            _StatItem(
+              icon: Icons.calendar_today_outlined,
+              label: 'Duración',
+              value: '${stats.totalDays} días',
+              color: Colors.indigo,
+            ),
+          if (stats.totalPages > 0)
+            _StatItem(
+              icon: Icons.menu_book_outlined,
+              label: 'Páginas leídas',
+              value: '${stats.totalPages} págs',
+              color: Colors.blue,
+            ),
+          if (stats.pagesPerDay > 0)
+            _StatItem(
+              icon: Icons.speed_outlined,
+              label: 'Ritmo medio',
+              value: '${stats.pagesPerDay.toStringAsFixed(1)} p/día',
+              color: Colors.orange,
+            ),
+        ];
+
+        if (items.isEmpty) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Dos columnas, filas dinámicas
+              final halfWidth = (constraints.maxWidth - 12) / 2;
+              final rows = <Widget>[];
+              for (int i = 0; i < items.length; i += 2) {
+                rows.add(
+                  Row(
+                    children: [
+                      _StatCard(item: items[i], width: halfWidth),
+                      const SizedBox(width: 12),
+                      if (i + 1 < items.length)
+                        _StatCard(item: items[i + 1], width: halfWidth)
+                      else
+                        SizedBox(width: halfWidth),
+                    ],
+                  ),
+                );
+                if (i + 2 < items.length) const SizedBox(height: 8);
+                if (i + 2 < items.length) rows.add(const SizedBox(height: 8));
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: rows,
+              );
+            },
           ),
         );
       },
@@ -576,16 +595,67 @@ class _ReadingStatsChips extends ConsumerWidget {
       error: (_, __) => const SizedBox.shrink(),
     );
   }
+}
 
-  Widget _buildStatChip(
-      BuildContext context, IconData icon, String label, MaterialColor color) {
-    return Chip(
-      avatar: Icon(icon, size: 16, color: color),
-      label: Text(label, style: TextStyle(fontSize: 12, color: color.shade700)),
-      backgroundColor: color.shade50,
-      side: BorderSide(color: color.shade200),
-      visualDensity: VisualDensity.compact,
-      padding: EdgeInsets.zero,
+class _StatItem {
+  final IconData icon;
+  final String label;
+  final String value;
+  final MaterialColor color;
+
+  const _StatItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({required this.item, required this.width});
+  final _StatItem item;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: item.color.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: item.color.shade100),
+      ),
+      child: Row(
+        children: [
+          Icon(item.icon, size: 20, color: item.color.shade600),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: item.color.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  item.value,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: item.color.shade900,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

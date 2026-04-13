@@ -117,7 +117,9 @@ final unifiedSyncCoordinatorProvider = Provider<UnifiedSyncCoordinator>((ref) {
     },
   );
 
-  coordinator.startAutoSync();
+  // NOTE: startAutoSync() is NOT called here on purpose.
+  // It is triggered by AuthController after the user authenticates,
+  // preventing LateInitializationError on clean installs (no user yet).
 
   ref.onDispose(() {
     coordinator.dispose();

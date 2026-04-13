@@ -988,6 +988,9 @@ class AppDatabase extends _$AppDatabase {
 
           if (from < 26) {
             // Migration to v26: Thematic groups — genre filter + color tint
+            try {
+              await m.addColumn(groups, groups.allowedGenres);
+            } catch (_) {}
             await m.addColumn(groups, groups.primaryColor);
           }
 
@@ -1007,6 +1010,18 @@ class AppDatabase extends _$AppDatabase {
               "UPDATE books SET is_on_shelf = 1, is_on_shelf_at = updated_at "
               "WHERE reading_status = 'finished' AND is_deleted = 0",
             );
+
+            // 3. SharedBooks enrichment: add metadata columns for discover/multi-owner
+            try { await m.addColumn(sharedBooks, sharedBooks.isPhysical); } catch (_) {}
+            try { await m.addColumn(sharedBooks, sharedBooks.isRead); } catch (_) {}
+            try { await m.addColumn(sharedBooks, sharedBooks.readingStatus); } catch (_) {}
+            try { await m.addColumn(sharedBooks, sharedBooks.description); } catch (_) {}
+            try { await m.addColumn(sharedBooks, sharedBooks.barcode); } catch (_) {}
+            try { await m.addColumn(sharedBooks, sharedBooks.readAt); } catch (_) {}
+            try { await m.addColumn(sharedBooks, sharedBooks.isBorrowedExternal); } catch (_) {}
+            try { await m.addColumn(sharedBooks, sharedBooks.externalLenderName); } catch (_) {}
+            try { await m.addColumn(sharedBooks, sharedBooks.pageCount); } catch (_) {}
+            try { await m.addColumn(sharedBooks, sharedBooks.publicationYear); } catch (_) {}
           }
 
           if (from < 29) {

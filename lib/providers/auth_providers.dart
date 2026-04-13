@@ -259,6 +259,8 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> _triggerInitialSync() async {
     _log('Iniciando sincronización unificada tras desbloqueo.');
     try {
+      // Ensure auto-sync is running (safe to call multiple times — idempotent)
+      _syncCoordinator.startAutoSync();
       // syncNow() ya sigue el orden correcto: Usuarios -> Grupos -> Préstamos -> Libros
       await _syncCoordinator.syncNow();
       _log('Sincronización inicial completada exitosamente.');

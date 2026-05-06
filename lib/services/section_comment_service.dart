@@ -22,6 +22,7 @@ class SectionCommentService {
 
   /// Post a new comment to a section
   Future<String> postComment({
+    required String clubUuid,
     required String bookUuid,
     required int sectionNumber,
     required String userUuid,
@@ -29,15 +30,24 @@ class SectionCommentService {
   }) async {
     final commentUuid = _uuid.v4();
 
+    final club = await dao.getClubByUuid(clubUuid);
+    final book = await dao.getClubBookByUuid(bookUuid);
+    final user = await dao.getClubMember(clubUuid, userUuid);
+
+    if (club == null) throw Exception('Club no encontrado');
+    if (book == null) throw Exception('Libro no encontrado en el club');
+    if (user == null) throw Exception('Usuario no es miembro del club');
+
     final companion = SectionCommentsCompanion.insert(
       uuid: commentUuid,
-      clubId: 0, // Will be set on sync
-      clubUuid: '', // Will be set on sync or passed if available
-      bookId: 0, // Will be set on sync
+      clubId: club.id,
+      clubUuid: clubUuid,
+      bookId: book.id,
       bookUuid: bookUuid,
       sectionNumber: sectionNumber,
-      userId: 0, // Will be set on sync
+      userId: user.memberUserId,
       userRemoteId: Value(userUuid),
+      authorRemoteId: Value(userUuid), // Also set authorRemoteId as an alias
       content: content,
       reportsCount: const Value(0),
       isHidden: const Value(false),

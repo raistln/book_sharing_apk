@@ -164,6 +164,16 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
         .getSingleOrNull();
   }
 
+  /// Get a club book by the original book UUID and club UUID
+  Future<ClubBook?> getClubBookByBookUuid(String clubUuid, String bookUuid) {
+    return (select(clubBooks)
+          ..where((t) =>
+              t.clubUuid.equals(clubUuid) &
+              t.bookUuid.equals(bookUuid) &
+              t.isDeleted.equals(false)))
+        .getSingleOrNull();
+  }
+
   /// Stream the current active book for a club
   Stream<ClubBook?> watchCurrentBook(String clubUuid) {
     return (select(clubBooks)

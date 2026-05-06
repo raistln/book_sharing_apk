@@ -96,7 +96,8 @@ enum ClubBookStatus {
 
 enum SectionMode {
   automatico('automatico', 'Automático'),
-  manual('manual', 'Manual');
+  manual('manual', 'Manual'),
+  total('total', 'Total / Sin Secciones');
 
   const SectionMode(this.value, this.label);
 

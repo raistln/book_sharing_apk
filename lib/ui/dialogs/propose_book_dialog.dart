@@ -75,10 +75,12 @@ class _ProposeBookDialogState extends ConsumerState<ProposeBookDialog> {
       return;
     }
 
-    final chapters = int.tryParse(_chaptersController.text);
+    final chaptersText = _chaptersController.text.trim();
+    final chapters = chaptersText.isEmpty ? 1 : int.tryParse(chaptersText);
+
     if (chapters == null || chapters <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingresa un número válido de capítulos')),
+        const SnackBar(content: Text('Ingresa un número válido de capítulos o déjalo vacío para modo total')),
       );
       return;
     }
@@ -305,7 +307,8 @@ class _ProposeBookDialogState extends ConsumerState<ProposeBookDialog> {
           TextFormField(
             controller: _chaptersController,
             decoration: const InputDecoration(
-              labelText: 'Número de Capítulos',
+              labelText: 'Número de Capítulos (Opcional)',
+              hintText: 'Déjalo vacío si no quieres usar secciones',
               border: OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,

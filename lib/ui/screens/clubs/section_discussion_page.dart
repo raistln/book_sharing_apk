@@ -55,6 +55,7 @@ class _SectionDiscussionPageState extends ConsumerState<SectionDiscussionPage> {
 
     try {
       await ref.read(sectionCommentServiceProvider).postComment(
+            clubUuid: widget.clubUuid,
             bookUuid: widget.bookUuid,
             sectionNumber: widget.sectionNumber,
             userUuid: user.remoteId!,

@@ -144,7 +144,17 @@ class ClubDetailPage extends ConsumerWidget {
         ),
       ),
       actions: [
-        if (isOwner)
+        if (isOwner) ...[
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            tooltip: 'Añadir libro al club directamente',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AddBookToClubDialog(clubUuid: club.uuid),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
@@ -155,6 +165,7 @@ class ClubDetailPage extends ConsumerWidget {
               );
             },
           ),
+        ],
       ],
     );
   }

@@ -81,7 +81,9 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
       return;
     }
 
-    final chapters = int.tryParse(_chaptersController.text);
+    final chapters = _sectionMode == SectionMode.total 
+        ? 1 
+        : int.tryParse(_chaptersController.text);
     if (chapters == null || chapters <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ingresa un número válido de capítulos')),
@@ -311,14 +313,6 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
           ),
           const Divider(),
           const SizedBox(height: 16),
-          TextFormField(
-            controller: _chaptersController,
-            decoration: const InputDecoration(
-              labelText: 'Número de Capítulos',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.number,
-          ),
           const SizedBox(height: 16),
           DropdownButtonFormField<SectionMode>(
             initialValue: _sectionMode,
@@ -336,6 +330,17 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
               if (value != null) setState(() => _sectionMode = value);
             },
           ),
+          if (_sectionMode != SectionMode.total) ...[
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _chaptersController,
+              decoration: const InputDecoration(
+                labelText: 'Número de Capítulos',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ],
           const SizedBox(height: 16),
           InputDecorator(
             decoration: const InputDecoration(

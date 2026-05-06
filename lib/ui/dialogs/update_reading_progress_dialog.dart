@@ -80,31 +80,33 @@ class _UpdateReadingProgressDialogState
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('¿Por qué sección vas?'),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Slider(
-                        value: _currentSection.toDouble(),
-                        min: 1,
-                        max: widget.totalSections.toDouble(),
-                        divisions: widget.totalSections > 1
-                            ? widget.totalSections - 1
-                            : 1,
-                        label: _currentSection.toString(),
-                        onChanged: (value) {
-                          setState(() => _currentSection = value.round());
-                        },
+                if (widget.totalSections > 1) ...[
+                  const Text('¿Por qué sección vas?'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          value: _currentSection.toDouble(),
+                          min: 1,
+                          max: widget.totalSections.toDouble(),
+                          divisions: widget.totalSections > 1
+                              ? widget.totalSections - 1
+                              : 1,
+                          label: _currentSection.toString(),
+                          onChanged: (value) {
+                            setState(() => _currentSection = value.round());
+                          },
+                        ),
                       ),
-                    ),
-                    Text(
-                      '$_currentSection / ${widget.totalSections}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                      Text(
+                        '$_currentSection / ${widget.totalSections}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 const Text('Estado de lectura'),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<ReadingProgressStatus>(

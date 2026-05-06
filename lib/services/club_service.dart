@@ -395,8 +395,8 @@ class ClubService {
     int? currentSection,
   }) async {
     final club = await _requireClub(clubUuid);
-    final clubBook = await dao.getClubBookByUuid(bookUuid);
-    if (clubBook == null || clubBook.clubUuid != clubUuid) {
+    final clubBook = await dao.getClubBookByBookUuid(clubUuid, bookUuid);
+    if (clubBook == null) {
       throw Exception('No se encontró el libro del club para registrar avance.');
     }
     final progressMember = await dao.getClubMember(clubUuid, userUuid);

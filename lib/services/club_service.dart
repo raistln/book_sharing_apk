@@ -22,6 +22,14 @@ class ClubService {
     syncCoordinator.markPendingChanges(SyncEntity.clubs);
   }
 
+  Future<ReadingClub> _requireClub(String clubUuid) async {
+    final club = await dao.getClubByUuid(clubUuid);
+    if (club == null) {
+      throw Exception('El club con código "$clubUuid" no existe.');
+    }
+    return club;
+  }
+
   // =====================================================================
   // CLUB CRUD
   // =====================================================================
@@ -183,10 +191,7 @@ class ClubService {
     required String userRemoteId,
   }) async {
     // Check if club exists
-    final club = await dao.getClubByUuid(clubUuid);
-    if (club == null) {
-      throw Exception('El club con código "$clubUuid" no existe.');
-    }
+    final club = await _requireClub(clubUuid);
 
     // Check if user is already a member
     final isMember = await isUserMember(clubUuid, userRemoteId);
@@ -197,7 +202,7 @@ class ClubService {
     // Add member
     await dao.upsertClubMember(ClubMembersCompanion.insert(
       uuid: _uuid.v4(),
-      clubId: 0, // Set on sync
+      clubId: club.id,
       clubUuid: clubUuid,
       memberUserId: userId,
       memberRemoteId: Value(userRemoteId),
@@ -229,12 +234,18 @@ class ClubService {
     await dao.removeClubMember(clubUuid, targetUserUuid);
 
     // Log moderation action
+    final club = await _requireClub(clubUuid);
+    final performerMember = await dao.getClubMember(clubUuid, performedByUuid);
+    if (performerMember == null) {
+      throw Exception('No se encontró la membresía del usuario ejecutor.');
+    }
+
     await dao.insertModerationLog(ModerationLogsCompanion.insert(
       uuid: _uuid.v4(),
-      clubId: 0, // Will be set on sync
+      clubId: club.id,
       clubUuid: clubUuid,
       action: 'expulsar_miembro',
-      performedByUserId: 0, // Will be set on sync
+      performedByUserId: performerMember.memberUserId,
       performedByRemoteId: Value(performedByUuid),
       targetId: targetUserUuid,
       isDirty: const Value(true),
@@ -267,6 +278,7 @@ class ClubService {
     String? sectionsJson, // For manual mode
     DateTime? startDate,
   }) async {
+    final club = await _requireClub(clubUuid);
     final maxOrder = await _getMaxOrderPosition(clubUuid);
 
     // Check if there is an active book
@@ -276,7 +288,7 @@ class ClubService {
 
     await dao.upsertClubBook(ClubBooksCompanion.insert(
       uuid: _uuid.v4(),
-      clubId: 0, // Sync will handle
+      clubId: club.id,
       clubUuid: clubUuid,
       bookUuid: bookUuid,
       orderPosition: Value(maxOrder + 1),
@@ -325,17 +337,23 @@ class ClubService {
     required String userUuid,
     required int totalChapters,
   }) async {
+    final club = await _requireClub(clubUuid);
+    final proposerMember = await dao.getClubMember(clubUuid, userUuid);
+    if (proposerMember == null) {
+      throw Exception('Debes ser miembro del club para proponer libros.');
+    }
+
     // Check if already proposed using dao query if needed, or rely on unique constraints if any.
     // Assuming UI handles duplicate check or we allow multiple proposals but maybe checking first is better.
 
     // For now simple insert
     await dao.upsertProposal(BookProposalsCompanion.insert(
       uuid: _uuid.v4(),
-      clubId: 0,
+      clubId: club.id,
       clubUuid: clubUuid,
       // bookId removed as it doesn't exist
       bookUuid: bookUuid,
-      proposedByUserId: 0,
+      proposedByUserId: proposerMember.memberUserId,
       proposedByRemoteId: Value(userUuid),
       status: const Value('abierta'),
       voteCount: const Value(0),
@@ -376,6 +394,16 @@ class ClubService {
     int? currentChapter,
     int? currentSection,
   }) async {
+    final club = await _requireClub(clubUuid);
+    final clubBook = await dao.getClubBookByUuid(bookUuid);
+    if (clubBook == null || clubBook.clubUuid != clubUuid) {
+      throw Exception('No se encontró el libro del club para registrar avance.');
+    }
+    final progressMember = await dao.getClubMember(clubUuid, userUuid);
+    if (progressMember == null) {
+      throw Exception('Debes ser miembro del club para actualizar avance.');
+    }
+
     // Get existing progress or create new
     final existing = await dao.getUserProgress(clubUuid, bookUuid, userUuid);
 
@@ -383,11 +411,11 @@ class ClubService {
       // Create new progress entry
       await dao.upsertProgress(ClubReadingProgressCompanion.insert(
         uuid: _uuid.v4(),
-        clubId: 0, // Will be set on sync
+        clubId: club.id,
         clubUuid: clubUuid,
-        bookId: 0, // Will be set on sync
+        bookId: clubBook.id,
         bookUuid: bookUuid,
-        userId: 0, // Will be set on sync
+        userId: progressMember.memberUserId,
         userRemoteId: Value(userUuid),
         status: Value(status.value),
         currentChapter: Value(currentChapter ?? 0),

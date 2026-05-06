@@ -4,6 +4,7 @@ import '../../../../data/local/database.dart';
 import '../../../../design_system/literary_shadows.dart';
 import '../../../../design_system/literary_animations.dart';
 import '../../../../design_system/library_visual_constants.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 class BookGridView extends StatelessWidget {
   const BookGridView({
@@ -62,24 +63,25 @@ class BookGridItem extends StatelessWidget {
     return LibraryVisualConstants.getOwnedBookTint(theme);
   }
 
-  Widget? _buildStatusChip(ThemeData theme) {
+  Widget? _buildStatusChip(BuildContext context, ThemeData theme) {
     String? label;
     Color? chipColor;
     Color? textColor;
 
     // Prioridad de etiquetas
+    final l10n = S.of(context);
     if (book.isBorrowedExternal) {
       label = book.externalLenderName != null
-          ? 'De ${book.externalLenderName}'
-          : 'Prestado';
+          ? l10n.lentByWithName(book.externalLenderName!)
+          : l10n.bookFormLoaned;
       chipColor = LibraryVisualConstants.getLoanedToYouChipColor(theme);
       textColor = theme.colorScheme.primary; // Blue-ish
     } else if (book.status == 'loaned') {
-      label = 'Prestado';
+      label = l10n.bookFormLoaned;
       chipColor = LibraryVisualConstants.getLoanedChipColor(theme);
       textColor = theme.colorScheme.onSurface;
     } else if (book.status == 'private' || !book.isPhysical) {
-      label = !book.isPhysical ? 'Digital' : 'Privado';
+      label = !book.isPhysical ? l10n.bookFormatDigital : l10n.bookFormPrivate;
       chipColor = LibraryVisualConstants.getPrivateChipColor(theme);
       textColor = Colors.green.shade800; // Green-ish
       if (theme.brightness == Brightness.dark) {
@@ -143,11 +145,11 @@ class BookGridItem extends StatelessWidget {
                   ),
                 ),
                 // Status Chip Positioned
-                if (_buildStatusChip(theme) != null)
+                if (_buildStatusChip(context, theme) != null)
                   Positioned(
                     top: 6,
                     right: 6,
-                    child: _buildStatusChip(theme)!,
+                    child: _buildStatusChip(context, theme)!,
                   ),
               ],
             ),

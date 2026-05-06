@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/sync_providers.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 /// Banner that shows the sync status of groups
 ///
@@ -42,18 +43,18 @@ class SyncBanner extends ConsumerWidget {
       background = colors.primaryContainer;
       foreground = colors.onPrimaryContainer;
       icon = Icons.sync_outlined;
-      message = 'Sincronizando...';
+      message = S.of(context).syncingLabel;
     } else if (hasError) {
       background = colors.errorContainer;
       foreground = colors.onErrorContainer;
       icon = Icons.error_outline;
-      final error = syncState.lastError ?? 'Se ha encontrado un error.';
+      final error = syncState.lastError ?? S.of(context).defaultSyncError;
       message = error.length > 140 ? '${error.substring(0, 137)}…' : error;
     } else {
       background = colors.surfaceContainerHigh;
       foreground = colors.onSurface;
       icon = Icons.cloud_upload_outlined;
-      message = 'Cambios locales listos para sincronizar.';
+      message = S.of(context).localChangesReadySync;
     }
 
     late final Widget trailing;
@@ -72,7 +73,7 @@ class SyncBanner extends ConsumerWidget {
           TextButton.icon(
             onPressed: () => unawaited(_performSync(context, ref)),
             icon: const Icon(Icons.refresh),
-            label: const Text('Reintentar'),
+            label: Text(S.of(context).actionRetry),
             style: TextButton.styleFrom(foregroundColor: foreground),
           ),
           IconButton(
@@ -82,7 +83,7 @@ class SyncBanner extends ConsumerWidget {
                 // Como alternativa, podemos ocultarlo o reintentar.
                 unawaited(_performSync(context, ref)),
             icon: Icon(Icons.close, color: foreground),
-            tooltip: 'Reintentar',
+            tooltip: S.of(context).actionRetry,
           ),
         ],
       );
@@ -92,7 +93,7 @@ class SyncBanner extends ConsumerWidget {
         child: TextButton.icon(
           onPressed: () => unawaited(_performSync(context, ref)),
           icon: const Icon(Icons.sync_outlined),
-          label: const Text('Sincronizar ahora'),
+          label: Text(S.of(context).actionSyncNow),
           style: TextButton.styleFrom(foregroundColor: foreground),
         ),
       );

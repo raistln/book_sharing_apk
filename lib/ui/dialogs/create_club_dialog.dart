@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/club_enums.dart';
 import '../../providers/clubs_provider.dart';
 import '../../providers/book_providers.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class CreateClubDialog extends ConsumerStatefulWidget {
   const CreateClubDialog({super.key});
@@ -33,6 +34,7 @@ class _CreateClubDialogState extends ConsumerState<CreateClubDialog> {
   }
 
   Future<void> _submit() async {
+    final l10n = S.of(context);
     if (!_formKey.currentState!.validate()) return;
 
     final user = ref.read(activeUserProvider).value;
@@ -69,7 +71,7 @@ class _CreateClubDialogState extends ConsumerState<CreateClubDialog> {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Club creado exitosamente')),
+          SnackBar(content: Text(l10n.createClubSuccess)),
         );
       }
     } catch (e) {
@@ -87,6 +89,7 @@ class _CreateClubDialogState extends ConsumerState<CreateClubDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context);
     // If we have a user location in profile, we could pre-fill city
     // final user = ref.watch(activeUserProvider).value;
 
@@ -103,17 +106,17 @@ class _CreateClubDialogState extends ConsumerState<CreateClubDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Crear Club de Lectura',
+                  l10n.createClubTitle,
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre del Club',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.group),
+                  decoration: InputDecoration(
+                    labelText: l10n.createClubNameLabel,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.group),
                   ),
                   validator: (value) => value == null || value.isEmpty
                       ? 'Ingresa un nombre'
@@ -122,10 +125,10 @@ class _CreateClubDialogState extends ConsumerState<CreateClubDialog> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Descripción',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.description),
+                  decoration: InputDecoration(
+                    labelText: l10n.createClubDescriptionLabel,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.description),
                   ),
                   maxLines: 2,
                   validator: (value) => value == null || value.isEmpty
@@ -135,10 +138,10 @@ class _CreateClubDialogState extends ConsumerState<CreateClubDialog> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _cityController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ciudad',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.location_city),
+                  decoration: InputDecoration(
+                    labelText: l10n.createClubCityLabel,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.location_city),
                   ),
                   validator: (value) => value == null || value.isEmpty
                       ? 'Ingresa una ciudad'
@@ -147,10 +150,10 @@ class _CreateClubDialogState extends ConsumerState<CreateClubDialog> {
                 const SizedBox(height: 16),
                 DropdownButtonFormField<ClubFrequency>(
                   initialValue: _frequency,
-                  decoration: const InputDecoration(
-                    labelText: 'Frecuencia de Lectura',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today),
+                  decoration: InputDecoration(
+                    labelText: l10n.createClubFrequencyLabel,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.calendar_today),
                   ),
                   items: ClubFrequency.values.map((f) {
                     return DropdownMenuItem(
@@ -166,11 +169,11 @@ class _CreateClubDialogState extends ConsumerState<CreateClubDialog> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _frequencyDaysController,
-                    decoration: const InputDecoration(
-                      labelText: 'Periodicidad Personalizada',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.timer),
-                      helperText: 'Días asignados para leer cada sección',
+                    decoration: InputDecoration(
+                      labelText: l10n.createClubCustomFrequency,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.timer),
+                      helperText: l10n.createClubCustomDays,
                     ),
                     keyboardType: TextInputType.number,
                     validator: (value) {
@@ -190,7 +193,7 @@ class _CreateClubDialogState extends ConsumerState<CreateClubDialog> {
                     TextButton(
                       onPressed:
                           _isLoading ? null : () => Navigator.of(context).pop(),
-                      child: const Text('Cancelar'),
+                      child: Text(l10n.cancel),
                     ),
                     const SizedBox(width: 16),
                     FilledButton(

@@ -5,12 +5,14 @@ import '../../../providers/book_providers.dart';
 import '../../dialogs/create_club_dialog.dart';
 import '../../widgets/community/join_by_code_dialog.dart';
 import 'club_detail_page.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ClubsListPage extends ConsumerWidget {
   const ClubsListPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = S.of(context);
     final clubsAsync = ref.watch(userClubsProvider);
 
     return clubsAsync.when(
@@ -30,7 +32,7 @@ class ClubsListPage extends ConsumerWidget {
                         );
                       },
                       icon: const Icon(Icons.add),
-                      label: const Text('Crear Grupo'),
+                      label: Text(l10n.clubListCreateGroup),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -38,7 +40,7 @@ class ClubsListPage extends ConsumerWidget {
                     child: OutlinedButton.icon(
                       onPressed: () => _handleJoinClubByCode(context, ref),
                       icon: const Icon(Icons.qr_code_2_outlined),
-                      label: const Text('Unirse por código'),
+                      label: Text(l10n.clubListJoinByCode),
                     ),
                   ),
                 ],
@@ -46,13 +48,13 @@ class ClubsListPage extends ConsumerWidget {
             ),
             Expanded(
               child: clubs.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.menu_book, size: 64, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text('Aún no tienes clubes de lectura'),
+                          const Icon(Icons.menu_book, size: 64, color: Colors.grey),
+                          const SizedBox(height: 16),
+                          Text(l10n.clubListEmpty),
                         ],
                       ),
                     )
@@ -89,6 +91,7 @@ class ClubsListPage extends ConsumerWidget {
 
   Future<void> _handleJoinClubByCode(
       BuildContext context, WidgetRef ref) async {
+    final l10n = S.of(context);
     final user = ref.read(activeUserProvider).value;
     if (user == null || user.remoteId == null) return;
 
@@ -104,10 +107,10 @@ class ClubsListPage extends ConsumerWidget {
             userRemoteId: user.remoteId!,
           );
         },
-        title: 'Unirse a Club',
-        labelText: 'ID del Club',
-        helperText: 'Ingresa el código UUID del club',
-        successMessage: '¡Te has unido al club!',
+        title: l10n.clubListJoinTitle,
+        labelText: l10n.clubListJoinIdLabel,
+        helperText: l10n.clubListJoinIdHint,
+        successMessage: l10n.successJoinedGroup,
       ),
     );
   }

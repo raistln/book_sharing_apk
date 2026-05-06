@@ -7,6 +7,7 @@ import '../../providers/book_providers.dart';
 import '../../providers/clubs_provider.dart';
 import '../../services/google_books_api_controller.dart';
 import '../../providers/api_providers.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class AddBookToClubDialog extends ConsumerStatefulWidget {
   const AddBookToClubDialog({super.key, required this.clubUuid});
@@ -74,9 +75,10 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
   }
 
   Future<void> _submit() async {
+    final l10n = S.of(context);
     if (_selectedBook == null && _selectedGoogleBook == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona un libro')),
+        SnackBar(content: Text(l10n.addBookToClubSelectBook)),
       );
       return;
     }
@@ -84,7 +86,7 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
     final chapters = int.tryParse(_chaptersController.text);
     if (chapters == null || chapters <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingresa un número válido de capítulos')),
+        SnackBar(content: Text(l10n.addBookToClubInvalidChapters)),
       );
       return;
     }
@@ -158,7 +160,7 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Libro añadido al club')),
+          SnackBar(content: Text(l10n.addBookToClubAdded)),
         );
       }
     } catch (e) {
@@ -174,6 +176,7 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context);
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
@@ -184,7 +187,7 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Añadir Libro',
+              l10n.addBookToClubTitle,
               style: Theme.of(context).textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
@@ -200,6 +203,7 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
   }
 
   Widget _buildSearchStep() {
+    final l10n = S.of(context);
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,7 +211,7 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              labelText: 'Buscar libro (Local o Google Books)',
+              labelText: l10n.addBookToClubSearchHint,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: IconButton(
                 icon: const Icon(Icons.search),
@@ -223,17 +227,17 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
           else if (_localResults.isEmpty &&
               _googleResults.isEmpty &&
               _searchController.text.isNotEmpty)
-            const Expanded(
-                child: Center(child: Text('No se encontraron libros')))
+             Expanded(
+                child: Center(child: Text(l10n.addBookToClubNoResults)))
           else
             Expanded(
               child: ListView(
                 children: [
                   if (_localResults.isNotEmpty) ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.0),
-                      child: Text('En tu biblioteca',
-                          style: TextStyle(
+                     Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(l10n.addBookToClubLocalSection,
+                          style: const TextStyle(
                               fontWeight: FontWeight.bold, color: Colors.grey)),
                     ),
                     ..._localResults.map((book) => ListTile(
@@ -243,7 +247,7 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
                               : const Icon(Icons.book),
                           title: Text(book.title,
                               maxLines: 1, overflow: TextOverflow.ellipsis),
-                          subtitle: Text(book.author ?? 'Desconocido'),
+                          subtitle: Text(book.author ?? l10n.clubDetailUnknownAuthor),
                           onTap: () {
                             setState(() {
                               _selectedBook = book;
@@ -253,10 +257,10 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
                         )),
                   ],
                   if (_googleResults.isNotEmpty) ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.0),
-                      child: Text('En Google Books',
-                          style: TextStyle(
+                     Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(l10n.addBookToClubGoogleSection,
+                          style: const TextStyle(
                               fontWeight: FontWeight.bold, color: Colors.blue)),
                     ),
                     ..._googleResults.map((book) => ListTile(
@@ -284,6 +288,7 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
   }
 
   Widget _buildConfigStep() {
+    final l10n = S.of(context);
     final title = _selectedBook?.title ?? _selectedGoogleBook?.title ?? '';
     final author =
         _selectedBook?.author ?? _selectedGoogleBook?.authors.join(', ') ?? '';
@@ -313,18 +318,18 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _chaptersController,
-            decoration: const InputDecoration(
-              labelText: 'Número de Capítulos',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.addBookToClubChaptersLabel,
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<SectionMode>(
             initialValue: _sectionMode,
-            decoration: const InputDecoration(
-              labelText: 'Modo de Secciones',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.addBookToClubSectionMode,
+              border: const OutlineInputBorder(),
             ),
             items: SectionMode.values.map((mode) {
               return DropdownMenuItem(
@@ -338,15 +343,15 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
           ),
           const SizedBox(height: 16),
           InputDecorator(
-            decoration: const InputDecoration(
-              labelText: 'Fecha de Inicio',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.addBookToClubStartDate,
+              border: const OutlineInputBorder(),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(_startDate == null
-                    ? 'Sin fecha'
+                    ? l10n.noDueDate
                     : DateFormat('dd/MM/yyyy').format(_startDate!)),
                 TextButton(
                   onPressed: () async {
@@ -360,7 +365,7 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
                       setState(() => _startDate = date);
                     }
                   },
-                  child: const Text('Seleccionar'),
+                  child: Text(l10n.addBookToClubSelectDate),
                 ),
               ],
             ),
@@ -372,7 +377,7 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
               TextButton(
                 onPressed:
                     _isLoading ? null : () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
+                child: Text(l10n.cancel),
               ),
               const SizedBox(width: 16),
               FilledButton(

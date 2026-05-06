@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../info_pop.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 class JoinByCodeDialog extends StatefulWidget {
   const JoinByCodeDialog({
@@ -58,7 +59,7 @@ class _JoinByCodeDialogState extends State<JoinByCodeDialog> {
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return 'Por favor ingresa un código';
+                  return S.of(context).pleaseEnterCode;
                 }
                 return null;
               },
@@ -77,7 +78,7 @@ class _JoinByCodeDialogState extends State<JoinByCodeDialog> {
       actions: [
         TextButton(
           onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(S.of(context).cancel),
         ),
         FilledButton(
           onPressed: _isSubmitting ? null : _handleSubmit,
@@ -87,7 +88,7 @@ class _JoinByCodeDialogState extends State<JoinByCodeDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Unirse'),
+              : Text(S.of(context).actionJoin),
         ),
       ],
     );
@@ -116,7 +117,7 @@ class _JoinByCodeDialogState extends State<JoinByCodeDialog> {
           _isSubmitting = false;
           _errorText = e.toString().contains('Exception:')
               ? e.toString().split('Exception:').last.trim()
-              : 'El código no es válido o ya expiró. Verifícalo e intenta de nuevo.';
+              : S.of(context).errorInvalidCode;
         });
       }
     }

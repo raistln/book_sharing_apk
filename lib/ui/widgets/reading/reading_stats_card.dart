@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/reading_providers.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 /// Widget para mostrar estadísticas de lectura semanales y mensuales con el formato original
 class ReadingStatsCard extends ConsumerWidget {
@@ -47,7 +48,7 @@ class ReadingStatsCard extends ConsumerWidget {
         children: [
           // SECCIÓN SEMANAL
           Text(
-            'Esta semana',
+            S.of(context).thisWeek,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -60,21 +61,21 @@ class ReadingStatsCard extends ConsumerWidget {
                 _StatItem(
                   icon: Icons.timer_outlined,
                   value: _formatDuration(stats.totalDuration),
-                  label: 'Tiempo',
+                  label: S.of(context).timeLabel,
                   color: Colors.blue,
                 ),
                 _buildVerticalDivider(context),
                 _StatItem(
                   icon: Icons.menu_book_outlined,
                   value: '${stats.totalPages}',
-                  label: 'Páginas',
+                  label: S.of(context).pagesLabel,
                   color: Colors.orange,
                 ),
                 _buildVerticalDivider(context),
                 _StatItem(
                   icon: Icons.trending_up,
                   value: stats.pagesPerDay.toStringAsFixed(1),
-                  label: 'Págs/día',
+                  label: S.of(context).pagesPerDayLabel,
                   color: Colors.green,
                 ),
               ],
@@ -90,7 +91,7 @@ class ReadingStatsCard extends ConsumerWidget {
 
           // SECCIÓN MENSUAL
           Text(
-            'Este mes',
+            S.of(context).thisMonth,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -103,27 +104,27 @@ class ReadingStatsCard extends ConsumerWidget {
                 _StatItem(
                   icon: Icons.timer_outlined,
                   value: _formatDuration(stats.totalDuration),
-                  label: 'Tiempo',
+                  label: S.of(context).timeLabel,
                   color: Colors.blue,
                 ),
                 _buildVerticalDivider(context),
                 _StatItem(
                   icon: Icons.menu_book_outlined,
                   value: '${stats.totalPages}',
-                  label: 'Páginas',
+                  label: S.of(context).pagesLabel,
                   color: Colors.orange,
                 ),
                 _buildVerticalDivider(context),
                 _StatItem(
                   icon: Icons.check_circle_outline,
                   value: '${stats.booksFinished}',
-                  label: 'Terminados',
+                  label: S.of(context).finishedLabel,
                   color: Colors.green,
                 ),
               ],
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => Text('Error: $err'),
+            error: (err, _) => Text(S.of(context).errorGeneric(err.toString())),
           ),
         ],
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/local/group_dao.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class PremiumGroupStats extends ConsumerWidget {
   const PremiumGroupStats({
@@ -65,21 +66,21 @@ class PremiumGroupStats extends ConsumerWidget {
           childAspectRatio: 1.1,
           children: [
             _StatCard(
-              label: 'Miembros',
+              label: S.of(context).statMembers,
               value: '$membersCount',
               icon: Icons.people_outline,
               color: primary,
               theme: theme,
             ),
             _StatCard(
-              label: 'Libros',
+              label: S.of(context).statBooks,
               value: '$booksCount',
               icon: Icons.menu_book_outlined,
               color: Colors.orange,
               theme: theme,
             ),
             _StatCard(
-              label: 'Libres',
+              label: S.of(context).statAvailable,
               value: '$availableBooksCount',
               icon: Icons.check_circle_outline,
               color: Colors.green,
@@ -207,14 +208,14 @@ class _ContributionBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tu aporte al grupo',
+                  S.of(context).contributionTitle,
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
                 Text(
-                  'Has compartido $count libros y hay $activeLoans en préstamo.',
+                  S.of(context).contributionMessage(count, activeLoans),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

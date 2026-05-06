@@ -12,6 +12,7 @@ import 'package:book_sharing_app/models/global_sync_state.dart'
 
 import 'package:book_sharing_app/services/supabase_loan_service.dart';
 import 'package:book_sharing_app/data/repositories/book_repository.dart';
+import 'package:book_sharing_app/l10n/generated/app_localizations.dart';
 
 // Mock classes for external dependencies
 class MockNotificationClient extends Mock implements NotificationClient {}
@@ -22,6 +23,8 @@ class MockUnifiedSyncCoordinator extends Mock
 class MockSupabaseLoanService extends Mock implements SupabaseLoanService {}
 
 class MockBookRepository extends Mock implements BookRepository {}
+
+class MockS extends Mock implements S {}
 
 /// Register common fallback values for Mocktail
 void setupTestFallbacks() {

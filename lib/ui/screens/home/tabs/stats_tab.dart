@@ -10,6 +10,7 @@ import 'discover_book_detail_page.dart';
 import '../../../../data/local/group_dao.dart';
 import '../../../../models/grouped_shared_book.dart';
 import '../../../../ui/utils/library_transition.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 /// Stats tab showing library statistics
 ///
@@ -56,7 +57,7 @@ class _StatsContent extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Estadísticas generales', style: theme.textTheme.headlineSmall),
+          Text(S.of(context).statsGeneralTitle, style: theme.textTheme.headlineSmall),
           const SizedBox(height: 16),
           Wrap(
             spacing: 16,
@@ -64,37 +65,37 @@ class _StatsContent extends ConsumerWidget {
             children: [
               _StatHighlight(
                 icon: Icons.menu_book,
-                label: 'Libros totales',
+                label: S.of(context).statsTotalBooks,
                 value: summary.totalBooks,
               ),
               _StatHighlight(
                 icon: Icons.auto_stories,
-                label: 'Libros leídos',
+                label: S.of(context).statsReadBooks,
                 value: summary.totalBooksRead,
               ),
               _StatHighlight(
                 icon: Icons.check_circle_outline,
-                label: 'Disponibles',
+                label: S.of(context).statsAvailable,
                 value: summary.availableBooks,
               ),
               _StatHighlight(
                 icon: Icons.swap_horiz,
-                label: 'Préstamos totales',
+                label: S.of(context).statsTotalLoans,
                 value: summary.totalLoans,
               ),
               _StatHighlight(
                 icon: Icons.playlist_add_check_circle,
-                label: 'Préstamos activos',
+                label: S.of(context).statsActiveLoans,
                 value: summary.activeLoans,
               ),
               _StatHighlight(
                 icon: Icons.assignment_turned_in,
-                label: 'Devueltos',
+                label: S.of(context).statsReturned,
                 value: summary.returnedLoans,
               ),
               _StatHighlight(
                 icon: Icons.hourglass_bottom,
-                label: 'Expirados',
+                label: S.of(context).statsExpired,
                 value: summary.expiredLoans,
               ),
             ],
@@ -109,15 +110,15 @@ class _StatsContent extends ConsumerWidget {
                 );
               },
               icon: const Icon(Icons.list),
-              label: const Text('Ver historial de lecturas'),
+              label: Text(S.of(context).statsViewReadingHistory),
             ),
           ),
           const SizedBox(height: 28),
-          Text('Préstamos activos', style: theme.textTheme.headlineSmall),
+          Text(S.of(context).statsActiveLoansHeader, style: theme.textTheme.headlineSmall),
           const SizedBox(height: 12),
           ActiveLoansList(loans: summary.activeLoanDetails),
           const SizedBox(height: 28),
-          Text('Libros más prestados', style: theme.textTheme.headlineSmall),
+          Text(S.of(context).statsTopBooksHeader, style: theme.textTheme.headlineSmall),
           const SizedBox(height: 12),
           _TopBooksList(topBooks: summary.topBooks),
           const SizedBox(height: 28),
@@ -187,7 +188,7 @@ class _TopBooksList extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Cuando registres préstamos aparecerán aquí tus libros más populares.',
+                  S.of(context).statsNoTopBooksMessage,
                   style: theme.textTheme.bodyMedium,
                 ),
               ),
@@ -208,7 +209,7 @@ class _TopBooksList extends StatelessWidget {
           child: ListTile(
             leading: CircleAvatar(child: Text('${index + 1}')),
             title: Text(book.title),
-            subtitle: Text('Préstamos registrados: ${book.loanCount}'),
+            subtitle: Text(S.of(context).statsLoanCount(book.loanCount.toString())),
           ),
         );
       },
@@ -233,7 +234,7 @@ class _StatsError extends StatelessWidget {
             Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             const SizedBox(height: 12),
             Text(
-              'No pudimos cargar las estadísticas.',
+              S.of(context).statsErrorLoading,
               style: theme.textTheme.titleLarge
                   ?.copyWith(color: theme.colorScheme.error),
               textAlign: TextAlign.center,
@@ -264,7 +265,7 @@ class _RecommendationSection extends ConsumerWidget {
       children: [
         Row(
           children: [
-            Text('Recomendaciones para ti',
+            Text(S.of(context).statsRecommendationsTitle,
                 style: theme.textTheme.headlineSmall),
             const SizedBox(width: 8),
             Icon(Icons.auto_awesome,
@@ -315,7 +316,7 @@ class _RecommendationSection extends ConsumerWidget {
                           )
                         : const Icon(Icons.book, size: 40),
                     title: Text(book.title),
-                    subtitle: Text(book.author ?? 'Autor desconocido'),
+                    subtitle: Text(book.author ?? S.of(context).statsUnknownAuthor),
                     trailing: const Icon(Icons.chevron_right),
                   ),
                 );

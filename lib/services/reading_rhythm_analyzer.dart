@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/local/database.dart';
+import '../l10n/generated/app_localizations.dart';
 
 /// Generates narrative, human-readable insights about reading rhythm
 class ReadingRhythmAnalyzer {
@@ -9,83 +10,84 @@ class ReadingRhythmAnalyzer {
     required Book book,
     required List<ReadingTimelineEntry> timeline,
     required double userAveragePagesPerDay,
+    required S s,
   }) async {
     if (timeline.isEmpty) return null;
-
+ 
     // Libro ya terminado: mostrar mensaje de conclusión antes de cualquier análisis
     if (book.readingStatus == 'finished' || book.isRead) {
-      return _finishedInsight(timeline);
+      return _finishedInsight(timeline, s);
     }
-
+ 
     // Calculate rhythm metrics
     final rhythm = _analyzeRhythm(timeline, book.pageCount);
-
+ 
     // No meaningful data yet
     if (rhythm.daysReading == 0 || rhythm.pagesRead == 0) {
-      return const ReadingInsight(
-        text: "Acabas de empezar este libro",
+      return ReadingInsight(
+        text: s.insightJustStarted,
         icon: Icons.auto_stories,
         color: Colors.blue,
       );
     }
-
+ 
     // Detect patterns
     final pace = _comparePace(rhythm.pagesPerDay, userAveragePagesPerDay);
     final hasLongPauses = rhythm.longestGapDays > 14;
     final hasFrequentUpdates = rhythm.totalEntries > 5;
     final isNearlyFinished = rhythm.percentageComplete > 80;
-
+ 
     // Generate insight based on patterns
     if (isNearlyFinished) {
-      return const ReadingInsight(
-        text: "Estás a punto de terminar este libro",
+      return ReadingInsight(
+        text: s.insightNearlyFinished,
         icon: Icons.celebration_outlined,
         color: Colors.amber,
       );
     }
-
+ 
     if (hasLongPauses) {
-      return const ReadingInsight(
-        text: "Este libro parece invitar a pausas y reflexión",
+      return ReadingInsight(
+        text: s.insightReflective,
         icon: Icons.self_improvement,
         color: Colors.purple,
       );
     }
-
+ 
     if (pace == PaceType.fast) {
       if (hasFrequentUpdates) {
-        return const ReadingInsight(
-          text: "Has devorado este libro con entusiasmo",
+        return ReadingInsight(
+          text: s.insightDevoured,
           icon: Icons.local_fire_department_outlined,
           color: Colors.orange,
         );
       } else {
-        return const ReadingInsight(
-          text: "Una lectura vertiginosa, difícil de soltar",
+        return ReadingInsight(
+          text: s.insightFastPace,
           icon: Icons.flash_on_outlined,
           color: Colors.orange,
         );
       }
     }
-
+ 
     if (pace == PaceType.slow) {
-      return const ReadingInsight(
-        text: "Estás saboreando este libro con calma, sin prisas",
+      return ReadingInsight(
+        text: s.insightSlowPace,
         icon: Icons.spa_outlined,
         color: Colors.teal,
       );
     }
-
+ 
     // Default: steady pace
-    return const ReadingInsight(
-      text: "Llevas un ritmo constante con este libro",
+    return ReadingInsight(
+      text: s.insightSteadyPace,
       icon: Icons.trending_flat,
       color: Colors.blue,
     );
   }
 
   /// Genera el insight de libro terminado según cuánto tardaste
-  static ReadingInsight _finishedInsight(List<ReadingTimelineEntry> timeline) {
+  static ReadingInsight _finishedInsight(List<ReadingTimelineEntry> timeline, S s) {
     // Buscar primera entrada de inicio y la de fin para calcular duración
     final sorted = List<ReadingTimelineEntry>.from(timeline)
       ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
@@ -102,20 +104,20 @@ class ReadingRhythmAnalyzer {
     final days = finishEntry.eventDate.difference(startEntry.eventDate).inDays;
 
     if (days <= 3) {
-      return const ReadingInsight(
-        text: "¡Lo leíste de un tirón! Otra aventura vivida.",
+      return ReadingInsight(
+        text: s.insightFinishedFast,
         icon: Icons.bolt,
         color: Colors.orange,
       );
     } else if (days <= 14) {
-      return const ReadingInsight(
-        text: "Un viaje completado. Cada página, un paso más.",
+      return ReadingInsight(
+        text: s.insightFinishedNormal,
         icon: Icons.check_circle_outline,
         color: Colors.green,
       );
     } else {
-      return const ReadingInsight(
-        text: "Terminado. Las historias que duran también dejan huella.",
+      return ReadingInsight(
+        text: s.insightFinishedSlow,
         icon: Icons.bookmark_added_outlined,
         color: Colors.teal,
       );

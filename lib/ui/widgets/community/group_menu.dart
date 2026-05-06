@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../data/local/database.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 enum GroupMenuAction {
   edit,
@@ -37,29 +38,29 @@ class GroupMenu extends StatelessWidget {
     if (isOwner || isAdmin) {
       menuEntries
         ..add(
-          const PopupMenuItem<GroupMenuAction>(
+          PopupMenuItem<GroupMenuAction>(
             value: GroupMenuAction.edit,
-            child: Text('Editar grupo'),
+            child: Text(S.of(context).actionEditGroup),
           ),
         )
         ..add(
-          const PopupMenuItem<GroupMenuAction>(
+          PopupMenuItem<GroupMenuAction>(
             value: GroupMenuAction.manageMembers,
-            child: Text('Gestionar miembros'),
+            child: Text(S.of(context).actionManageMembers),
           ),
         )
         ..add(
-          const PopupMenuItem<GroupMenuAction>(
+          PopupMenuItem<GroupMenuAction>(
             value: GroupMenuAction.manageInvitations,
-            child: Text('Gestionar invitaciones'),
+            child: Text(S.of(context).actionManageInvitations),
           ),
         );
     } else {
       // For non-admins, show View Members
       menuEntries.add(
-        const PopupMenuItem<GroupMenuAction>(
+        PopupMenuItem<GroupMenuAction>(
           value: GroupMenuAction.viewMembers,
-          child: Text('Ver miembros'),
+          child: Text(S.of(context).actionViewMembers),
         ),
       );
     }
@@ -70,15 +71,15 @@ class GroupMenu extends StatelessWidget {
       }
       menuEntries
         ..add(
-          const PopupMenuItem<GroupMenuAction>(
+          PopupMenuItem<GroupMenuAction>(
             value: GroupMenuAction.transferOwnership,
-            child: Text('Transferir propiedad'),
+            child: Text(S.of(context).actionTransferOwnership),
           ),
         )
         ..add(
-          const PopupMenuItem<GroupMenuAction>(
+          PopupMenuItem<GroupMenuAction>(
             value: GroupMenuAction.delete,
-            child: Text('Eliminar grupo'),
+            child: Text(S.of(context).actionDeleteGroup),
           ),
         );
     }
@@ -88,9 +89,9 @@ class GroupMenu extends StatelessWidget {
         menuEntries.add(const PopupMenuDivider());
       }
       menuEntries.add(
-        const PopupMenuItem<GroupMenuAction>(
+        PopupMenuItem<GroupMenuAction>(
           value: GroupMenuAction.leaveGroup,
-          child: Text('Salir del grupo'),
+          child: Text(S.of(context).actionLeaveGroup),
         ),
       );
     }
@@ -101,7 +102,7 @@ class GroupMenu extends StatelessWidget {
 
     return PopupMenuButton<GroupMenuAction>(
       icon: const Icon(Icons.more_vert),
-      tooltip: 'Acciones del grupo',
+      tooltip: S.of(context).tooltipGroupActions,
       enabled: !isGroupBusy,
       itemBuilder: (context) => menuEntries,
       onSelected: onAction,

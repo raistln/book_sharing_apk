@@ -13,6 +13,7 @@ import '../../../utils/isbn_utils.dart';
 import '../barcode_scanner_sheet.dart';
 import '../library/cover_field.dart';
 import '../library/library_utils.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ReceiveExternalLoanSheet extends ConsumerStatefulWidget {
   const ReceiveExternalLoanSheet({super.key});
@@ -83,7 +84,7 @@ class _ReceiveExternalLoanSheetState
     if (!granted) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Permiso de cámara denegado')),
+        SnackBar(content: Text(S.of(context).permissionCameraDenied)),
       );
       return;
     }
@@ -101,7 +102,7 @@ class _ReceiveExternalLoanSheetState
     if (!granted) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Permiso de cámara denegado')),
+        SnackBar(content: Text(S.of(context).permissionCameraDenied)),
       );
       return;
     }
@@ -136,7 +137,7 @@ class _ReceiveExternalLoanSheetState
     try {
       final isbnCandidates = IsbnUtils.expandCandidates(barcode);
       if (isbnCandidates.isEmpty) {
-        setState(() => _searchError = 'ISBN no válido');
+        setState(() => _searchError = S.of(context).isbnInvalid);
         return;
       }
 
@@ -187,7 +188,7 @@ class _ReceiveExternalLoanSheetState
       final finalCandidates = uniqueCandidates.values.toList();
 
       if (finalCandidates.isEmpty) {
-        setState(() => _searchError = 'No se encontró el libro');
+        setState(() => _searchError = S.of(context).bookNotFound);
         return;
       }
 
@@ -197,7 +198,7 @@ class _ReceiveExternalLoanSheetState
         await _applyCandidate(selected, coverService);
       }
     } catch (err) {
-      setState(() => _searchError = 'Error: $err');
+      setState(() => _searchError = S.of(context).errorGeneric(err.toString()));
     } finally {
       if (mounted) setState(() => _isSearching = false);
     }
@@ -208,7 +209,7 @@ class _ReceiveExternalLoanSheetState
     final isbn = _isbnController.text.trim();
 
     if (query.isEmpty && isbn.isEmpty) {
-      setState(() => _searchError = 'Introduce título o ISBN');
+      setState(() => _searchError = S.of(context).searchPromptTitleOrIsbn);
       return;
     }
 
@@ -253,7 +254,7 @@ class _ReceiveExternalLoanSheetState
       final finalCandidates = uniqueCandidates.values.toList();
 
       if (finalCandidates.isEmpty) {
-        setState(() => _searchError = 'Sin resultados');
+        setState(() => _searchError = S.of(context).searchNoResults);
         return;
       }
 
@@ -281,7 +282,7 @@ class _ReceiveExternalLoanSheetState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Selecciona un resultado',
+              Text(S.of(context).searchSelectResult,
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
               Flexible(
@@ -297,7 +298,7 @@ class _ReceiveExternalLoanSheetState
                               width: 40, fit: BoxFit.cover)
                           : const Icon(Icons.book),
                       title: Text(c.title),
-                      subtitle: Text(c.author ?? 'Autor desconocido'),
+                      subtitle: Text(c.author ?? S.of(context).unknownAuthor),
                       onTap: () => Navigator.pop(context, c),
                     );
                   },
@@ -392,21 +393,21 @@ class _ReceiveExternalLoanSheetState
           builder: (context) => AlertDialog(
             icon: const Icon(Icons.check_circle_outline,
                 color: Colors.green, size: 48),
-            title: const Text('Préstamo registrado'),
+            title: Text(S.of(context).loanRegisteredSuccess),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildDetailRow(context, 'Libro:', _titleController.text),
+                _buildDetailRow(context, S.of(context).bookLabel, _titleController.text),
                 const SizedBox(height: 8),
                 _buildDetailRow(
-                    context, 'Propietario:', _lenderNameController.text),
+                    context, S.of(context).lenderLabel, _lenderNameController.text),
                 const SizedBox(height: 8),
                 _buildDetailRow(
                   context,
                   'Vence:',
                   _isIndefinite
-                      ? 'Indefinido'
+                      ? S.of(context).loanIndefinite
                       : DateFormat.yMMMd().format(_dueDate),
                 ),
               ],
@@ -414,7 +415,7 @@ class _ReceiveExternalLoanSheetState
             actions: [
               FilledButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Entendido'),
+                child: Text(S.of(context).understood),
               ),
             ],
           ),
@@ -424,7 +425,7 @@ class _ReceiveExternalLoanSheetState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al registrar: $e'),
+            content: Text(S.of(context).loanErrorRegister(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -465,12 +466,12 @@ class _ReceiveExternalLoanSheetState
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Registrar libro prestado',
+                S.of(context).loanReceiveTitle,
                 style: theme.textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
               Text(
-                'Registra un libro que alguien (fuera de la app) te ha prestado.',
+                S.of(context).loanReceiveDescription,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -478,27 +479,27 @@ class _ReceiveExternalLoanSheetState
               const SizedBox(height: 24),
 
               // Book Details
-              Text('Detalles del libro', style: theme.textTheme.titleMedium),
+              Text(S.of(context).bookDetails, style: theme.textTheme.titleMedium),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Título del libro *',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.book_outlined),
+                decoration: InputDecoration(
+                  labelText: S.of(context).bookFormTitle,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.book_outlined),
                 ),
                 textCapitalization: TextCapitalization.sentences,
                 validator: (value) => value == null || value.trim().isEmpty
-                    ? '¿Cómo se llama la historia?'
+                    ? S.of(context).bookTitleRequiredError
                     : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _authorController,
-                decoration: const InputDecoration(
-                  labelText: 'Autor',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person_outline),
+                decoration: InputDecoration(
+                  labelText: S.of(context).bookFormAuthor,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.person_outline),
                 ),
                 textCapitalization: TextCapitalization.words,
               ),
@@ -508,10 +509,10 @@ class _ReceiveExternalLoanSheetState
                   Expanded(
                     child: TextFormField(
                       controller: _isbnController,
-                      decoration: const InputDecoration(
-                        labelText: 'ISBN',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.qr_code_scanner_outlined),
+                      decoration: InputDecoration(
+                        labelText: S.of(context).bookFormIsbn,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.qr_code_scanner_outlined),
                       ),
                       keyboardType: TextInputType.number,
                     ),
@@ -534,7 +535,7 @@ class _ReceiveExternalLoanSheetState
                       }
                     },
                     icon: const Icon(Icons.qr_code_scanner),
-                    tooltip: 'Escanear código',
+                    tooltip: S.of(context).scanBarcode,
                   ),
                 ],
               ),
@@ -555,7 +556,7 @@ class _ReceiveExternalLoanSheetState
                             )
                           : const Icon(Icons.search),
                       label:
-                          Text(_isSearching ? 'Buscando...' : 'Buscar datos'),
+                          Text(_isSearching ? S.of(context).searching : S.of(context).searchData),
                     ),
                   ],
                 ),
@@ -582,28 +583,28 @@ class _ReceiveExternalLoanSheetState
               const SizedBox(height: 24),
 
               // Lender Details
-              Text('¿Quién te lo prestó?', style: theme.textTheme.titleMedium),
+              Text(S.of(context).loanWhoLentIt, style: theme.textTheme.titleMedium),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _lenderNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre del propietario *',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.account_circle_outlined),
+                decoration: InputDecoration(
+                  labelText: S.of(context).loanLenderNameRequired,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.account_circle_outlined),
                 ),
                 textCapitalization: TextCapitalization.words,
                 validator: (value) => value == null || value.trim().isEmpty
-                    ? '¿Quién es el guardián de este libro?'
+                    ? S.of(context).loanLenderNameRequiredError
                     : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _lenderContactController,
-                decoration: const InputDecoration(
-                  labelText: 'Contacto (Opcional)',
-                  hintText: 'Teléfono, email, etc.',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.contact_phone_outlined),
+                decoration: InputDecoration(
+                  labelText: S.of(context).loanContactOptional,
+                  hintText: S.of(context).loanContactHint,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.contact_phone_outlined),
                 ),
               ),
 
@@ -613,11 +614,11 @@ class _ReceiveExternalLoanSheetState
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Fecha de devolución',
+                  Text(S.of(context).loanDueDate,
                       style: theme.textTheme.titleMedium),
                   Row(
                     children: [
-                      Text('Indefinido', style: theme.textTheme.bodySmall),
+                      Text(S.of(context).loanIndefinite, style: theme.textTheme.bodySmall),
                       Switch(
                         value: _isIndefinite,
                         onChanged: (val) => setState(() => _isIndefinite = val),
@@ -650,7 +651,7 @@ class _ReceiveExternalLoanSheetState
                       ),
                       child: Text(
                         _isIndefinite
-                            ? 'Sin fecha límite'
+                            ? S.of(context).loanNoDueDate
                             : DateFormat.yMMMd().format(_dueDate),
                         style: theme.textTheme.bodyLarge,
                       ),
@@ -664,7 +665,7 @@ class _ReceiveExternalLoanSheetState
               FilledButton.icon(
                 onPressed: _submit,
                 icon: const Icon(Icons.save_alt),
-                label: const Text('Registrar préstamo'),
+                label: Text(S.of(context).loanRegister),
               ),
               const SizedBox(height: 24),
             ],

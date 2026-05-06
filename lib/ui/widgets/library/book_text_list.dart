@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../../data/local/database.dart';
 import '../../../../design_system/library_visual_constants.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 class BookTextList extends StatelessWidget {
   const BookTextList({
@@ -31,7 +32,7 @@ class BookTextList extends StatelessWidget {
       itemBuilder: (context, index) {
         final book = books[index];
         final tintColor = _getBackgroundColor(theme, book);
-        final chip = _buildStatusChip(theme, book);
+        final chip = _buildStatusChip(context, theme, book);
 
         return Container(
           color: tintColor,
@@ -108,23 +109,25 @@ class BookTextList extends StatelessWidget {
     return Colors.transparent; // Default list might be transparent or surface
   }
 
-  Widget? _buildStatusChip(ThemeData theme, Book book) {
+  Widget? _buildStatusChip(BuildContext context, ThemeData theme, Book book) {
     String? label;
     Color? chipColor;
     Color? textColor;
 
+    final l10n = S.of(context);
+
     if (book.isBorrowedExternal) {
       label = book.externalLenderName != null
-          ? 'De ${book.externalLenderName}'
-          : 'Prestado';
+          ? l10n.lentByWithName(book.externalLenderName!)
+          : l10n.bookStatusLoaned;
       chipColor = LibraryVisualConstants.getLoanedToYouChipColor(theme);
       textColor = theme.colorScheme.primary;
     } else if (book.status == 'loaned') {
-      label = 'Prestado';
+      label = l10n.bookStatusLoaned;
       chipColor = LibraryVisualConstants.getLoanedChipColor(theme);
       textColor = theme.colorScheme.onSurface;
     } else if (book.status == 'private' || !book.isPhysical) {
-      label = !book.isPhysical ? 'Digital' : 'Privado';
+      label = !book.isPhysical ? l10n.bookDetailsDigital : l10n.bookStatusPrivate;
       chipColor = LibraryVisualConstants.getPrivateChipColor(theme);
       textColor = Colors.green.shade800;
       if (theme.brightness == Brightness.dark) {

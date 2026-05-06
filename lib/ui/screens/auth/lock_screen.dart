@@ -11,6 +11,7 @@ import '../../widgets/textured_background.dart';
 import '../../widgets/auth/literary_pin_input.dart';
 import '../../../design_system/literary_animations.dart';
 import '../home/home_shell.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class LockScreen extends ConsumerStatefulWidget {
   const LockScreen({super.key});
@@ -81,6 +82,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
       } else {
         _triggerShake();
         setState(() {
+          // TODO: Use a proper localization string for error. We will keep it hardcoded for now or use fallback.
           _errorMessage =
               result.message ?? 'La llave no encaja. Intenta de nuevo.';
           _pinController.clear();
@@ -126,6 +128,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
 
   @override
   material.Widget build(material.BuildContext context) {
+    final l10n = S.of(context);
     final authState = ref.watch(authControllerProvider);
     final status = authState.status;
     final isLoading = status == AuthStatus.loading;
@@ -171,7 +174,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
                     FadeScaleIn(
                       delay: const Duration(milliseconds: 100),
                       child: material.Text(
-                        'Desbloquea tu biblioteca',
+                        l10n.lockScreenTitle,
                         style: theme.textTheme.headlineMedium?.copyWith(
                           fontFamily: 'Georgia',
                         ),
@@ -182,7 +185,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
                     FadeScaleIn(
                       delay: const Duration(milliseconds: 200),
                       child: material.Text(
-                        'Introduce tu llave para acceder',
+                        l10n.lockScreenSubtitle,
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -218,7 +221,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
                               : _tryBiometric,
                           icon: const material.Icon(material.Icons.fingerprint,
                               size: 32),
-                          tooltip: 'Usar huella',
+                          tooltip: l10n.lockScreenBiometric,
                           style: material.IconButton.styleFrom(
                             foregroundColor: theme.colorScheme.primary,
                             padding: const material.EdgeInsets.all(16),
@@ -233,7 +236,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
                     // Mensajes de error y estado
                     if (isTemporarilyLocked)
                       material.Text(
-                        'La cerradura está atascada temporalmente. Espera un momento.',
+                        l10n.lockScreenThrottled,
                         style:
                             material.TextStyle(color: theme.colorScheme.error),
                         textAlign: material.TextAlign.center,

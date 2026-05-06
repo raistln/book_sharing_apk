@@ -10,12 +10,14 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../widgets/info_pop.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../providers/auth_providers.dart';
 import '../../../../providers/book_providers.dart';
 import '../../../../providers/cover_refresh_providers.dart';
 import '../../../../providers/api_providers.dart';
 import '../../../../providers/settings_providers.dart';
 import '../../../../providers/theme_providers.dart';
+import '../../../../providers/locale_providers.dart';
 import '../../../../services/backup_scheduler_service.dart';
 import '../../../../utils/database_reset.dart';
 import '../../../../providers/loan_providers.dart' as loan;
@@ -59,12 +61,12 @@ class SettingsTab extends ConsumerWidget {
 
                 // Sección de importación de libros
                 Text(
-                  'Biblioteca',
+                  S.of(context).settingsLibrary,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Importa o exporta tu biblioteca de libros.',
+                  S.of(context).settingsLibraryDesc,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 16),
@@ -73,25 +75,25 @@ class SettingsTab extends ConsumerWidget {
                     children: [
                       ListTile(
                         leading: const Icon(Icons.upload_file_outlined),
-                        title: const Text('Exportar biblioteca'),
-                        subtitle: const Text(
-                            'Guarda tu lista de libros en CSV, JSON o PDF'),
+                        title: Text(S.of(context).exportLibrary),
+                        subtitle: Text(
+                            S.of(context).exportLibraryDesc),
                         onTap: () => ExportHandler.handle(context, ref),
                       ),
                       const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.history_edu_outlined),
-                        title: const Text('Exportar historial de préstamos'),
-                        subtitle: const Text(
-                            'Genera un informe de tus préstamos (CSV)'),
+                        title: Text(S.of(context).exportLoanHistory),
+                        subtitle: Text(
+                            S.of(context).exportLoanHistoryDesc),
                         onTap: () => _handleExportLoans(context, ref),
                       ),
                       const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.import_export),
-                        title: const Text('Importar libros'),
-                        subtitle: const Text(
-                            'Importa libros desde un archivo CSV o JSON'),
+                        title: Text(S.of(context).importBooks),
+                        subtitle: Text(
+                            S.of(context).importBooksDesc),
                         onTap: () {
                           showDialog(
                             context: context,
@@ -106,16 +108,16 @@ class SettingsTab extends ConsumerWidget {
 
                 // Sección de Almacenamiento
                 Text(
-                  'Almacenamiento',
+                  S.of(context).settingsStorage,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 12),
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.broken_image_outlined),
-                    title: const Text('Borrar todas las portadas'),
-                    subtitle: const Text(
-                        'Libera espacio eliminando las imágenes descargadas.'),
+                    title: Text(S.of(context).deleteAllCovers),
+                    subtitle: Text(
+                        S.of(context).deleteAllCoversDesc),
                     onTap: () => _handleDeleteCovers(context, ref),
                   ),
                 ),
@@ -123,10 +125,10 @@ class SettingsTab extends ConsumerWidget {
                   child: ListTile(
                     leading: const Icon(Icons.delete_sweep_outlined,
                         color: Colors.red),
-                    title: const Text('Resetear base de datos local'),
-                    subtitle: const Text(
-                        'Elimina todos los datos locales y comienza desde cero.',
-                        style: TextStyle(color: Colors.red)),
+                    title: Text(S.of(context).resetLocalDatabase),
+                    subtitle: Text(
+                        S.of(context).resetLocalDatabaseDesc,
+                        style: const TextStyle(color: Colors.red)),
                     onTap: () => _handleResetDatabase(context, ref),
                   ),
                 ),
@@ -134,7 +136,7 @@ class SettingsTab extends ConsumerWidget {
 
                 // Sección de Backup
                 Text(
-                  'Copias de seguridad',
+                  S.of(context).settingsBackup,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 12),
@@ -143,21 +145,21 @@ class SettingsTab extends ConsumerWidget {
 
                 // Sección de seguridad
                 Text(
-                  'Ajustes de seguridad',
+                  S.of(context).settingsSecurity,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Gestiona tu PIN y controla el bloqueo automático por inactividad.',
+                  S.of(context).settingsSecurityDesc,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.password_outlined),
-                    title: const Text('Cambiar PIN'),
+                    title: Text(S.of(context).changePin),
                     subtitle:
-                        const Text('Vuelve a definir el código de acceso.'),
+                        Text(S.of(context).changePinDesc),
                     onTap: () {
                       Navigator.of(context).pushNamed(PinSetupScreen.routeName);
                     },
@@ -166,15 +168,15 @@ class SettingsTab extends ConsumerWidget {
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.cancel_outlined),
-                    title: const Text('Eliminar PIN y cambiar de usuario'),
-                    subtitle: const Text(
-                        'Vuelve al inicio para configurar otra cuenta.'),
+                    title: Text(S.of(context).deletePinAndSwitchUser),
+                    subtitle: Text(
+                        S.of(context).deletePinAndSwitchUserDesc),
                     onTap: () async {
                       final confirmed = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
                           title:
-                              const Text('¿Eliminar PIN y salir de la cuenta?'),
+                              Text(S.of(context).securityResetConfirmTitle),
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,9 +184,8 @@ class SettingsTab extends ConsumerWidget {
                               const Icon(Icons.warning_amber,
                                   size: 48, color: Colors.orange),
                               const SizedBox(height: 16),
-                              const Text(
-                                'Se eliminarán TODOS los datos locales (libros, grupos, préstamos) '
-                                'y tendrás que iniciar sesión o configurar un nuevo usuario.',
+                              Text(
+                                S.of(context).securityResetConfirmMessage,
                               ),
                               const SizedBox(height: 16),
                               Container(
@@ -200,11 +201,10 @@ class SettingsTab extends ConsumerWidget {
                                     Icon(Icons.lightbulb_outline,
                                         color: Colors.blue.shade700),
                                     const SizedBox(width: 12),
-                                    const Expanded(
+                                    Expanded(
                                       child: Text(
-                                        '💡 Tip: Exporta tu biblioteca antes de continuar. '
-                                        'Si tienes backups automáticos, búscalos en Descargas/BookSharing/backups.',
-                                        style: TextStyle(
+                                        S.of(context).securityResetConfirmTip,
+                                        style: const TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: Colors.black87,
                                         ),
@@ -218,7 +218,7 @@ class SettingsTab extends ConsumerWidget {
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(false),
-                              child: const Text('Cancelar'),
+                              child: Text(S.of(context).cancel),
                             ),
                             FilledButton(
                               onPressed: () => Navigator.of(context).pop(true),
@@ -226,7 +226,7 @@ class SettingsTab extends ConsumerWidget {
                                 backgroundColor:
                                     Theme.of(context).colorScheme.error,
                               ),
-                              child: const Text('Eliminar todo'),
+                              child: Text(S.of(context).securityResetAction),
                             ),
                           ],
                         ),
@@ -247,10 +247,10 @@ class SettingsTab extends ConsumerWidget {
 
                       // Show message and close app so user can restart fresh
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
+                        SnackBar(
                           content: Text(
-                              'Datos eliminados. Reinicia la app para configurar un nuevo usuario.'),
-                          duration: Duration(seconds: 3),
+                              S.of(context).securityResetSuccess),
+                          duration: const Duration(seconds: 3),
                         ),
                       );
 
@@ -264,7 +264,7 @@ class SettingsTab extends ConsumerWidget {
                 _buildSyncStatusBanner(context, ref),
                 const SizedBox(height: 16),
                 Text(
-                  'Apariencia',
+                  S.of(context).settingsAppearance,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 12),
@@ -272,7 +272,20 @@ class SettingsTab extends ConsumerWidget {
 
                 const SizedBox(height: 16),
                 Text(
-                  'Integraciones externas',
+                  S.of(context).settingsLanguage,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  S.of(context).settingsLanguageDesc,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                const _LanguageSection(),
+
+                const SizedBox(height: 16),
+                Text(
+                  S.of(context).settingsExternalIntegrations,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 12),
@@ -285,17 +298,17 @@ class SettingsTab extends ConsumerWidget {
                 _buildSyncActionsCard(context, ref),
 
                 const SizedBox(height: 24),
-                const _PlaceholderTab(
-                  title: 'Más configuraciones próximamente',
+                _PlaceholderTab(
+                  title: S.of(context).settingsMoreComingSoon,
                   description:
-                      'Pronto podrás gestionar copias de seguridad, sincronización y preferencias.',
+                      S.of(context).settingsMoreComingSoonDesc,
                 ),
                 const SizedBox(height: 24),
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      'Datos bibliográficos proporcionados por Open Library (Internet Archive). Contenido bajo licencia ODC-By.',
+                      S.of(context).settingsOpenLibraryCredit,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant,
@@ -331,21 +344,21 @@ class SettingsTab extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Invítame a un café',
+                  S.of(context).donationTitle,
                   style: theme.textTheme.titleMedium,
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Text(
-              'Si esta app te resulta útil, puedes apoyar su desarrollo con una donación.',
+              S.of(context).donationMessage,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: () => _openDonationLink(context, donationUrl),
               icon: const Icon(Icons.open_in_new),
-              label: const Text('Invítame a un café'),
+              label: Text(S.of(context).donationButton),
             ),
           ],
         ),
@@ -359,7 +372,7 @@ class SettingsTab extends ConsumerWidget {
     if (uri == null) {
       _showFeedbackSnackBar(
         context: context,
-        message: 'El enlace de donación no es válido.',
+        message: S.of(context).donationLinkInvalid,
         isError: true,
       );
       return;
@@ -371,7 +384,7 @@ class SettingsTab extends ConsumerWidget {
       if (!launched && context.mounted) {
         _showFeedbackSnackBar(
           context: context,
-          message: 'No se pudo abrir el enlace de donación.',
+          message: S.of(context).donationLinkError,
           isError: true,
         );
       }
@@ -379,7 +392,7 @@ class SettingsTab extends ConsumerWidget {
       if (!context.mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'Error al abrir el enlace: $e',
+        message: S.of(context).donationLinkOpenError(e.toString()),
         isError: true,
       );
     }
@@ -391,17 +404,17 @@ class SettingsTab extends ConsumerWidget {
 
     final statusText = state.when(
       data: (data) => data.isSyncing
-          ? 'Sincronizando con Supabase...'
+          ? S.of(context).syncingWithSupabase
           : data.lastFullSync != null
-              ? 'Última sincronización: ${DateFormat.yMd().add_Hm().format(data.lastFullSync!)}'
-              : 'Aún no se ha sincronizado con Supabase.',
-      loading: () => 'Sincronizando con Supabase...',
-      error: (error, _) => 'Último error de sincronización',
+              ? S.of(context).lastSync(DateFormat.yMd().add_Hm().format(data.lastFullSync!))
+              : S.of(context).notSyncedYet,
+      loading: () => S.of(context).syncingWithSupabase,
+      error: (error, _) => S.of(context).syncLastError,
     );
 
     final String? errorText = state.whenOrNull(
       data: (data) =>
-          data.hasErrors ? 'Se encontraron errores recientemente' : null,
+          data.hasErrors ? S.of(context).syncErrorRecent : null,
       error: (error, _) => error.toString(),
     );
 
@@ -445,7 +458,7 @@ class SettingsTab extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Estado de sincronización',
+                  S.of(context).syncStatus,
                   style: theme.textTheme.titleMedium
                       ?.copyWith(color: Colors.white),
                 ),
@@ -466,7 +479,7 @@ class SettingsTab extends ConsumerWidget {
                 if (hasPendingChanges && !isSyncing) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Hay cambios pendientes por sincronizar.',
+                    S.of(context).pendingChanges,
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: Colors.white70),
                   ),
@@ -494,15 +507,14 @@ class SettingsTab extends ConsumerWidget {
                 Icon(Icons.groups_outlined, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Sincronización manual',
+                  S.of(context).manualSync,
                   style: theme.textTheme.titleMedium,
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Text(
-              'Fuerza la subida y bajada de libros, préstamos y clubes con Supabase. '
-              'Normalmente esto ocurre de forma automática en segundo plano.',
+              S.of(context).manualSyncDesc,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
@@ -521,7 +533,7 @@ class SettingsTab extends ConsumerWidget {
                         )
                       : const Icon(Icons.sync_outlined),
                   label: Text(
-                      isSyncing ? 'Sincronizando...' : 'Sincronizar ahora'),
+                      isSyncing ? S.of(context).syncing : S.of(context).syncNow),
                 ),
               ],
             ),
@@ -539,14 +551,14 @@ class SettingsTab extends ConsumerWidget {
 
       _showFeedbackSnackBar(
         context: context,
-        message: 'Sincronización completada.',
+        message: S.of(context).syncComplete,
         isError: false,
       );
     } catch (error) {
       if (!context.mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'Error de sincronización: $error',
+        message: S.of(context).syncError(error.toString()),
         isError: true,
       );
     }
@@ -556,38 +568,38 @@ class SettingsTab extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('⚠️ Resetear base de datos local'),
-        content: const Column(
+        title: Text(S.of(context).resetDatabaseTitle),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.warning_amber, size: 48, color: Colors.red),
-            SizedBox(height: 16),
+            const Icon(Icons.warning_amber, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
             Text(
-              'Esto eliminará TODOS los datos locales:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              S.of(context).resetDatabaseWarning,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
-            Text('• Libros registrados'),
-            Text('• Grupos y membresías'),
-            Text('• Préstamos y notificaciones'),
-            Text('• Configuración local'),
-            SizedBox(height: 12),
+            const SizedBox(height: 8),
+            Text(S.of(context).resetDatabaseItem1),
+            Text(S.of(context).resetDatabaseItem2),
+            Text(S.of(context).resetDatabaseItem3),
+            Text(S.of(context).resetDatabaseItem4),
+            const SizedBox(height: 12),
             Text(
-              'Los datos en la nube (Supabase) NO se eliminarán.',
-              style: TextStyle(color: Colors.blue),
+              S.of(context).resetDatabaseCloudNote,
+              style: const TextStyle(color: Colors.blue),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              'Después de resetear, la app se reiniciará automáticamente.',
-              style: TextStyle(fontStyle: FontStyle.italic),
+              S.of(context).resetDatabaseRestartNote,
+              style: const TextStyle(fontStyle: FontStyle.italic),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancelar'),
+            child: Text(S.of(context).cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -595,7 +607,7 @@ class SettingsTab extends ConsumerWidget {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Resetear todo'),
+            child: Text(S.of(context).securityResetAction),
           ),
         ],
       ),
@@ -607,7 +619,7 @@ class SettingsTab extends ConsumerWidget {
       if (context.mounted) {
         _showFeedbackSnackBar(
           context: context,
-          message: 'Reseteando base de datos...',
+          message: S.of(context).resettingDatabase,
           isError: false,
         );
       }
@@ -618,7 +630,7 @@ class SettingsTab extends ConsumerWidget {
       if (context.mounted) {
         _showFeedbackSnackBar(
           context: context,
-          message: 'Base de datos reseteada. Reiniciando app...',
+          message: S.of(context).databaseResetSuccess,
           isError: false,
         );
       }
@@ -632,7 +644,7 @@ class SettingsTab extends ConsumerWidget {
       if (context.mounted) {
         _showFeedbackSnackBar(
           context: context,
-          message: 'Error al resetear la base de datos: $error',
+          message: S.of(context).errorResettingDatabase(error.toString()),
           isError: true,
         );
       }
@@ -643,22 +655,21 @@ class SettingsTab extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Borrar todas las portadas?'),
-        content: const Text(
-          'Se eliminarán todas las imágenes de portada descargadas. '
-          'Podrás volver a descargarlas manualmente desde la biblioteca.',
+        title: Text(S.of(context).deleteCoversTitle),
+        content: Text(
+          S.of(context).deleteCoversDesc,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(S.of(context).cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Borrar'),
+            child: Text(S.of(context).deleteAction),
           ),
         ],
       ),
@@ -677,7 +688,7 @@ class SettingsTab extends ConsumerWidget {
 
       _showFeedbackSnackBar(
         context: context,
-        message: 'Se eliminaron $count portadas.',
+        message: S.of(context).coversDeletedCount(count.toString()),
         isError: false,
       );
 
@@ -687,7 +698,7 @@ class SettingsTab extends ConsumerWidget {
       if (!context.mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'Error al borrar portadas: $e',
+        message: S.of(context).errorDeletingCovers(e.toString()),
         isError: true,
       );
     }
@@ -719,7 +730,7 @@ class SettingsTab extends ConsumerWidget {
         if (context.mounted) {
           _showFeedbackSnackBar(
             context: context,
-            message: 'API key guardada correctamente.',
+            message: S.of(context).apiKeySavedSuccess,
             isError: false,
           );
         }
@@ -727,7 +738,7 @@ class SettingsTab extends ConsumerWidget {
         if (context.mounted) {
           _showFeedbackSnackBar(
             context: context,
-            message: 'Error al guardar API key: $e',
+            message: S.of(context).errorSavingApiKey(e.toString()),
             isError: true,
           );
         }
@@ -740,21 +751,21 @@ class SettingsTab extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Eliminar API key de Google Books?'),
-        content: const Text(
-          'Se eliminará la API key guardada. La búsqueda de libros en Google Books dejará de funcionar hasta que configures una nueva key.',
+        title: Text(S.of(context).googleBooksKeyDeleteTitle),
+        content: Text(
+          S.of(context).googleBooksKeyDeleteDesc,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(S.of(context).cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Eliminar'),
+            child: Text(S.of(context).delete),
           ),
         ],
       ),
@@ -768,7 +779,7 @@ class SettingsTab extends ConsumerWidget {
         if (context.mounted) {
           _showFeedbackSnackBar(
             context: context,
-            message: 'API key eliminada.',
+            message: S.of(context).apiKeyDeletedSuccess,
             isError: false,
           );
         }
@@ -776,7 +787,7 @@ class SettingsTab extends ConsumerWidget {
         if (context.mounted) {
           _showFeedbackSnackBar(
             context: context,
-            message: 'Error al eliminar API key: $e',
+            message: S.of(context).errorDeletingApiKey(e.toString()),
             isError: true,
           );
         }
@@ -790,7 +801,7 @@ class SettingsTab extends ConsumerWidget {
       if (activeUser == null) {
         _showFeedbackSnackBar(
           context: context,
-          message: 'Debes tener una sesión activa.',
+          message: S.of(context).errorActiveSessionRequired,
           isError: true,
         );
         return;
@@ -833,7 +844,7 @@ class SettingsTab extends ConsumerWidget {
       if (!context.mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'Error al exportar préstamos: $e',
+        message: S.of(context).errorExportingLoans(e.toString()),
         isError: true,
       );
     }
@@ -862,7 +873,7 @@ class _ThemeSection extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'No pudimos cargar la preferencia de tema.',
+                S.of(context).errorLoadingTheme,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -874,7 +885,7 @@ class _ThemeSection extends ConsumerWidget {
               FilledButton.icon(
                 onPressed: () => ref.invalidate(themeSettingsProvider),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
+                label: Text(S.of(context).retry),
               ),
             ],
           ),
@@ -886,9 +897,9 @@ class _ThemeSection extends ConsumerWidget {
             value: value,
             label: Text(
               switch (value) {
-                ThemePreference.system => 'Usar tema del sistema',
-                ThemePreference.light => 'Modo claro',
-                ThemePreference.dark => 'Modo oscuro',
+                ThemePreference.system => S.of(context).themeSystem,
+                ThemePreference.light => S.of(context).themeLight,
+                ThemePreference.dark => S.of(context).themeDark,
               },
             ),
             icon: Icon(
@@ -982,14 +993,14 @@ class _GoogleBooksApiCard extends ConsumerWidget {
             const SizedBox(height: 12),
             Text(
               hasApiKey
-                  ? 'API key configurada. Puedes buscar libros en Google Books.'
-                  : 'Configura una API key para buscar libros en Google Books.',
+                  ? S.of(context).googleBooksKeyConfigured
+                  : S.of(context).googleBooksKeyNotConfigured,
               style: theme.textTheme.bodyMedium,
             ),
             if (errorMessage != null) ...[
               const SizedBox(height: 8),
               Text(
-                'Error: $errorMessage',
+                S.of(context).errorGeneric(errorMessage),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.error,
                 ),
@@ -1004,13 +1015,13 @@ class _GoogleBooksApiCard extends ConsumerWidget {
                   onPressed: isLoading ? null : onConfigure,
                   icon: const Icon(Icons.key_outlined),
                   label: Text(
-                      hasApiKey ? 'Cambiar API key' : 'Configurar API key'),
+                      hasApiKey ? S.of(context).changeApiKey : S.of(context).configApiKey),
                 ),
                 if (hasApiKey)
                   OutlinedButton.icon(
                     onPressed: isLoading ? null : onClear,
                     icon: const Icon(Icons.delete_outline),
-                    label: const Text('Eliminar'),
+                    label: Text(S.of(context).delete),
                   ),
               ],
             ),
@@ -1032,7 +1043,7 @@ class _GoogleBooksApiCard extends ConsumerWidget {
                             color: Colors.blue.shade700, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          '¿Cómo obtener una API key?',
+                          S.of(context).googleBooksKeyHelpTitle,
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Colors.blue.shade700,
@@ -1042,11 +1053,7 @@ class _GoogleBooksApiCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '1. Ve a Google Cloud Console\n'
-                      '2. Crea un nuevo proyecto o selecciona uno existente\n'
-                      '3. Habilita la "Books API"\n'
-                      '4. Crea credenciales tipo "API key"\n'
-                      '5. Copia la clave y pégala aquí',
+                      S.of(context).googleBooksKeyHelpSteps,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.blue.shade700,
@@ -1085,7 +1092,7 @@ class _GoogleBooksApiDialogState extends State<_GoogleBooksApiDialog> {
     final theme = Theme.of(context);
 
     return AlertDialog(
-      title: const Text('Configurar API key de Google Books'),
+      title: Text(S.of(context).googleBooksKeyDialogTitle),
       content: SizedBox(
         width: 400,
         child: Column(
@@ -1093,7 +1100,7 @@ class _GoogleBooksApiDialogState extends State<_GoogleBooksApiDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Introduce tu API key de Google Books para poder buscar libros.',
+              S.of(context).googleBooksKeyDialogDesc,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
@@ -1102,7 +1109,7 @@ class _GoogleBooksApiDialogState extends State<_GoogleBooksApiDialog> {
               obscureText: _obscureKey,
               decoration: InputDecoration(
                 labelText: 'API Key',
-                hintText: 'Pega tu API key aquí',
+                hintText: S.of(context).googleBooksKeyHint,
                 suffixIcon: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1146,7 +1153,7 @@ class _GoogleBooksApiDialogState extends State<_GoogleBooksApiDialog> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Puedes validar la API key antes de guardarla.',
+                        S.of(context).googleBooksKeyValidationTip,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.blue.shade700,
@@ -1163,7 +1170,7 @@ class _GoogleBooksApiDialogState extends State<_GoogleBooksApiDialog> {
       actions: [
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(S.of(context).cancel),
         ),
         if (widget.controller.text.isNotEmpty)
           OutlinedButton(
@@ -1174,11 +1181,11 @@ class _GoogleBooksApiDialogState extends State<_GoogleBooksApiDialog> {
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Validar y guardar'),
+                : Text(S.of(context).validateAndSave),
           ),
         FilledButton(
           onPressed: _isLoading ? null : () => _saveAndClose(context),
-          child: const Text('Guardar'),
+          child: Text(S.of(context).save),
         ),
       ],
     );
@@ -1195,7 +1202,7 @@ class _GoogleBooksApiDialogState extends State<_GoogleBooksApiDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al validar API key: $e'),
+            content: Text(S.of(context).errorValidatingApiKey(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -1298,22 +1305,20 @@ class _BackupSectionState extends State<_BackupSection> {
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Permiso necesario'),
-            content: const Text(
-                'Para guardar y restaurar backups en la carpeta de Descargas, '
-                'necesitamos acceso a todos los archivos.\n\n'
-                'Por favor, concede el permiso en la siguiente pantalla.'),
+            title: Text(S.of(context).permissionRequired),
+            content: Text(
+                S.of(context).backupPermissionDesc),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
+                child: Text(S.of(context).cancel),
               ),
               FilledButton(
                 onPressed: () {
                   Navigator.pop(context);
                   Permission.manageExternalStorage.request();
                 },
-                child: const Text('Continuar'),
+                child: Text(S.of(context).continueLabel),
               ),
             ],
           ),
@@ -1339,9 +1344,8 @@ class _BackupSectionState extends State<_BackupSection> {
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'Se requiere permiso de almacenamiento para guardar el backup.'),
+            SnackBar(
+              content: Text(S.of(context).errorStoragePermissionRequired),
             ),
           );
         }
@@ -1365,8 +1369,8 @@ class _BackupSectionState extends State<_BackupSection> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(value
-                ? 'Backup automático semanal activado'
-                : 'Backup automático desactivado'),
+                ? S.of(context).autoBackupEnabled
+                : S.of(context).autoBackupDisabled),
           ),
         );
       }
@@ -1375,7 +1379,7 @@ class _BackupSectionState extends State<_BackupSection> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al cambiar configuración: $e'),
+            content: Text(S.of(context).errorChangingBackupConfig(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -1416,7 +1420,7 @@ class _BackupSectionState extends State<_BackupSection> {
       if (path != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Backup guardado en: $path'),
+            content: Text(S.of(context).backupSavedAt(path)),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 4),
           ),
@@ -1425,7 +1429,7 @@ class _BackupSectionState extends State<_BackupSection> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content:
-                const Text('No se pudo crear el backup. Intenta de nuevo.'),
+                Text(S.of(context).errorCreatingBackup),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -1434,7 +1438,7 @@ class _BackupSectionState extends State<_BackupSection> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al crear backup: $e'),
+            content: Text(S.of(context).errorCreatingBackupDetail(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -1446,30 +1450,30 @@ class _BackupSectionState extends State<_BackupSection> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Restaurar último backup automático?'),
-        content: const Column(
+        title: Text(S.of(context).restoreLatestBackupTitle),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('⚠️ Atención:', style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
+            Text('⚠️ ${S.of(context).warningLabel}:', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             Text(
-                'Esta acción reemplazará TODOS tus datos actuales con la copia de seguridad más reciente.'),
-            SizedBox(height: 8),
-            Text('La aplicación se reiniciará al finalizar.'),
+                S.of(context).restoreBackupWarning),
+            const SizedBox(height: 8),
+            Text(S.of(context).appRestartNote),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(S.of(context).cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Restaurar'),
+            child: Text(S.of(context).restore),
           ),
         ],
       ),
@@ -1480,7 +1484,7 @@ class _BackupSectionState extends State<_BackupSection> {
     try {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Buscando backups...')),
+          SnackBar(content: Text(S.of(context).searchingBackups)),
         );
       }
 
@@ -1490,8 +1494,8 @@ class _BackupSectionState extends State<_BackupSection> {
       if (backups.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('No se encontraron backups automáticos.')),
+            SnackBar(
+                content: Text(S.of(context).noBackupsFound)),
           );
         }
         return;
@@ -1503,7 +1507,7 @@ class _BackupSectionState extends State<_BackupSection> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content:
-                  Text('Restaurando ${latestBackup.path.split('/').last}...')),
+                  Text(S.of(context).restoringBackup(latestBackup.path.split('/').last))),
         );
       }
 
@@ -1511,8 +1515,8 @@ class _BackupSectionState extends State<_BackupSection> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Restauración completada. Reiniciando...')),
+          SnackBar(
+              content: Text(S.of(context).restoreComplete)),
         );
         // Wait a bit and restart
         await Future.delayed(const Duration(seconds: 2));
@@ -1522,7 +1526,7 @@ class _BackupSectionState extends State<_BackupSection> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al restaurar: $e'),
+            content: Text(S.of(context).errorRestoringBackup(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -1547,30 +1551,30 @@ class _BackupSectionState extends State<_BackupSection> {
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('¿Restaurar este backup?'),
+            title: Text(S.of(context).restoreSpecificBackupTitle),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Archivo: ${file.path.split('/').last}'),
+                Text(S.of(context).backupFileLabel(file.path.split('/').last)),
                 const SizedBox(height: 16),
-                const Text(
-                    'Esta acción reemplazará TODOS tus datos actuales con el contenido del backup.'),
+                Text(
+                    S.of(context).restoreBackupWarning),
                 const SizedBox(height: 8),
-                const Text('La aplicación se reiniciará al finalizar.'),
+                Text(S.of(context).appRestartNote),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar'),
+                child: Text(S.of(context).cancel),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),
                 style: FilledButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.error,
                 ),
-                child: const Text('Restaurar'),
+                child: Text(S.of(context).restore),
               ),
             ],
           ),
@@ -1580,7 +1584,7 @@ class _BackupSectionState extends State<_BackupSection> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Restaurando backup...')),
+            SnackBar(content: Text(S.of(context).restoringBackup(''))),
           );
         }
 
@@ -1657,5 +1661,43 @@ class _BackupSectionState extends State<_BackupSection> {
         ),
       );
     });
+  }
+}
+
+class _LanguageSection extends ConsumerWidget {
+  const _LanguageSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final localePrefAsync = ref.watch(localeSettingsProvider);
+
+    return localePrefAsync.when(
+      data: (preference) {
+        return SegmentedButton<LocalePreference>(
+          segments: [
+            ButtonSegment<LocalePreference>(
+              value: LocalePreference.system,
+              label: Text(S.of(context).languageSystem),
+            ),
+            ButtonSegment<LocalePreference>(
+              value: LocalePreference.spanish,
+              label: Text(S.of(context).languageSpanish),
+            ),
+            ButtonSegment<LocalePreference>(
+              value: LocalePreference.english,
+              label: Text(S.of(context).languageEnglish),
+            ),
+          ],
+          selected: {preference},
+          onSelectionChanged: (Set<LocalePreference> newSelection) {
+            ref
+                .read(localeSettingsProvider.notifier)
+                .update(newSelection.first);
+          },
+        );
+      },
+      loading: () => const CircularProgressIndicator(),
+      error: (error, _) => Text(S.of(context).errorGeneric(error.toString())),
+    );
   }
 }

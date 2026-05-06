@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 class LoanFeedbackBanner extends StatefulWidget {
   const LoanFeedbackBanner({
@@ -67,7 +68,7 @@ class _LoanFeedbackBannerState extends State<LoanFeedbackBanner> {
             IconButton(
               icon: Icon(Icons.close, color: textColor),
               onPressed: widget.onDismiss,
-              tooltip: 'Cerrar',
+              tooltip: S.of(context).actionClose,
             ),
           ],
         ),

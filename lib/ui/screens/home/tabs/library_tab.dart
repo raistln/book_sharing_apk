@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/local/database.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../models/book_genre.dart';
 import '../../../../providers/book_providers.dart';
 import '../../../../ui/widgets/library/empty_library_state.dart';
@@ -127,7 +128,7 @@ class _LibraryTabState extends ConsumerState<LibraryTab>
     final headerActions = Row(
       children: [
         Text(
-          'Biblioteca',
+          S.of(context).libraryHeader,
           style: theme.textTheme.headlineSmall
               ?.copyWith(fontWeight: FontWeight.bold),
         ),
@@ -135,19 +136,19 @@ class _LibraryTabState extends ConsumerState<LibraryTab>
         IconButton(
           onPressed: () => setState(() => _isGridView = !_isGridView),
           icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
-          tooltip: _isGridView ? 'Ver lista' : 'Ver cuadrícula',
+          tooltip: _isGridView ? S.of(context).tooltipViewList : S.of(context).tooltipViewGrid,
           visualDensity: VisualDensity.compact,
         ),
         IconButton(
           onPressed: () => CoverRefreshHandler.handle(context, ref),
           icon: const Icon(Icons.refresh_rounded),
-          tooltip: 'Actualizar portadas',
+          tooltip: S.of(context).tooltipRefreshCovers,
           visualDensity: VisualDensity.compact,
         ),
         IconButton(
           onPressed: () => ExportHandler.handle(context, ref),
           icon: const Icon(Icons.share_outlined),
-          tooltip: 'Exportar biblioteca',
+          tooltip: S.of(context).tooltipExportLibrary,
           visualDensity: VisualDensity.compact,
         ),
       ],
@@ -208,9 +209,9 @@ class _LibraryTabState extends ConsumerState<LibraryTab>
               labelColor: theme.colorScheme.onPrimary,
               unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-              tabs: const [
-                Tab(text: '  Mis libros  '),
-                Tab(text: '  Me prestaron  '),
+              tabs: [
+                Tab(text: '  ${S.of(context).tabMyBooks}  '),
+                Tab(text: '  ${S.of(context).tabBorrowedBooks}  '),
               ],
             ),
           ),
@@ -233,14 +234,14 @@ class _LibraryTabState extends ConsumerState<LibraryTab>
                     _buildBookListOrEmpty(
                       context,
                       myBooks,
-                      emptyMessage: 'Añade tus libros para gestionarlos aquí.',
+                      emptyMessage: S.of(context).emptyMyBooksMessage,
                       isMyBooksTab: true,
                     ),
                     _buildBookListOrEmpty(
                       context,
                       borrowedBooks,
                       emptyMessage:
-                          'Aquí aparecerán los libros que te presten amigos, ya sea por la app o fuera de ella.',
+                          S.of(context).emptyBorrowedBooksMessage,
                       isMyBooksTab: false,
                     ),
                   ],
@@ -264,7 +265,7 @@ class _LibraryTabState extends ConsumerState<LibraryTab>
           _readStatusFilter != null ||
           _genreFilter != null) {
         return Center(
-            child: Text('No hay coincidencias con los filtros.',
+            child: Text(S.of(context).noFilterResults,
                 style: Theme.of(context).textTheme.bodyMedium));
       }
       if (isMyBooksTab) {
@@ -325,7 +326,7 @@ class _SortSelector extends StatelessWidget {
     return PopupMenuButton<LibrarySortOption>(
       initialValue: selected,
       onSelected: onSelected,
-      tooltip: 'Ordenar libros',
+      tooltip: S.of(context).tooltipSortBooks,
       icon: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -339,12 +340,12 @@ class _SortSelector extends StatelessWidget {
         ),
       ),
       itemBuilder: (context) => [
-        _buildItem(LibrarySortOption.titleAz, 'Título (A-Z)'),
-        _buildItem(LibrarySortOption.titleZa, 'Título (Z-A)'),
-        _buildItem(LibrarySortOption.authorAz, 'Autor (A-Z)'),
-        _buildItem(LibrarySortOption.authorZa, 'Autor (Z-A)'),
-        _buildItem(LibrarySortOption.newest, 'Más recientes'),
-        _buildItem(LibrarySortOption.oldest, 'Más antiguos'),
+        _buildItem(LibrarySortOption.titleAz, S.of(context).sortTitleAZ),
+        _buildItem(LibrarySortOption.titleZa, S.of(context).sortTitleZA),
+        _buildItem(LibrarySortOption.authorAz, S.of(context).sortAuthorAZ),
+        _buildItem(LibrarySortOption.authorZa, S.of(context).sortAuthorZA),
+        _buildItem(LibrarySortOption.newest, S.of(context).sortNewest),
+        _buildItem(LibrarySortOption.oldest, S.of(context).sortOldest),
       ],
     );
   }
@@ -383,15 +384,15 @@ class _GenreSelector extends StatelessWidget {
           value: selected,
           onChanged: onSelected,
           style: theme.textTheme.bodyMedium,
-          hint: const Text('Género'),
+          hint: Text(S.of(context).genreFilter),
           items: [
-            const DropdownMenuItem<BookGenre?>(
+            DropdownMenuItem<BookGenre?>(
               value: null,
-              child: Text('Todos los géneros'),
+              child: Text(S.of(context).allGenres),
             ),
             ...BookGenre.values.map((genre) => DropdownMenuItem<BookGenre?>(
                   value: genre,
-                  child: Text(genre.label),
+                  child: Text(genre.localizedLabel(context)),
                 )),
           ],
         ),

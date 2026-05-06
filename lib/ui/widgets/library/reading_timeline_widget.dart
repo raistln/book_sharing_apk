@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/local/database.dart';
 import '../../../providers/book_providers.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import 'reading_insight_banner.dart';
 import 'timeline_entry_card.dart';
 import 'add_timeline_entry_sheet.dart';
@@ -50,7 +51,7 @@ class _ReadingTimelineWidgetState extends ConsumerState<ReadingTimelineWidget> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Línea temporal de lectura',
+                    S.of(context).timelineTitle,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -89,7 +90,7 @@ class _ReadingTimelineWidgetState extends ConsumerState<ReadingTimelineWidget> {
                       child: FilledButton.icon(
                         onPressed: () => _showAddEntrySheet(context),
                         icon: const Icon(Icons.add),
-                        label: const Text('Actualizar progreso'),
+                        label: Text(S.of(context).timelineUpdateProgress),
                       ),
                     ),
                   const SizedBox(height: 24),
@@ -110,7 +111,7 @@ class _ReadingTimelineWidgetState extends ConsumerState<ReadingTimelineWidget> {
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'Aún no has registrado ningún progreso',
+                                  S.of(context).timelineEmpty,
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
@@ -118,7 +119,7 @@ class _ReadingTimelineWidgetState extends ConsumerState<ReadingTimelineWidget> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Añade tu primer hito de lectura',
+                                  S.of(context).timelineAddFirst,
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
@@ -154,7 +155,7 @@ class _ReadingTimelineWidgetState extends ConsumerState<ReadingTimelineWidget> {
                     error: (error, _) => Center(
                       child: Padding(
                         padding: const EdgeInsets.all(32),
-                        child: Text('Error: $error'),
+                        child: Text('${S.of(context).errorStateLabel}: $error'),
                       ),
                     ),
                   ),
@@ -198,21 +199,23 @@ class _ReadingTimelineWidgetState extends ConsumerState<ReadingTimelineWidget> {
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eliminar evento'),
-        content: const Text(
-            '¿Estás seguro de eliminar este evento de la línea temporal?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l10n = S.of(context);
+        return AlertDialog(
+          title: Text(l10n.timelineDeleteTitle),
+          content: Text(l10n.timelineDeleteMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed == true && context.mounted) {

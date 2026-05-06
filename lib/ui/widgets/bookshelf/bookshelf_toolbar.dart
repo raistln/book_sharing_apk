@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/bookshelf_models.dart';
 import '../../../providers/bookshelf_providers.dart';
 import 'bookshelf_editor_sheet.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class BookshelfToolbar extends ConsumerWidget {
   final ShelfThemeConfig themeConfig;
@@ -32,7 +33,7 @@ class BookshelfToolbar extends ConsumerWidget {
                   searchVisible ? Icons.search_off : Icons.search,
                   color: themeConfig.textColor,
                 ),
-                tooltip: 'Buscar en mis lecturas',
+                tooltip: S.of(context).bookshelfSearchTooltip,
               ),
 
               // Sort chips (scrollable)
@@ -46,7 +47,7 @@ class BookshelfToolbar extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: ChoiceChip(
                           label: Text(
-                            sort.label,
+                            sort.localizedLabel(context),
                             style: TextStyle(
                               fontSize: 11,
                               color: isSelected
@@ -82,14 +83,14 @@ class BookshelfToolbar extends ConsumerWidget {
                 onPressed: () => _showThemeSelector(context, ref),
                 icon:
                     Icon(Icons.palette_outlined, color: themeConfig.textColor),
-                tooltip: 'Personalizar estantería',
+                tooltip: S.of(context).bookshelfThemeTooltip,
               ),
 
               // Manual Edit button
               IconButton(
                 onPressed: () => _showBookshelfEditor(context),
                 icon: Icon(Icons.edit_note, color: themeConfig.textColor),
-                tooltip: 'Gestionar títulos',
+                tooltip: S.of(context).bookshelfManageTooltip,
               ),
             ],
           ),
@@ -104,7 +105,7 @@ class BookshelfToolbar extends ConsumerWidget {
                       ),
               style: TextStyle(color: themeConfig.textColor),
               decoration: InputDecoration(
-                hintText: 'Buscar por título o autor...',
+                hintText: S.of(context).bookshelfSearchHint,
                 hintStyle: TextStyle(
                     color: themeConfig.textColor.withValues(alpha: 0.4)),
                 isDense: true,
@@ -139,10 +140,11 @@ class BookshelfToolbar extends ConsumerWidget {
         final currentTheme = ref.watch(bookshelfThemeProvider);
         final currentWall = ref.watch(bookshelfWallProvider);
 
+        final theme = Theme.of(context);
         return DefaultTabController(
           length: 2,
           child: AlertDialog(
-            title: const Text('Personalizar Estantería'),
+            title: Text(S.of(context).bookshelfCustomTitle),
             contentPadding: EdgeInsets.zero,
             content: SizedBox(
               width: double.maxFinite,
@@ -150,12 +152,12 @@ class BookshelfToolbar extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const TabBar(
-                    labelColor: Colors.blue,
+                  TabBar(
+                    labelColor: theme.colorScheme.primary,
                     unselectedLabelColor: Colors.grey,
                     tabs: [
-                      Tab(text: 'Baldas'),
-                      Tab(text: 'Fondo'),
+                      Tab(text: S.of(context).bookshelfTabShelves),
+                      Tab(text: S.of(context).bookshelfTabWall),
                     ],
                   ),
                   Expanded(
@@ -172,7 +174,7 @@ class BookshelfToolbar extends ConsumerWidget {
                                 backgroundColor: config.shelfColor,
                                 radius: 12,
                               ),
-                              title: Text(config.displayName),
+                              title: Text(theme.localizedDisplayName(context)),
                               trailing: isSelected
                                   ? const Icon(Icons.check, color: Colors.green)
                                   : null,
@@ -204,7 +206,7 @@ class BookshelfToolbar extends ConsumerWidget {
                                   ),
                                 ),
                               ),
-                              title: Text(config.displayName),
+                              title: Text(wall.localizedDisplayName(context)),
                               trailing: isSelected
                                   ? const Icon(Icons.check, color: Colors.green)
                                   : null,
@@ -225,7 +227,7 @@ class BookshelfToolbar extends ConsumerWidget {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cerrar'),
+                child: Text(S.of(context).cancel),
               ),
             ],
           ),

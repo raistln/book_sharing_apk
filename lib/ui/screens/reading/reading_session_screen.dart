@@ -12,6 +12,7 @@ import '../../../data/local/database.dart';
 import '../../../providers/reading_providers.dart';
 import '../../widgets/library/review_dialog.dart';
 import '../../widgets/library/book_details_page.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ReadingSessionScreen extends ConsumerStatefulWidget {
   const ReadingSessionScreen({
@@ -226,7 +227,7 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
             IconButton(
               icon: Icon(_isZenMode ? Icons.nightlight_round : Icons.wb_sunny),
               onPressed: _toggleZenMode,
-              tooltip: _isZenMode ? 'Modo Normal' : 'Modo Lectura Nocturna',
+              tooltip: _isZenMode ? S.of(context).zenModeNormal : S.of(context).zenModeNocturnal,
             ),
           ],
           leading: IconButton(
@@ -319,9 +320,9 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
                                   color: _isZenMode ? Colors.grey : null,
                                 ),
                               ),
-                              if (widget.targetDuration != null)
+                                if (widget.targetDuration != null)
                                 Text(
-                                  'restante',
+                                  S.of(context).remaining,
                                   style: Theme.of(context)
                                       .textTheme
                                       .labelMedium
@@ -346,7 +347,7 @@ class _ReadingSessionScreenState extends ConsumerState<ReadingSessionScreen> {
                               : Theme.of(context).colorScheme.error,
                         ),
                         label: Text(
-                          'TERMINAR SESIÓN',
+                          S.of(context).endSessionAction,
                           style: TextStyle(
                             color: _isZenMode
                                 ? Colors.grey
@@ -420,7 +421,7 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
         children: [
           const Icon(Icons.auto_awesome, color: Colors.amber),
           const SizedBox(width: 8),
-          const Text('Sesión completada'),
+          Text(S.of(context).sessionCompleted),
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.close),
@@ -442,7 +443,7 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${widget.duration.inMinutes} minutos dedicados a "${widget.bookTitle}"',
+                S.of(context).sessionDurationSummary(widget.duration.inMinutes.toString(), widget.bookTitle),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 24),
@@ -450,8 +451,8 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
                 controller: _pageController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: '¿En qué página te has quedado?',
-                  hintText: 'Ej: 145',
+                  labelText: S.of(context).sessionLastPagePrompt,
+                  hintText: S.of(context).sessionLastPageHint,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -461,9 +462,9 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
               TextField(
                 controller: _notesController,
                 decoration: InputDecoration(
-                  labelText: '¿Algo que quieras recordar?',
+                  labelText: S.of(context).sessionNotesPrompt,
                   hintText:
-                      'Ej: "El capítulo con Maga me hizo llorar. Increíble."',
+                      S.of(context).sessionNotesHint,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -475,7 +476,7 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
               const SizedBox(height: 12),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Marcar libro como terminado'),
+                title: Text(S.of(context).sessionMarkFinished),
                 value: _finishBook,
                 onChanged: (val) {
                   setState(() {
@@ -506,7 +507,7 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
                     ),
                   );
                 },
-                child: const Text('SOLO GUARDAR'),
+                child: Text(S.of(context).sessionSaveOnly),
               ),
             ),
             const SizedBox(width: 8),
@@ -524,10 +525,10 @@ class _EndSessionDialogState extends State<_EndSessionDialog> {
                     ),
                   );
                 },
-                child: const Text(
-                  'GUARDAR Y VER LIBRO',
+                child: Text(
+                  S.of(context).sessionSaveAndView,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: 12),
                 ),
               ),
             ),

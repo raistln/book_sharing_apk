@@ -9,6 +9,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/textured_background.dart';
 import '../home/home_shell.dart';
 import 'onboarding_intro_screen.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class OnboardingWizardScreen extends ConsumerStatefulWidget {
   const OnboardingWizardScreen({super.key});
@@ -118,7 +119,7 @@ class _OnboardingWizardScreenState
     final theme = material.Theme.of(context);
     messenger.showSnackBar(
       material.SnackBar(
-        content: const material.Text('¡Listo! Bienvenido a Book Sharing.'),
+        content: material.Text(S.of(context).welcomeToApp),
         backgroundColor: theme.colorScheme.primary,
       ),
     );
@@ -192,9 +193,9 @@ class _OnboardingWizardScreenState
 
     if (skipped) {
       messenger.showSnackBar(
-        const material.SnackBar(
+        material.SnackBar(
             content: material.Text(
-                'Paso omitido. Puedes configurarlo más tarde desde la ayuda.')),
+                S.of(context).stepSkippedHint)),
       );
     }
   }
@@ -218,12 +219,13 @@ class _OnboardingWizardScreenState
 
   Future<bool> _createGroup(material.BuildContext context,
       {required material.ScaffoldMessengerState messenger}) async {
+    final s = S.of(context);
     final activeUser = ref.read(activeUserProvider).value;
     if (activeUser == null || !_isSynced) {
       messenger.showSnackBar(
-        const material.SnackBar(
+        material.SnackBar(
             content: material.Text(
-                'Estamos terminando de sincronizar tu cuenta. Intenta en unos segundos.')),
+                s.errorSyncingAccount)),
       );
       return false;
     }
@@ -245,7 +247,7 @@ class _OnboardingWizardScreenState
       if (alreadyExists) {
         messenger.showSnackBar(
           material.SnackBar(
-              content: material.Text('Ya tienes un grupo llamado "$name".')),
+              content: material.Text(s.groupAlreadyExists(name))),
         );
         return true; // Consideramos que ya está "creado"
       }
@@ -263,14 +265,14 @@ class _OnboardingWizardScreenState
       _groupCreated = true;
       messenger.showSnackBar(
         material.SnackBar(
-            content: material.Text('Grupo "$name" creado correctamente.')),
+            content: material.Text(s.successGroupCreatedWizard(name))),
       );
       return true;
     } catch (error) {
       if (!mounted) return false;
       messenger.showSnackBar(
         material.SnackBar(
-            content: material.Text('No se pudo crear el grupo: $error')),
+            content: material.Text(s.errorCreatingGroupWizard(error.toString()))),
       );
       return false;
     } finally {
@@ -282,12 +284,13 @@ class _OnboardingWizardScreenState
 
   Future<bool> _joinGroupByCode(material.BuildContext context,
       {required material.ScaffoldMessengerState messenger}) async {
+    final s = S.of(context);
     final activeUser = ref.read(activeUserProvider).value;
     if (activeUser == null || !_isSynced) {
       messenger.showSnackBar(
-        const material.SnackBar(
+        material.SnackBar(
             content: material.Text(
-                'Estamos terminando de sincronizar tu cuenta. Intenta en unos segundos.')),
+                s.errorSyncingAccount)),
       );
       return false;
     }
@@ -307,15 +310,15 @@ class _OnboardingWizardScreenState
       );
       if (!mounted) return false;
       messenger.showSnackBar(
-        const material.SnackBar(
-            content: material.Text('Te uniste al grupo correctamente.')),
+        material.SnackBar(
+            content: material.Text(s.successJoinedGroup)),
       );
       return true;
     } catch (error) {
       if (!mounted) return false;
       messenger.showSnackBar(
         material.SnackBar(
-            content: material.Text('No se pudo unir al grupo: $error')),
+            content: material.Text(s.errorJoiningGroupWizard(error.toString()))),
       );
       return false;
     } finally {
@@ -351,10 +354,10 @@ class _OnboardingWizardScreenState
         body: material.Center(
           child: EmptyState(
             icon: material.Icons.error_outline,
-            title: 'No pudimos cargar el estado del onboarding.',
+            title: S.of(context).errorLoadingOnboarding,
             message: '$error',
             action: EmptyStateAction(
-              label: 'Reintentar',
+              label: S.of(context).actionRetry,
               icon: material.Icons.refresh,
               onPressed: () => ref.invalidate(onboardingProgressProvider),
             ),
@@ -417,12 +420,12 @@ class _OnboardingWizardScreenState
 
         return material.Scaffold(
           appBar: material.AppBar(
-            title: const material.Text('Comienza tu historia'),
+            title: material.Text(S.of(context).onboardingWizardTitle),
             automaticallyImplyLeading: false,
             actions: [
               material.TextButton(
                 onPressed: _isProcessing ? null : () => _skipWizard(context),
-                child: const material.Text('Saltar Introducción'),
+                child: material.Text(S.of(context).actionSkipIntro),
               ),
             ],
           ),
@@ -445,15 +448,15 @@ class _OnboardingWizardScreenState
                           ? material.Icons.check_circle_outline
                           : material.Icons.arrow_forward),
                       label: material.Text(_currentStep == _totalSteps - 1
-                          ? 'Sellar Pacto'
-                          : 'Continuar'),
+                          ? S.of(context).actionSealPact
+                          : S.of(context).actionContinueWizard),
                     ),
                     const material.SizedBox(width: 12),
                     material.TextButton(
                       onPressed: _isProcessing
                           ? null
                           : () => _handleSkipStep(_currentStep),
-                      child: const material.Text('Omitir Capítulo'),
+                      child: material.Text(S.of(context).actionSkipChapter),
                     ),
                   ],
                 );
@@ -492,9 +495,9 @@ class _OnboardingWizardScreenState
 
     return [
       material.Step(
-        title: const material.Text('Capítulo 1: La Fundación'),
-        subtitle: const material.Text(
-            'Crea un círculo para compartir tus volúmenes.'),
+        title: material.Text(S.of(context).wizardStep1Title),
+        subtitle: material.Text(
+            S.of(context).wizardStep1Subtitle),
         isActive: _currentStep >= _groupStepIndex,
         state: _resolveStepState(_groupStepIndex),
         content: material.Form(
@@ -503,20 +506,20 @@ class _OnboardingWizardScreenState
             crossAxisAlignment: material.CrossAxisAlignment.start,
             children: [
               material.Text(
-                'Un grupo te permite compartir libros con otros miembros. Puedes crear uno nuevo ahora o hacerlo más tarde.',
+                S.of(context).wizardStep1Content,
                 style: theme.textTheme.bodyMedium,
               ),
               const material.SizedBox(height: 12),
               buildSyncNotice(
-                title: 'Sincronizando tu cuenta...',
-                subtitle: 'En cuanto terminemos podrás crear grupos.',
+                title: S.of(context).syncingAccountTitle,
+                subtitle: S.of(context).syncingAccountSubtitle,
               ),
               const material.SizedBox(height: 16),
               material.TextFormField(
                 controller: _groupNameController,
-                decoration: const material.InputDecoration(
-                  labelText: 'Nombre del grupo',
-                  hintText: 'Ej. Club de lectura Aficionados',
+                decoration: material.InputDecoration(
+                  labelText: S.of(context).groupNameLabel,
+                  hintText: S.of(context).groupNameHint,
                 ),
                 textInputAction: material.TextInputAction.next,
                 enabled: _isSynced,
@@ -524,7 +527,7 @@ class _OnboardingWizardScreenState
                   if (!_isSynced) return null;
                   final trimmed = value?.trim() ?? '';
                   if (trimmed.isEmpty) {
-                    return 'Introduce un nombre para el grupo.';
+                    return S.of(context).errorGroupNameRequired;
                   }
                   return null;
                 },
@@ -532,8 +535,8 @@ class _OnboardingWizardScreenState
               const material.SizedBox(height: 12),
               material.TextFormField(
                 controller: _groupDescriptionController,
-                decoration: const material.InputDecoration(
-                  labelText: 'Descripción (opcional)',
+                decoration: material.InputDecoration(
+                  labelText: S.of(context).groupDescriptionLabel,
                 ),
                 enabled: _isSynced,
               ),
@@ -543,7 +546,7 @@ class _OnboardingWizardScreenState
                 child: material.TextButton.icon(
                   onPressed: () => _showGroupInfoSheet(context),
                   icon: const material.Icon(material.Icons.info_outline),
-                  label: const material.Text('Aprender sobre grupos'),
+                  label: material.Text(S.of(context).learnAboutGroupsAction),
                 ),
               ),
             ],
@@ -551,9 +554,9 @@ class _OnboardingWizardScreenState
         ),
       ),
       material.Step(
-        title: const material.Text('Capítulo 2: La Alianza'),
-        subtitle: const material.Text(
-            'Únete a un círculo existente mediante código.'),
+        title: material.Text(S.of(context).wizardStep2Title),
+        subtitle: material.Text(
+            S.of(context).wizardStep2Subtitle),
         isActive: _currentStep >= _joinStepIndex,
         state: _resolveStepState(_joinStepIndex),
         content: material.Form(
@@ -562,21 +565,21 @@ class _OnboardingWizardScreenState
             crossAxisAlignment: material.CrossAxisAlignment.start,
             children: [
               material.Text(
-                'Si has recibido una invitación, este es el momento de responder al llamado.',
+                S.of(context).wizardStep2Content,
                 style: theme.textTheme.bodyMedium,
               ),
               const material.SizedBox(height: 12),
               buildSyncNotice(
-                title: 'Sincronizando tu cuenta...',
+                title: S.of(context).syncingAccountTitle,
                 subtitle:
-                    'Necesitamos tu usuario activo para validar el código.',
+                    S.of(context).syncingAccountSubtitleJoin,
               ),
               const material.SizedBox(height: 16),
               material.TextFormField(
                 controller: _joinCodeController,
-                decoration: const material.InputDecoration(
-                  labelText: 'Código de invitación',
-                  hintText: 'Ej. 123e4567-e89b-12d3-a456-426614174000',
+                decoration: material.InputDecoration(
+                  labelText: S.of(context).labelInvitationCode,
+                  hintText: S.of(context).invitationCodeHint,
                 ),
                 textInputAction: material.TextInputAction.done,
                 enabled: _isSynced,
@@ -584,10 +587,10 @@ class _OnboardingWizardScreenState
                   if (!_isSynced) return null;
                   final trimmed = value?.trim() ?? '';
                   if (trimmed.isEmpty) {
-                    return 'Introduce un código válido o pulsa "Omitir paso".';
+                    return S.of(context).errorInvalidCodeWizard;
                   }
                   if (trimmed.length < 6) {
-                    return 'El código es demasiado corto.';
+                    return S.of(context).errorCodeTooShort;
                   }
                   return null;
                 },
@@ -597,9 +600,9 @@ class _OnboardingWizardScreenState
         ),
       ),
       material.Step(
-        title: const material.Text('Epílogo: Confirmaciones'),
+        title: material.Text(S.of(context).wizardStep3Title),
         subtitle:
-            const material.Text('Revisa lo escrito antes de cerrar el libro.'),
+            material.Text(S.of(context).wizardStep3Subtitle),
         isActive: _currentStep >= _summaryStepIndex,
         state: _resolveStepState(_summaryStepIndex),
         content: _SummaryStep(
@@ -642,18 +645,16 @@ class _GroupInfoBottomSheet extends material.StatelessWidget {
           mainAxisSize: material.MainAxisSize.min,
           crossAxisAlignment: material.CrossAxisAlignment.start,
           children: [
-            material.Text('¿Qué es un grupo?',
+            material.Text(S.of(context).whatIsGroupTitle,
                 style: theme.textTheme.titleMedium),
             const material.SizedBox(height: 12),
             material.Text(
-              'Los grupos reúnen a tus amigos o familiares para compartir bibliotecas locales. '
-              'Desde aquí podrás invitar miembros, gestionar préstamos y llevar un historial conjunto.',
+              S.of(context).whatIsGroupContent,
               style: theme.textTheme.bodyMedium,
             ),
             const material.SizedBox(height: 16),
             material.Text(
-              'Puedes crear varios grupos: uno para tu familia, otro para tu club de lectura, etc. '
-              'Cada grupo tiene sus propias invitaciones y catálogos.',
+              S.of(context).whatIsGroupContent2,
               style: theme.textTheme.bodySmall,
             ),
             const material.SizedBox(height: 24),
@@ -661,7 +662,7 @@ class _GroupInfoBottomSheet extends material.StatelessWidget {
               alignment: material.Alignment.centerRight,
               child: material.FilledButton(
                 onPressed: () => material.Navigator.of(context).pop(),
-                child: const material.Text('Entendido'),
+                child: material.Text(S.of(context).actionGotIt),
               ),
             ),
           ],
@@ -702,7 +703,7 @@ class _SummaryStep extends material.StatelessWidget {
         ),
         title: material.Text(title),
         subtitle: material.Text(subtitle),
-        trailing: material.Text(done ? 'Completado' : 'Pendiente'),
+        trailing: material.Text(done ? S.of(context).statusCompleted : S.of(context).statusPending),
       );
     }
 
@@ -710,12 +711,12 @@ class _SummaryStep extends material.StatelessWidget {
       crossAxisAlignment: material.CrossAxisAlignment.start,
       children: [
         material.Text(
-          '¡Ya casi terminamos!',
+          S.of(context).almostDoneTitle,
           style: theme.textTheme.titleMedium,
         ),
         const material.SizedBox(height: 12),
         material.Text(
-          'Estos son los pasos que configuraste. Puedes volver atrás si quieres ajustar algo antes de empezar.',
+          S.of(context).onboardingSummaryMessage,
           style: theme.textTheme.bodyMedium,
         ),
         const material.SizedBox(height: 16),
@@ -727,20 +728,20 @@ class _SummaryStep extends material.StatelessWidget {
                   material.Icons.person_outline,
                   color: theme.colorScheme.primary,
                 ),
-                title: const material.Text('Perfil configurado'),
-                subtitle: material.Text('Usuario: $displayName'),
-                trailing: const material.Text('Completado'),
+                title: material.Text(S.of(context).profileConfiguredTitle),
+                subtitle: material.Text(S.of(context).userLabel(displayName)),
+                trailing: material.Text(S.of(context).statusCompleted),
               ),
               const material.Divider(height: 1),
               buildTile(
-                title: 'Primer grupo',
-                subtitle: 'Creaste tu comunidad principal.',
+                title: S.of(context).firstGroupTitle,
+                subtitle: S.of(context).firstGroupSubtitle,
                 done: groupCompleted,
               ),
               const material.Divider(height: 1),
               buildTile(
-                title: 'Unión por código',
-                subtitle: 'Te uniste a un grupo existente.',
+                title: S.of(context).joinByCodeTitle,
+                subtitle: S.of(context).joinByCodeSubtitle,
                 done: joinCompleted,
               ),
             ],
@@ -748,7 +749,7 @@ class _SummaryStep extends material.StatelessWidget {
         ),
         const material.SizedBox(height: 16),
         material.Text(
-          'Al pulsar “Finalizar” sincronizaremos tu información y te llevaremos a tu biblioteca.',
+          S.of(context).finishOnboardingMessage,
           style: theme.textTheme.bodySmall,
         ),
       ],

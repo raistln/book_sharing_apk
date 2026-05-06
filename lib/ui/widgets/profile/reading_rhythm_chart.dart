@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../data/local/database.dart';
 import '../../../utils/reading_rhythm_helper.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ReadingRhythmChart extends StatefulWidget {
   final ReadingRhythmData data;
@@ -57,7 +58,7 @@ class _ReadingRhythmChartState extends State<ReadingRhythmChart> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Tu viaje lector",
+                          S.of(context).rhythmJourneyTitle,
                           style: Theme.of(context)
                               .textTheme
                               .labelMedium
@@ -162,7 +163,7 @@ class _ReadingRhythmChartState extends State<ReadingRhythmChart> {
   Widget _buildEmptyState() {
     return Center(
       child: Text(
-        'El silencio antes de la historia...',
+        S.of(context).rhythmEmptyState,
         style: TextStyle(
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
@@ -212,7 +213,7 @@ class _ReadingRhythmChartState extends State<ReadingRhythmChart> {
             ),
             padding: const EdgeInsets.only(left: 8.0, top: 10.0),
             child: Text(
-              DateFormat('MMM', 'es')
+              DateFormat('MMM', Localizations.localeOf(context).languageCode)
                   .format(m)
                   .toLowerCase(), // Minúsculas se ven más suaves
               style: Theme.of(context).textTheme.labelSmall?.copyWith(

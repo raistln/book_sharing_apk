@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/club_enums.dart';
 import '../../../providers/clubs_provider.dart';
 import '../../../providers/book_providers.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class UpdateReadingProgressDialog extends ConsumerStatefulWidget {
   const UpdateReadingProgressDialog({
@@ -69,8 +70,9 @@ class _UpdateReadingProgressDialogState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context);
     return AlertDialog(
-      title: const Text('Actualizar Progreso'),
+      title: Text(l10n.updateProgressTitle),
       content: _isLoading
           ? const SizedBox(
               height: 100,
@@ -80,7 +82,7 @@ class _UpdateReadingProgressDialogState
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('¿Por qué sección vas?'),
+                Text(l10n.updateProgressSectionLabel),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -105,7 +107,7 @@ class _UpdateReadingProgressDialogState
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Text('Estado de lectura'),
+                Text(l10n.updateProgressStatusLabel),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<ReadingProgressStatus>(
                   initialValue: _status,
@@ -129,11 +131,11 @@ class _UpdateReadingProgressDialogState
       actions: [
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: _isLoading ? null : _save,
-          child: const Text('Guardar'),
+          child: Text(l10n.actionSave), // Or actionSave is usually 'Guardar'
         ),
       ],
     );

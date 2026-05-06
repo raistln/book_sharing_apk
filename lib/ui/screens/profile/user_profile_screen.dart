@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../providers/user_profile_provider.dart';
 import '../../../providers/book_providers.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../read_books_screen.dart';
 import '../wishlist_screen.dart';
 
@@ -153,19 +154,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Editar Perfil' : 'Perfil'),
+        title: Text(_isEditing ? S.of(context).profileEditTitle : S.of(context).profileTitle),
         actions: [
           if (!_isEditing)
             IconButton(
               onPressed: () => setState(() => _isEditing = true),
               icon: const Icon(Icons.edit_outlined),
-              tooltip: 'Editar',
+              tooltip: S.of(context).tooltipEdit,
             )
           else
             IconButton(
               onPressed: _save,
               icon: const Icon(Icons.check),
-              tooltip: 'Guardar',
+              tooltip: S.of(context).tooltipSave,
             ),
         ],
       ),
@@ -296,13 +297,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                           return Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              _buildCounter(context, 'Libros',
+                              _buildCounter(context, S.of(context).statsBooks,
                                   totalBooks.toString(), Icons.auto_stories),
-                              _buildCounter(context, 'Leídos',
+                              _buildCounter(context, S.of(context).statsRead,
                                   readBooks.toString(), Icons.verified),
                               _buildCounter(
                                   context,
-                                  'Leyendo',
+                                  S.of(context).statsReading,
                                   readingBooks.toString(),
                                   Icons.play_arrow_rounded),
                             ],
@@ -322,7 +323,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildSectionHeader(
-                            context, 'Sobre mí', Icons.person_outline),
+                            context, S.of(context).aboutMe, Icons.person_outline),
                         const SizedBox(height: 16),
                         Card(
                           elevation: 0,
@@ -337,24 +338,24 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                             child: Column(
                               children: [
                                 _buildInfoRow(context, Icons.book_rounded,
-                                    'Libro favorito', profile.favoriteBook),
+                                    S.of(context).favoriteBook, profile.favoriteBook),
                                 const Divider(indent: 32),
                                 _buildInfoRow(
                                     context,
                                     Icons.local_library_rounded,
-                                    'Género',
+                                    S.of(context).favoriteGenre,
                                     profile.favoriteGenre),
                                 const Divider(indent: 32),
                                 _buildInfoRow(
                                     context,
                                     Icons.location_on_rounded,
-                                    'Ubicación',
+                                    S.of(context).locationLabel,
                                     profile.residence),
                                 const Divider(indent: 32),
                                 _buildInfoRow(
                                     context,
                                     Icons.alternate_email_rounded,
-                                    'Contacto',
+                                    S.of(context).contactLabel,
                                     profile.email),
                               ],
                             ),
@@ -363,7 +364,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                         if (profile.bio.isNotEmpty) ...[
                           const SizedBox(height: 24),
                           _buildSectionHeader(
-                              context, 'Biografía', Icons.format_quote_rounded),
+                              context, S.of(context).biographyHeader, Icons.format_quote_rounded),
                           const SizedBox(height: 12),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -389,11 +390,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildSectionHeader(
-                            context, 'Accesos rápidos', Icons.bolt_rounded),
+                            context, S.of(context).quickAccess, Icons.bolt_rounded),
                         const SizedBox(height: 16),
                         _buildQuickLink(
                           context,
-                          'Mis libros leídos',
+                          S.of(context).myReadBooks,
                           Icons.history_edu_rounded,
                           () => Navigator.of(context).push(MaterialPageRoute(
                               builder: (_) => const ReadBooksScreen())),
@@ -401,7 +402,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                         const SizedBox(height: 8),
                         _buildQuickLink(
                           context,
-                          'Lista de deseos',
+                          S.of(context).wishlist,
                           Icons.auto_awesome_rounded,
                           () => Navigator.of(context).push(MaterialPageRoute(
                               builder: (_) => const WishlistScreen())),
@@ -413,7 +414,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                   // Edit Form
                   Padding(
                     padding: const EdgeInsets.all(24),
-                    child: _buildEditForm(theme, profile),
+                    child: _buildEditForm(theme, profile, context),
                   ),
                 ],
               ],
@@ -465,7 +466,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
     );
   }
 
-  Widget _buildEditForm(ThemeData theme, dynamic profile) {
+  Widget _buildEditForm(ThemeData theme, dynamic profile, BuildContext context) {
     return Form(
       key: _formKey,
       child: Column(
@@ -474,19 +475,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
           TextFormField(
             controller: _nameController,
             readOnly: true,
-            decoration: const InputDecoration(
-                labelText: 'Nombre (desde registro)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person),
-                suffixIcon: Icon(Icons.lock_outline, size: 20)),
+            decoration: InputDecoration(
+                labelText: S.of(context).nameFromRegistration,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.person),
+                suffixIcon: const Icon(Icons.lock_outline, size: 20)),
           ),
           const SizedBox(height: 16),
           TextFormField(
             controller: _emailController,
-            decoration: const InputDecoration(
-                labelText: 'Correo',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.email)),
+            decoration: InputDecoration(
+                labelText: S.of(context).emailLabel,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.email)),
           ),
           const SizedBox(height: 16),
           Autocomplete<String>(
@@ -511,11 +512,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
               return TextFormField(
                 controller: controller,
                 focusNode: focusNode,
-                decoration: const InputDecoration(
-                  labelText: 'Lugar de residencia (Provincia)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.location_on),
-                  suffixIcon: Icon(Icons.search, size: 20),
+                decoration: InputDecoration(
+                  labelText: S.of(context).residenceLabel,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.location_on),
+                  suffixIcon: const Icon(Icons.search, size: 20),
                 ),
                 onChanged: (value) => _residenceController.text = value,
                 validator: (value) {
@@ -523,7 +524,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                     return null;
                   }
                   if (!_provinces.contains(value.trim())) {
-                    return 'Seleccione una provincia válida de la lista';
+                    return S.of(context).selectValidProvince;
                   }
                   return null;
                 },
@@ -561,26 +562,26 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _favBookController,
-            decoration: const InputDecoration(
-                labelText: 'Libro favorito',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.book)),
+            decoration: InputDecoration(
+                labelText: S.of(context).favoriteBookLabel,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.book)),
           ),
           const SizedBox(height: 16),
           TextFormField(
             controller: _favGenreController,
-            decoration: const InputDecoration(
-                labelText: 'Género favorito',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.local_library)),
+            decoration: InputDecoration(
+                labelText: S.of(context).favoriteGenreLabel,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.local_library)),
           ),
           const SizedBox(height: 16),
           TextFormField(
             controller: _bioController,
-            decoration: const InputDecoration(
-                labelText: 'Biografía / Notas',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.format_quote)),
+            decoration: InputDecoration(
+                labelText: S.of(context).biographyNotesLabel,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.format_quote)),
             maxLines: 4,
           ),
         ],
@@ -658,7 +659,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                             .withValues(alpha: 0.6),
                         fontWeight: FontWeight.bold)),
                 Text(
-                  isValueEmpty ? 'No especificado' : value,
+                  value.isNotEmpty ? value : S.of(context).notSpecified,
                   style: theme.textTheme.bodyLarge?.copyWith(
                       color: isValueEmpty
                           ? theme.colorScheme.outline

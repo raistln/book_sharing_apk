@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 import '../../../../data/local/database.dart';
 
@@ -33,13 +34,13 @@ class LoansSection extends StatelessWidget {
         }).toList();
 
         if (userLoans.isEmpty) {
-          return Text('No tienes préstamos activos en este grupo.',
+          return Text(S.of(context).noActiveLoansInGroup,
               style: theme.textTheme.bodyMedium);
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tus préstamos', style: theme.textTheme.titleSmall),
+            Text(S.of(context).yourLoansHeader, style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
             ...userLoans.map((detail) {
               return LoanCard(
@@ -60,7 +61,7 @@ class LoansSection extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 8),
         child: LinearProgressIndicator(),
       ),
-      error: (error, _) => Text('Error cargando préstamos: $error',
+      error: (error, _) => Text(S.of(context).errorLoadingLoans(error.toString()),
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.error)),
     );
@@ -93,34 +94,34 @@ class LoansSection extends StatelessWidget {
   Future<void> _cancelLoan(BuildContext context, dynamic detail) async {
     final borrower = detail.borrower;
     if (borrower == null) {
-      onFeedback('No pudimos identificar al solicitante.', true);
+      onFeedback(S.of(context).errorIdentifyingBorrower, true);
       return;
     }
 
     try {
       await loanController.cancelLoan(loan: detail.loan!, borrower: borrower);
       if (!context.mounted) return;
-      onFeedback('Solicitud cancelada.', false);
+      onFeedback(S.of(context).successLoanCancelled, false);
     } catch (error) {
       if (!context.mounted) return;
-      onFeedback('No se pudo cancelar la solicitud: $error', true);
+      onFeedback(S.of(context).errorCancellingLoan(error.toString()), true);
     }
   }
 
   Future<void> _acceptLoan(BuildContext context, dynamic detail) async {
     final owner = detail.owner;
     if (owner == null) {
-      onFeedback('No pudimos identificar al propietario.', true);
+      onFeedback(S.of(context).errorIdentifyingOwner, true);
       return;
     }
 
     try {
       await loanController.acceptLoan(loan: detail.loan!, owner: owner);
       if (!context.mounted) return;
-      onFeedback('Préstamo aceptado.', false);
+      onFeedback(S.of(context).successLoanAccepted, false);
     } catch (error) {
       if (!context.mounted) return;
-      onFeedback('No se pudo aceptar el préstamo: $error', true);
+      onFeedback(S.of(context).errorAcceptingLoan(error.toString()), true);
     }
   }
 
@@ -134,27 +135,27 @@ class LoansSection extends StatelessWidget {
     try {
       await loanController.rejectLoan(loan: detail.loan!, owner: owner);
       if (!context.mounted) return;
-      onFeedback('Solicitud rechazada.', false);
+      onFeedback(S.of(context).successLoanRejected, false);
     } catch (error) {
       if (!context.mounted) return;
-      onFeedback('No se pudo rechazar la solicitud: $error', true);
+      onFeedback(S.of(context).errorRejectingLoan(error.toString()), true);
     }
   }
 
   Future<void> _markReturned(BuildContext context, dynamic detail) async {
     final actor = activeUser;
     if (actor == null) {
-      onFeedback('No pudimos identificar al usuario activo.', true);
+      onFeedback(S.of(context).errorIdentifyingActiveUser, true);
       return;
     }
 
     try {
       await loanController.markReturned(loan: detail.loan!, actor: actor);
       if (!context.mounted) return;
-      onFeedback('Préstamo marcado como devuelto.', false);
+      onFeedback(S.of(context).successLoanReturned, false);
     } catch (error) {
       if (!context.mounted) return;
-      onFeedback('No se pudo marcar como devuelto: $error', true);
+      onFeedback(S.of(context).errorMarkingReturned(error.toString()), true);
     }
   }
 
@@ -162,7 +163,7 @@ class LoansSection extends StatelessWidget {
     final sharedBook = detail.sharedBook;
     final borrower = activeUser;
     if (sharedBook == null || borrower == null) {
-      onFeedback('No pudimos preparar la solicitud para este libro.', true);
+      onFeedback(S.of(context).errorPreparingRequest, true);
       return;
     }
 
@@ -170,10 +171,10 @@ class LoansSection extends StatelessWidget {
       await loanController.requestLoan(
           sharedBook: sharedBook, borrower: borrower);
       if (!context.mounted) return;
-      onFeedback('Solicitud enviada.', false);
+      onFeedback(S.of(context).successLoanRequested, false);
     } catch (error) {
       if (!context.mounted) return;
-      onFeedback('No se pudo enviar la solicitud: $error', true);
+      onFeedback(S.of(context).errorRequestingLoan(error.toString()), true);
     }
   }
 }
@@ -196,12 +197,12 @@ class LoanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final loan = detail.loan!;
-    final bookTitle = detail.book?.title ?? 'Libro';
+    final bookTitle = detail.book?.title ?? S.of(context).bookLabel;
     final status = loan.status;
     final start = DateFormat.yMd().format(loan.requestedAt);
     final due = loan.dueDate != null
         ? DateFormat.yMd().format(loan.dueDate!)
-        : 'Sin fecha límite';
+        : S.of(context).noDueDate;
     final isBorrower =
         activeUser != null && loan.borrowerUserId == activeUser!.id;
     final isOwner = activeUser != null && loan.lenderUserId == activeUser!.id;
@@ -227,13 +228,15 @@ class LoanCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            Text('Inicio: $start · Vence: $due',
+            Text(S.of(context).loanDatesLabel(start, due),
                 style: theme.textTheme.bodySmall),
             if (detail.borrower != null || detail.owner != null) ...[
               const SizedBox(height: 4),
               Text(
-                'Solicitante: ${loan.externalBorrowerName ?? _resolveUserName(detail.borrower)} · '
-                'Propietario: ${_resolveUserName(detail.owner)}',
+                S.of(context).loanParticipantsLabel(
+                    loan.externalBorrowerName ??
+                        _resolveUserName(context, detail.borrower),
+                    _resolveUserName(context, detail.owner)),
                 style: theme.textTheme.bodySmall,
               ),
             ],
@@ -241,7 +244,7 @@ class LoanCard extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _buildActionButtons(
+              children: _buildActionButtons(context,
                   isBorrower, isOwner, isManualLoan, status),
             ),
           ],
@@ -250,7 +253,7 @@ class LoanCard extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildActionButtons(
+  List<Widget> _buildActionButtons(BuildContext context,
       bool isBorrower, bool isOwner, bool isManualLoan, String status) {
     final buttons = <Widget>[];
 
@@ -260,7 +263,7 @@ class LoanCard extends StatelessWidget {
           onPressed:
               loanState.isLoading ? null : () => onAction(LoanAction.cancel),
           icon: const Icon(Icons.cancel_outlined),
-          label: const Text('Cancelar solicitud'),
+          label: Text(S.of(context).actionCancelRequest),
         ),
       );
     }
@@ -271,13 +274,13 @@ class LoanCard extends StatelessWidget {
           onPressed:
               loanState.isLoading ? null : () => onAction(LoanAction.accept),
           icon: const Icon(Icons.check_circle_outlined),
-          label: const Text('Aceptar'),
+          label: Text(S.of(context).actionAccept),
         ),
         OutlinedButton.icon(
           onPressed:
               loanState.isLoading ? null : () => onAction(LoanAction.reject),
           icon: const Icon(Icons.cancel_schedule_send_outlined),
-          label: const Text('Rechazar'),
+          label: Text(S.of(context).actionReject),
         ),
       ]);
     }
@@ -291,7 +294,7 @@ class LoanCard extends StatelessWidget {
               ? null
               : () => onAction(LoanAction.markReturned),
           icon: const Icon(Icons.assignment_turned_in_outlined),
-          label: const Text('Marcar devuelto'),
+          label: Text(S.of(context).actionMarkReturned),
         ),
       );
     }
@@ -305,7 +308,7 @@ class LoanCard extends StatelessWidget {
           onPressed:
               loanState.isLoading ? null : () => onAction(LoanAction.request),
           icon: const Icon(Icons.handshake_outlined),
-          label: const Text('Solicitar préstamo'),
+          label: Text(S.of(context).actionRequestLoan),
         ),
       );
     }
@@ -313,12 +316,12 @@ class LoanCard extends StatelessWidget {
     return buttons;
   }
 
-  String _resolveUserName(LocalUser? user) {
+  String _resolveUserName(BuildContext context, LocalUser? user) {
     if (user == null) {
-      return 'Usuario desconocido';
+      return S.of(context).userUnknown;
     }
     final username = user.username.trim();
-    return username.isEmpty ? 'Usuario desconocido' : username;
+    return username.isEmpty ? S.of(context).userUnknown : username;
   }
 }
 

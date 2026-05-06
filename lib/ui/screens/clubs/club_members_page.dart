@@ -4,6 +4,7 @@ import '../../../data/local/database.dart';
 import '../../../data/local/club_dao.dart';
 import '../../../providers/book_providers.dart';
 import '../../../providers/clubs_provider.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ClubMembersPage extends ConsumerWidget {
   const ClubMembersPage({super.key, required this.club});
@@ -12,17 +13,18 @@ class ClubMembersPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = S.of(context);
     final membersAsync = ref.watch(clubMembersProvider(club.uuid));
     final activeUser = ref.watch(activeUserProvider).value;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Miembros del Club'),
+        title: Text(l10n.clubMembersTitle),
       ),
       body: membersAsync.when(
         data: (members) {
           if (members.isEmpty) {
-            return const Center(child: Text('No hay miembros (esto es raro)'));
+            return Center(child: Text(l10n.clubMembersEmpty));
           }
 
           // Determine current user's role
@@ -50,7 +52,7 @@ class ClubMembersPage extends ConsumerWidget {
                 ),
                 title: Text(item.user.username),
                 subtitle: Text(
-                  '${_getRoleLabel(item.member.role)} • ${_getStatusLabel(item.member.status)}',
+                  '${_getRoleLabel(item.member.role, l10n)} • ${_getStatusLabel(item.member.status, l10n)}',
                   style: TextStyle(
                     color: item.member.status == 'activo'
                         ? Colors.green
@@ -61,19 +63,19 @@ class ClubMembersPage extends ConsumerWidget {
                     ? PopupMenuButton<String>(
                         onSelected: (value) {
                           if (value == 'kick') {
-                            _confirmKick(context, ref, item);
+                            _confirmKick(context, ref, item, l10n);
                           }
                         },
                         itemBuilder: (context) => [
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'kick',
                             child: Row(
                               children: [
-                                Icon(Icons.remove_circle_outline,
+                                const Icon(Icons.remove_circle_outline,
                                     color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Expulsar',
-                                    style: TextStyle(color: Colors.red)),
+                                const SizedBox(width: 8),
+                                Text(l10n.clubMembersKick,
+                                    style: const TextStyle(color: Colors.red)),
                               ],
                             ),
                           ),
@@ -90,40 +92,39 @@ class ClubMembersPage extends ConsumerWidget {
     );
   }
 
-  String _getRoleLabel(String role) {
+  String _getRoleLabel(String role, S l10n) {
     switch (role) {
       case 'dueño':
-        return 'Dueño';
+        return l10n.clubRoleOwner;
       case 'admin':
-        return 'Admin';
+        return l10n.clubRoleAdmin;
       default:
-        return 'Miembro';
+        return l10n.roleMember;
     }
   }
 
-  String _getStatusLabel(String status) {
+  String _getStatusLabel(String status, S l10n) {
     switch (status) {
       case 'activo':
-        return 'Activo';
+        return l10n.clubStatusActive;
       case 'inactivo':
-        return 'Inactivo';
+        return l10n.clubStatusInactive;
       default:
         return status;
     }
   }
 
   void _confirmKick(
-      BuildContext context, WidgetRef ref, ClubMemberWithUser target) {
+      BuildContext context, WidgetRef ref, ClubMemberWithUser target, S l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Expulsar a ${target.user.username}?'),
-        content: const Text(
-            'Esta acción eliminará al usuario del club. ¿Estás seguro?'),
+        title: Text(l10n.clubMembersKickConfirmTitle(target.user.username)),
+        content: Text(l10n.clubMembersKickConfirmMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -141,7 +142,7 @@ class ClubMembersPage extends ConsumerWidget {
                     );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Usuario expulsado')),
+                    SnackBar(content: Text(l10n.clubMembersKickSuccess)),
                   );
                 }
               } catch (e) {
@@ -153,7 +154,7 @@ class ClubMembersPage extends ConsumerWidget {
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Expulsar'),
+            child: Text(l10n.clubMembersKick),
           ),
         ],
       ),

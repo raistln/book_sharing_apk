@@ -2,8 +2,18 @@ import 'package:book_sharing_app/data/local/database.dart';
 import 'package:book_sharing_app/services/reading_rhythm_analyzer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import '../helpers/test_helper.dart';
 
 void main() {
+  late MockS mockS;
+
+  setUp(() {
+    mockS = MockS();
+    when(() => mockS.insightJustStarted).thenReturn('Acabas de empezar este libro');
+    when(() => mockS.insightNearlyFinished).thenReturn('¡Casi lo tienes!');
+  });
+
   group('ReadingRhythmAnalyzer', () {
     test('generateInsight returns null when timeline is empty', () async {
       final book = Book(
@@ -27,6 +37,7 @@ void main() {
         book: book,
         timeline: [],
         userAveragePagesPerDay: 10.0,
+        s: mockS,
       );
 
       expect(insight, null);
@@ -71,6 +82,7 @@ void main() {
         book: book,
         timeline: timeline,
         userAveragePagesPerDay: 10.0,
+        s: mockS,
       );
 
       expect(insight?.text, 'Acabas de empezar este libro');
@@ -117,6 +129,7 @@ void main() {
         book: book,
         timeline: timeline,
         userAveragePagesPerDay: 10.0,
+        s: mockS,
       );
 
       expect(insight?.text, 'Acabas de empezar este libro');

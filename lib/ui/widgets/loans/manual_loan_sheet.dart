@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../data/local/database.dart';
 import '../../../providers/book_providers.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ManualLoanSheet extends ConsumerStatefulWidget {
   const ManualLoanSheet({super.key, this.initialBook});
@@ -70,7 +71,7 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Nuevo Préstamo Manual',
+                S.of(context).loanManualTitle,
                 style: theme.textTheme.titleLarge,
               ),
               IconButton(
@@ -90,7 +91,7 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 16),
-                    Text('Libro a prestar', style: theme.textTheme.labelLarge),
+                    Text(S.of(context).loanBookToLend, style: theme.textTheme.labelLarge),
                     const SizedBox(height: 8),
                     availableBooksAsync.when(
                       data: (books) {
@@ -113,7 +114,7 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
-                                    'No tienes libros disponibles para prestar.',
+                                    S.of(context).loanNoAvailableBooks,
                                     style: TextStyle(
                                         color:
                                             theme.colorScheme.onErrorContainer),
@@ -128,7 +129,7 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                           initialValue: _selectedBook,
                           decoration: InputDecoration(
                             border: const OutlineInputBorder(),
-                            hintText: 'Selecciona un libro',
+                            hintText: S.of(context).loanSelectBook,
                             filled: true,
                             fillColor: theme.colorScheme.surfaceContainerHighest
                                 .withValues(alpha: 0.3),
@@ -146,29 +147,29 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                             setState(() => _selectedBook = value);
                           },
                           validator: (value) =>
-                              value == null ? 'Selecciona un libro' : null,
+                              value == null ? S.of(context).loanSelectBook : null,
                           isExpanded: true,
                         );
                       },
                       loading: () => const LinearProgressIndicator(),
                       error: (err, stack) =>
-                          Text('Error cargando libros: $err'),
+                          Text(S.of(context).loanErrorLoadingBooks(err.toString())),
                     ),
                     const SizedBox(height: 24),
-                    Text('Datos del prestatario',
+                    Text(S.of(context).loanBorrowerData,
                         style: theme.textTheme.labelLarge),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre Completo',
-                        hintText: 'Ej. Juan Pérez',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person_outline),
+                      decoration: InputDecoration(
+                        labelText: S.of(context).loanFullName,
+                        hintText: S.of(context).loanFullNameHint,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.person_outline),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'El nombre es requerido';
+                          return S.of(context).loanNameRequired;
                         }
                         return null;
                       },
@@ -177,22 +178,22 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _contactController,
-                      decoration: const InputDecoration(
-                        labelText: 'Contacto (Opcional)',
-                        hintText: 'Teléfono, email o nota',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.contact_phone_outlined),
+                      decoration: InputDecoration(
+                        labelText: S.of(context).loanContactOptional,
+                        hintText: S.of(context).loanContactHint,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.contact_phone_outlined),
                       ),
                     ),
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Fecha de devolución',
+                        Text(S.of(context).loanDueDate,
                             style: theme.textTheme.labelLarge),
                         Row(
                           children: [
-                            Text('Indefinido',
+                            Text(S.of(context).loanIndefinite,
                                 style: theme.textTheme.bodySmall),
                             Switch(
                               value: _isIndefinite,
@@ -227,8 +228,8 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                               prefixIcon: Icon(Icons.calendar_today),
                             ),
                             child: Text(
-                              _isIndefinite
-                                  ? 'Sin fecha límite'
+                               _isIndefinite
+                                  ? S.of(context).loanNoDueDate
                                   : DateFormat.yMMMd().format(_dueDate),
                               style: theme.textTheme.bodyLarge,
                             ),
@@ -265,8 +266,8 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
                               child: CircularProgressIndicator(strokeWidth: 2))
                           : const Icon(Icons.save),
                       label: Text(loanState.isLoading
-                          ? 'Guardando...'
-                          : 'Registrar Préstamo'),
+                          ? S.of(context).saving
+                          : S.of(context).loanRegister),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -306,27 +307,27 @@ class _ManualLoanSheetState extends ConsumerState<ManualLoanSheet> {
           builder: (context) => AlertDialog(
             icon: const Icon(Icons.check_circle_outline,
                 color: Colors.green, size: 48),
-            title: const Text('Préstamo registrado'),
+            title: Text(S.of(context).loanRegisteredSuccess),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildDetailRow(context, 'Libro:', _selectedBook!.title),
+                _buildDetailRow(context, S.of(context).bookLabel, _selectedBook!.title),
                 const SizedBox(height: 8),
-                _buildDetailRow(context, 'Prestatario:', _nameController.text),
+                _buildDetailRow(context, S.of(context).borrowerLabel, _nameController.text),
                 const SizedBox(height: 8),
                 _buildDetailRow(
                     context,
-                    'Vence:',
+                    S.of(context).dueLabel,
                     _isIndefinite
-                        ? 'Indefinido'
+                        ? S.of(context).loanIndefinite
                         : DateFormat.yMMMd().format(_dueDate)),
               ],
             ),
             actions: [
               FilledButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Entendido'),
+                child: Text(S.of(context).understood),
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/generated/app_localizations.dart';
 
 enum RecommendationLevel {
   notRecommended(1),
@@ -26,33 +27,35 @@ enum RecommendationLevel {
     );
   }
 
-  String get label {
+  String label(BuildContext context) {
+    final s = S.of(context);
     switch (this) {
       case RecommendationLevel.notRecommended:
-        return 'No lo recomendaría';
+        return s.recommendLevel1;
       case RecommendationLevel.fineButNotForMe:
-        return 'Está bien, pero no es para mí';
+        return s.recommendLevel2;
       case RecommendationLevel.recommendToSimilar:
-        return 'Lo recomiendo a gente como yo';
+        return s.recommendLevel3;
       case RecommendationLevel.mustRead:
-        return 'Todo el mundo debería leerlo';
+        return s.recommendLevel4;
       case RecommendationLevel.finishedButTough:
-        return 'Lo terminé, pero me costó';
+        return s.recommendLevel5;
     }
   }
 
-  String get shortLabel {
+  String shortLabel(BuildContext context) {
+    final s = S.of(context);
     switch (this) {
       case RecommendationLevel.notRecommended:
-        return 'No recomendado';
+        return s.recommendLevel1Short;
       case RecommendationLevel.fineButNotForMe:
-        return 'Ni fu ni fa';
+        return s.recommendLevel2Short;
       case RecommendationLevel.recommendToSimilar:
-        return 'Recomendado';
+        return s.recommendLevel3Short;
       case RecommendationLevel.mustRead:
-        return 'Imprescindible';
+        return s.recommendLevel4Short;
       case RecommendationLevel.finishedButTough:
-        return 'Terminado con esfuerzo';
+        return s.recommendLevel5Short;
     }
   }
 

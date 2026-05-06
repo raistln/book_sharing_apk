@@ -1,5 +1,6 @@
 // Models and enums for the Virtual Bookshelf feature.
 import 'package:flutter/material.dart';
+import '../l10n/generated/app_localizations.dart';
 
 // ─────────────────────────────────────────────
 // Sort Order
@@ -15,6 +16,17 @@ enum BookShelfSortOrder {
   const BookShelfSortOrder(this.label, this.icon);
   final String label;
   final IconData icon;
+
+  String localizedLabel(BuildContext context) {
+    final s = S.of(context);
+    return switch (this) {
+      BookShelfSortOrder.recent => s.sortRecent,
+      BookShelfSortOrder.alphabetical => s.sortAlpha,
+      BookShelfSortOrder.author => s.sortAuthor,
+      BookShelfSortOrder.pageCount => s.sortPages,
+      BookShelfSortOrder.rating => s.sortRating,
+    };
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -26,7 +38,18 @@ enum ShelfTheme {
   modernWhite,
   vintageBrown,
   industrial,
-  cozyPastel,
+  cozyPastel;
+
+  String localizedDisplayName(BuildContext context) {
+    final s = S.of(context);
+    return switch (this) {
+      ShelfTheme.classicWood => s.shelfThemeClassic,
+      ShelfTheme.modernWhite => s.shelfThemeModern,
+      ShelfTheme.vintageBrown => s.shelfThemeVintage,
+      ShelfTheme.industrial => s.shelfThemeIndustrial,
+      ShelfTheme.cozyPastel => s.shelfThemePastel,
+    };
+  }
 }
 
 class ShelfThemeConfig {
@@ -94,7 +117,18 @@ enum WallTheme {
   brick,
   paper,
   wood,
-  dark,
+  dark;
+
+  String localizedDisplayName(BuildContext context) {
+    final s = S.of(context);
+    return switch (this) {
+      WallTheme.plaster => s.wallThemePlaster,
+      WallTheme.brick => s.wallThemeBrick,
+      WallTheme.paper => s.wallThemePaper,
+      WallTheme.wood => s.wallThemeWood,
+      WallTheme.dark => s.wallThemeDark,
+    };
+  }
 }
 
 class WallThemeConfig {

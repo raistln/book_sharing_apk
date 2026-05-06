@@ -5,6 +5,7 @@ import '../../../providers/auth_providers.dart';
 import '../../../providers/book_providers.dart';
 import '../../screens/home/home_shell.dart';
 import '../../widgets/auth/literary_pin_input.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ExistingAccountLoginScreen extends ConsumerStatefulWidget {
   const ExistingAccountLoginScreen({super.key});
@@ -34,6 +35,7 @@ class _ExistingAccountLoginScreenState
 
   @override
   material.Widget build(material.BuildContext context) {
+    final l10n = S.of(context);
     final authState = ref.watch(authControllerProvider);
     final isLoading = _isSubmitting || authState.status == AuthStatus.loading;
 
@@ -53,7 +55,7 @@ class _ExistingAccountLoginScreenState
                       color: material.Theme.of(context).colorScheme.primary),
                   const material.SizedBox(height: 24),
                   material.Text(
-                    'Inicio con usuario existente',
+                    l10n.loginTitle,
                     style: material.Theme.of(context).textTheme.headlineSmall,
                     textAlign: material.TextAlign.center,
                   ),
@@ -63,10 +65,10 @@ class _ExistingAccountLoginScreenState
                     enabled: !isLoading,
                     textCapitalization: material.TextCapitalization.none,
                     textInputAction: material.TextInputAction.next,
-                    decoration: const material.InputDecoration(
-                      labelText: 'Nombre de usuario',
-                      border: material.OutlineInputBorder(),
-                      hintText: 'Ej. ana_lectora',
+                    decoration: material.InputDecoration(
+                      labelText: l10n.loginUsernameLabel,
+                      border: const material.OutlineInputBorder(),
+                      hintText: l10n.loginUsernameHint,
                     ),
                   ),
                   const material.SizedBox(height: 12),
@@ -92,7 +94,7 @@ class _ExistingAccountLoginScreenState
                     onPressed: isLoading ? null : _submit,
                     icon: const material.Icon(
                         material.Icons.check_circle_outline),
-                    label: const material.Text('Acceder'),
+                    label: material.Text(l10n.loginSubmit),
                   ),
                   const material.SizedBox(height: 12),
                   material.TextButton(
@@ -101,7 +103,7 @@ class _ExistingAccountLoginScreenState
                         : () {
                             material.Navigator.of(context).pop();
                           },
-                    child: const material.Text('Volver'),
+                    child: material.Text(l10n.loginBack),
                   ),
                   if (_errorMessage != null) ...[
                     const material.SizedBox(height: 12),

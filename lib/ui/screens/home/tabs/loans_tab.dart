@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../data/local/database.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../data/local/group_dao.dart';
 import '../../../../providers/loans_providers.dart';
 import '../../../../providers/book_providers.dart';
@@ -12,7 +13,7 @@ import '../../../widgets/loans/receive_external_loan_sheet.dart';
 
 import '../../../widgets/loan_feedback_banner.dart';
 import '../../../widgets/empty_state.dart';
-import '../../../../design_system/evocative_texts.dart';
+
 import '../../../../design_system/literary_animations.dart';
 import '../../loan_history_screen.dart';
 import '../../../widgets/loans/loan_stats_card.dart';
@@ -57,7 +58,7 @@ class LoansTab extends ConsumerWidget {
               child: Row(
                 children: [
                   Text(
-                    'Préstamos',
+                    S.of(context).loansHeader,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -73,7 +74,7 @@ class LoansTab extends ConsumerWidget {
                         ),
                       );
                     },
-                    tooltip: 'Historial de préstamos',
+                    tooltip: S.of(context).tooltipLoanHistory,
                   ),
                 ],
               ),
@@ -108,10 +109,10 @@ class LoansTab extends ConsumerWidget {
               child: FadeScaleIn(
                 child: EmptyState(
                   icon: Icons.import_contacts,
-                  title: EvocativeTexts.emptyLoansTitle,
-                  message: EvocativeTexts.emptyLoansMessage,
+                  title: S.of(context).emptyLoansTitle,
+                  message: S.of(context).emptyLoansMessage,
                   action: EmptyStateAction(
-                    label: EvocativeTexts.emptyLoansAction,
+                    label: S.of(context).emptyLoansAction,
                     icon: Icons.add_circle_outline,
                     onPressed: () => _showLoanCreationOptions(context),
                   ),
@@ -123,7 +124,7 @@ class LoansTab extends ConsumerWidget {
 
             if (hasIncoming)
               _buildSectionHeader(context,
-                  'Solicitudes Recibidas (${incomingRequests.length})'),
+                  S.of(context).incomingRequests(incomingRequests.length)),
             if (hasIncoming)
               SliverList(
                 delegate: SliverChildBuilderDelegate(
@@ -135,7 +136,7 @@ class LoansTab extends ConsumerWidget {
 
             if (hasOutgoing)
               _buildSectionHeader(
-                  context, 'Solicitudes Enviadas (${outgoingRequests.length})'),
+                  context, S.of(context).outgoingRequests(outgoingRequests.length)),
             if (hasOutgoing)
               SliverList(
                 delegate: SliverChildBuilderDelegate(
@@ -146,7 +147,7 @@ class LoansTab extends ConsumerWidget {
               ),
 
             if (hasActiveLender)
-              _buildSectionHeader(context, 'Prestados por ti'),
+              _buildSectionHeader(context, S.of(context).lentByYou),
             if (hasActiveLender)
               SliverList(
                 delegate: SliverChildBuilderDelegate(
@@ -158,7 +159,7 @@ class LoansTab extends ConsumerWidget {
                 ),
               ),
 
-            if (hasActiveBorrower) _buildSectionHeader(context, 'Te prestaron'),
+            if (hasActiveBorrower) _buildSectionHeader(context, S.of(context).borrowedFromOthers),
             if (hasActiveBorrower)
               SliverList(
                 delegate: SliverChildBuilderDelegate(
@@ -170,7 +171,7 @@ class LoansTab extends ConsumerWidget {
                 ),
               ),
 
-            if (hasHistory) _buildSectionHeader(context, 'Recientes'),
+            if (hasHistory) _buildSectionHeader(context, S.of(context).recentLoans),
             if (hasHistory)
               SliverList(
                 delegate: SliverChildBuilderDelegate(
@@ -188,7 +189,7 @@ class LoansTab extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showLoanCreationOptions(context),
-        label: const Text('Préstamo Manual'),
+        label: Text(S.of(context).manualLoan),
         icon: const Icon(Icons.add),
       ),
     );
@@ -212,10 +213,10 @@ class LoansTab extends ConsumerWidget {
   Widget _buildRequestCard(
       BuildContext context, WidgetRef ref, LoanDetail detail, bool isIncoming) {
     final theme = Theme.of(context);
-    final bookTitle = detail.book?.title ?? 'Libro';
+    final bookTitle = detail.book?.title ?? S.of(context).bookFallback;
     final otherName = isIncoming
-        ? (detail.borrower?.username ?? 'Alguien')
-        : (detail.owner?.username ?? 'Propietario');
+        ? (detail.borrower?.username ?? S.of(context).someoneFallback)
+        : (detail.owner?.username ?? S.of(context).ownerFallback);
     final loan = detail.loan;
     final loanController = ref.read(loanControllerProvider.notifier);
 
@@ -229,7 +230,7 @@ class LoansTab extends ConsumerWidget {
           onPressed: () =>
               loanController.rejectLoan(loan: loan, owner: detail.owner!),
           icon: const Icon(Icons.close),
-          label: const Text('Rechazar'),
+          label: Text(S.of(context).reject),
           style: OutlinedButton.styleFrom(
               foregroundColor: theme.colorScheme.error),
         ),
@@ -238,7 +239,7 @@ class LoansTab extends ConsumerWidget {
         FilledButton.icon(
           onPressed: () => _handleAcceptLoan(context, ref, detail),
           icon: const Icon(Icons.check),
-          label: const Text('Aceptar'),
+          label: Text(S.of(context).accept),
         ),
       );
     } else {
@@ -248,7 +249,7 @@ class LoansTab extends ConsumerWidget {
           onPressed: () =>
               loanController.cancelLoan(loan: loan, borrower: detail.borrower!),
           icon: const Icon(Icons.cancel_outlined),
-          label: const Text('Cancelar solicitud'),
+          label: Text(S.of(context).cancelRequest),
           style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
         ),
       );
@@ -274,8 +275,8 @@ class LoansTab extends ConsumerWidget {
                       Text(bookTitle, style: theme.textTheme.titleMedium),
                       Text(
                         isIncoming
-                            ? 'Solicitado por $otherName'
-                            : 'Solicitado a $otherName',
+                            ? S.of(context).loanRequestedBy(otherName)
+                            : S.of(context).loanRequestedTo(otherName),
                         style: theme.textTheme.bodyMedium,
                       ),
                     ],
@@ -312,17 +313,17 @@ class LoansTab extends ConsumerWidget {
         builder: (context, setState) {
           final theme = Theme.of(context);
           return AlertDialog(
-            title: const Text('Aceptar Préstamo'),
+            title: Text(S.of(context).acceptLoanTitle),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Selecciona una fecha de vencimiento:'),
+                Text(S.of(context).selectDueDate),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Indefinido', style: theme.textTheme.bodyMedium),
+                    Text(S.of(context).indefinite, style: theme.textTheme.bodyMedium),
                     Switch(
                       value: isIndefinite,
                       onChanged: (val) => setState(() => isIndefinite = val),
@@ -358,7 +359,7 @@ class LoansTab extends ConsumerWidget {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
+                child: Text(S.of(context).cancel),
               ),
               FilledButton(
                 onPressed: () {
@@ -368,7 +369,7 @@ class LoansTab extends ConsumerWidget {
                           ? DateTime.now().add(const Duration(days: 365 * 10))
                           : dueDate);
                 },
-                child: const Text('Confirmar'),
+                child: Text(S.of(context).confirm),
               ),
             ],
           );
@@ -395,21 +396,21 @@ class LoansTab extends ConsumerWidget {
     // We only treat the user as "lender" for labeling if they are the lender AND it's not a book they borrowed from someone else.
     final isLenderLabel = isActiveUserLender && !isExternalReceived;
 
-    final action = isLenderLabel ? 'Prestaste' : 'Te prestaron';
-    final bookTitle = detail.book?.title ?? 'Libro';
+    final action = isLenderLabel ? S.of(context).youLent : S.of(context).theyLentYou;
+    final bookTitle = detail.book?.title ?? S.of(context).bookFallback;
 
     final String otherName;
     final String personLabel;
 
     if (isExternalReceived) {
-      otherName = detail.book?.externalLenderName ?? 'Alguien';
+      otherName = detail.book?.externalLenderName ?? S.of(context).someoneFallback;
       personLabel = 'De:';
     } else {
       otherName = detail.loan.externalBorrowerName ??
           (isLenderLabel
               ? detail.borrower?.username
               : detail.owner?.username) ??
-          'Alguien';
+          S.of(context).someoneFallback;
       personLabel = isLenderLabel ? 'A:' : 'De:';
     }
 
@@ -435,32 +436,32 @@ class LoansTab extends ConsumerWidget {
       leading: Icon(icon, color: color),
       title: Text('$action "$bookTitle"'),
       subtitle:
-          Text('$personLabel $otherName · ${_statusLabel(detail.loan.status)}'),
+          Text('$personLabel $otherName · ${_statusLabel(context, detail.loan.status)}'),
       trailing: detail.loan.wasRead == true
-          ? const Tooltip(
-              message: 'Leído',
-              child: Icon(Icons.auto_stories, size: 20, color: Colors.amber),
+          ? Tooltip(
+              message: S.of(context).tooltipRead,
+              child: const Icon(Icons.auto_stories, size: 20, color: Colors.amber),
             )
           : null,
     );
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(BuildContext context, String status) {
     switch (status) {
       case 'requested':
-        return 'Solicitado';
+        return S.of(context).loanStatusRequested;
       case 'active':
-        return 'En curso';
+        return S.of(context).loanStatusActive;
       case 'returned':
-        return 'Devuelto';
+        return S.of(context).loanStatusReturned;
       case 'cancelled':
-        return 'Cancelado';
+        return S.of(context).loanStatusCancelled;
       case 'rejected':
-        return 'Rechazado';
+        return S.of(context).loanStatusRejected;
       case 'completed':
-        return 'Completado';
+        return S.of(context).loanStatusCompleted;
       case 'expired':
-        return 'Expirado';
+        return S.of(context).loanStatusExpired;
       default:
         return status;
     }
@@ -475,9 +476,9 @@ class LoansTab extends ConsumerWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.outbox),
-              title: const Text('Prestar un libro manualmente'),
-              subtitle: const Text(
-                  'Registra un préstamo de tu biblioteca a alguien sin la app'),
+              title: Text(S.of(context).lendBookManually),
+              subtitle: Text(
+                  S.of(context).lendBookManuallyDesc),
               onTap: () {
                 Navigator.pop(context);
                 showModalBottomSheet(
@@ -490,8 +491,8 @@ class LoansTab extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.move_to_inbox),
-              title: const Text('Registrar libro recibido'),
-              subtitle: const Text('Registra un libro que alguien te prestó'),
+              title: Text(S.of(context).registerReceivedBook),
+              subtitle: Text(S.of(context).registerReceivedBookDesc),
               onTap: () {
                 Navigator.pop(context);
                 showModalBottomSheet(

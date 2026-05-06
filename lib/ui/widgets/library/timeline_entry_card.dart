@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 import '../../../data/local/database.dart';
 
@@ -79,7 +80,7 @@ class TimelineEntryCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _getEventLabel(),
+                          _getEventLabel(context),
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: _getEventColor(theme),
@@ -90,14 +91,14 @@ class TimelineEntryCard extends StatelessWidget {
                           PopupMenuButton<String>(
                             itemBuilder: (context) => [
                               if (onEdit != null)
-                                const PopupMenuItem(
+                                PopupMenuItem(
                                   value: 'edit',
-                                  child: Text('Editar'),
+                                  child: Text(S.of(context).edit),
                                 ),
                               if (onDelete != null)
-                                const PopupMenuItem(
+                                PopupMenuItem(
                                   value: 'delete',
-                                  child: Text('Eliminar'),
+                                  child: Text(S.of(context).delete),
                                 ),
                             ],
                             onSelected: (value) {
@@ -130,7 +131,7 @@ class TimelineEntryCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Página ${entry.currentPage}',
+                              S.of(context).timelinePage(entry.currentPage!),
                               style: theme.textTheme.bodyMedium,
                             ),
                           ],
@@ -207,18 +208,19 @@ class TimelineEntryCard extends StatelessWidget {
     }
   }
 
-  String _getEventLabel() {
+  String _getEventLabel(BuildContext context) {
+    final s = S.of(context);
     switch (entry.eventType) {
       case 'start':
-        return 'Inicio';
+        return s.timelineStart;
       case 'progress':
-        return 'Progreso';
+        return s.timelineProgress;
       case 'pause':
-        return 'Pausa';
+        return s.timelinePause;
       case 'resume':
-        return 'Reanudación';
+        return s.timelineResume;
       case 'finish':
-        return 'Finalizado';
+        return s.timelineFinish;
       default:
         return entry.eventType;
     }

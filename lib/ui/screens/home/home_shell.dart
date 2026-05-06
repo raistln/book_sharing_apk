@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../data/local/database.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../providers/book_providers.dart';
 import '../../../providers/auth_providers.dart';
 import '../../../services/notification_service.dart';
@@ -93,12 +94,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   IconButton(
                     onPressed: () => _handleBulletinAction(context, ref),
                     icon: const Icon(Icons.newspaper_outlined),
-                    tooltip: 'Boletín Literario',
+                    tooltip: S.of(context).tooltipBulletin,
                   ),
                   IconButton(
                     onPressed: () => _showBookshelfSheet(context),
                     icon: const Icon(Icons.shelves),
-                    tooltip: 'Estantería Virtual',
+                    tooltip: S.of(context).tooltipBookshelf,
                   ),
 
                   const Spacer(),
@@ -107,12 +108,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   IconButton(
                     onPressed: () => _showNotificationsSheet(context, ref),
                     icon: const Icon(Icons.notifications_outlined),
-                    tooltip: 'Notificaciones',
+                    tooltip: S.of(context).tooltipNotifications,
                   ),
                   IconButton(
                     onPressed: () => _showProfileScreen(context),
                     icon: const Icon(Icons.person_outline),
-                    tooltip: 'Perfil',
+                    tooltip: S.of(context).tooltipProfile,
                   ),
                   IconButton(
                     onPressed: () {
@@ -123,7 +124,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                       );
                     },
                     icon: const Icon(Icons.settings_outlined),
-                    tooltip: 'Ajustes',
+                    tooltip: S.of(context).tooltipSettings,
                   ),
                 ],
               ),
@@ -146,26 +147,26 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book),
-            label: 'Leyendo',
+            icon: const Icon(Icons.menu_book_outlined),
+            selectedIcon: const Icon(Icons.menu_book),
+            label: S.of(context).tabReading,
           ),
           NavigationDestination(
-            icon: Icon(Icons.library_books_outlined),
-            selectedIcon: Icon(Icons.library_books),
-            label: 'Biblioteca',
+            icon: const Icon(Icons.library_books_outlined),
+            selectedIcon: const Icon(Icons.library_books),
+            label: S.of(context).tabLibrary,
           ),
           NavigationDestination(
-            icon: Icon(Icons.swap_horiz_outlined),
-            selectedIcon: Icon(Icons.swap_horiz),
-            label: 'Préstamos',
+            icon: const Icon(Icons.swap_horiz_outlined),
+            selectedIcon: const Icon(Icons.swap_horiz),
+            label: S.of(context).tabLoans,
           ),
           NavigationDestination(
-            icon: Icon(Icons.groups_outlined),
-            selectedIcon: Icon(Icons.groups),
-            label: 'Grupos',
+            icon: const Icon(Icons.groups_outlined),
+            selectedIcon: const Icon(Icons.groups),
+            label: S.of(context).tabGroups,
           ),
         ],
         onDestinationSelected: (value) {
@@ -182,7 +183,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       return FloatingActionButton.extended(
         onPressed: () => _showBookFormSheet(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text('Añadir libro'),
+        label: Text(S.of(context).addBook),
       );
     }
 
@@ -190,7 +191,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       return FloatingActionButton.extended(
         onPressed: () => _clearPin(context, ref),
         icon: const Icon(Icons.dangerous_outlined),
-        label: const Text('Debug: reset PIN'),
+        label: Text(S.of(context).debugResetPin),
       );
     }
 
@@ -247,15 +248,15 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         _showFeedbackSnackBar(
           context: context,
           message: book == null
-              ? 'Libro añadido a tu biblioteca.'
-              : 'Libro actualizado correctamente.',
+              ? S.of(context).snackBookAdded
+              : S.of(context).snackBookUpdated,
           isError: false,
         );
         break;
       case _BookFormResult.deleted:
         _showFeedbackSnackBar(
           context: context,
-          message: 'Libro eliminado.',
+          message: S.of(context).snackBookDeleted,
           isError: false,
         );
         break;
@@ -267,7 +268,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (!context.mounted) return;
     _showFeedbackSnackBar(
       context: context,
-      message: 'PIN borrado (solo debug).',
+      message: S.of(context).snackPinCleared,
       isError: false,
     );
     Navigator.of(context)
@@ -354,7 +355,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           month: now.month,
           year: now.year,
           narrative:
-              'No se han registrado eventos literarios destacados en la provincia de $province para este mes. ¡Suscríbete a nuestras notificaciones para enterarte de las novedades!',
+              S.of(context).noBulletinPlaceholder(province),
           events: [],
           totalEvents: 0,
           generatedAt: now,
@@ -368,7 +369,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       Navigator.of(context).pop(); // Close loading
       _showFeedbackSnackBar(
         context: context,
-        message: 'Error al cargar el boletín: $e',
+        message: S.of(context).errorLoadingBulletin(e.toString()),
         isError: true,
       );
     }
@@ -378,21 +379,21 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Lugar de residencia necesario'),
-        content: const Text(
-          'Para recibir boletines literarios de tu zona, por favor rellena tu lugar de residencia en tu perfil.',
+        title: Text(S.of(context).residenceRequired),
+        content: Text(
+          S.of(context).residenceRequiredMessage,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Ahora no'),
+            child: Text(S.of(context).notNow),
           ),
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
               _showProfileScreen(context);
             },
-            child: const Text('Ir al Perfil'),
+            child: Text(S.of(context).goToProfile),
           ),
         ],
       ),

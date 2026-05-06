@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/local/club_dao.dart';
 import '../../../providers/book_providers.dart';
 import '../../../providers/clubs_provider.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class SectionDiscussionPage extends ConsumerStatefulWidget {
   const SectionDiscussionPage({
@@ -38,13 +39,14 @@ class _SectionDiscussionPageState extends ConsumerState<SectionDiscussionPage> {
   }
 
   Future<void> _sendComment() async {
+    final l10n = S.of(context);
     final content = _commentController.text.trim();
     if (content.isEmpty) return;
 
     final user = ref.read(activeUserProvider).value;
     if (user == null || user.remoteId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes iniciar sesión para comentar')),
+        SnackBar(content: Text(l10n.sectionDiscussionLoginRequired)),
       );
       return;
     }
@@ -86,12 +88,13 @@ class _SectionDiscussionPageState extends ConsumerState<SectionDiscussionPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context);
     final commentsAsync = ref.watch(sectionCommentsProvider(
         (bookUuid: widget.bookUuid, sectionNumber: widget.sectionNumber)));
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Discusión Sección ${widget.sectionNumber}'),
+        title: Text(l10n.sectionDiscussionTitle(widget.sectionNumber)),
       ),
       body: Column(
         children: [
@@ -99,15 +102,15 @@ class _SectionDiscussionPageState extends ConsumerState<SectionDiscussionPage> {
             child: commentsAsync.when(
               data: (comments) {
                 if (comments.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.chat_bubble_outline,
+                        const Icon(Icons.chat_bubble_outline,
                             size: 48, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text('Sé el primero en comentar',
-                            style: TextStyle(color: Colors.grey)),
+                        const SizedBox(height: 16),
+                        Text(l10n.sectionDiscussionFirstComment,
+                            style: const TextStyle(color: Colors.grey)),
                       ],
                     ),
                   );
@@ -171,7 +174,7 @@ class _SectionDiscussionPageState extends ConsumerState<SectionDiscussionPage> {
                     child: TextField(
                       controller: _commentController,
                       decoration: InputDecoration(
-                        hintText: 'Escribe un comentario...',
+                        hintText: l10n.sectionDiscussionHint,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,
@@ -266,7 +269,7 @@ class _CommentTile extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
             child: Text(
-              intl.DateFormat('dd MMM HH:mm', 'es')
+              intl.DateFormat('dd MMM HH:mm', Localizations.localeOf(context).languageCode)
                   .format(comment.comment.createdAt),
               style: TextStyle(
                 fontSize: 10,

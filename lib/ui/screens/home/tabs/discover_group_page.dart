@@ -20,55 +20,59 @@ import '../../../widgets/community/group_stats_chips.dart';
 import '../../../../models/book_genre.dart';
 import '../../../widgets/library/book_text_list.dart';
 import '../../../widgets/community/group_card.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 /// Helper to resolve owner name
-String _resolveOwnerName(LocalUser? ownerUser, int ownerIdFallback) {
+String _resolveOwnerName(BuildContext context, LocalUser? ownerUser, int ownerIdFallback) {
+  final s = S.of(context);
   final username = ownerUser?.username.trim();
   if (username != null && username.isNotEmpty) {
     return username;
   }
-  return 'Usuario $ownerIdFallback';
+  return s.userFallback(ownerIdFallback);
 }
 
 /// Helper to resolve status display
 _DiscoverStatusDisplay _resolveStatusDisplay({
+  required BuildContext context,
   required ThemeData theme,
   required SharedBook sharedBook,
   LoanDetail? loanDetail,
 }) {
+  final s = S.of(context);
   final colors = theme.colorScheme;
 
   if (loanDetail != null) {
     final status = loanDetail.loan.status;
     if (status == 'requested') {
       return _DiscoverStatusDisplay(
-        label: 'Solicitado',
+        label: s.statusRequested,
         icon: Icons.schedule_outlined,
         background: colors.secondaryContainer,
         foreground: colors.onSecondaryContainer,
-        caption: 'Solicitud pendiente de aprobación',
+        caption: s.statusRequestedCaption,
       );
     } else if (status == 'active') {
       return _DiscoverStatusDisplay(
-        label: 'En préstamo',
+        label: s.statusOnLoan,
         icon: Icons.handshake_outlined,
         background: colors.primaryContainer,
         foreground: colors.onPrimaryContainer,
-        caption: 'Préstamo activo',
+        caption: s.statusOnLoanCaption,
       );
     }
   }
 
   if (sharedBook.isAvailable) {
     return _DiscoverStatusDisplay(
-      label: 'Disponible',
+      label: s.statusAvailable,
       icon: Icons.check_circle_outlined,
       background: colors.tertiaryContainer,
       foreground: colors.onTertiaryContainer,
     );
   } else {
     return _DiscoverStatusDisplay(
-      label: 'No disponible',
+      label: s.statusUnavailable,
       icon: Icons.block_outlined,
       background: colors.surfaceContainerHighest,
       foreground: colors.onSurface,
@@ -206,13 +210,14 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
     final membersAsync = ref.watch(groupMemberDetailsProvider(group.id));
     final loansAsync = ref.watch(userRelevantLoansProvider(group.id));
 
+    final s = S.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(group.name),
         actions: [
           IconButton(
             icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
-            tooltip: _isGridView ? 'Ver lista' : 'Ver cuadrícula',
+            tooltip: _isGridView ? s.tooltipViewList : s.tooltipViewGrid,
             onPressed: () {
               setState(() {
                 _isGridView = !_isGridView;
@@ -221,7 +226,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
           ),
           IconButton(
             icon: const Icon(Icons.people_outline),
-            tooltip: 'Ver miembros',
+            tooltip: s.tooltipViewMembers,
             onPressed: () {
               showModalBottomSheet(
                 context: context,
@@ -232,35 +237,35 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
           ),
           PopupMenuButton<GroupSortOption>(
             icon: const Icon(Icons.sort),
-            tooltip: 'Ordenar por',
+            tooltip: s.tooltipSortBy,
             initialValue: state.sortOption,
             onSelected: (option) {
               controller.setSortOption(option);
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: GroupSortOption.titleAz,
-                child: Text('Título (A-Z)'),
+                child: Text(s.sortTitleAZ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: GroupSortOption.titleZa,
-                child: Text('Título (Z-A)'),
+                child: Text(s.sortTitleZA),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: GroupSortOption.authorAz,
-                child: Text('Autor (A-Z)'),
+                child: Text(s.sortAuthorAZ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: GroupSortOption.authorZa,
-                child: Text('Autor (Z-A)'),
+                child: Text(s.sortAuthorZA),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: GroupSortOption.newest,
-                child: Text('Más recientes'),
+                child: Text(s.sortNewest),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: GroupSortOption.oldest,
-                child: Text('Más antiguos'),
+                child: Text(s.sortOldest),
               ),
             ],
           ),
@@ -301,7 +306,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                           ),
                           const SizedBox(width: 8),
                           FilterChip(
-                            label: const Text('Ocultar leídos'),
+                            label: Text(s.filterHideRead),
                             selected: state.hideRead,
                             onSelected: (value) =>
                                 controller.setHideRead(value),
@@ -323,7 +328,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                             activeUserId: activeUser?.id,
                           ),
                           FilterChip(
-                            label: const Text('Incluir no disponibles'),
+                            label: Text(s.filterIncludeUnavailable),
                             selected: state.includeUnavailable,
                             onSelected: (value) =>
                                 controller.setIncludeUnavailable(value),
@@ -370,11 +375,12 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
                     loanDetails:
                         loansAsync.asData?.value ?? const <LoanDetail>[],
                     isGridView: _isGridView,
+                    s: s,
                   ),
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (error, _) => _DiscoverErrorView(
-                    message: 'No pudimos cargar tu biblioteca.',
+                    message: s.errorLoadingLibrary,
                     details: '$error',
                     onRetry: () => controller.refresh(),
                   ),
@@ -396,6 +402,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
     required List<GroupMemberDetail> members,
     required List<LoanDetail> loanDetails,
     required bool isGridView,
+    required S s,
   }) {
     if (state.isLoadingInitial && state.items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -403,7 +410,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
 
     if (state.error != null && state.items.isEmpty) {
       return _DiscoverErrorView(
-        message: 'No pudimos cargar los libros compartidos.',
+        message: s.errorLoadingSharedBooksGeneric,
         details: '${state.error}',
         onRetry: () => controller.refresh(),
       );
@@ -420,7 +427,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
     final ownerNames = <int, String>{
       for (final member in members)
         member.membership.memberUserId:
-            _resolveOwnerName(member.user, member.membership.memberUserId),
+            _resolveOwnerName(context, member.user, member.membership.memberUserId),
     };
 
     final activeLoansBySharedBookId = <int, LoanDetail>{};
@@ -450,11 +457,10 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
       EmptyStateAction? action;
 
       if (hasSearch) {
-        title = 'Sin resultados para tu búsqueda';
-        message =
-            'Revisa el término ingresado o restablece los filtros para ver más libros.';
+        title = s.emptySearchTitle;
+        message = s.emptySearchMessage;
         action = EmptyStateAction(
-          label: 'Limpiar búsqueda',
+          label: s.actionClearSearch,
           icon: Icons.clear,
           variant: EmptyStateActionVariant.text,
           onPressed: () {
@@ -464,11 +470,10 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
           },
         );
       } else if (ownerFilterActive) {
-        title = 'Sin libros de este miembro';
-        message =
-            'Prueba con otra persona o vuelve a mostrar todos los libros disponibles.';
+        title = s.emptyMemberBooksTitle;
+        message = s.emptyMemberBooksMessage;
         action = EmptyStateAction(
-          label: 'Quitar filtro',
+          label: s.actionRemoveFilter,
           icon: Icons.filter_list_off,
           variant: EmptyStateActionVariant.text,
           onPressed: () {
@@ -477,11 +482,10 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
           },
         );
       } else {
-        title = 'Todavía no hay libros para descubrir';
-        message =
-            'Cuando otros miembros compartan ejemplares compatibles, los verás listados aquí.';
+        title = s.emptyDiscoverTitle;
+        message = s.emptyDiscoverMessage;
         action = EmptyStateAction(
-          label: 'Actualizar lista',
+          label: s.actionUpdateList,
           icon: Icons.refresh,
           variant: EmptyStateActionVariant.text,
           onPressed: () => controller.refresh(),
@@ -530,7 +534,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
 
                 final groupedBook = filtered[index];
                 return _buildGridItem(context, groupedBook, theme, ownerNames,
-                    activeLoansBySharedBookId);
+                    activeLoansBySharedBookId, s);
               },
             )
           : BookTextList(
@@ -557,9 +561,10 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
     ThemeData theme,
     Map<int, String> ownerNames,
     Map<int, LoanDetail> activeLoansBySharedBookId,
+    S s,
   ) {
     final book = groupedBook.book;
-    final title = book?.title ?? 'Libro sin título';
+    final title = book?.title ?? s.bookNoTitle;
     final author = (book?.author ?? '').trim();
     
     final isAnyAvailable = groupedBook.isAnyAvailable;
@@ -573,6 +578,7 @@ class _DiscoverGroupPageState extends ConsumerState<DiscoverGroupPage> {
     }
 
     final statusDisplay = _resolveStatusDisplay(
+      context: context,
       theme: theme,
       sharedBook: groupedBook.allCopies.first.sharedBook.copyWith(isAvailable: isAnyAvailable),
       loanDetail: activeLoan,
@@ -857,8 +863,8 @@ class _GenreDropdown extends StatelessWidget {
             ),
             ...BookGenre.values.map((genre) {
               return DropdownMenuItem<String?>(
-                value: genre.label,
-                child: Text(genre.label),
+                value: genre.localizedLabel(context),
+                child: Text(genre.localizedLabel(context)),
               );
             }),
           ],

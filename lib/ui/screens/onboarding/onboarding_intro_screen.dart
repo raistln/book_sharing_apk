@@ -6,6 +6,7 @@ import '../../widgets/textured_background.dart';
 import '../../../design_system/literary_animations.dart';
 import '../home/home_shell.dart';
 import 'onboarding_wizard_screen.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class OnboardingIntroScreen extends ConsumerStatefulWidget {
   const OnboardingIntroScreen({super.key});
@@ -22,32 +23,7 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
   int _currentPage = 0;
   bool _isCompleting = false;
 
-  final _slides = const [
-    _IntroSlide(
-      icon: material.Icons.auto_stories_outlined, // Icono más literario
-      title: 'Tu propia colección',
-      message:
-          'Cada libro cuenta una historia. Preserva las tuyas, añade notas y mantén viva la memoria de tus lecturas.',
-    ),
-    _IntroSlide(
-      icon: material.Icons.diversity_3_outlined,
-      title: 'Círculos de Lectura',
-      message:
-          'Donde las historias se encuentran. Únete a comunidades y descubre bibliotecas compartidas con otros lectores.',
-    ),
-    _IntroSlide(
-      icon: material.Icons.import_contacts_outlined,
-      title: 'El viaje del libro',
-      message:
-          'Sigue el rastro de cada ejemplar prestado. Gestiona devoluciones y comparte el conocimiento con confianza.',
-    ),
-    _IntroSlide(
-      icon: material.Icons.cloud_sync_outlined,
-      title: 'Crónica en la nube',
-      message:
-          'Tu catálogo se preserva en Supabase, disponible siempre para continuar la historia desde cualquier lugar.',
-    ),
-  ];
+
 
   @override
   void initState() {
@@ -82,7 +58,32 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
   @override
   material.Widget build(material.BuildContext context) {
     final theme = material.Theme.of(context);
-    final isLastPage = _currentPage == _slides.length - 1;
+    final s = S.of(context);
+
+    final slides = [
+      _IntroSlide(
+        icon: material.Icons.auto_stories_outlined,
+        title: s.onboardingSlide1Title,
+        message: s.onboardingSlide1Message,
+      ),
+      _IntroSlide(
+        icon: material.Icons.diversity_3_outlined,
+        title: s.onboardingSlide2Title,
+        message: s.onboardingSlide2Message,
+      ),
+      _IntroSlide(
+        icon: material.Icons.import_contacts_outlined,
+        title: s.onboardingSlide3Title,
+        message: s.onboardingSlide3Message,
+      ),
+      _IntroSlide(
+        icon: material.Icons.cloud_sync_outlined,
+        title: s.onboardingSlide4Title,
+        message: s.onboardingSlide4Message,
+      ),
+    ];
+
+    final isLastPage = _currentPage == slides.length - 1;
 
     return material.Scaffold(
       appBar: material.AppBar(
@@ -90,7 +91,7 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
         actions: [
           material.TextButton(
             onPressed: () => _completeIntro(context),
-            child: const material.Text('Saltar'),
+            child: material.Text(s.actionSkip),
           ),
         ],
       ),
@@ -106,9 +107,9 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
                       _currentPage = index;
                     });
                   },
-                  itemCount: _slides.length,
+                  itemCount: slides.length,
                   itemBuilder: (context, index) {
-                    final slide = _slides[index];
+                    final slide = slides[index];
                     return material.Padding(
                       padding: const material.EdgeInsets.symmetric(
                           horizontal: 24, vertical: 32),
@@ -149,7 +150,7 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
                     material.Row(
                       mainAxisAlignment: material.MainAxisAlignment.center,
                       children: List.generate(
-                        _slides.length,
+                        slides.length,
                         (index) => material.AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           margin: const material.EdgeInsets.symmetric(
@@ -182,8 +183,9 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
                       icon: material.Icon(isLastPage
                           ? material.Icons.check_circle_outline
                           : material.Icons.arrow_forward),
-                      label: material.Text(
-                          isLastPage ? 'Comenzar Crónica' : 'Siguiente Página'),
+                      label: material.Text(isLastPage
+                          ? s.actionStartChronicle
+                          : s.actionNextPage),
                     ),
                     const material.SizedBox(height: 12),
                     material.TextButton.icon(
@@ -200,7 +202,7 @@ class _OnboardingIntroScreenState extends ConsumerState<OnboardingIntroScreen> {
                         navigator.pushReplacementNamed(HomeShell.routeName);
                       },
                       icon: const material.Icon(material.Icons.home_outlined),
-                      label: const material.Text('Saltar Prólogo'),
+                      label: material.Text(s.actionSkipPrologue),
                     ),
                   ],
                 ),

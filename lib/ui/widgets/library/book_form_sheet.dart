@@ -19,9 +19,10 @@ import '../../../services/google_books_client.dart';
 import '../../../utils/isbn_utils.dart';
 import '../../../providers/reading_providers.dart';
 import '../../../providers/reading_list_provider.dart';
-import '../barcode_scanner_sheet.dart';
 import 'cover_field.dart';
 import 'library_utils.dart';
+import '../../../l10n/generated/app_localizations.dart';
+import '../barcode_scanner_sheet.dart';
 
 // BookSource and BookCandidate moved to library_utils.dart
 
@@ -160,14 +161,15 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Géneros', style: theme.textTheme.titleSmall),
+            Text(S.of(context).bookFormGenres,
+                style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 ..._selectedGenres.map((genre) => Chip(
-                      label: Text(genre.label),
+                      label: Text(genre.localizedLabel(context)),
                       onDeleted: () {
                         setState(() {
                           _selectedGenres.remove(genre);
@@ -176,7 +178,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                     )),
                 ActionChip(
                   avatar: const Icon(Icons.add, size: 18),
-                  label: const Text('Añadir género'),
+                  label: Text(S.of(context).bookFormAddGenre),
                   onPressed: () => _showGenreSelector(context),
                 ),
               ],
@@ -186,7 +188,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         const SizedBox(height: 16),
         SwitchListTile(
           title: Text(
-            _isPhysical ? 'Libro Físico' : 'Libro Digital',
+            _isPhysical
+                ? S.of(context).bookFormatPhysical
+                : S.of(context).bookFormatDigital,
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color:
@@ -243,26 +247,28 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
 
   /// Construye la lista de items para el dropdown dinámicamente
   List<DropdownMenuItem<String>> _buildDropdownItems() {
+    final l10n = S.of(context);
     final items = <DropdownMenuItem<String>>[
-      const DropdownMenuItem(
+      DropdownMenuItem(
         value: 'available',
         child: Row(
           children: [
-            Icon(Icons.check_circle_outline, color: Colors.blue, size: 20),
-            SizedBox(width: 8),
-            Text('Disponible'),
+            const Icon(Icons.check_circle_outline,
+                color: Colors.blue, size: 20),
+            const SizedBox(width: 8),
+            Text(l10n.bookFormAvailable),
           ],
         ),
       ),
 // Archived option removed as per simplification request
 
-      const DropdownMenuItem(
+      DropdownMenuItem(
         value: 'private',
         child: Row(
           children: [
-            Icon(Icons.lock_outline, color: Colors.purple, size: 20),
-            SizedBox(width: 8),
-            Text('Privado'),
+            const Icon(Icons.lock_outline, color: Colors.purple, size: 20),
+            const SizedBox(width: 8),
+            Text(l10n.bookFormPrivate),
           ],
         ),
       ),
@@ -272,13 +278,14 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     if (_hasActiveLoans) {
       items.insert(
           1,
-          const DropdownMenuItem(
+          DropdownMenuItem(
             value: 'loaned',
             child: Row(
               children: [
-                Icon(Icons.swap_horiz_outlined, color: Colors.red, size: 20),
-                SizedBox(width: 8),
-                Text('Prestado'),
+                const Icon(Icons.swap_horiz_outlined,
+                    color: Colors.red, size: 20),
+                const SizedBox(width: 8),
+                Text(l10n.bookFormLoaned),
               ],
             ),
           ));
@@ -289,6 +296,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final coverService = ref.watch(coverImageServiceProvider);
 
@@ -306,14 +314,16 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      _isEditing ? 'Editar libro' : 'Añadir libro',
+                      _isEditing
+                          ? 'Editar libro'
+                          : l10n.addBook, // TODO: add editBook key
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                   ),
                   if (_isEditing)
                     IconButton(
                       icon: const Icon(Icons.share_outlined),
-                      tooltip: 'Compartir libro',
+                      tooltip: l10n.bookFormShareBook,
                       onPressed: () {
                         final book = widget.initialBook!;
                         final text =
@@ -331,9 +341,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
               TextFormField(
                 controller: _titleController,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'Título',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.bookFormTitle,
+                  border: const OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -346,9 +356,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
               TextFormField(
                 controller: _authorController,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'Autor',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.bookFormAuthor,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
@@ -358,9 +368,9 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                     child: TextFormField(
                       controller: _isbnController,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'ISBN',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.bookFormIsbn,
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                   ),
@@ -370,11 +380,11 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                       controller: _barcodeController,
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
-                        labelText: 'Código barras',
+                        labelText: l10n.bookFormBarcode,
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.qr_code_scanner),
-                          tooltip: 'Escanear código',
+                          tooltip: l10n.bookFormScanBarcode,
                           onPressed: () async {
                             final searchContext = context;
                             final result = await showModalBottomSheet<String>(
@@ -417,10 +427,10 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                       controller: _pageCountController,
                       keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Páginas',
-                        border: OutlineInputBorder(),
-                        hintText: 'Ej: 350',
+                      decoration: InputDecoration(
+                        labelText: l10n.bookFormPages,
+                        border: const OutlineInputBorder(),
+                        hintText: l10n.bookFormPageHint,
                       ),
                     ),
                   ),
@@ -430,10 +440,10 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                       controller: _publicationYearController,
                       keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Año publicación',
-                        border: OutlineInputBorder(),
-                        hintText: 'Ej: 2020',
+                      decoration: InputDecoration(
+                        labelText: l10n.bookFormYear,
+                        border: const OutlineInputBorder(),
+                        hintText: l10n.bookFormYearHint,
                       ),
                     ),
                   ),
@@ -450,7 +460,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                       TextButton.icon(
                         onPressed: _submitting ? null : () => _clearForm(),
                         icon: const Icon(Icons.clear_all_outlined),
-                        label: const Text('Limpiar formulario'),
+                        label: Text(l10n.bookFormClearForm),
                       ),
                     OutlinedButton.icon(
                       onPressed:
@@ -489,7 +499,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
               DropdownButtonFormField<String>(
                 initialValue: _status,
                 decoration: InputDecoration(
-                  labelText: 'Estado del libro',
+                  labelText: l10n.bookFormStatus,
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.bookmark_outline),
                   suffixText:
@@ -519,14 +529,14 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
                 controller: _notesController,
                 minLines: 3,
                 maxLines: 5,
-                decoration: const InputDecoration(
-                  labelText: 'Notas',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.bookFormNotes,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
               SwitchListTile(
-                title: const Text('Estado de lectura'),
+                title: Text(l10n.bookFormReadingStatus),
                 subtitle: Text(_isRead
                     ? 'Leído · Para quitarlo, usa este switch'
                     : 'No leído · Solo aquí puedes desmarcarlo'),
@@ -626,7 +636,7 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         if (context.mounted) {
           showFeedbackSnackBar(
             context: context,
-            message: 'Necesitas un usuario activo para compartir tus libros.',
+            message: S.of(context).bookFormNoActiveUser,
             isError: true,
           );
         }
@@ -737,18 +747,21 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
         if (errorMessage.contains('Ya tienes ese libro')) {
           await showDialog(
             context: context,
-            builder: (context) => AlertDialog(
-              icon:
-                  const Icon(Icons.info_outline, size: 48, color: Colors.blue),
-              title: const Text('Libro duplicado'),
-              content: Text(errorMessage.replaceAll('Exception: ', '')),
-              actions: [
-                FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Entendido'),
-                ),
-              ],
-            ),
+            builder: (context) {
+              final l10n = S.of(context);
+              return AlertDialog(
+                icon: const Icon(Icons.info_outline,
+                    size: 48, color: Colors.blue),
+                title: Text(l10n.bookFormDuplicateTitle),
+                content: Text(errorMessage.replaceAll('Exception: ', '')),
+                actions: [
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(l10n.bookFormUnderstood),
+                  ),
+                ],
+              );
+            },
           );
         } else {
           // Show error SnackBar for other errors
@@ -775,20 +788,23 @@ class BookFormSheetState extends ConsumerState<BookFormSheet> {
     final navigator = Navigator.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eliminar libro'),
-        content: Text('¿Seguro que deseas eliminar "${book.title}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l10n = S.of(context);
+        return AlertDialog(
+          title: Text(l10n.bookFormDeleteTitle),
+          content: Text(l10n.bookFormDeleteMessage(book.title)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed != true) return;
@@ -1397,22 +1413,25 @@ class _GenreMultiSelectDialogState extends State<_GenreMultiSelectDialog> {
     var filtered = BookGenre.values;
     if (_searchQuery.isNotEmpty) {
       filtered = filtered
-          .where(
-              (g) => g.label.toLowerCase().contains(_searchQuery.toLowerCase()))
+          .where((g) => g
+              .localizedLabel(context)
+              .toLowerCase()
+              .contains(_searchQuery.toLowerCase()))
           .toList();
     }
 
+    final l10n = S.of(context);
     return AlertDialog(
-      title: const Text('Seleccionar géneros'),
+      title: Text(l10n.bookFormSelectGenresTitle),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              decoration: const InputDecoration(
-                hintText: 'Buscar género...',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: l10n.bookFormSearchGenre,
+                prefixIcon: const Icon(Icons.search),
               ),
               onChanged: (value) => setState(() => _searchQuery = value),
             ),
@@ -1425,7 +1444,7 @@ class _GenreMultiSelectDialogState extends State<_GenreMultiSelectDialog> {
                   final genre = filtered[index];
                   final isSelected = _selected.contains(genre);
                   return CheckboxListTile(
-                    title: Text(genre.label),
+                    title: Text(genre.localizedLabel(context)),
                     value: isSelected,
                     onChanged: (value) {
                       setState(() {
@@ -1446,11 +1465,11 @@ class _GenreMultiSelectDialogState extends State<_GenreMultiSelectDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_selected),
-          child: const Text('Aceptar'),
+          child: const Text('Aceptar'), // Hardcoded
         ),
       ],
     );

@@ -48,7 +48,7 @@ class RecommendationSelector extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          level.label,
+                          level.label(context),
                           style: TextStyle(
                             fontWeight: isSelected
                                 ? FontWeight.bold

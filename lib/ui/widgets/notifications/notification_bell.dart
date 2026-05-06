@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 import '../../../../providers/book_providers.dart';
 
@@ -23,8 +24,7 @@ class NotificationBell extends ConsumerWidget {
         );
 
         return Tooltip(
-          message:
-              count > 0 ? 'Tienes $count notificaciones' : 'Notificaciones',
+          message: S.of(context).notificationsTooltip(count),
           child: IconButton(
             onPressed: onPressed,
             icon: count > 0
@@ -47,7 +47,7 @@ class NotificationBell extends ConsumerWidget {
       error: (_, __) => IconButton(
         onPressed: onPressed,
         icon: const Icon(Icons.notifications_off_outlined),
-        tooltip: 'Notificaciones',
+        tooltip: S.of(context).notificationsTitle,
       ),
     );
   }

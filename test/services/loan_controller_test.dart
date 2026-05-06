@@ -24,6 +24,7 @@ void main() {
     late LoanController loanController;
     late MockNotificationClient mockNotificationClient;
     late MockUnifiedSyncCoordinator mockSyncCoordinator;
+    late MockS mockS;
 
     late LocalUser owner;
     late LocalUser borrower;
@@ -54,6 +55,7 @@ void main() {
       // Create mocks
       mockNotificationClient = MockNotificationClient();
       mockSyncCoordinator = MockUnifiedSyncCoordinator();
+      mockS = MockS();
 
       // Stub sync coordinator methods
       when(() => mockSyncCoordinator.syncOnCriticalEvent(any<SyncEvent>()))
@@ -81,12 +83,36 @@ void main() {
             androidActions: any(named: 'androidActions'),
           )).thenAnswer((_) async {});
 
+      // Stub S getters
+      when(() => mockS.loanManualRegistered).thenReturn('manual');
+      when(() => mockS.loanExternalRegistered).thenReturn('externo');
+      when(() => mockS.loanRequestSent).thenReturn('enviada');
+      when(() => mockS.loanRequestCancelled).thenReturn('cancelada');
+      when(() => mockS.loanRequestRejected).thenReturn('rechazada');
+      when(() => mockS.loanRequestAccepted).thenReturn('aceptado');
+      when(() => mockS.loanMarkedReturned).thenReturn('devuelto');
+      when(() => mockS.notificationLoanDueSoonTitle).thenReturn('Préstamo por vencer');
+      when(() => mockS.notificationLoanDueSoonBody).thenReturn('Préstamo por vencer');
+      when(() => mockS.notificationLoanRequestTitle).thenReturn('Solicitud de préstamo');
+      when(() => mockS.notificationLoanAcceptedTitle).thenReturn('Préstamo aceptado');
+      when(() => mockS.notificationLoanReturnedTitle).thenReturn('Libro devuelto');
+      when(() => mockS.notificationLoanCancelledTitle).thenReturn('Solicitud cancelada');
+      when(() => mockS.notificationLoanRejectedTitle).thenReturn('Solicitud rechazada');
+      when(() => mockS.notificationLoanDueSoonBodyWithTitle(any())).thenReturn('Préstamo por vencer');
+      when(() => mockS.notificationLoanRequestFallback(any())).thenReturn('Solicitud');
+      when(() => mockS.notificationLoanAcceptedFallback(any())).thenReturn('Aceptado');
+      when(() => mockS.notificationLoanReturnedFallback(any())).thenReturn('Devuelto');
+      when(() => mockS.notificationLoanCancelledFallback(any())).thenReturn('Cancelado');
+      when(() => mockS.notificationLoanRejectedFallback(any())).thenReturn('Rechazado');
+      when(() => mockS.loanMarkedExpired).thenReturn('expirado');
+
       // Create controller
       loanController = LoanController(
         loanRepository: loanRepository,
         notificationClient: mockNotificationClient,
         notificationRepository: notificationRepository,
         syncCoordinator: mockSyncCoordinator,
+        s: mockS,
       );
 
       // Setup test data using helpers

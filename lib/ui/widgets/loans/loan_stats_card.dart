@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../providers/book_providers.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 class LoanStatsCard extends ConsumerWidget {
   const LoanStatsCard({super.key});
@@ -24,7 +25,7 @@ class LoanStatsCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Resumen de Actividad',
+                S.of(context).statsActivitySummary,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
@@ -35,8 +36,8 @@ class LoanStatsCard extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: _PremiumStatCard(
-                      title: 'Préstamos',
-                      subtitle: 'Realizados',
+                      title: S.of(context).loans,
+                      subtitle: S.of(context).statsRealized,
                       icon: Icons.outbox_rounded,
                       color: Colors.orange,
                       count30d: loansMade30d,
@@ -47,8 +48,8 @@ class LoanStatsCard extends ConsumerWidget {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _PremiumStatCard(
-                      title: 'Solicitudes',
-                      subtitle: 'Aceptados',
+                      title: S.of(context).requests,
+                      subtitle: S.of(context).statsAccepted,
                       icon: Icons.inbox_rounded,
                       color: Colors.purple,
                       count30d: loansRequested30d,
@@ -70,7 +71,7 @@ class LoanStatsCard extends ConsumerWidget {
       ),
       error: (e, st) => Padding(
         padding: const EdgeInsets.all(24.0),
-        child: Text('Error al cargar estadísticas: $e'),
+        child: Text(S.of(context).statsErrorLoadingWithDetail(e.toString())),
       ),
     );
   }
@@ -168,12 +169,12 @@ class _PremiumStatCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               _buildMetric(
-                label: '30 d',
+                label: S.of(context).stats30Days,
                 value: '$count30d',
                 theme: theme,
               ),
               _buildMetric(
-                label: 'Total año',
+                label: S.of(context).statsTotalYear,
                 value: '$count1y',
                 theme: theme,
                 isSecondary: true,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/book_providers.dart';
 import '../../../services/book_export_service.dart';
 import '../../../utils/file_export_helper.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import 'library_utils.dart';
 
 /// Handles library export functionality
@@ -23,7 +24,7 @@ class ExportHandler {
         if (!ctx.mounted) return;
         showFeedbackSnackBar(
           context: ctx,
-          message: 'No hay libros para exportar.',
+          message: S.of(ctx).exportNoBooks,
           isError: true,
         );
         return;
@@ -40,19 +41,19 @@ class ExportHandler {
             children: [
               ListTile(
                 leading: const Icon(Icons.table_rows_outlined),
-                title: const Text('Exportar como CSV'),
+                title: Text(S.of(ctx).exportCSV),
                 onTap: () =>
                     Navigator.of(sheetContext).pop(BookExportFormat.csv),
               ),
               ListTile(
                 leading: const Icon(Icons.code),
-                title: const Text('Exportar como JSON'),
+                title: Text(S.of(ctx).exportJSON),
                 onTap: () =>
                     Navigator.of(sheetContext).pop(BookExportFormat.json),
               ),
               ListTile(
                 leading: const Icon(Icons.picture_as_pdf_outlined),
-                title: const Text('Exportar como PDF'),
+                title: Text(S.of(ctx).exportPDF),
                 onTap: () =>
                     Navigator.of(sheetContext).pop(BookExportFormat.pdf),
               ),
@@ -96,7 +97,7 @@ class ExportHandler {
       if (!ctx.mounted) return;
       showFeedbackSnackBar(
         context: ctx,
-        message: 'No se pudo exportar: $err',
+        message: S.of(ctx).exportError(err.toString()),
         isError: true,
       );
     }

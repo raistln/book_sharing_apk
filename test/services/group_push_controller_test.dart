@@ -12,6 +12,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
+import '../helpers/test_helper.dart';
 
 // Mock classes
 class MockGroupPushRepository extends Mock implements GroupPushRepository {}
@@ -41,6 +42,7 @@ void main() {
     late MockBookRepository mockBookRepository;
     late MockUnifiedSyncCoordinator mockSyncCoordinator;
     late MockNotificationRepository mockNotificationRepository;
+    late MockS mockS;
 
     setUpAll(() {
       registerFallbackValue(ImageSource.gallery);
@@ -62,6 +64,7 @@ void main() {
       mockBookRepository = MockBookRepository();
       mockSyncCoordinator = MockUnifiedSyncCoordinator();
       mockNotificationRepository = MockNotificationRepository();
+      mockS = MockS();
 
       // Stub sync methods
       when(() => mockGroupSyncController.markPendingChanges())
@@ -86,6 +89,24 @@ void main() {
             androidActions: any(named: 'androidActions'),
           )).thenAnswer((_) async {});
 
+      // Stub S getters
+      // Stub S getters
+      when(() => mockS.groupCreated).thenReturn('creado');
+      when(() => mockS.joinedGroup).thenReturn('unido');
+      when(() => mockS.groupUpdated).thenReturn('actualizado');
+      when(() => mockS.groupDeleted).thenReturn('borrado');
+      when(() => mockS.memberRemoved).thenReturn('salido');
+      when(() => mockS.ownershipTransferred).thenReturn('transferido');
+      when(() => mockS.notificationGroupMemberJoinedTitle(any())).thenReturn('Nuevo miembro');
+      when(() => mockS.notificationGroupMemberJoinedMessage(any())).thenReturn('Nuevo miembro');
+      when(() => mockS.notificationGroupMemberJoinedByCodeMessage(any())).thenReturn('Nuevo miembro');
+      when(() => mockS.notificationGroupUpdatedTitle(any())).thenReturn('Grupo actualizado');
+      when(() => mockS.notificationGroupUpdatedMessage).thenReturn('Grupo actualizado');
+      when(() => mockS.notificationGroupDeletedTitle).thenReturn('Grupo borrado');
+      when(() => mockS.notificationGroupDeletedMessage(any())).thenReturn('Grupo borrado');
+      when(() => mockS.notificationGroupMemberLeftTitle(any())).thenReturn('Miembro salió');
+      when(() => mockS.notificationGroupMemberLeftMessage(any())).thenReturn('Miembro salió');
+
       // Create controller
       groupPushController = GroupPushController(
         groupPushRepository: mockGroupPushRepository,
@@ -95,6 +116,7 @@ void main() {
         groupDao: groupDao,
         syncCoordinator: mockSyncCoordinator,
         notificationRepository: mockNotificationRepository,
+        s: mockS,
       );
     });
 

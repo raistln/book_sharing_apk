@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/local/database.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../providers/book_providers.dart';
 import '../../../../design_system/literary_shadows.dart';
 import '../../../../design_system/literary_animations.dart';
@@ -34,7 +35,7 @@ class BookList extends StatelessWidget {
     if (books.isEmpty) {
       return Center(
         child: Text(
-          'No se encontraron libros',
+          S.of(context).emptyMyBooksMessage,
           style: theme.textTheme.bodyMedium,
         ),
       );
@@ -77,7 +78,7 @@ class BookListTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final statusColor = _getStatusColor(book.status, theme);
-    final statusLabel = _getStatusLabel(book.status);
+    final statusLabel = _getStatusLabel(context, book.status);
 
     return TapAnimation(
       onTap: onTap,
@@ -153,7 +154,7 @@ class BookListTile extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              BookGenre.fromString(book.genre)?.label ??
+                              BookGenre.fromString(book.genre)?.localizedLabel(context) ??
                                   book.genre!,
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: theme.colorScheme.onSecondaryContainer,
@@ -164,7 +165,7 @@ class BookListTile extends ConsumerWidget {
                         if (book.isbn != null) ...[
                           const SizedBox(height: 4),
                           Text(
-                            'ISBN: ${book.isbn!}',
+                            S.of(context).bookDetailsIsbn(book.isbn!),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -231,7 +232,7 @@ class BookListTile extends ConsumerWidget {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      book.isRead ? 'Leído' : 'No leído',
+                                      book.isRead ? S.of(context).evocReadStatus : S.of(context).evocUnreadStatus,
                                       style:
                                           theme.textTheme.bodySmall?.copyWith(
                                         color: book.isRead
@@ -262,34 +263,34 @@ class BookListTile extends ConsumerWidget {
                                 }
                               },
                               itemBuilder: (context) => [
-                                const PopupMenuItem(
+                                PopupMenuItem(
                                   value: 'review',
                                   child: Row(
                                     children: [
-                                      Icon(Icons.star_border),
-                                      SizedBox(width: 8),
-                                      Text('Añadir reseña'),
+                                      const Icon(Icons.star_border),
+                                      const SizedBox(width: 8),
+                                      Text(S.of(context).evocEmptyReviewsAction),
                                     ],
                                   ),
                                 ),
-                                const PopupMenuItem(
+                                PopupMenuItem(
                                   value: 'reviews',
                                   child: Row(
                                     children: [
-                                      Icon(Icons.rate_review),
-                                      SizedBox(width: 8),
-                                      Text('Ver reseñas'),
+                                      const Icon(Icons.rate_review),
+                                      const SizedBox(width: 8),
+                                      Text(S.of(context).tooltipViewList),
                                     ],
                                   ),
                                 ),
                                 if (book.status == 'available')
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: 'loan',
                                     child: Row(
                                       children: [
-                                        Icon(Icons.handshake_outlined),
-                                        SizedBox(width: 8),
-                                        Text('Crear préstamo manual'),
+                                        const Icon(Icons.handshake_outlined),
+                                        const SizedBox(width: 8),
+                                        Text(S.of(context).lendBookManually),
                                       ],
                                     ),
                                   ),
@@ -317,7 +318,7 @@ class BookListTile extends ConsumerWidget {
       data: (reviews) {
         if (reviews.isEmpty) {
           return Text(
-            'Sin opiniones todavía',
+            S.of(context).evocEmptyReviewsTitle,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -337,7 +338,7 @@ class BookListTile extends ConsumerWidget {
                     size: 16, color: theme.colorScheme.primary),
                 const SizedBox(width: 4),
                 Text(
-                  '$count ${count == 1 ? 'opinión' : 'opiniones'}',
+                  S.of(context).reviewCount(count),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.w600,
@@ -356,7 +357,7 @@ class BookListTile extends ConsumerWidget {
         child: CircularProgressIndicator(strokeWidth: 2),
       ),
       error: (err, _) => Text(
-        'Error',
+        S.of(context).errorStateLabel,
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.error,
         ),
@@ -405,16 +406,16 @@ class BookListTile extends ConsumerWidget {
     }
   }
 
-  String _getStatusLabel(String status) {
+  String _getStatusLabel(BuildContext context, String status) {
     switch (status) {
       case 'available':
-        return 'Disponible';
+        return S.of(context).bookStatusAvailable;
       case 'loaned':
-        return 'Prestado';
+        return S.of(context).bookStatusLoaned;
       case 'archived':
-        return 'Archivado';
+        return S.of(context).bookStatusArchived;
       case 'private':
-        return 'Privado';
+        return S.of(context).bookStatusPrivate;
       default:
         return status;
     }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 enum CoachMarkId {
   discoverShareBook,
@@ -25,6 +26,33 @@ extension CoachMarkIdStorage on CoachMarkId {
         CoachMarkId.bookDetailRequestLoan => 'detail_request',
         CoachMarkId.groupManageInvitations => 'groups_manage_invites',
       };
+
+  String localizedTitle(BuildContext context) {
+    final s = S.of(context);
+    return switch (this) {
+      CoachMarkId.discoverShareBook => s.coachMarkDiscoverShareTitle,
+      CoachMarkId.discoverFilterChips => s.coachMarkDiscoverFiltersTitle,
+      CoachMarkId.bookDetailRequestLoan => s.coachMarkDetailRequestTitle,
+      CoachMarkId.groupManageInvitations => s.coachMarkGroupInviteTitle,
+    };
+  }
+
+  String localizedDescription(BuildContext context) {
+    final s = S.of(context);
+    return switch (this) {
+      CoachMarkId.discoverShareBook => s.coachMarkDiscoverShareDesc,
+      CoachMarkId.discoverFilterChips => s.coachMarkDiscoverFiltersDesc,
+      CoachMarkId.bookDetailRequestLoan => s.coachMarkDetailRequestDesc,
+      CoachMarkId.groupManageInvitations => s.coachMarkGroupInviteDesc,
+    };
+  }
+
+  String? localizedPrimaryAction(BuildContext context, String? original) {
+    final s = S.of(context);
+    if (original == 'Siguiente' || original == 'Next') return s.actionNext;
+    if (original == 'Listo' || original == 'Done') return s.actionDone;
+    return original;
+  }
 }
 
 class CoachMarkConfig {

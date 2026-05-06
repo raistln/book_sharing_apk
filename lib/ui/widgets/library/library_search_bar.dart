@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class LibrarySearchBar extends StatefulWidget {
   const LibrarySearchBar({
@@ -22,7 +23,7 @@ class _LibrarySearchBarState extends State<LibrarySearchBar> {
     return TextField(
       controller: widget.controller,
       decoration: InputDecoration(
-        hintText: 'Buscar por título o autor...',
+        hintText: S.of(context).searchBarHint,
         prefixIcon: const Icon(Icons.search),
         suffixIcon: _searchQuery.isNotEmpty
             ? IconButton(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 import '../../models/book_genre.dart';
 
@@ -99,7 +100,9 @@ class _GroupFormDialogState extends State<GroupFormDialog> {
     final previewColor = primaryHex != null ? _hexToColor(primaryHex) : null;
 
     return AlertDialog(
-      title: Text(isEditing ? 'Editar grupo' : 'Crear grupo'),
+      title: Text(isEditing
+          ? S.of(context).actionEditGroup
+          : S.of(context).actionCreateGroupDialog),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 400),
         child: Form(
@@ -112,14 +115,14 @@ class _GroupFormDialogState extends State<GroupFormDialog> {
                 // ---- Name -----------------------------------------------
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre del grupo',
+                  decoration: InputDecoration(
+                    labelText: S.of(context).groupNameLabel,
                   ),
                   autofocus: !isEditing,
                   textInputAction: TextInputAction.next,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Introduce un nombre válido.';
+                      return S.of(context).errorInvalidGroupName;
                     }
                     return null;
                   },
@@ -129,8 +132,8 @@ class _GroupFormDialogState extends State<GroupFormDialog> {
                 // ---- Description ----------------------------------------
                 TextFormField(
                   controller: _descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Descripción (opcional)',
+                  decoration: InputDecoration(
+                    labelText: S.of(context).groupDescriptionLabel,
                   ),
                   maxLines: 2,
                   textInputAction: TextInputAction.done,
@@ -144,12 +147,12 @@ class _GroupFormDialogState extends State<GroupFormDialog> {
                         size: 18, color: theme.colorScheme.primary),
                     const SizedBox(width: 6),
                     Text(
-                      'Géneros permitidos',
+                      S.of(context).allowedGenresLabel,
                       style: theme.textTheme.titleSmall,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '(opcional)',
+                      S.of(context).optionalLabel,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -158,7 +161,7 @@ class _GroupFormDialogState extends State<GroupFormDialog> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Si eliges géneros, solo los libros de esos géneros serán visibles en este grupo. Sin selección, se muestran todos.',
+                  S.of(context).genreFilterExplanation,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -187,7 +190,7 @@ class _GroupFormDialogState extends State<GroupFormDialog> {
                     final chipColor =
                         selected ? _hexToColor(genre.primaryHex) : null;
                     return FilterChip(
-                      label: Text(genre.label),
+                      label: Text(genre.localizedLabel(context)),
                       selected: selected,
                       onSelected: (_) => _toggleGenre(genre),
                       selectedColor: chipColor?.withValues(alpha: 0.25),
@@ -210,7 +213,7 @@ class _GroupFormDialogState extends State<GroupFormDialog> {
                 if (!isEditing) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Puedes cambiar los géneros más tarde desde el menú del grupo.',
+                    S.of(context).genreChangeLaterHint,
                     style: theme.textTheme.bodySmall,
                   ),
                 ],
@@ -222,11 +225,13 @@ class _GroupFormDialogState extends State<GroupFormDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(S.of(context).cancel),
         ),
         FilledButton(
           onPressed: _submit,
-          child: Text(isEditing ? 'Guardar' : 'Crear'),
+          child: Text(isEditing
+              ? S.of(context).actionSave
+              : S.of(context).actionCreate),
         ),
       ],
     );

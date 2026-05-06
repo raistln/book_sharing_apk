@@ -11,6 +11,7 @@ import 'notification_service.dart';
 import 'unified_sync_coordinator.dart';
 import '../data/repositories/notification_repository.dart';
 import '../data/models/in_app_notification_type.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class GroupActionState {
   const GroupActionState({
@@ -45,6 +46,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
     required GroupDao groupDao,
     required UnifiedSyncCoordinator syncCoordinator,
     required NotificationRepository notificationRepository,
+    required this.s,
   })  : _groupPushRepository = groupPushRepository,
         _groupSyncController = groupSyncController,
         _notificationClient = notificationClient,
@@ -61,6 +63,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
   final GroupDao _groupDao;
   final UnifiedSyncCoordinator _syncCoordinator;
   final NotificationRepository _notificationRepository;
+  final S s;
 
   void dismissError() {
     state = state.copyWith(lastError: () => null);
@@ -113,7 +116,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
 
       state = state.copyWith(
         isLoading: false,
-        lastSuccess: () => 'Grupo creado.',
+        lastSuccess: () => s.groupCreated,
       );
       return group;
     } catch (error) {
@@ -147,7 +150,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
       _groupSyncController.markPendingChanges();
       state = state.copyWith(
         isLoading: false,
-        lastSuccess: () => 'Grupo actualizado.',
+        lastSuccess: () => s.groupUpdated,
       );
 
       // Notify members about group update
@@ -157,8 +160,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
           await _notificationRepository.createNotification(
             type: InAppNotificationType.groupUpdated,
             targetUserId: member.memberUserId,
-            title: 'Grupo "$name" actualizado',
-            message: 'Se han realizado cambios en los detalles del grupo.',
+            title: s.notificationGroupUpdatedTitle(name),
+            message: s.notificationGroupUpdatedMessage,
           );
         }
       });
@@ -188,7 +191,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
 
       state = state.copyWith(
         isLoading: false,
-        lastSuccess: () => 'Grupo eliminado.',
+        lastSuccess: () => s.groupDeleted,
       );
 
       // Notify members about group deletion
@@ -204,8 +207,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
           await _notificationRepository.createNotification(
             type: InAppNotificationType.groupDeleted,
             targetUserId: member.memberUserId,
-            title: 'Grupo eliminado',
-            message: 'El grupo "${group.name}" ha sido disuelto.',
+            title: s.notificationGroupDeletedTitle,
+            message: s.notificationGroupDeletedMessage(group.name),
           );
         }
       });
@@ -234,7 +237,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
       _groupSyncController.markPendingChanges();
       state = state.copyWith(
         isLoading: false,
-        lastSuccess: () => 'Propiedad transferida.',
+        lastSuccess: () => s.ownershipTransferred,
       );
     } catch (error) {
       state = state.copyWith(
@@ -263,7 +266,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
       _groupSyncController.markPendingChanges();
       state = state.copyWith(
         isLoading: false,
-        lastSuccess: () => 'Miembro añadido.',
+        lastSuccess: () => s.memberAdded,
       );
 
       // Notify owner about new member
@@ -272,8 +275,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
           type: InAppNotificationType.groupMemberJoined,
           targetUserId: group.ownerUserId!,
           actorUserId: user.id,
-          title: 'Nuevo miembro en "${group.name}"',
-          message: '${user.username} se unió al grupo.',
+          title: s.notificationGroupMemberJoinedTitle(group.name),
+          message: s.notificationGroupMemberJoinedMessage(user.username),
         );
       });
 
@@ -303,7 +306,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
       _groupSyncController.markPendingChanges();
       state = state.copyWith(
         isLoading: false,
-        lastSuccess: () => 'Rol actualizado.',
+        lastSuccess: () => s.roleUpdated,
       );
     } catch (error) {
       state = state.copyWith(
@@ -329,7 +332,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
       await _syncCoordinator.syncOnCriticalEvent(SyncEvent.userLeftGroup);
       state = state.copyWith(
         isLoading: false,
-        lastSuccess: () => 'Miembro eliminado.',
+        lastSuccess: () => s.memberRemoved,
       );
 
       // Notify owner about member leaving
@@ -342,8 +345,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
               type: InAppNotificationType.groupMemberLeft,
               targetUserId: group.ownerUserId!,
               actorUserId: user.id,
-              title: 'Miembro salió de "${group.name}"',
-              message: '${user.username} dejó el grupo.',
+              title: s.notificationGroupMemberLeftTitle(group.name),
+              message: s.notificationGroupMemberLeftMessage(user.username),
             );
           });
         }
@@ -381,7 +384,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
 
       state = state.copyWith(
         isLoading: false,
-        lastSuccess: () => 'Invitación creada.',
+        lastSuccess: () => s.invitationCreated,
       );
 
       // Removed self-notification - user will share via share button
@@ -409,7 +412,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
       _groupSyncController.markPendingChanges();
       state = state.copyWith(
         isLoading: false,
-        lastSuccess: () => 'Invitación cancelada.',
+        lastSuccess: () => s.invitationCancelled,
       );
       await _cancelGroupInvitationNotification(invitation);
     } catch (error) {
@@ -461,8 +464,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
       state = state.copyWith(
         isLoading: false,
         lastSuccess: () => newStatus == 'accepted'
-            ? 'Invitación aceptada.'
-            : 'Invitación actualizada.',
+            ? s.invitationAccepted
+            : s.invitationUpdated,
       );
       await _cancelGroupInvitationNotification(updated);
       return updated;
@@ -503,7 +506,7 @@ class GroupPushController extends StateNotifier<GroupActionState> {
 
       state = state.copyWith(
         isLoading: false,
-        lastSuccess: () => 'Te uniste al grupo.',
+        lastSuccess: () => s.joinedGroup,
       );
 
       // Notify owner about new member joining by code
@@ -513,8 +516,8 @@ class GroupPushController extends StateNotifier<GroupActionState> {
             type: InAppNotificationType.groupMemberJoined,
             targetUserId: group.ownerUserId!,
             actorUserId: user.id,
-            title: 'Nuevo miembro en "${group.name}"',
-            message: '${user.username} se unió por código.',
+            title: s.notificationGroupMemberJoinedTitle(group.name),
+            message: s.notificationGroupMemberJoinedByCodeMessage(user.username),
           );
         });
       }

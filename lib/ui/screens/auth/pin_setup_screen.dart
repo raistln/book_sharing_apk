@@ -9,6 +9,7 @@ import '../../../design_system/literary_animations.dart';
 import '../home/home_shell.dart';
 import '../onboarding/onboarding_intro_screen.dart';
 import 'existing_account_login_screen.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class PinSetupScreen extends ConsumerStatefulWidget {
   const PinSetupScreen({super.key});
@@ -68,6 +69,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
     final isLoading = authState.status == AuthStatus.loading || _isSubmitting;
     final isExistingUser = activeUser != null;
     final theme = material.Theme.of(context);
+    final l10n = S.of(context);
 
     // Si ya existe usuario, no pedimos nombre, solo PIN.
     final stepTitle = isExistingUser ? 'Nueva Llave' : 'Nombra al Guardián';
@@ -142,8 +144,8 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                           style: theme.textTheme.titleMedium,
                           textAlign: material.TextAlign.center,
                           decoration: material.InputDecoration(
-                            labelText: 'Nombre o Alias',
-                            hintText: 'Ej. El Bibliotecario',
+                            labelText: l10n.pinSetupNameLabel,
+                            hintText: l10n.pinSetupNameHint,
                             border: material.OutlineInputBorder(
                               borderRadius: material.BorderRadius.circular(12),
                             ),
@@ -162,7 +164,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                       child: material.Column(
                         children: [
                           material.Text(
-                            'Forja tu llave maestra (4 dígitos)',
+                            l10n.pinSetupPinLabel,
                             style: theme.textTheme.titleSmall,
                           ),
                           const material.SizedBox(height: 16),
@@ -187,7 +189,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                       child: material.Column(
                         children: [
                           material.Text(
-                            'Confirma la llave',
+                            l10n.pinSetupConfirmLabel,
                             style: theme.textTheme.titleSmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant),
                           ),
@@ -238,8 +240,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                                   material.Navigator.of(context).pushNamed(
                                       ExistingAccountLoginScreen.routeName);
                                 },
-                          child: const material.Text(
-                              '¿Ya tienes una cuenta? Recupérala aquí'),
+                          child: material.Text(l10n.pinSetupExistingAccount),
                         ),
                       ),
 

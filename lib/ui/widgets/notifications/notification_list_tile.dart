@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 import '../../../../data/local/database.dart';
 import '../../../../data/models/in_app_notification_status.dart';
@@ -89,12 +90,12 @@ class NotificationListTile extends ConsumerWidget {
                   TextButton.icon(
                     onPressed: markRead,
                     icon: const Icon(Icons.mark_email_read_outlined),
-                    label: const Text('Marcar como leído'),
+                    label: Text(S.of(context).actionMarkAsRead),
                   ),
                 TextButton.icon(
                   onPressed: dismiss,
                   icon: const Icon(Icons.close),
-                  label: const Text('Descartar'),
+                  label: Text(S.of(context).actionDismiss),
                 ),
               ],
             ),

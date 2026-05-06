@@ -14,6 +14,7 @@ import 'package:book_sharing_app/services/unified_sync_coordinator.dart';
 import 'package:book_sharing_app/models/global_sync_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import '../helpers/test_helper.dart';
 
 class MockLoanRepository extends Mock implements LoanRepository {}
 
@@ -99,6 +100,7 @@ void main() {
   late MockGroupSyncController mockGroupSyncCont;
   late MockBookRepository mockBookRepo;
   late MockGroupDao mockGroupDao;
+  late MockS mockS;
 
   late LoanController loanController;
   late GroupPushController groupPushController;
@@ -124,6 +126,7 @@ void main() {
     mockGroupSyncCont = MockGroupSyncController();
     mockBookRepo = MockBookRepository();
     mockGroupDao = MockGroupDao();
+    mockS = MockS();
 
     // Stubs for sync and other dependencies
     when(() => mockSyncCoord.syncOnCriticalEvent(any()))
@@ -134,11 +137,48 @@ void main() {
     when(() => mockLoanRepo.findSharedBookById(any()))
         .thenAnswer((_) async => null);
 
+    // Stub S getters
+    when(() => mockS.loanManualRegistered).thenReturn('manual');
+    when(() => mockS.loanExternalRegistered).thenReturn('externo');
+    when(() => mockS.loanRequestSent).thenReturn('enviada');
+    when(() => mockS.loanRequestCancelled).thenReturn('cancelada');
+    when(() => mockS.loanRequestRejected).thenReturn('rechazada');
+    when(() => mockS.loanRequestAccepted).thenReturn('aceptado');
+    when(() => mockS.loanMarkedReturned).thenReturn('devuelto');
+    when(() => mockS.notificationLoanDueSoonTitle).thenReturn('Préstamo por vencer');
+    when(() => mockS.notificationLoanDueSoonBody).thenReturn('Préstamo por vencer');
+    when(() => mockS.notificationLoanDueSoonBodyWithTitle(any())).thenReturn('Préstamo por vencer');
+    when(() => mockS.notificationLoanRequestTitle).thenReturn('Solicitud de préstamo');
+    when(() => mockS.notificationLoanRequestFallback(any())).thenReturn('Solicitud');
+    when(() => mockS.notificationLoanAcceptedTitle).thenReturn('Préstamo aceptado');
+    when(() => mockS.notificationLoanAcceptedFallback(any())).thenReturn('Aceptado');
+    when(() => mockS.notificationLoanReturnedTitle).thenReturn('Libro devuelto');
+    when(() => mockS.notificationLoanReturnedFallback(any())).thenReturn('Devuelto');
+    when(() => mockS.notificationLoanCancelledTitle).thenReturn('Solicitud cancelada');
+    when(() => mockS.notificationLoanCancelledFallback(any())).thenReturn('Cancelado');
+    when(() => mockS.notificationLoanRejectedTitle).thenReturn('Solicitud rechazada');
+    when(() => mockS.notificationLoanRejectedFallback(any())).thenReturn('Rechazado');
+    when(() => mockS.groupCreated).thenReturn('creado');
+    when(() => mockS.joinedGroup).thenReturn('unido');
+    when(() => mockS.groupUpdated).thenReturn('actualizado');
+    when(() => mockS.groupDeleted).thenReturn('borrado');
+    when(() => mockS.memberRemoved).thenReturn('salido');
+    when(() => mockS.ownershipTransferred).thenReturn('transferido');
+    when(() => mockS.notificationGroupMemberJoinedTitle(any())).thenReturn('Nuevo miembro');
+    when(() => mockS.notificationGroupMemberJoinedMessage(any())).thenReturn('Nuevo miembro');
+    when(() => mockS.notificationGroupDeletedTitle).thenReturn('Grupo borrado');
+    when(() => mockS.notificationGroupDeletedMessage(any())).thenReturn('Grupo borrado');
+    when(() => mockS.notificationGroupUpdatedTitle(any())).thenReturn('Grupo actualizado');
+    when(() => mockS.notificationGroupUpdatedMessage).thenReturn('Grupo actualizado');
+    when(() => mockS.notificationGroupMemberLeftTitle(any())).thenReturn('Miembro salió');
+    when(() => mockS.notificationGroupMemberLeftMessage(any())).thenReturn('Miembro salió');
+
     loanController = LoanController(
       loanRepository: mockLoanRepo,
       notificationClient: mockNotifClient,
       notificationRepository: mockNotifRepo,
       syncCoordinator: mockSyncCoord,
+      s: mockS,
     );
 
     groupPushController = GroupPushController(
@@ -149,6 +189,7 @@ void main() {
       groupDao: mockGroupDao,
       syncCoordinator: mockSyncCoord,
       notificationRepository: mockNotifRepo,
+      s: mockS,
     );
   });
 

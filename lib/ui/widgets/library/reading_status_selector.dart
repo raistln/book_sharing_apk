@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 import '../../../data/local/database.dart';
 import '../../../models/global_sync_state.dart';
@@ -50,7 +51,7 @@ class ReadingStatusSelector extends ConsumerWidget {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Estado de lectura',
+                  S.of(context).readingStatusTitle,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -76,7 +77,7 @@ class ReadingStatusSelector extends ConsumerWidget {
                             : theme.colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: 6),
-                      Text(status.label),
+                      Text(status.localizedLabel(context)),
                     ],
                   ),
                   onSelected: (selected) {
@@ -129,7 +130,7 @@ class ReadingStatusSelector extends ConsumerWidget {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Estado cambiado a: ${newStatus.label}'),
+          content: Text(S.of(context).readingStatusChanged(newStatus.localizedLabel(context))),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -138,7 +139,7 @@ class ReadingStatusSelector extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error al cambiar estado: $error'),
+          content: Text(S.of(context).readingStatusError(error.toString())),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );

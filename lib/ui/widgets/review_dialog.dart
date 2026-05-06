@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/local/database.dart';
 import '../../providers/book_providers.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 /// Dialog for creating or editing a book review
 class ReviewDialog extends ConsumerStatefulWidget {
@@ -49,7 +50,7 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
       if (activeUser == null) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Necesitas un usuario activo')),
+          SnackBar(content: Text(S.of(context).reviewWidgetActiveUser)),
         );
         return;
       }
@@ -68,7 +69,7 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $error')),
+        SnackBar(content: Text(S.of(context).errorGeneric(error.toString()))),
       );
     } finally {
       if (mounted) {
@@ -83,8 +84,8 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
 
     return AlertDialog(
       title: Text(widget.existingReview == null
-          ? 'Escribe una reseña'
-          : 'Editar reseña'),
+          ? S.of(context).reviewDialogWriteTitle
+          : S.of(context).reviewListEdit),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -97,13 +98,13 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
             if (widget.book.author != null) ...[
               const SizedBox(height: 4),
               Text(
-                'por ${widget.book.author}',
+                S.of(context).reviewDialogByAuthor(widget.book.author!),
                 style: theme.textTheme.bodySmall,
               ),
             ],
             const SizedBox(height: 24),
             Text(
-              'Valoración',
+              S.of(context).reviewWidgetRating,
               style: theme.textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
@@ -125,7 +126,7 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Comentario (opcional)',
+              S.of(context).reviewDialogOptionalComment,
               style: theme.textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
@@ -133,9 +134,9 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
               controller: _reviewController,
               maxLines: 4,
               maxLength: 500,
-              decoration: const InputDecoration(
-                hintText: 'Comparte tu opinión sobre este libro...',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: S.of(context).reviewDialogCommentHint,
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -144,7 +145,7 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
       actions: [
         TextButton(
           onPressed: _isSubmitting ? null : () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+          child: Text(S.of(context).cancel),
         ),
         FilledButton(
           onPressed: _isSubmitting ? null : _submitReview,
@@ -154,7 +155,7 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Guardar'),
+              : Text(S.of(context).save),
         ),
       ],
     );

@@ -14,6 +14,7 @@ import 'club_members_page.dart';
 import '../../dialogs/propose_book_dialog.dart';
 import '../../dialogs/update_reading_progress_dialog.dart';
 import '../../widgets/library/book_details_page.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ClubDetailPage extends ConsumerWidget {
   const ClubDetailPage({super.key, required this.club});
@@ -24,6 +25,7 @@ class ClubDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = S.of(context);
     // Watchers
     final activeBookAsync = ref.watch(activeClubBookDetailsProvider(club.uuid));
     final membersAsync = ref.watch(clubMembersProvider(club.uuid));
@@ -55,8 +57,8 @@ class ClubDetailPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                   _SectionHeader(
-                      title: 'Propuestas',
-                      action: 'Ver todas',
+                      title: l10n.clubDetailProposals,
+                      action: l10n.actionSeeAll,
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -68,8 +70,8 @@ class ClubDetailPage extends ConsumerWidget {
                   _ProposalsSection(proposalsAsync: proposalsAsync),
                   const SizedBox(height: 24),
                   _SectionHeader(
-                      title: 'Miembros',
-                      action: 'Gestionar',
+                      title: l10n.clubDetailMembers,
+                      action: l10n.actionManage,
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -109,7 +111,7 @@ class ClubDetailPage extends ConsumerWidget {
                 );
               }
             },
-            label: Text(hasActiveBook ? 'Discusión' : 'Proponer Libro'),
+            label: Text(hasActiveBook ? l10n.clubDetailDiscussion : l10n.proposeBookTitle),
             icon: Icon(hasActiveBook ? Icons.chat_bubble_outline : Icons.add),
           );
         },
@@ -204,6 +206,7 @@ class _CurrentBookSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = S.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -211,7 +214,7 @@ class _CurrentBookSection extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'LEYENDO AHORA',
+              l10n.clubDetailReadingNow,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
@@ -238,7 +241,7 @@ class _CurrentBookSection extends ConsumerWidget {
                         const Icon(Icons.auto_stories,
                             size: 48, color: Colors.grey),
                         const SizedBox(height: 8),
-                        const Text('No hay libro activo'),
+                        Text(l10n.clubDetailNoActiveBook),
                         const SizedBox(height: 16),
                         FilledButton.icon(
                           onPressed: () {
@@ -252,7 +255,7 @@ class _CurrentBookSection extends ConsumerWidget {
                             );
                           },
                           icon: const Icon(Icons.add),
-                          label: const Text('Añadir Libro'),
+                          label: Text(l10n.clubDetailAddBook),
                         ),
                       ],
                     ),
@@ -322,7 +325,7 @@ class _CurrentBookSection extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              book.author ?? 'Autor desconocido',
+                              book.author ?? l10n.clubDetailUnknownAuthor,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
@@ -343,7 +346,7 @@ class _CurrentBookSection extends ConsumerWidget {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Sección $currentSection/$totalChapters',
+                                  l10n.clubDetailSection(currentSection, totalChapters),
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                                 Row(
@@ -365,7 +368,7 @@ class _CurrentBookSection extends ConsumerWidget {
                                           ),
                                         );
                                       },
-                                      tooltip: 'Discusión',
+                                      tooltip: l10n.clubDetailDiscussion,
                                     ),
                                     TextButton(
                                       onPressed: () {
@@ -391,7 +394,7 @@ class _CurrentBookSection extends ConsumerWidget {
                                         tapTargetSize:
                                             MaterialTapTargetSize.shrinkWrap,
                                       ),
-                                      child: const Text('Actualizar'),
+                                      child: Text(l10n.clubDetailUpdateProgress),
                                     ),
                                   ],
                                 ),
@@ -424,6 +427,7 @@ class _ProposalsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = S.of(context);
     return SizedBox(
       height: 160,
       child: proposalsAsync.when(
@@ -431,7 +435,7 @@ class _ProposalsSection extends ConsumerWidget {
           if (proposals.isEmpty) {
             return Center(
               child: Text(
-                'No hay propuestas activas',
+                l10n.clubDetailNoProposals,
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
@@ -466,9 +470,8 @@ class _ProposalsSection extends ConsumerWidget {
                       );
                     } else if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text(
-                                'Detalles no disponibles para este libro propuesto')),
+                        SnackBar(
+                            content: Text(l10n.clubDetailProposalUnavailable)),
                       );
                     }
                   },
@@ -506,7 +509,7 @@ class _ProposalsSection extends ConsumerWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                proposal.title ?? 'Sin título',
+                                proposal.title ?? l10n.bookNoTitle,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -549,6 +552,7 @@ class _MembersSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context);
     return membersAsync.when(
       data: (members) {
         // Limit to 5 members for display
@@ -575,7 +579,7 @@ class _MembersSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      member.role == 'dueño' ? 'Admin' : 'Miem.',
+                      member.role == 'dueño' ? l10n.clubMembersRoleOwner : l10n.clubMembersRoleMember,
                       style: const TextStyle(fontSize: 10, color: Colors.grey),
                     ),
                   ],

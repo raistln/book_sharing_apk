@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../services/coach_marks/coach_mark_models.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 class CoachMarkOverlay extends StatelessWidget {
   const CoachMarkOverlay({
@@ -70,9 +71,11 @@ class CoachMarkOverlay extends StatelessWidget {
           ? max(size.height - clampedRect.top + 16, safeInsets.bottom + 16)
           : null,
       child: _CoachMarkCard(
-        title: display.config.title,
-        description: display.config.description,
-        primaryLabel: display.config.primaryActionLabel ?? 'Entendido',
+        title: display.id.localizedTitle(context),
+        description: display.id.localizedDescription(context),
+        primaryLabel: display.id.localizedPrimaryAction(
+                context, display.config.primaryActionLabel) ??
+            S.of(context).actionGotIt,
         secondaryLabel: display.config.secondaryActionLabel,
         onPrimary: onPrimary,
         onSecondary: onSecondary,
@@ -231,7 +234,7 @@ class _CoachMarkCard extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: onSkip,
-                  child: const Text('Saltar'),
+                  child: Text(S.of(context).actionSkip),
                 ),
               ],
             ),

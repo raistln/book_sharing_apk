@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../providers/book_providers.dart';
 import '../empty_state.dart';
 import 'notification_list_tile.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 /// Bottom sheet displaying in-app notifications
 class NotificationsSheet extends ConsumerWidget {
@@ -30,20 +31,20 @@ class NotificationsSheet extends ConsumerWidget {
 
     Future<void> clearAll() async {
       if (!hasNotifications) {
-        showSnack('No hay notificaciones para limpiar.');
+        showSnack(S.of(context).noNotificationsToClear);
         return;
       }
       if (activeUser == null) {
-        showSnack('Configura un usuario activo antes de limpiar.');
+        showSnack(S.of(context).errorNoUserToClearNotifications);
         return;
       }
       try {
         await repository.clearAllForUser(activeUser.id);
         if (!context.mounted) return;
-        showSnack('Notificaciones borradas.');
+        showSnack(S.of(context).successNotificationsCleared);
       } catch (error) {
         if (!context.mounted) return;
-        showSnack('No se pudieron borrar las notificaciones: $error');
+        showSnack(S.of(context).errorClearingNotifications(error.toString()));
       }
     }
 
@@ -61,7 +62,7 @@ class NotificationsSheet extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Notificaciones',
+                      S.of(context).notificationsTitle,
                       style: theme.textTheme.titleLarge,
                     ),
                   ),
@@ -69,14 +70,14 @@ class NotificationsSheet extends ConsumerWidget {
                     TextButton.icon(
                       onPressed: () => unawaited(clearAll()),
                       icon: const Icon(Icons.delete_sweep_outlined),
-                      label: const Text('Vaciar'),
+                      label: Text(S.of(context).actionClearAll),
                       style: TextButton.styleFrom(
                         foregroundColor: theme.colorScheme.error,
                       ),
                     ),
                   IconButton(
                     icon: const Icon(Icons.close),
-                    tooltip: 'Cerrar',
+                    tooltip: S.of(context).actionClose,
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
                 ],
@@ -87,11 +88,11 @@ class NotificationsSheet extends ConsumerWidget {
               child: notificationsAsync.when(
                 data: (notifications) {
                   if (notifications.isEmpty) {
-                    return const EmptyState(
+                    return EmptyState(
                       icon: Icons.notifications_none_outlined,
-                      title: 'Sin notificaciones',
+                      title: S.of(context).noNotificationsTitle,
                       message:
-                          'Aquí verás las novedades sobre tus préstamos y solicitudes.',
+                          S.of(context).noNotificationsMessage,
                     );
                   }
 
@@ -109,7 +110,7 @@ class NotificationsSheet extends ConsumerWidget {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, _) => EmptyState(
                   icon: Icons.error_outline,
-                  title: 'No se pudieron cargar',
+                  title: S.of(context).errorLoadingNotifications,
                   message: '$error',
                 ),
               ),

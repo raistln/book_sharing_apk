@@ -5,6 +5,7 @@ import '../../../providers/api_providers.dart';
 import '../../../providers/permission_providers.dart';
 import '../../../services/google_books_api_controller.dart';
 import '../barcode_scanner_sheet.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class AddWishlistItemSheet extends ConsumerStatefulWidget {
   const AddWishlistItemSheet({super.key});
@@ -38,9 +39,9 @@ class _AddWishlistItemSheetState extends ConsumerState<AddWishlistItemSheet> {
     if (!granted) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content:
-              Text('Necesitas habilitar permisos de cámara para escanear.'),
+              Text(S.of(context).permissionCameraDenied),
           backgroundColor: Colors.red,
         ),
       );
@@ -108,15 +109,15 @@ class _AddWishlistItemSheetState extends ConsumerState<AddWishlistItemSheet> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('📚 Encontrado: $title'),
+            content: Text(S.of(context).bookFoundTitle(title)),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se encontró información para este código.'),
+          SnackBar(
+            content: Text(S.of(context).bookNotFoundInfo),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -125,7 +126,7 @@ class _AddWishlistItemSheetState extends ConsumerState<AddWishlistItemSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al buscar: $e'),
+            content: Text(S.of(context).searchError(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -164,7 +165,7 @@ class _AddWishlistItemSheetState extends ConsumerState<AddWishlistItemSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Error: $e'),
+              content: Text(S.of(context).errorGeneric(e.toString())),
               backgroundColor: Theme.of(context).colorScheme.error),
         );
       }
@@ -191,7 +192,7 @@ class _AddWishlistItemSheetState extends ConsumerState<AddWishlistItemSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Nuevo Deseo',
+              S.of(context).wishlistNewTitle,
               style: theme.textTheme.headlineSmall
                   ?.copyWith(fontFamily: 'Georgia'),
               textAlign: TextAlign.center,
@@ -200,12 +201,12 @@ class _AddWishlistItemSheetState extends ConsumerState<AddWishlistItemSheet> {
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
-                labelText: 'Título del libro',
+                labelText: S.of(context).bookFormTitle,
                 border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.book_outlined),
                 suffixIcon: IconButton(
                   onPressed: _isScanning ? null : _handleScan,
-                  tooltip: 'Escanear código de barras',
+                  tooltip: S.of(context).scanBarcode,
                   icon: _isScanning
                       ? const SizedBox(
                           width: 24,
@@ -219,36 +220,36 @@ class _AddWishlistItemSheetState extends ConsumerState<AddWishlistItemSheet> {
                 ),
               ),
               validator: (v) =>
-                  v == null || v.isEmpty ? 'El título es obligatorio' : null,
+                  v == null || v.isEmpty ? S.of(context).bookTitleRequiredError : null,
               textCapitalization: TextCapitalization.sentences,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _authorController,
-              decoration: const InputDecoration(
-                labelText: 'Autor (opcional)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person_outline),
+              decoration: InputDecoration(
+                labelText: S.of(context).bookAuthorOptional,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.person_outline),
               ),
               textCapitalization: TextCapitalization.words,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _isbnController,
-              decoration: const InputDecoration(
-                labelText: 'ISBN (opcional)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.qr_code),
+              decoration: InputDecoration(
+                labelText: S.of(context).isbnOptional,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.qr_code),
               ),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notas / Por qué lo quieres',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.notes),
+              decoration: InputDecoration(
+                labelText: S.of(context).wishlistNotesHint,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.notes),
               ),
               maxLines: 3,
             ),
@@ -261,7 +262,7 @@ class _AddWishlistItemSheetState extends ConsumerState<AddWishlistItemSheet> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.favorite_border),
-              label: const Text('Añadir a deseos'),
+              label: Text(S.of(context).wishlistAddAction),
             ),
             const SizedBox(height: 24),
           ],

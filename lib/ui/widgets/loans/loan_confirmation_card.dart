@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 import '../../../data/local/database.dart'; // For LocalUser, Loan classes if distinct
 import '../../../data/local/group_dao.dart';
@@ -22,6 +23,7 @@ class LoanConfirmationCard extends ConsumerWidget {
     final loan = detail.loan;
     final loanController = ref.watch(loanControllerProvider.notifier);
     final loanState = ref.watch(loanControllerProvider);
+    final l10n = S.of(context);
 
     final isOwner = loan.lenderUserId == activeUser.id;
     final isManual =
@@ -31,22 +33,22 @@ class LoanConfirmationCard extends ConsumerWidget {
     final isExternalReceived = detail.book?.isBorrowedExternal ?? false;
 
     final borrowerName = isExternalReceived
-        ? (detail.borrower?.username ?? 'Tú')
+        ? (detail.borrower?.username ?? l10n.you)
         : (isManual
-            ? (loan.externalBorrowerName ?? 'Prestatario')
-            : (detail.borrower?.username ?? 'Usuario'));
+            ? (loan.externalBorrowerName ?? l10n.borrower)
+            : (detail.borrower?.username ?? l10n.user));
 
     final ownerName = isExternalReceived
-        ? (detail.book?.externalLenderName ?? 'Alguien')
-        : (detail.owner?.username ?? 'Propietario');
+        ? (detail.book?.externalLenderName ?? l10n.someone)
+        : (detail.owner?.username ?? l10n.owner);
 
     final dueDateStr = loan.dueDate != null
         ? DateFormat.yMMMd().format(loan.dueDate!)
-        : 'Indefinido';
+        : l10n.loanIndefinite;
 
     final loanInfo = isExternalReceived
-        ? 'Recibido de: $ownerName\nVence: $dueDateStr'
-        : 'Prestado a: $borrowerName\nPrestado de: $ownerName\nVence: $dueDateStr';
+        ? l10n.loanInfoReceived(ownerName, dueDateStr)
+        : l10n.loanInfoSent(borrowerName, ownerName, dueDateStr);
 
     final otherName =
         (isOwner && !isExternalReceived) ? borrowerName : ownerName;
@@ -62,9 +64,9 @@ class LoanConfirmationCard extends ConsumerWidget {
     // Manual Loan Case: Simple return
     if (isManual) {
       if (!isOwner) return const SizedBox.shrink(); // Should not happen
-      final bookTitle = detail.book?.title ?? 'Libro desconocido';
+      final bookTitle = detail.book?.title ?? l10n.unknownBook;
 
-      final sub = '$loanInfo\n\n(Préstamo manual)';
+      final sub = '$loanInfo\n\n${l10n.loanManualLabel}';
 
       return _buildActionCard(
         context,
@@ -79,7 +81,7 @@ class LoanConfirmationCard extends ConsumerWidget {
                 : () =>
                     loanController.markReturned(loan: loan, actor: activeUser),
             icon: const Icon(Icons.check),
-            label: const Text('Marcar Devuelto'),
+            label: Text(l10n.loanMarkReturned),
           ),
         ],
       );
@@ -97,9 +99,9 @@ class LoanConfirmationCard extends ConsumerWidget {
         context,
         theme,
         icon: Icons.swap_horiz,
-        title: detail.book?.title ?? 'Devolución',
+        title: detail.book?.title ?? l10n.loanReturn,
         subtitle:
-            '$loanInfo\n\nCuando se complete la devolución, ambos debéis confirmarlo.',
+            '$loanInfo\n\n${l10n.loanReturnDoubleConfirm}',
         actions: [
           OutlinedButton.icon(
             onPressed: loanState.isLoading
@@ -109,7 +111,7 @@ class LoanConfirmationCard extends ConsumerWidget {
                         loan: loan, actor: activeUser, wasRead: null);
                   },
             icon: const Icon(Icons.check_circle_outlined),
-            label: const Text('Confirmar devolución'),
+            label: Text(l10n.loanConfirmReturn),
           ),
         ],
       );
@@ -127,9 +129,9 @@ class LoanConfirmationCard extends ConsumerWidget {
         theme,
         color: theme.colorScheme.surfaceContainerHighest,
         icon: Icons.hourglass_top,
-        title: '${detail.book?.title ?? 'Préstamo'}: Esperando a $otherName',
+        title: '${detail.book?.title ?? l10n.loan}: ${l10n.loanWaitingFor(otherName)}',
         subtitle:
-            '$loanInfo\n\nYa has confirmed la devolución el ${DateFormat.MMMd().format(myConfirmation)}.',
+            '$loanInfo\n\n${l10n.loanAlreadyConfirmed(DateFormat.MMMd().format(myConfirmation))}',
         actions: [
           if (canForce)
             FilledButton.icon(
@@ -142,7 +144,7 @@ class LoanConfirmationCard extends ConsumerWidget {
                   : () => loanController.ownerForceConfirmReturn(
                       loan: loan, owner: activeUser),
               icon: const Icon(Icons.warning_amber),
-              label: const Text('Forzar finalización'),
+              label: Text(l10n.loanForceFinish),
             )
           else
             TextButton.icon(
@@ -151,7 +153,7 @@ class LoanConfirmationCard extends ConsumerWidget {
                   : () => loanController.sendReturnReminder(
                       loan: loan, actor: activeUser),
               icon: const Icon(Icons.notifications_active_outlined),
-              label: const Text('Enviar recordatorio'),
+              label: Text(l10n.loanSendReminder),
             ),
         ],
       );
@@ -164,9 +166,9 @@ class LoanConfirmationCard extends ConsumerWidget {
         theme,
         color: theme.colorScheme.primaryContainer,
         icon: Icons.priority_high,
-        title: '${detail.book?.title ?? 'Préstamo'}: ¡$otherName confirmó!',
+        title: '${detail.book?.title ?? l10n.loan}: ${l10n.loanOtherConfirmed(otherName)}',
         subtitle:
-            '$loanInfo\n\nConfirma que has recibido/entregado el libro para finalizar.',
+            '$loanInfo\n\n${l10n.loanFinishConfirmation}',
         actions: [
           FilledButton.icon(
             onPressed: loanState.isLoading
@@ -176,7 +178,7 @@ class LoanConfirmationCard extends ConsumerWidget {
                         loan: loan, actor: activeUser, wasRead: null);
                   },
             icon: const Icon(Icons.check_circle),
-            label: const Text('Confirmar y finalizar'),
+            label: Text(l10n.loanConfirmAndFinish),
           ),
         ],
       );

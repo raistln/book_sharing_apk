@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/local/group_dao.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 class SharedBooksSection extends StatelessWidget {
   const SharedBooksSection({super.key, required this.sharedBooksAsync});
@@ -23,14 +24,14 @@ class SharedBooksSection extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Estadísticas de libros', style: theme.textTheme.titleSmall),
+            Text(S.of(context).bookStatsHeader, style: theme.textTheme.titleSmall),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: StatCard(
                     icon: Icons.menu_book_outlined,
-                    label: 'Total',
+                    label: S.of(context).totalLabel,
                     value: '$totalBooks',
                     color: Colors.blue,
                   ),
@@ -39,7 +40,7 @@ class SharedBooksSection extends StatelessWidget {
                 Expanded(
                   child: StatCard(
                     icon: Icons.check_circle_outline,
-                    label: 'Disponibles',
+                    label: S.of(context).availableLabel,
                     value: '$availableBooks',
                     color: Colors.green,
                   ),
@@ -53,7 +54,7 @@ class SharedBooksSection extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 8),
         child: LinearProgressIndicator(),
       ),
-      error: (error, _) => Text('Error cargando libros compartidos: $error',
+      error: (error, _) => Text(S.of(context).errorLoadingSharedBooks(error.toString()),
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.error)),
     );

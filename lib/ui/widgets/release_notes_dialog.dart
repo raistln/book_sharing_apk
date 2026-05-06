@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/release_note.dart';
 import '../../design_system/literary_animations.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 class ReleaseNotesDialog extends StatelessWidget {
   final ReleaseNote note;
@@ -62,7 +63,7 @@ class ReleaseNotesDialog extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '¡Nuevos Capítulos!',
+                            S.of(context).releaseNotesTitle,
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontFamily: 'Georgia',
                               fontWeight: FontWeight.bold,
@@ -70,7 +71,7 @@ class ReleaseNotesDialog extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Versión ${note.version}',
+                            S.of(context).versionLabel(note.version),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: colorScheme.primary,
                               fontWeight: FontWeight.w600,
@@ -153,7 +154,7 @@ class ReleaseNotesDialog extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('¡A seguir leyendo!'),
+                    child: Text(S.of(context).releaseNotesAction),
                   ),
                 ),
               ),

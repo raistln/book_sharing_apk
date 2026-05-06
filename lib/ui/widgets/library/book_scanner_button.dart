@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 import '../../../../ui/widgets/barcode_scanner_sheet.dart';
 
@@ -16,7 +17,7 @@ class BookScannerButton extends ConsumerWidget {
     return FilledButton.icon(
       onPressed: () => _showBarcodeScanner(context),
       icon: const Icon(Icons.camera_alt_outlined),
-      label: const Text('Escanear código'),
+      label: Text(S.of(context).scanBarcode),
     );
   }
 

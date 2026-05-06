@@ -1,3 +1,6 @@
+import 'package:flutter/widgets.dart';
+import '../l10n/generated/app_localizations.dart';
+
 enum BookGenre {
   fantasy,
   scienceFiction,
@@ -145,6 +148,60 @@ enum BookGenre {
         return 'Distopía';
       case BookGenre.classic:
         return 'Clásico';
+    }
+  }
+
+  String localizedLabel(BuildContext context) {
+    final s = S.of(context);
+    switch (this) {
+      case BookGenre.fantasy:
+        return s.genreFantasy;
+      case BookGenre.scienceFiction:
+        return s.genreScienceFiction;
+      case BookGenre.horror:
+        return s.genreHorror;
+      case BookGenre.thrillerSuspense:
+        return s.genreThrillerSuspense;
+      case BookGenre.crimeMystery:
+        return s.genreCrimeMystery;
+      case BookGenre.romance:
+        return s.genreRomance;
+      case BookGenre.historical:
+        return s.genreHistorical;
+      case BookGenre.literaryFiction:
+        return s.genreLiteraryFiction;
+      case BookGenre.nonFiction:
+        return s.genreNonFiction;
+      case BookGenre.biographyMemoir:
+        return s.genreBiographyMemoir;
+      case BookGenre.essay:
+        return s.genreEssay;
+      case BookGenre.philosophy:
+        return s.genrePhilosophy;
+      case BookGenre.poetry:
+        return s.genrePoetry;
+      case BookGenre.comicsGraphicNovel:
+        return s.genreComicsGraphicNovel;
+      case BookGenre.youngAdult:
+        return s.genreYoungAdult;
+      case BookGenre.children:
+        return s.genreChildren;
+      case BookGenre.technicalEducational:
+        return s.genreTechnicalEducational;
+      case BookGenre.selfHelp:
+        return s.genreSelfHelp;
+      case BookGenre.politicsSociety:
+        return s.genrePoliticsSociety;
+      case BookGenre.religionSpirituality:
+        return s.genreReligionSpirituality;
+      case BookGenre.humor:
+        return s.genreHumor;
+      case BookGenre.adventure:
+        return s.genreAdventure;
+      case BookGenre.dystopian:
+        return s.genreDystopian;
+      case BookGenre.classic:
+        return s.genreClassic;
     }
   }
 

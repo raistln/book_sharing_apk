@@ -9,6 +9,7 @@ import '../../../data/local/book_dao.dart';
 import '../../../models/book_genre.dart';
 import '../../../models/recommendation_level.dart';
 import '../../../providers/book_providers.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import 'book_form_sheet.dart';
 import 'review_dialog.dart';
 import 'reading_status_selector.dart';
@@ -37,7 +38,7 @@ class BookDetailsPage extends ConsumerWidget {
             data: (book) => book != null
                 ? IconButton(
                     icon: const Icon(Icons.edit_outlined),
-                    tooltip: 'Editar',
+                    tooltip: S.of(context).edit,
                     onPressed: () => _openEditSheet(context, book),
                   )
                 : const SizedBox.shrink(),
@@ -207,7 +208,7 @@ class _BookDetailsContentState extends ConsumerState<_BookDetailsContent> {
                 alignment: WrapAlignment.center,
                 children: BookGenre.fromCsv(book.genre)
                     .map((g) => Chip(
-                          label: Text(g.label,
+                          label: Text(g.localizedLabel(context),
                               style: const TextStyle(fontSize: 11)),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
@@ -234,8 +235,8 @@ class _BookDetailsContentState extends ConsumerState<_BookDetailsContent> {
                   Chip(
                     avatar: const Icon(Icons.tablet_mac,
                         size: 16, color: Colors.purple),
-                    label: const Text('Digital',
-                        style: TextStyle(fontSize: 12, color: Colors.purple)),
+                    label: Text(S.of(context).bookDetailsDigital,
+                        style: const TextStyle(fontSize: 12, color: Colors.purple)),
                     backgroundColor: Colors.purple.shade50,
                     side: BorderSide(color: Colors.purple.shade200),
                     visualDensity: VisualDensity.compact,
@@ -245,8 +246,8 @@ class _BookDetailsContentState extends ConsumerState<_BookDetailsContent> {
                   Chip(
                     avatar:
                         const Icon(Icons.book, size: 16, color: Colors.blue),
-                    label: const Text('Físico',
-                        style: TextStyle(fontSize: 12, color: Colors.blue)),
+                    label: Text(S.of(context).bookDetailsPhysical,
+                        style: const TextStyle(fontSize: 12, color: Colors.blue)),
                     backgroundColor: Colors.blue.shade50,
                     side: BorderSide(color: Colors.blue.shade200),
                     visualDensity: VisualDensity.compact,
@@ -284,7 +285,7 @@ class _BookDetailsContentState extends ConsumerState<_BookDetailsContent> {
 
           if (book.description != null && book.description!.isNotEmpty) ...[
             Text(
-              'Sinopsis',
+              S.of(context).bookDetailsSynopsis,
               style: theme.textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
@@ -321,22 +322,22 @@ class _BookDetailsContentState extends ConsumerState<_BookDetailsContent> {
     } else {
       switch (book.status) {
         case 'available':
-          label = 'Disponible';
+          label = S.of(context).bookStatusAvailable;
           color = Colors.teal;
           icon = Icons.check_circle_outline;
           break;
         case 'loaned':
-          label = 'Prestado';
+          label = S.of(context).bookStatusLoaned;
           color = Colors.orange;
           icon = Icons.outbox;
           break;
         case 'private':
-          label = 'Privado';
+          label = S.of(context).bookStatusPrivate;
           color = Colors.grey;
           icon = Icons.lock_outline;
           break;
         case 'archived':
-          label = 'Archivado';
+          label = S.of(context).bookStatusArchived;
           color = Colors.blueGrey;
           icon = Icons.archive_outlined;
           break;
@@ -369,7 +370,7 @@ class _BookDetailsContentState extends ConsumerState<_BookDetailsContent> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '¿Quién lo ha leído?',
+                S.of(context).bookDetailsWhoRead,
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -385,7 +386,7 @@ class _BookDetailsContentState extends ConsumerState<_BookDetailsContent> {
         TextButton.icon(
           onPressed: () => showAddReviewDialog(context, ref, book),
           icon: const Icon(Icons.add_comment_outlined),
-          label: const Text('Opinar'),
+          label: Text(S.of(context).bookDetailsOpine),
         ),
       ],
     );
@@ -405,7 +406,7 @@ class _BookDetailsContentState extends ConsumerState<_BookDetailsContent> {
                       .withValues(alpha: 0.5)),
               const SizedBox(height: 12),
               Text(
-                'Nadie ha opinado todavía',
+                S.of(context).bookDetailsNoOpinions,
                 style: theme.textTheme.bodyMedium
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
@@ -421,7 +422,7 @@ class _BookDetailsContentState extends ConsumerState<_BookDetailsContent> {
         if (reviews.length > 5)
           TextButton(
             onPressed: () => showReviewsListDialog(context, ref, book),
-            child: const Text('Ver todas las opiniones'),
+            child: Text(S.of(context).bookDetailsSeeAllOpinions),
           ),
       ],
     );
@@ -483,7 +484,7 @@ class _ReviewTile extends ConsumerWidget {
                   ],
                 ),
                 Text(
-                  level.label,
+                  level.label(context),
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: level.color,
                     fontWeight: FontWeight.w500,
@@ -524,35 +525,35 @@ class _ReadingStatsChips extends ConsumerWidget {
           if (stats.startDate != null)
             _StatItem(
               icon: Icons.play_circle_outline,
-              label: 'Empezado',
+              label: S.of(context).bookDetailsStarted,
               value: format.format(stats.startDate!),
               color: Colors.green,
             ),
           if (stats.finishDate != null)
             _StatItem(
               icon: Icons.check_circle_outline,
-              label: 'Terminado',
+              label: S.of(context).bookDetailsFinished,
               value: format.format(stats.finishDate!),
               color: Colors.teal,
             ),
           if (stats.totalDays > 0)
             _StatItem(
               icon: Icons.calendar_today_outlined,
-              label: 'Duración',
+              label: S.of(context).bookDetailsDuration,
               value: '${stats.totalDays} días',
               color: Colors.indigo,
             ),
           if (stats.totalPages > 0)
             _StatItem(
               icon: Icons.menu_book_outlined,
-              label: 'Páginas leídas',
+              label: S.of(context).bookDetailsPagesRead,
               value: '${stats.totalPages} págs',
               color: Colors.blue,
             ),
           if (stats.pagesPerDay > 0)
             _StatItem(
               icon: Icons.speed_outlined,
-              label: 'Ritmo medio',
+              label: S.of(context).bookDetailsAvgRhythm,
               value: '${stats.pagesPerDay.toStringAsFixed(1)} p/día',
               color: Colors.orange,
             ),

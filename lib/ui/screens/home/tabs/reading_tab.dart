@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/local/database.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../providers/reading_list_provider.dart';
 import '../../../../providers/reading_providers.dart';
 import '../../../../providers/stats_providers.dart';
@@ -39,7 +40,7 @@ class _ReadingTabState extends ConsumerState<ReadingTab> {
             children: [
               // 1. Header: Leyendo
               Text(
-                'Leyendo',
+                S.of(context).readingHeader,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -72,7 +73,7 @@ class _ReadingTabState extends ConsumerState<ReadingTab> {
                 ),
                 error: (err, stack) => SizedBox(
                   height: 320,
-                  child: Center(child: Text('Error: $err')),
+                  child: Center(child: Text(S.of(context).errorGeneric(err.toString()))),
                 ),
               ),
 
@@ -80,7 +81,7 @@ class _ReadingTabState extends ConsumerState<ReadingTab> {
 
               // 3. Header: Actividad
               Text(
-                'Actividad',
+                S.of(context).activityHeader,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -117,7 +118,7 @@ class _ReadingTabState extends ConsumerState<ReadingTab> {
                                 borderRadius: BorderRadius.circular(21),
                               ),
                               child: Text(
-                                'Ritmo',
+                                S.of(context).chartRhythm,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: _activeChartIndex == 0
@@ -142,7 +143,7 @@ class _ReadingTabState extends ConsumerState<ReadingTab> {
                                 borderRadius: BorderRadius.circular(21),
                               ),
                               child: Text(
-                                'Calendario',
+                                S.of(context).chartCalendar,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: _activeChartIndex == 1
@@ -184,7 +185,7 @@ class _ReadingTabState extends ConsumerState<ReadingTab> {
                               loading: () => const Center(
                                   child: CircularProgressIndicator()),
                               error: (err, _) =>
-                                  Center(child: Text('Error: $err')),
+                                  Center(child: Text(S.of(context).errorGeneric(err.toString()))),
                             );
                           },
                         )
@@ -201,7 +202,7 @@ class _ReadingTabState extends ConsumerState<ReadingTab> {
                               loading: () => const Center(
                                   child: CircularProgressIndicator()),
                               error: (err, _) =>
-                                  Center(child: Text('Error: $err')),
+                                  Center(child: Text(S.of(context).errorGeneric(err.toString()))),
                             );
                           },
                         ),
@@ -243,14 +244,14 @@ class _ReadingTabState extends ConsumerState<ReadingTab> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Sin lecturas activas',
+            S.of(context).noActiveReading,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Ve a tu biblioteca para empezar',
+            S.of(context).goToLibrary,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -336,14 +337,14 @@ class _ReadingBookItem extends ConsumerWidget {
                           color: Colors.black.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.pause, size: 12, color: Colors.white),
-                            SizedBox(width: 4),
+                            const Icon(Icons.pause, size: 12, color: Colors.white),
+                            const SizedBox(width: 4),
                             Text(
-                              'Pausado',
-                              style: TextStyle(
+                              S.of(context).statusPaused,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -419,7 +420,7 @@ class _ReadingBookItem extends ConsumerWidget {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            'Leyendo ahora',
+                            S.of(context).readingNow,
                             style: Theme.of(context)
                                 .textTheme
                                 .labelSmall

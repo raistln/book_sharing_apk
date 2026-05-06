@@ -1,0 +1,2279 @@
+{
+  "@@locale": "es",
+  "appTitle": "PassTheBook",
+  "tabReading": "Leyendo",
+  "tabLibrary": "Biblioteca",
+  "tabLoans": "Préstamos",
+  "tabGroups": "Grupos",
+  "tooltipBulletin": "Boletín Literario",
+  "tooltipBookshelf": "Estantería Virtual",
+  "tooltipNotifications": "Notificaciones",
+  "tooltipProfile": "Perfil",
+  "tooltipSettings": "Ajustes",
+  "tooltipEdit": "Editar",
+  "tooltipSave": "Guardar",
+  "tooltipLoanHistory": "Historial de préstamos",
+  "tooltipSortBooks": "Ordenar libros",
+  "tooltipViewList": "Ver lista",
+  "tooltipViewGrid": "Ver cuadrícula",
+  "tooltipRefreshCovers": "Actualizar portadas",
+  "tooltipExportLibrary": "Exportar biblioteca",
+  "tooltipRead": "Leído",
+  "addBook": "Añadir libro",
+  "debugResetPin": "Debug: reset PIN",
+  "snackBookAdded": "Libro añadido a tu biblioteca.",
+  "snackBookUpdated": "Libro actualizado correctamente.",
+  "snackBookDeleted": "Libro eliminado.",
+  "snackPinCleared": "PIN borrado (solo debug).",
+  "residenceRequired": "Lugar de residencia necesario",
+  "residenceRequiredMessage": "Para recibir boletines literarios de tu zona, por favor rellena tu lugar de residencia en tu perfil.",
+  "notNow": "Ahora no",
+  "goToProfile": "Ir al Perfil",
+  "noBulletinPlaceholder": "No se han registrado eventos literarios destacados en la provincia de {province} para este mes. ¡Suscríbete a nuestras notificaciones para enterarte de las novedades!",
+  "@noBulletinPlaceholder": {
+    "placeholders": {
+      "province": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingBulletin": "Error al cargar el boletín: {error}",
+  "@errorLoadingBulletin": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "readingHeader": "Leyendo",
+  "activityHeader": "Actividad",
+  "chartRhythm": "Ritmo",
+  "chartCalendar": "Calendario",
+  "noActiveReading": "Sin lecturas activas",
+  "goToLibrary": "Ve a tu biblioteca para empezar",
+  "statusPaused": "Pausado",
+  "readingNow": "Leyendo ahora",
+  "libraryHeader": "Biblioteca",
+  "tabMyBooks": "Mis libros",
+  "tabBorrowedBooks": "Me prestaron",
+  "emptyMyBooksMessage": "Añade tus libros para gestionarlos aquí.",
+  "emptyBorrowedBooksMessage": "Aquí aparecerán los libros que te presten amigos, ya sea por la app o fuera de ella.",
+  "noFilterResults": "No hay coincidencias con los filtros.",
+  "sortTitleAZ": "Título (A-Z)",
+  "sortTitleZA": "Título (Z-A)",
+  "sortAuthorAZ": "Autor (A-Z)",
+  "sortAuthorZA": "Autor (Z-A)",
+  "sortNewest": "Más recientes",
+  "sortOldest": "Más antiguos",
+  "genreFilter": "Género",
+  "allGenres": "Todos los géneros",
+  "loansHeader": "Préstamos",
+  "loan": "préstamo",
+  "loans": "préstamos",
+  "requests": "solicitudes",
+  "incomingRequests": "Solicitudes Recibidas ({count})",
+  "@incomingRequests": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "outgoingRequests": "Solicitudes Enviadas ({count})",
+  "@outgoingRequests": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "lentByYou": "Prestados por ti",
+  "borrowedFromOthers": "Te prestaron",
+  "recentLoans": "Recientes",
+  "manualLoan": "Préstamo Manual",
+  "loanRequestedBy": "Solicitado por {name}",
+  "lentByWithName": "De {name}",
+  "@lentByWithName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@loanRequestedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "loanRequestedTo": "Solicitado a {name}",
+  "@loanRequestedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reject": "Rechazar",
+  "accept": "Aceptar",
+  "cancelRequest": "Cancelar solicitud",
+  "acceptLoanTitle": "Aceptar Préstamo",
+  "selectDueDate": "Selecciona una fecha de vencimiento:",
+  "indefinite": "Indefinido",
+  "cancel": "Cancelar",
+  "confirm": "Confirmar",
+  "youLent": "Prestaste",
+  "theyLentYou": "Te prestaron",
+  "bookFallback": "Libro",
+  "someoneFallback": "Alguien",
+  "ownerFallback": "Propietario",
+  "book": "libro",
+  "booksCount": "{count, plural, =1{1 libro} other{{count} libros}}",
+  "@booksCount": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
+  "fromLabel": "De:",
+  "toLabel": "A:",
+  "lendBookManually": "Prestar libro manualmente",
+  "lendBookManuallyDesc": "Registra un préstamo de tu biblioteca a alguien sin la app",
+  "registerReceivedBook": "Registrar libro recibido",
+  "registerReceivedBookDesc": "Registra un libro que alguien te prestó",
+  "loanStatusRequested": "Solicitado",
+  "loanStatusActive": "En curso",
+  "loanStatusReturned": "Devuelto",
+  "loanStatusCancelled": "Cancelado",
+  "loanStatusRejected": "Rechazado",
+  "loanStatusCompleted": "Completado",
+  "loanStatusExpired": "Expirado",
+  "profileTitle": "Perfil",
+  "profileEditTitle": "Editar Perfil",
+  "statsBooks": "Libros",
+  "statsRead": "Leídos",
+  "statsReading": "Leyendo",
+  "aboutMe": "Sobre mí",
+  "favoriteBook": "Libro favorito",
+  "favoriteGenre": "Género favorito",
+  "locationLabel": "Ubicación",
+  "contactLabel": "Contacto",
+  "biographyHeader": "Biografía",
+  "quickAccess": "Accesos rápidos",
+  "myReadBooks": "Mis libros leídos",
+  "wishlist": "Lista de deseos",
+  "notSpecified": "No especificado",
+  "nameFromRegistration": "Nombre (desde registro)",
+  "emailLabel": "Correo",
+  "residenceLabel": "Lugar de residencia (Provincia)",
+  "favoriteBookLabel": "Libro favorito",
+  "favoriteGenreLabel": "Género favorito",
+  "biographyNotesLabel": "Biografía / Notas",
+  "selectValidProvince": "Seleccione una provincia válida de la lista",
+  "settingsLibrary": "Biblioteca",
+  "settingsLibraryDesc": "Importa o exporta tu biblioteca de libros.",
+  "exportLibrary": "Exportar biblioteca",
+  "exportLibraryDesc": "Guarda tu lista de libros en CSV, JSON o PDF",
+  "exportLoanHistory": "Exportar historial de préstamos",
+  "exportLoanHistoryDesc": "Genera un informe de tus préstamos (CSV)",
+  "importBooks": "Importar libros",
+  "importBooksDesc": "Importa libros desde un archivo CSV o JSON",
+  "settingsStorage": "Almacenamiento",
+  "deleteAllCovers": "Borrar todas las portadas",
+  "deleteAllCoversDesc": "Libera espacio eliminando las imágenes descargadas.",
+  "resetLocalDatabase": "Resetear base de datos local",
+  "resetLocalDatabaseDesc": "Elimina todos los datos locales y comienza desde cero.",
+  "settingsBackup": "Copias de seguridad",
+  "settingsSecurity": "Ajustes de seguridad",
+  "settingsSecurityDesc": "Gestiona tu PIN y controla el bloqueo automático por inactividad.",
+  "changePin": "Cambiar PIN",
+  "changePinDesc": "Vuelve a definir el código de acceso.",
+  "deletePinAndSwitchUser": "Eliminar PIN y cambiar de usuario",
+  "deletePinAndSwitchUserDesc": "Vuelve al inicio para configurar otra cuenta.",
+  "deletePinConfirmTitle": "¿Eliminar PIN y salir de la cuenta?",
+  "deletePinConfirmMessage": "Se eliminarán TODOS los datos locales (libros, grupos, préstamos) y tendrás que iniciar sesión o configurar un nuevo usuario.",
+  "deletePinTip": "💡 Tip: Exporta tu biblioteca antes de continuar. Si tienes backups automáticos, búscalos en Descargas/BookSharing/backups.",
+  "deleteAll": "Eliminar todo",
+  "dataDeleted": "Datos eliminados. Reinicia la app para configurar un nuevo usuario.",
+  "settingsAppearance": "Apariencia",
+  "settingsLanguage": "Idioma",
+  "settingsLanguageDesc": "Selecciona en qué idioma se muestra la app.",
+  "languageSystem": "Sistema",
+  "languageSpanish": "Español",
+  "languageEnglish": "English",
+  "settingsExternalIntegrations": "Integraciones externas",
+  "settingsMoreComingSoon": "Más configuraciones próximamente",
+  "settingsMoreComingSoonDesc": "Pronto podrás gestionar copias de seguridad, sincronización y preferencias.",
+  "settingsOpenLibraryCredit": "Datos bibliográficos proporcionados por Open Library (Internet Archive). Contenido bajo licencia ODC-By.",
+  "donationTitle": "Invítame a un café",
+  "donationMessage": "Si esta app te resulta útil, puedes apoyar su desarrollo con una donación.",
+  "donationButton": "Invítame a un café",
+  "donationLinkInvalid": "El enlace de donación no es válido.",
+  "donationLinkError": "No se pudo abrir el enlace de donación.",
+  "donationLinkOpenError": "Error al abrir el enlace: {error}",
+  "@donationLinkOpenError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "syncStatus": "Estado de sincronización",
+  "syncingWithSupabase": "Sincronizando con Supabase...",
+  "lastSync": "Última sincronización: {date}",
+  "@lastSync": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notSyncedYet": "Aún no se ha sincronizado con Supabase.",
+  "syncErrorRecent": "Se encontraron errores recientemente",
+  "syncLastError": "Último error de sincronización",
+  "pendingChanges": "Hay cambios pendientes por sincronizar.",
+  "manualSync": "Sincronización manual",
+  "manualSyncDesc": "Fuerza la subida y bajada de libros, préstamos y clubes con Supabase. Normalmente esto ocurre de forma automática en segundo plano.",
+  "syncing": "Sincronizando...",
+  "syncNow": "Sincronizar ahora",
+  "syncComplete": "Sincronización completada.",
+  "syncError": "Error de sincronización: {error}",
+  "@syncError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "resetDatabaseTitle": "⚠️ Resetear base de datos local",
+  "resetDatabaseWarning": "Esto eliminará TODOS los datos locales:",
+  "resetDatabaseItem1": "• Libros registrados",
+  "resetDatabaseItem2": "• Grupos y membresías",
+  "resetDatabaseItem3": "• Préstamos y notificaciones",
+  "resetDatabaseItem4": "• Configuración local",
+  "resetDatabaseCloudNote": "Los datos en la nube (Supabase) NO se eliminarán.",
+  "resetDatabaseRestartNote": "Después de resetear, la app se reiniciará automáticamente.",
+  "resetAll": "Resetear todo",
+  "resettingDatabase": "Reseteando base de datos...",
+  "databaseResetSuccess": "Base de datos reseteada. Reiniciando app...",
+  "databaseResetError": "Error al resetear la base de datos: {error}",
+  "@databaseResetError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteCoversConfirmTitle": "¿Borrar todas las portadas?",
+  "deleteCoversConfirmMessage": "Se eliminarán todas las imágenes de portada descargadas. Podrás volver a descargarlas manualmente desde la biblioteca.",
+  "delete": "Borrar",
+  "coversDeleted": "Se eliminaron {count} portadas.",
+  "@coversDeleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coversDeleteError": "Error al borrar portadas: {error}",
+  "@coversDeleteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "googleBooksApi": "Google Books API",
+  "googleBooksApiConfigured": "API key configurada. Puedes buscar libros en Google Books.",
+  "googleBooksApiNotConfigured": "Configura una API key para buscar libros en Google Books.",
+  "changeApiKey": "Cambiar API key",
+  "configureApiKey": "Configurar API key",
+  "removeLabel": "Eliminar",
+  "howToGetApiKey": "¿Cómo obtener una API key?",
+  "apiKeyInstructions": "1. Ve a Google Cloud Console\n2. Crea un nuevo proyecto o selecciona uno existente\n3. Habilita la \"Books API\"\n4. Crea credenciales tipo \"API key\"\n5. Copia la clave y pégala aquí",
+  "configureGoogleBooksApiKey": "Configurar API key de Google Books",
+  "apiKeyInputHint": "Introduce tu API key de Google Books para poder buscar libros.",
+  "apiKeySaved": "API key guardada correctamente.",
+  "apiKeySaveError": "Error al guardar API key: {error}",
+  "@apiKeySaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteApiKeyConfirmTitle": "¿Eliminar API key de Google Books?",
+  "deleteApiKeyConfirmMessage": "Se eliminará la API key guardada. La búsqueda de libros en Google Books dejará de funcionar hasta que configures una nueva key.",
+  "apiKeyDeleted": "API key eliminada.",
+  "apiKeyDeleteError": "Error al eliminar API key: {error}",
+  "@apiKeyDeleteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "exportLoansError": "Error al exportar préstamos: {error}",
+  "@exportLoansError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "activeSessionRequired": "Debes tener una sesión activa.",
+  "themeSystem": "Usar tema del sistema",
+  "themeLight": "Modo claro",
+  "themeDark": "Modo oscuro",
+  "themeLoadError": "No pudimos cargar la preferencia de tema.",
+  "retry": "Reintentar",
+  "genreFantasy": "Fantasía",
+  "genreScienceFiction": "Ciencia Ficción",
+  "genreHorror": "Terror",
+  "genreThrillerSuspense": "Thriller / Suspense",
+  "genreCrimeMystery": "Crimen / Misterio",
+  "genreRomance": "Romance",
+  "genreHistorical": "Histórica",
+  "genreLiteraryFiction": "Ficción Literaria",
+  "genreNonFiction": "No Ficción",
+  "genreBiographyMemoir": "Biografía / Memorias",
+  "genreEssay": "Ensayo",
+  "genrePhilosophy": "Filosofía",
+  "genrePoetry": "Poesía",
+  "genreComicsGraphicNovel": "Cómic / Novela Gráfica",
+  "genreYoungAdult": "Juvenil (YA)",
+  "genreChildren": "Infantil",
+  "genreTechnicalEducational": "Técnico / Educativo",
+  "genreSelfHelp": "Autoayuda",
+  "genrePoliticsSociety": "Política / Sociedad",
+  "genreReligionSpirituality": "Religión / Espiritualidad",
+  "genreHumor": "Humor",
+  "genreAdventure": "Aventura",
+  "genreDystopian": "Distopía",
+  "genreClassic": "Clásico",
+  "evocEmptyLibraryTitle": "Tu biblioteca aguarda en silencio",
+  "evocEmptyLibraryMessage": "Las estanterías esperan sus primeros habitantes. Cada gran colección comienza con un solo libro.",
+  "evocEmptyLibraryAction": "Añadir primer libro",
+  "evocEmptySharedLibraryTitle": "El archivo colectivo está vacío",
+  "evocEmptySharedLibraryMessage": "Aún no hay libros compartidos en este círculo de lectores. Sé el primero en contribuir al conocimiento común.",
+  "evocEmptyLoansTitle": "Sin historias en tránsito",
+  "evocEmptyLoansMessage": "Los libros descansan en sus estantes. Inicia un nuevo viaje compartiendo una lectura.",
+  "evocEmptyLoansAction": "Registrar préstamo",
+  "evocEmptyPendingLoansTitle": "No hay solicitudes pendientes",
+  "evocEmptyPendingLoansMessage": "El buzón de peticiones está vacío. Ningún lector aguarda por el momento.",
+  "evocEmptyGroupsTitle": "Aún no formas parte de ningún círculo",
+  "evocEmptyGroupsMessage": "Los círculos de lectura son comunidades donde las historias fluyen. Únete a uno o crea el tuyo propio.",
+  "evocEmptyGroupsAction": "Crear círculo",
+  "evocEmptyReviewsTitle": "Sin reseñas todavía",
+  "evocEmptyReviewsMessage": "Este libro aguarda su primera impresión. ¿Qué te pareció su historia?",
+  "evocEmptyReviewsAction": "Escribir primera reseña",
+  "evocWelcomeTitle": "Bienvenido a tu biblioteca personal",
+  "evocWelcomeMessage": "Un lugar donde las historias encuentran hogar y viajan entre lectores.",
+  "evocEnteringArchive": "Entrando al archivo...",
+  "evocLoadingBooks": "Reuniendo los volúmenes...",
+  "evocSyncingLibrary": "Sincronizando el catálogo...",
+  "evocArchiveButton": "El Gran Archivo de {groupName}",
+  "@evocArchiveButton": {
+    "placeholders": {
+      "groupName": {
+        "type": "String"
+      }
+    }
+  },
+  "evocArchiveButtonShort": "El Gran Archivo",
+  "evocLoanConfirmed": "El libro ha iniciado su viaje",
+  "evocLoanReturned": "El libro ha regresado a casa",
+  "evocBookAdded": "Un nuevo volumen se une a tu colección",
+  "evocBookRemoved": "El libro ha sido retirado del catálogo",
+  "evocBookNotFound": "Este volumen parece haberse extraviado",
+  "evocConnectionError": "No se puede alcanzar el archivo remoto en este momento",
+  "evocSyncError": "Hubo un problema al sincronizar el catálogo",
+  "evocReadStatus": "Leído",
+  "evocUnreadStatus": "Por leer",
+  "evocReadingStatus": "Leyendo",
+  "evocLoanRequest": "{requester} solicita \"{bookTitle}\" de tu biblioteca",
+  "@evocLoanRequest": {
+    "placeholders": {
+      "requester": {
+        "type": "String"
+      },
+      "bookTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "evocLoanAccepted": "Tu solicitud de \"{bookTitle}\" ha sido aceptada",
+  "@evocLoanAccepted": {
+    "placeholders": {
+      "bookTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "evocLoanReturnReminder": "\"{bookTitle}\" debe regresar en {daysLeft} {daysLeft, plural, =1{día} other{días}}",
+  "@evocLoanReturnReminder": {
+    "placeholders": {
+      "bookTitle": {
+        "type": "String"
+      },
+      "daysLeft": {
+        "type": "int"
+      }
+    }
+  },
+  "evocLoanOverdue": "\"{bookTitle}\" ha excedido su tiempo de préstamo",
+  "@evocLoanOverdue": {
+    "placeholders": {
+      "bookTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "readingStatusPending": "Pendiente",
+  "readingStatusReading": "Leyendo",
+  "readingStatusPaused": "Pausado",
+  "readingStatusFinished": "Terminado",
+  "readingStatusAbandoned": "Abandonado",
+  "readingStatusRereading": "Releyendo",
+  "bookStatusAvailable": "Disponible",
+  "bookStatusLoaned": "Prestado",
+  "bookStatusPrivate": "Privado",
+  "bookStatusArchived": "Archivado",
+  "searchBooks": "Buscar libros...",
+  "readFilter": "Leídos",
+  "unreadFilter": "No leídos",
+  "allFilter": "Todos",
+  "save": "Guardar",
+  "close": "Cerrar",
+  "ok": "Aceptar",
+  "yes": "Sí",
+  "no": "No",
+  "error": "Error",
+  "errorStateLabel": "Error",
+  "loading": "Cargando...",
+  "errorGeneric": "Error: {error}",
+  "errorImporting": "Error al importar: {error}",
+  "@errorGeneric": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLoanDueSoonTitle": "Préstamo por vencer",
+  "notificationLoanDueSoonBody": "Tu préstamo vence en menos de una semana.",
+  "notificationLoanDueSoonBodyWithTitle": "El préstamo de \"{title}\" vence pronto.",
+  "@notificationLoanDueSoonBodyWithTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLoanExpiredTitle": "Préstamo vencido",
+  "notificationLoanExpiredBody": "Tu préstamo ha llegado a su fecha límite.",
+  "notificationLoanExpiredBodyWithTitle": "El préstamo de \"{title}\" ha expirado.",
+  "@notificationLoanExpiredBodyWithTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLoanRequestTitle": "Nueva solicitud de préstamo",
+  "notificationLoanRequestFallback": "{name} solicitó un préstamo.",
+  "@notificationLoanRequestFallback": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLoanRequestWithTitle": "{name} quiere pedir prestado \"{title}\".",
+  "@notificationLoanRequestWithTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLoanCancelledTitle": "Solicitud de préstamo cancelada",
+  "notificationLoanCancelledFallback": "{name} canceló la solicitud de préstamo.",
+  "@notificationLoanCancelledFallback": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLoanCancelledWithTitle": "{name} canceló la solicitud para \"{title}\".",
+  "@notificationLoanCancelledWithTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLoanRejectedTitle": "Solicitud de préstamo rechazada",
+  "notificationLoanRejectedFallback": "{name} rechazó tu solicitud de préstamo.",
+  "@notificationLoanRejectedFallback": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLoanRejectedWithTitle": "{name} rechazó tu solicitud para \"{title}\".",
+  "@notificationLoanRejectedWithTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLoanAcceptedTitle": "Préstamo aceptado",
+  "notificationLoanAcceptedFallback": "{name} aceptó tu solicitud de préstamo.",
+  "@notificationLoanAcceptedFallback": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLoanAcceptedWithTitle": "{name} aceptó tu solicitud para \"{title}\".",
+  "@notificationLoanAcceptedWithTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLoanReturnedTitle": "Préstamo marcado como devuelto",
+  "notificationLoanReturnedFallback": "{name} marcó el préstamo como devuelto.",
+  "@notificationLoanReturnedFallback": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLoanReturnedWithTitle": "{name} marcó como devuelto \"{title}\".",
+  "@notificationLoanReturnedWithTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationReturnReminderTitle": "Confirmación pendiente",
+  "notificationReturnReminderFallback": "Recordatorio para confirmar devolución.",
+  "notificationReturnReminderWithTitle": "Recordatorio: Por favor confirma la devolución de \"{title}\".",
+  "@notificationReturnReminderWithTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "loanManualRegistered": "Préstamo manual registrado.",
+  "loanExternalRegistered": "Préstamo externo registrado.",
+  "loanRequestSent": "Solicitud enviada.",
+  "loanRequestCancelled": "Solicitud cancelada.",
+  "loanRequestRejected": "Solicitud rechazada.",
+  "loanRequestAccepted": "Préstamo aceptado.",
+  "loanMarkedReturned": "Préstamo marcado como devuelto.",
+  "loanMarkedExpired": "Préstamo marcado como expirado.",
+  "loanReturnConfirmed": "Devolución confirmada.",
+  "loanReminderSent": "Recordatorio enviado.",
+  "errorLoanDueDatePast": "La fecha de devolución no puede ser anterior a hoy.",
+  "errorLoanCancelledByOther": "El usuario canceló la solicitud antes de que pudieras aceptarla.",
+  "errorLoanAlreadyActive": "Este libro ya ha sido prestado a otra persona.",
+  "errorLoanInvalidState": "La solicitud ya no es válida (quizás ya fue aceptada o rechazada).",
+  "groupCreated": "Grupo creado.",
+  "groupUpdated": "Grupo actualizado.",
+  "groupDeleted": "Grupo eliminado.",
+  "ownershipTransferred": "Propiedad transferida.",
+  "memberAdded": "Miembro añadido.",
+  "roleUpdated": "Rol actualizado.",
+  "memberRemoved": "Miembro eliminado.",
+  "invitationCreated": "Invitación creada.",
+  "invitationCancelled": "Invitación cancelada.",
+  "invitationAccepted": "Invitación aceptada.",
+  "invitationUpdated": "Invitación actualizada.",
+  "joinedGroup": "Te uniste al grupo.",
+  "notificationGroupUpdatedTitle": "Grupo \"{name}\" actualizado",
+  "@notificationGroupUpdatedTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationGroupUpdatedMessage": "Se han realizado cambios en los detalles del grupo.",
+  "notificationGroupDeletedTitle": "Grupo eliminado",
+  "notificationGroupDeletedMessage": "El grupo \"{name}\" ha sido disuelto.",
+  "@notificationGroupDeletedMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationGroupMemberJoinedTitle": "Nuevo miembro en \"{name}\"",
+  "@notificationGroupMemberJoinedTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationGroupMemberJoinedMessage": "{name} se unió al grupo.",
+  "@notificationGroupMemberJoinedMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationGroupMemberLeftTitle": "Miembro salió de \"{name}\"",
+  "@notificationGroupMemberLeftTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationGroupMemberLeftMessage": "{name} dejó el grupo.",
+  "@notificationGroupMemberLeftMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationGroupMemberJoinedByCodeMessage": "{name} se unió por código.",
+  "@notificationGroupMemberJoinedByCodeMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "userFallback": "Usuario {id}",
+  "@userFallback": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "statusRequested": "Solicitado",
+  "statusRequestedCaption": "Solicitud pendiente de aprobación",
+  "statusOnLoan": "En préstamo",
+  "statusOnLoanCaption": "Préstamo activo",
+  "statusAvailable": "Disponible",
+  "statusUnavailable": "No disponible",
+  "tooltipViewMembers": "Ver miembros",
+  "tooltipSortBy": "Ordenar por",
+
+  "filterHideRead": "Ocultar leídos",
+  "filterIncludeUnavailable": "Incluir no disponibles",
+  "errorLoadingLibrary": "No pudimos cargar tu biblioteca.",
+  "errorLoadingSharedBooksGeneric": "No pudimos cargar los libros compartidos.",
+  "emptySearchTitle": "Sin resultados para tu búsqueda",
+  "emptySearchMessage": "Revisa el término ingresado o restablece los filtros para ver más libros.",
+  "actionClearSearch": "Limpiar búsqueda",
+  "emptyMemberBooksTitle": "Sin libros de este miembro",
+  "emptyMemberBooksMessage": "Prueba con otra persona o vuelve a mostrar todos los libros disponibles.",
+  "actionRemoveFilter": "Quitar filtro",
+  "emptyDiscoverTitle": "Todavía no hay libros para descubrir",
+  "emptyDiscoverMessage": "Cuando otros miembros compartan ejemplares compatibles, los verás listados aquí.",
+  "actionUpdateList": "Actualizar lista",
+  "bookNoTitle": "Libro sin título",
+  "bookPages": "{count} páginas",
+  "@bookPages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noReviewsYet": "Nadie ha opinado todavía",
+  "reviewCount": "{count, plural, =1{1 opinión} other{{count} opiniones}}",
+  "@reviewCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bookOwner": "Propietario: {name}",
+  "@bookOwner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bookFormatPhysical": "Físico",
+  "bookFormatDigital": "Digital",
+  "bookNoDescription": "Este libro no tiene una descripción añadida.",
+  "actionsTitle": "Acciones",
+  "reservedBy": "Reservado por {name}",
+  "@reservedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "loanPendingApproval": "pendiente de aprobación",
+  "loanInProgress": "en curso",
+  "loanStatusMessage": "El préstamo está {status}. Podrás solicitarlo cuando vuelva a estar disponible.",
+  "@loanStatusMessage": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLocalSessionRequired": "Necesitas iniciar sesión local.",
+  "errorLocalSessionMessage": "Solo las personas registradas localmente pueden solicitar préstamos.",
+  "pendingRequestTitle": "Solicitud pendiente",
+  "pendingRequestFrom": "Tienes una solicitud de {name} para este libro.",
+  "@pendingRequestFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "actionAcceptRequest": "Aceptar solicitud",
+  "actionRejectRequest": "Rechazar",
+  "actionBorrow": "Pedir prestado",
+  "actionAddToLibrary": "Añadir a mi biblioteca",
+  "actionCancelRequest": "Cancelar solicitud",
+  "alreadyRequestedMessage": "Ya enviaste una solicitud para este libro y está {status}.",
+  "@alreadyRequestedMessage": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "bookNotAvailableMessage": "Este libro no está disponible en este momento.",
+  "errorLoadingBook": "No pudimos cargar este libro.",
+  "warningSelectOwner": "Por favor, selecciona un dueño primero.",
+  "ownerSelectorLabel": "Disponible a través de {count, plural, =1{1 persona} other{{count} personas}}:",
+  "@ownerSelectorLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "me": "Mí (propietario)",
+  "availableNow": "Disponible ahora",
+  "notInLibrary": "No está en tu biblioteca",
+  "opinar": "Opinar",
+  "edit": "Editar",
+  "dialogCancelRequestTitle": "¿Cancelar solicitud?",
+  "dialogCancelRequestMessage": "¿Estás seguro de que quieres cancelar esta solicitud de préstamo?",
+  "dialogRejectRequestTitle": "¿Rechazar solicitud?",
+  "dialogRejectRequestMessage": "¿Estás seguro de que quieres rechazar esta solicitud de préstamo?",
+  "dialogAddToLibraryTitle": "¿Añadir a mi biblioteca?",
+  "dialogAddToLibraryMessage": "¿Seguro que quieres pasar este libro a tu biblioteca personal?",
+  "errorOriginalMetadataNotFound": "No se encontraron los metadatos del libro original",
+  "bookAddedToLibrary": "\"{title}\" añadido a tu biblioteca",
+  "@bookAddedToLibrary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "errorAlreadyInLibrary": "Ya tienes este libro en tu biblioteca",
+  "errorAddingToLibrary": "Error al añadir a la biblioteca: {error}",
+  "@errorAddingToLibrary": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "userUnknown": "Usuario desconocido",
+  "selectOwnerTitle": "¿A quién quieres pedírselo?",
+  "addedFromGroup": "Añadido desde un grupo",
+  "actionRequestLoan": "Solicitar préstamo",
+  "unknown": "Desconocido",
+  "groupLibrarian": "Lector@ Maest@: {name} (Dueño)",
+  "@groupLibrarian": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "lastUpdate": "Última actualización: {date}",
+  "@lastUpdate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "tooltipSyncGroup": "Sincronizar grupo",
+  "actionEditGroup": "Editar grupo",
+  "actionManageMembers": "Gestionar miembros",
+  "actionManageInvitations": "Gestionar invitaciones",
+  "actionViewMembers": "Ver miembros",
+  "actionTransferOwnership": "Transferir propiedad",
+  "actionDeleteGroup": "Eliminar grupo",
+  "actionLeaveGroup": "Salir del grupo",
+  "tooltipGroupActions": "Acciones del grupo",
+  "dialogTransferOwnershipTitle": "¿Transferir propiedad?",
+  "dialogTransferOwnershipMessage": "¿Estás seguro de que quieres transferir la propiedad del grupo a {name}?",
+  "@dialogTransferOwnershipMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dialogDeleteGroupTitle": "¿Borrar grupo?",
+  "dialogDeleteGroupMessage": "¿Estás seguro de que quieres borrar el grupo \"{name}\"? Esta acción no se puede deshacer.",
+  "@dialogDeleteGroupMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dialogLeaveGroupTitle": "¿Salir del grupo?",
+  "dialogLeaveGroupMessage": "¿Estás seguro de que quieres salir del grupo \"{name}\"?",
+  "@dialogLeaveGroupMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errorUnexpected": "Ocurrió un error inesperado",
+  "successGroupDeleted": "Grupo borrado con éxito",
+  "successGroupLeft": "Has salido del grupo",
+  "successOwnershipTransferred": "Propiedad transferida a {name}",
+  "@successOwnershipTransferred": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "successGroupUpdated": "Grupo actualizado correctamente",
+  "errorUpdatingGroup": "Error al actualizar grupo: {error}",
+  "@errorUpdatingGroup": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorNoOtherMembers": "No hay otros miembros a quienes transferir",
+  "errorTransferringOwnership": "Error al transferir propiedad: {error}",
+  "@errorTransferringOwnership": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorDeletingGroup": "Error al eliminar grupo: {error}",
+  "@errorDeletingGroup": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLeavingGroup": "Error al salir del grupo: {error}",
+  "@errorLeavingGroup": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "actionTransfer": "Transferir",
+  "actionDelete": "Eliminar",
+  "actionLeave": "Salir",
+  "statMembers": "Miembros",
+  "statBooks": "Libros",
+  "statAvailable": "Libres",
+  "contributionTitle": "Tu aporte al grupo",
+  "contributionMessage": "Has compartido {count} libros y hay {activeLoans} en préstamo.",
+  "@contributionMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "activeLoans": {
+        "type": "int"
+      }
+    }
+  },
+  "actionCreateInvitation": "Crear invitación",
+  "noPendingInvitations": "No hay invitaciones pendientes",
+  "invitationCodeLabel": "Código: {code}",
+  "@invitationCodeLabel": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "invitationExpiresLabel": "Expira: {date}",
+  "@invitationExpiresLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "successInvitationCreated": "Invitación creada correctamente",
+  "errorCreatingInvitation": "Error al crear invitación: {error}",
+  "@errorCreatingInvitation": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shareInvitationMessage": "Te envío esta invitación para unirte a mi grupo de lectores: {code}",
+  "@shareInvitationMessage": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "shareInvitationSubject": "Invitación a grupo de lectores",
+  "errorSharing": "Error al compartir: {error}",
+  "@errorSharing": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "dialogCancelInvitationTitle": "Cancelar invitación",
+  "dialogCancelInvitationMessage": "¿Estás seguro de cancelar esta invitación?",
+  "actionCancelInvitationConfirm": "Sí, cancelar",
+  "successInvitationCancelled": "Invitación cancelada",
+  "errorCancellingInvitation": "Error al cancelar invitación: {error}",
+  "@errorCancellingInvitation": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noLabel": "No",
+  "yesLabel": "Sí",
+  "invitationsHeader": "Invitaciones",
+  "starMemberTooltip": "Miembro Estrella (Máxima actividad)",
+  "badgeBibliophile": "Bibliófilo",
+  "badgeCurator": "Curador",
+  "badgeLibrarian": "Bibliotecario",
+  "badgeActiveReader": "Lector Activo",
+  "badgeGenerous": "Generoso",
+  "actionMakeAdmin": "Hacer admin",
+  "actionMakeMember": "Hacer miembro",
+  "roleOwner": "Propietario",
+  "roleAdmin": "Administrador",
+  "roleMember": "Miembro",
+  "successMemberRemoved": "Miembro eliminado",
+  "successRoleUpdated": "Rol actualizado",
+  "selectNewOwnerTitle": "Seleccionar nuevo propietario",
+  "excludedByFilter": "{count, plural, =1{1 libro excluido} other{{count} libros excluidos}} por el filtro de género · {passing} visibles",
+  "@excludedByFilter": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "passing": {
+        "type": "int"
+      }
+    }
+  },
+  "actionCreateGroup": "Crear grupo",
+  "actionJoinByCode": "Unirse por código",
+  "syncGroupsTitle": "Sincroniza tus grupos",
+  "syncGroupsMessage": "Conecta con Supabase para traer tus comunidades, miembros y libros compartidos.",
+  "actionSyncNow": "Sincronizar ahora",
+  "errorLoadingGroups": "No pudimos cargar tus grupos.",
+  "actionRetrySync": "Reintentar sincronización",
+  "errorCreatingGroup": "No se pudo crear el grupo: {error}",
+  "@errorCreatingGroup": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "thematicGroupTitle": "Grupo temático",
+  "thematicGroupMessage": "Este grupo tiene un filtro activo de géneros: {genres}.\n\nSolo los libros físicos de esos géneros serán visibles en este grupo.",
+  "@thematicGroupMessage": {
+    "placeholders": {
+      "genres": {
+        "type": "String"
+      }
+    }
+  },
+  "actionGotIt": "Entendido",
+  "errorSyncing": "Error de sincronización: {error}",
+  "@errorSyncing": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "syncCompleted": "Sincronización completada.",
+  "joinGroupTitle": "Unirse a grupo",
+  "groupCodeLabel": "Código de grupo",
+  "successJoinedGroup": "¡Te has unido al grupo exitosamente!",
+  "pleaseEnterCode": "Por favor ingresa un código",
+  "actionJoin": "Unirse",
+  "errorInvalidCode": "El código no es válido o ya expiró. Verifícalo e intenta de nuevo.",
+  "coachMarkDiscoverShareTitle": "Comparte tus libros",
+  "coachMarkDiscoverShareDesc": "Publica ejemplares para que tu grupo pueda solicitarlos rápidamente.",
+  "coachMarkDiscoverFiltersTitle": "Filtra resultados",
+  "coachMarkDiscoverFiltersDesc": "Usa estos filtros para ver libros de grupos o propietarios concretos.",
+  "coachMarkDetailRequestTitle": "Solicita un préstamo",
+  "coachMarkDetailRequestDesc": "Desde aquí puedes pedir prestar el libro y coordinar la entrega.",
+  "coachMarkGroupInviteTitle": "Gestiona invitaciones",
+  "coachMarkGroupInviteDesc": "Invita a nuevas personas o revisa solicitudes pendientes de tu grupo.",
+  "actionNext": "Siguiente",
+  "actionDone": "Listo",
+  "actionSkip": "Saltar",
+  "actionCreateGroupDialog": "Crear grupo",
+  "groupNameLabel": "Nombre del grupo",
+  "errorInvalidGroupName": "Introduce un nombre válido.",
+  "groupDescriptionLabel": "Descripción (opcional)",
+  "allowedGenresLabel": "Géneros permitidos",
+  "optionalLabel": "(opcional)",
+  "genreFilterExplanation": "Si eliges géneros, solo los libros de esos géneros serán visibles en este grupo. Sin selección, se muestran todos.",
+  "genreChangeLaterHint": "Puedes cambiar los géneros más tarde desde el menú del grupo.",
+  "actionSave": "Guardar",
+  "actionCreate": "Crear",
+  "noActiveLoansInGroup": "No tienes préstamos activos en este grupo.",
+  "yourLoansHeader": "Tus préstamos",
+  "errorLoadingLoans": "Error cargando préstamos: {error}",
+  "@errorLoadingLoans": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorIdentifyingBorrower": "No pudimos identificar al solicitante.",
+  "successLoanCancelled": "Solicitud cancelada.",
+  "errorCancellingLoan": "No se pudo cancelar la solicitud: {error}",
+  "@errorCancellingLoan": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorIdentifyingOwner": "No pudimos identificar al propietario.",
+  "successLoanAccepted": "Préstamo aceptado.",
+  "errorAcceptingLoan": "No se pudo aceptar el préstamo: {error}",
+  "@errorAcceptingLoan": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "successLoanRejected": "Solicitud rechazada.",
+  "errorRejectingLoan": "No se pudo rechazar la solicitud: {error}",
+  "@errorRejectingLoan": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorIdentifyingActiveUser": "No pudimos identificar al usuario activo.",
+  "successLoanReturned": "Préstamo marcado como devuelto.",
+  "errorMarkingReturned": "No se pudo marcar como devuelto: {error}",
+  "@errorMarkingReturned": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorPreparingRequest": "No pudimos preparar la solicitud para este libro.",
+  "successLoanRequested": "Solicitud enviada.",
+  "errorRequestingLoan": "No se pudo enviar la solicitud: {error}",
+  "@errorRequestingLoan": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "bookLabel": "Libro",
+  "noDueDate": "Sin fecha límite",
+  "loanDatesLabel": "Inicio: {start} · Vence: {due}",
+  "@loanDatesLabel": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "due": {
+        "type": "String"
+      }
+    }
+  },
+  "loanParticipantsLabel": "Solicitante: {borrower} · Propietario: {owner}",
+  "@loanParticipantsLabel": {
+    "placeholders": {
+      "borrower": {
+        "type": "String"
+      },
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "actionAccept": "Aceptar",
+  "actionReject": "Rechazar",
+  "actionMarkReturned": "Marcar devuelto",
+  "bookStatsHeader": "Estadísticas de libros",
+  "totalLabel": "Total",
+  "availableLabel": "Disponibles",
+  "errorLoadingSharedBooks": "Error cargando libros compartidos: {error}",
+  "@errorLoadingSharedBooks": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "successSync": "Sincronización completada",
+  "discoverTabTitle": "Descubrir",
+  "discoverTabDesc": "Explora los grupos a los que perteneces y descubre libros disponibles para solicitar préstamo.",
+  "noGroupsTitle": "Aún no perteneces a ningún grupo",
+  "noGroupsMessage": "Crea un grupo o únete con un código para empezar a compartir libros y gestionar préstamos.",
+  "actionJoinOrSync": "Unirme o sincronizar",
+  "actionRetry": "Reintentar",
+  "onboardingSlide1Title": "Tu propia colección",
+  "onboardingSlide1Message": "Cada libro cuenta una historia. Preserva las tuyas, añade notas y mantén viva la memoria de tus lecturas.",
+  "onboardingSlide2Title": "Círculos de Lectura",
+  "onboardingSlide2Message": "Donde las historias se encuentran. Únete a comunidades y descubre bibliotecas compartidas con otros lectores.",
+  "onboardingSlide3Title": "El viaje del libro",
+  "onboardingSlide3Message": "Sigue el rastro de cada ejemplar prestado. Gestiona devoluciones y comparte el conocimiento con confianza.",
+  "onboardingSlide4Title": "Crónica en la nube",
+  "onboardingSlide4Message": "Tu catálogo se preserva en Supabase, disponible siempre para continuar la historia desde cualquier lugar.",
+  "actionStartChronicle": "Comenzar Crónica",
+  "actionNextPage": "Siguiente Página",
+  "actionSkipPrologue": "Saltar Prólogo",
+  "welcomeToApp": "¡Listo! Bienvenido a Book Sharing.",
+  "stepSkippedHint": "Paso omitido. Puedes configurarlo más tarde desde la ayuda.",
+  "errorSyncingAccount": "Estamos terminando de sincronizar tu cuenta. Intenta en unos segundos.",
+  "groupAlreadyExists": "Ya tienes un grupo llamado \"{name}\".",
+  "@groupAlreadyExists": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "successGroupCreatedWizard": "Grupo \"{name}\" creado correctamente.",
+  "@successGroupCreatedWizard": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCreatingGroupWizard": "No se pudo crear el grupo: {error}",
+  "@errorCreatingGroupWizard": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorJoiningGroupWizard": "No se pudo unir al grupo: {error}",
+  "@errorJoiningGroupWizard": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingOnboarding": "No pudimos cargar el estado del onboarding.",
+  "onboardingWizardTitle": "Comienza tu historia",
+  "actionSkipIntro": "Saltar Introducción",
+  "actionSealPact": "Sellar Pacto",
+  "actionContinueWizard": "Continuar",
+  "actionSkipChapter": "Omitir Capítulo",
+  "wizardStep1Title": "Capítulo 1: La Fundación",
+  "wizardStep1Subtitle": "Crea un círculo para compartir tus volúmenes.",
+  "wizardStep1Content": "Un grupo te permite compartir libros con otros miembros. Puedes crear uno nuevo ahora o hacerlo más tarde.",
+  "syncingAccountTitle": "Sincronizando tu cuenta...",
+  "syncingAccountSubtitle": "En cuanto terminemos podrás crear grupos.",
+  "groupNameHint": "Ej. Club de lectura Aficionados",
+  "errorGroupNameRequired": "Introduce un nombre para el grupo.",
+  "learnAboutGroupsAction": "Aprender sobre grupos",
+  "wizardStep2Title": "Capítulo 2: La Alianza",
+  "wizardStep2Subtitle": "Únete a un círculo existente mediante código.",
+  "wizardStep2Content": "Si has recibido una invitación, este es el momento de responder al llamado.",
+  "syncingAccountSubtitleJoin": "Necesitamos tu usuario activo para validar el código.",
+  "labelInvitationCode": "Código de invitación",
+  "invitationCodeHint": "Ej. 123e4567-e89b-12d3-a456-426614174000",
+  "errorInvalidCodeWizard": "Introduce un código válido o pulsa \"Omitir paso\".",
+  "errorCodeTooShort": "El código es demasiado corto.",
+  "wizardStep3Title": "Epílogo: Confirmaciones",
+  "wizardStep3Subtitle": "Revisa lo escrito antes de cerrar el libro.",
+  "whatIsGroupTitle": "¿Qué es un grupo?",
+  "whatIsGroupContent": "Los grupos reúnen a tus amigos o familiares para compartir bibliotecas locales. Desde aquí podrás invitar miembros, gestionar préstamos y llevar un historial conjunto.",
+  "whatIsGroupContent2": "Puedes crear varios grupos: uno para tu familia, otro para tu club de lectura, etc. Cada grupo tiene sus propias invitaciones y catálogos.",
+  "statusCompleted": "Completado",
+  "statusPending": "Pendiente",
+  "almostDoneTitle": "¡Ya casi terminamos!",
+  "onboardingSummaryMessage": "Estos son los pasos que configuraste. Puedes volver atrás si quieres ajustar algo antes de empezar.",
+  "profileConfiguredTitle": "Perfil configurado",
+  "userLabel": "Usuario: {name}",
+  "@userLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "firstGroupTitle": "Primer grupo",
+  "firstGroupSubtitle": "Creaste tu comunidad principal.",
+  "joinByCodeTitle": "Unión por código",
+  "joinByCodeSubtitle": "Te uniste a un grupo existente.",
+  "finishOnboardingMessage": "Al pulsar “Finalizar” sincronizaremos tu información y te llevaremos a tu biblioteca.",
+  "notificationLoanApproved": "Préstamo aceptado",
+  "notificationLoanRejected": "Solicitud rechazada",
+  "notificationLoanCancelled": "Solicitud cancelada",
+  "notificationLoanReturned": "Préstamo devuelto",
+  "notificationLoanExpired": "Préstamo vencido",
+  "notificationLoanDueSoon": "Préstamo por vencer",
+  "notificationMemberJoined": "Nuevo miembro en el grupo",
+  "notificationMemberLeft": "Miembro dejó el grupo",
+  "notificationGroupUpdated": "Grupo actualizado",
+  "notificationGroupDeleted": "Grupo eliminado",
+  "notificationLoanRequested": "Nueva solicitud de préstamo",
+  "actionMarkAsRead": "Marcar como leído",
+  "actionDismiss": "Descartar",
+  "noNotificationsToClear": "No hay notificaciones para limpiar.",
+  "errorNoUserToClearNotifications": "Configura un usuario activo antes de limpiar.",
+  "successNotificationsCleared": "Notificaciones borradas.",
+  "errorClearingNotifications": "No se pudieron borrar las notificaciones: {error}",
+  "@errorClearingNotifications": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsTitle": "Notificaciones",
+  "actionClearAll": "Vaciar",
+  "actionClose": "Cerrar",
+  "emptyLoansTitle": "Sin actividad de préstamos",
+  "emptyLoansMessage": "Tus solicitudes y libros prestados aparecerán aquí.",
+  "emptyLoansAction": "Registrar préstamo manual",
+  "noNotificationsTitle": "Sin notificaciones",
+  "noNotificationsMessage": "Aquí verás las novedades sobre tus préstamos y solicitudes.",
+  "errorLoadingNotifications": "No se pudieron cargar",
+  "notificationsTooltip": "{count, plural, =0{Notificaciones} =1{Tienes 1 notificación} other{Tienes {count} notificaciones}}",
+  "syncingLabel": "Sincronizando...",
+  "defaultSyncError": "Se ha encontrado un error.",
+  "localChangesReadySync": "Cambios locales listos para sincronizar.",
+  "clubDetailProposals": "Propuestas",
+  "clubDetailMembers": "Miembros",
+  "clubDetailReadingNow": "LEYENDO AHORA",
+  "clubDetailNoActiveBook": "No hay libro activo",
+  "clubDetailAddBook": "Añadir Libro",
+  "clubDetailDiscussion": "Discusión",
+  "clubDetailUpdateProgress": "Actualizar",
+  "clubDetailNoProposals": "No hay propuestas activas",
+  "clubDetailProposalUnavailable": "Detalles no disponibles para este libro propuesto",
+  "clubDetailUnknownAuthor": "Autor desconocido",
+  "clubDetailSection": "Sección {current}/{total}",
+  "@clubDetailSection": {
+    "placeholders": {
+      "current": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "clubMembersTitle": "Miembros del Club",
+  "clubMembersEmpty": "No hay miembros (esto es raro)",
+  "clubMembersKick": "Expulsar",
+  "clubMembersKickConfirmTitle": "¿Expulsar a {username}?",
+  "@clubMembersKickConfirmTitle": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "clubMembersKickConfirmMessage": "Esta acción eliminará al usuario del club. ¿Estás seguro?",
+  "clubMembersKickSuccess": "Usuario expulsado",
+  "clubMembersRoleOwner": "Admin",
+  "clubMembersRoleMember": "Miem.",
+  "clubProposalsTitle": "Propuestas de Lectura",
+  "clubProposalsEmpty": "No hay propuestas activas",
+  "clubProposalsPropose": "Proponer",
+  "clubProposalsLoginRequired": "Debes iniciar sesión para votar",
+  "clubProposalsChapters": "{count} caps",
+  "@clubProposalsChapters": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "clubSettingsTitle": "Configuración del Club",
+  "clubSettingsSaved": "Configuración guardada",
+  "clubSettingsName": "Nombre del Club",
+  "clubSettingsDescription": "Descripción",
+  "clubSettingsCity": "Lugar de reunión",
+  "clubSettingsFrequency": "Frecuencia de lectura",
+  "clubSettingsCustomFrequency": "Periodicidad Personalizada",
+  "clubSettingsCustomFrequencyDays": "Días asignados para leer cada sección",
+  "clubSettingsDeleteButton": "Eliminar Club",
+  "clubSettingsDeleteTitle": "¿Eliminar Club?",
+  "clubSettingsDeleteMessage": "Esta acción no se puede deshacer. Todos los datos del club serán eliminados.",
+  "clubSettingsDeleteSuccess": "Club eliminado",
+  "clubListCreateGroup": "Crear Grupo",
+  "clubListJoinByCode": "Unirse por código",
+  "clubListEmpty": "Aún no tienes clubes de lectura",
+  "clubListJoinTitle": "Unirse a Club",
+  "clubListJoinIdLabel": "ID del Club",
+  "clubListJoinIdHint": "Ingresa el código UUID del club",
+  "sectionDiscussionLoginRequired": "Debes iniciar sesión para comentar",
+  "sectionDiscussionTitle": "Discusión Sección {number}",
+  "@sectionDiscussionTitle": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "sectionDiscussionFirstComment": "Sé el primero en comentar",
+  "sectionDiscussionHint": "Escribe un comentario...",
+  "lockScreenTitle": "Desbloquea tu biblioteca",
+  "lockScreenSubtitle": "Introduce tu llave para acceder",
+  "lockScreenBiometric": "Usar huella",
+  "lockScreenThrottled": "La cerradura está atascada temporalmente. Espera un momento.",
+  "pinSetupNameLabel": "Nombre o Alias",
+  "pinSetupNameHint": "Ej. El Bibliotecario",
+  "pinSetupPinLabel": "Forja tu llave maestra (4 dígitos)",
+  "pinSetupConfirmLabel": "Confirma la llave",
+  "pinSetupExistingAccount": "¿Ya tienes una cuenta? Recupérala aquí",
+  "loginTitle": "Inicio con usuario existente",
+  "loginUsernameLabel": "Nombre de usuario",
+  "loginUsernameHint": "Ej. ana_lectora",
+  "loginSubmit": "Acceder",
+  "loginBack": "Volver",
+  "addBookToClubTitle": "Añadir Libro",
+  "addBookToClubSelectBook": "Selecciona un libro",
+  "addBookToClubInvalidChapters": "Ingresa un número válido de capítulos",
+  "addBookToClubAdded": "Libro añadido al club",
+  "addBookToClubSearchHint": "Buscar libro (Local o Google Books)",
+  "addBookToClubNoResults": "No se encontraron libros",
+  "addBookToClubLocalSection": "En tu biblioteca",
+  "addBookToClubGoogleSection": "En Google Books",
+  "addBookToClubChaptersLabel": "Número de Capítulos",
+  "addBookToClubSectionMode": "Modo de Secciones",
+  "addBookToClubStartDate": "Fecha de Inicio",
+  "addBookToClubSelectDate": "Seleccionar",
+  "createClubTitle": "Crear Club de Lectura",
+  "createClubSuccess": "Club creado exitosamente",
+  "createClubNameLabel": "Nombre del Club",
+  "createClubDescriptionLabel": "Descripción",
+  "createClubCityLabel": "Ciudad",
+  "createClubFrequencyLabel": "Frecuencia de Lectura",
+  "createClubCustomFrequency": "Periodicidad Personalizada",
+  "createClubCustomDays": "Días asignados para leer cada sección",
+  "proposeBookTitle": "Proponer Libro",
+  "proposeBookSuccess": "Libro propuesto exitosamente",
+  "proposeBookSelectBook": "Selecciona un libro",
+  "proposeBookSearchHint": "Buscar libro (Local o Google Books)",
+  "proposeBookNoResults": "No se encontraron libros",
+  "proposeBookLocalSection": "En tu biblioteca",
+  "proposeBookGoogleSection": "En Google Books",
+  "proposeBookChaptersLabel": "Número de Capítulos",
+  "updateProgressTitle": "Actualizar Progreso",
+  "updateProgressSectionLabel": "¿Por qué sección vas?",
+  "updateProgressStatusLabel": "Estado de lectura",
+  "bookFormGenres": "Géneros",
+  "bookFormAddGenre": "Añadir género",
+  "bookFormTitle": "Título",
+  "bookFormAuthor": "Autor",
+  "bookFormIsbn": "ISBN",
+  "bookFormIsbnOptional": "ISBN (opcional)",
+  "bookFormAuthorOptional": "Autor (opcional)",
+  "bookFormBarcode": "Código barras",
+  "bookFormScanBarcode": "Escanear código",
+  "bookFormPages": "Páginas",
+  "bookFormPageHint": "Ej: 350",
+  "bookFormYear": "Año publicación",
+  "bookFormYearHint": "Ej: 2020",
+  "bookFormNotes": "Notas",
+  "bookFormShareBook": "Compartir libro",
+  "bookFormAvailable": "Disponible",
+  "bookFormPrivate": "Privado",
+  "bookFormLoaned": "Prestado",
+  "bookFormClearForm": "Limpiar formulario",
+  "bookFormStatus": "Estado del libro",
+  "bookFormReadingStatus": "Estado de lectura",
+  "bookFormDuplicateTitle": "Libro duplicado",
+  "bookFormUnderstood": "Entendido",
+  "bookFormDeleteTitle": "Eliminar libro",
+  "bookFormDeleteMessage": "¿Seguro que deseas eliminar \"{title}\"?",
+  "@bookFormDeleteMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "bookFormSelectGenresTitle": "Seleccionar géneros",
+  "bookFormSearchGenre": "Buscar género...",
+  "bookFormNoActiveUser": "Necesitas un usuario activo para compartir tus libros.",
+  "bookDetails": "Detalles del libro",
+  "bookDetailsSynopsis": "Sinopsis",
+  "bookDetailsWhoRead": "¿Quién lo ha leído?",
+  "bookDetailsOpine": "Opinar",
+  "bookDetailsNoOpinions": "Nadie ha opinado todavía",
+  "bookDetailsSeeAllOpinions": "Ver todas las opiniones",
+  "bookDetailsStarted": "Empezado",
+  "bookDetailsFinished": "Terminado",
+  "bookDetailsDuration": "Duración",
+  "bookDetailsPagesRead": "Páginas leídas",
+  "bookDetailsAvgRhythm": "Ritmo medio",
+  "bookDetailsDigital": "Digital",
+  "bookDetailsPhysical": "Físico",
+  "timelineTitle": "Línea temporal de lectura",
+  "timelineUpdateProgress": "Actualizar progreso",
+  "timelineEmpty": "Aún no has registrado ningún progreso",
+  "timelineAddFirst": "Añade tu primer hito de lectura",
+  "timelineDeleteTitle": "Eliminar evento",
+  "timelineDeleteMessage": "¿Estás seguro de eliminar este evento de la línea temporal?",
+  "timelineEntryEdit": "Editar",
+  "timelineEntryDelete": "Eliminar",
+  "loanNoActiveLoans": "No tienes préstamos pendientes o en curso en este momento.",
+  "loanLenderName": "Prestamista: {name}",
+  "@loanLenderName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "loanBorrowerName": "Solicitante: {name}",
+  "@loanBorrowerName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "loanStatusLabel": "Estado: {status}",
+  "@loanStatusLabel": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "loanRequestedDate": "Solicitado: {date}",
+  "@loanRequestedDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "loanDueDateValue": "Vence: {date}",
+  "@loanDueDateValue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "loanNavigationDetail": "Navegación a detalle de préstamo",
+  "loanMarkReturned": "Marcar devuelto",
+  "loanMarkReturnedSuccess": "Préstamo marcado como devuelto",
+  "loanStatusRequested": "Solicitado",
+  "loanStatusActive": "En curso",
+  "loanStatusReturned": "Devuelto",
+  "loanStatusCancelled": "Cancelado",
+  "loanStatusRejected": "Rechazado",
+  "loanStatusCompleted": "Completado",
+  "loanStatusExpired": "Expirado",
+  "loanReturn": "Devolución",
+  "loanReturnDoubleConfirm": "Cuando se complete la devolución, ambos debéis confirmarlo.",
+  "loanConfirmReturn": "Confirmar devolución",
+  "loanWaitingFor": "Esperando a {name}",
+  "@loanWaitingFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "loanAlreadyConfirmed": "Ya has confirmado la devolución el {date}.",
+  "@loanAlreadyConfirmed": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "loanForceFinish": "Forzar finalización",
+  "loanSendReminder": "Enviar recordatorio",
+  "loanOtherConfirmed": "¡{name} confirmó!",
+  "@loanOtherConfirmed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "loanFinishConfirmation": "Confirma que has recibido/entregado el libro para finalizar.",
+  "loanConfirmAndFinish": "Confirmar y finalizar",
+  "loanManualLabel": "(Préstamo manual)",
+  "loanInfoReceived": "Recibido de: {owner}\nVence: {dueDate}",
+  "@loanInfoReceived": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      },
+      "dueDate": {
+        "type": "String"
+      }
+    }
+  },
+  "loanInfoSent": "Prestado a: {borrower}\nPrestado de: {owner}\nVence: {dueDate}",
+  "@loanInfoSent": {
+    "placeholders": {
+      "borrower": {
+        "type": "String"
+      },
+      "owner": {
+        "type": "String"
+      },
+      "dueDate": {
+        "type": "String"
+      }
+    }
+  },
+  "you": "Tú",
+  "borrower": "Prestatario",
+  "user": "Usuario",
+  "someone": "Alguien",
+  "owner": "Propietario",
+  "unknownBook": "Libro desconocido",
+  "statsActivitySummary": "Resumen de Actividad",
+  "statsRealized": "Realizados",
+  "statsAccepted": "Aceptados",
+  "statsErrorLoadingWithDetail": "Error al cargar estadísticas: {error}",
+  "@statsErrorLoadingWithDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "stats30Days": "30 d",
+  "statsTotalYear": "Total año",
+  "wishlistTitle": "Lista de Deseos",
+  "wishlistEmpty": "Tu lista de deseos está vacía.",
+  "wishlistEmptySub": "Añade libros que quieras leer o comprar.",
+  "wishlistAddToLibrary": "Añadir a mi biblioteca",
+  "wishlistRemove": "Eliminar deseo",
+  "wishlistNew": "Nuevo deseo",
+  "wishlistDeleteConfirm": "¿Eliminar deseo?",
+  "wishlistDeleteMessage": "\"{title}\" se borrará de tu lista.",
+  "@wishlistDeleteMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "wishlistAlreadyHave": "¿Ya lo tienes?",
+  "wishlistMoveToLibraryConfirm": "¿Seguro que quieres pasar \"{title}\" a tu biblioteca personal? Se quitará de tu lista de deseos.",
+  "@wishlistMoveToLibraryConfirm": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "notYet": "Aún no",
+  "yesItsMine": "¡Sí, ya es mío!",
+  "wishlistDefaultDescription": "Añadido desde mi lista de deseos",
+  "wishlistAddedToLibrary": "\"{title}\" añadido a tu biblioteca personal.",
+  "@wishlistAddedToLibrary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "wishlistErrorMoving": "Error al mover a la biblioteca: {error}",
+  "@wishlistErrorMoving": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "bookFoundTitle": "📚 Encontrado: {title}",
+  "@bookFoundTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "bookNotFoundInfo": "No se encontró información para este código.",
+  "searchError": "Error al buscar: {error}",
+  "@searchError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "wishlistNewTitle": "Nuevo Deseo",
+  "bookAuthorOptional": "Autor (opcional)",
+  "isbnOptional": "ISBN (opcional)",
+  "wishlistNotesHint": "Notas / Por qué lo quieres",
+  "wishlistAddAction": "Añadir a deseos",
+  "zenModeNormal": "Modo Normal",
+  "zenModeNocturnal": "Modo Lectura Nocturna",
+  "remaining": "restante",
+  "endSessionAction": "TERMINAR SESIÓN",
+  "sessionCompleted": "Sesión completada",
+  "sessionDurationSummary": "{minutes} minutos dedicados a \"{title}\"",
+  "@sessionDurationSummary": {
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionLastPagePrompt": "¿En qué página te has quedado?",
+  "sessionLastPageHint": "Ej: 145",
+  "sessionNotesPrompt": "¿Algo que quieras recordar?",
+  "sessionNotesHint": "Ej: \"El capítulo con Maga me hizo llorar. Increíble.\"",
+  "sessionMarkFinished": "Marcar libro como terminado",
+  "sessionSaveOnly": "SOLO GUARDAR",
+  "sessionSaveAndView": "GUARDAR Y VER LIBRO",
+  "thisWeek": "Esta semana",
+  "timeLabel": "Tiempo",
+  "pagesLabel": "Páginas",
+  "pagesPerDayLabel": "Págs/día",
+  "thisMonth": "Este mes",
+  "finishedLabel": "Terminados",
+  "rhythmJourneyTitle": "Tu viaje lector",
+  "rhythmEmptyState": "El silencio antes de la historia...",
+  "securityResetConfirmTitle": "¿Eliminar PIN y salir de la cuenta?",
+  "securityResetConfirmMessage": "Se eliminarán TODOS los datos locales (libros, grupos, préstamos) y tendrás que iniciar sesión o configurar un nuevo usuario.",
+  "securityResetConfirmTip": "💡 Tip: Exporta tu biblioteca antes de continuar. Si tienes backups automáticos, búscalos en Descargas/BookSharing/backups.",
+  "securityResetAction": "Eliminar todo",
+  "securityResetSuccess": "Datos eliminados. Reinicia la app para configurar un nuevo usuario.",
+  "errorActiveSessionRequired": "Debes tener una sesión activa.",
+  "errorExportingLoans": "Error al exportar préstamos: {error}",
+  "@errorExportingLoans": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingTheme": "No pudimos cargar la preferencia de tema.",
+  "themeSystem": "Usar tema del sistema",
+  "themeLight": "Modo claro",
+  "themeDark": "Modo oscuro",
+  "googleBooksKeyConfigured": "API key configurada. Puedes buscar libros en Google Books.",
+  "googleBooksKeyNotConfigured": "Configura una API key para buscar libros en Google Books.",
+  "changeApiKey": "Cambiar API key",
+  "configApiKey": "Configurar API key",
+  "googleBooksKeyHelpTitle": "¿Cómo obtener una API key?",
+  "googleBooksKeyHelpSteps": "1. Ve a Google Cloud Console\\n2. Crea un nuevo proyecto o selecciona uno existente\\n3. Habilita la \"Books API\"\\n4. Crea credenciales tipo \"API key\"\\n5. Copia la clave y pégala aquí",
+  "googleBooksKeyDialogTitle": "Configurar API key de Google Books",
+  "googleBooksKeyDialogDesc": "Introduce tu API key de Google Books para poder buscar libros.",
+  "googleBooksKeyHint": "Pega tu API key aquí",
+  "googleBooksKeyValidationTip": "Puedes validar la API key antes de guardarla.",
+  "validateAndSave": "Validar y guardar",
+  "errorValidatingApiKey": "Error al validar API key: {error}",
+  "@errorValidatingApiKey": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiKeySavedSuccess": "API key guardada correctamente.",
+  "errorSavingApiKey": "Error al guardar API key: {error}",
+  "@errorSavingApiKey": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "googleBooksKeyDeleteTitle": "¿Eliminar API key de Google Books?",
+  "googleBooksKeyDeleteDesc": "Se eliminará la API key guardada. La búsqueda de libros en Google Books dejará de funcionar hasta que configures una nueva key.",
+  "apiKeyDeletedSuccess": "API key eliminada.",
+  "errorDeletingApiKey": "Error al eliminar API key: {error}",
+  "@errorDeletingApiKey": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupPermissionDesc": "Para guardar y restaurar backups en la carpeta de Descargas, necesitamos acceso a todos los archivos.\\n\\nPor favor, concede el permiso en la siguiente pantalla.",
+  "errorStoragePermissionRequired": "Se requiere permiso de almacenamiento para guardar el backup.",
+  "autoBackupEnabled": "Backup automático semanal activado",
+  "autoBackupDisabled": "Backup automático desactivado",
+  "errorChangingBackupConfig": "Error al cambiar configuración: {error}",
+  "@errorChangingBackupConfig": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "creatingBackup": "Creando copia de seguridad...",
+  "backupSavedAt": "Backup guardado en: {path}",
+  "@backupSavedAt": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCreatingBackup": "No se pudo crear el backup. Intenta de nuevo.",
+  "errorCreatingBackupDetail": "Error al crear backup: {error}",
+  "@errorCreatingBackupDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "restoreLatestBackupTitle": "¿Restaurar último backup automático?",
+  "restoreBackupWarning": "Esta acción reemplazará TODOS tus datos actuales con la copia de seguridad más reciente.",
+  "searchingBackups": "Buscando backups...",
+  "noBackupsFound": "No se encontraron backups automáticos.",
+  "restoringBackup": "Restaurando {filename}...",
+  "@restoringBackup": {
+    "placeholders": {
+      "filename": {
+        "type": "String"
+      }
+    }
+  },
+  "restoreComplete": "Restauración completada. Reiniciando...",
+  "errorRestoringBackup": "Error al restaurar: {error}",
+  "@errorRestoringBackup": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "restoreSpecificBackupTitle": "¿Restaurar este backup?",
+  "restore": "Restaurar",
+  "appRestartNote": "La aplicación se reiniciará automáticamente tras la restauración.",
+  "deleteAction": "Eliminar",
+  "permissionRequired": "Permiso requerido",
+  "continueLabel": "Continuar",
+  "warningLabel": "Advertencia",
+  "backupFileLabel": "Archivo: {filename}",
+  "@backupFileLabel": {
+    "placeholders": {
+      "filename": {
+        "type": "String"
+      }
+    }
+  },
+  "resettingDatabase": "Reseteando base de datos...",
+  "databaseResetSuccess": "Base de datos reseteada. Reiniciando app...",
+  "errorResettingDatabase": "Error al resetear la base de datos: {error}",
+  "@errorResettingDatabase": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteCoversTitle": "¿Borrar todas las portadas?",
+  "deleteCoversDesc": "Se eliminarán todas las imágenes de portada descargadas. Podrás volver a descargarlas manualmente desde la biblioteca.",
+  "coversDeletedCount": "Se eliminaron {count} portadas.",
+  "@coversDeletedCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "errorDeletingCovers": "Error al borrar portadas: {error}",
+  "@errorDeletingCovers": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importBooksDialogTitle": "Importar libros",
+  "importBooksDialogDesc": "Selecciona un archivo CSV o JSON para importar tus libros.",
+  "selectFile": "Seleccionar archivo",
+  "importSuccessCount": "Se importaron {count} libros correctamente",
+  "@importSuccessCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "importFailureCount": " ({count} fallidos)",
+  "@importFailureCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "importMoreErrors": " (y {count} más...)",
+  "@importMoreErrors": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "errorNoBooksImported": "No se pudo importar ningún libro",
+  "errorNoActiveUserImport": "No hay usuario activo para importar los libros.",
+  "errorUnsupportedFileFormat": "Formato de archivo no soportado",
+  "releaseNotesTitle": "¡Nuevos Capítulos!",
+  "versionLabel": "Versión {version}",
+  "@versionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "releaseNotesAction": "¡A seguir leyendo!",
+  "bookshelfSearchTooltip": "Buscar en mis lecturas",
+  "bookshelfThemeTooltip": "Personalizar estantería",
+  "bookshelfManageTooltip": "Gestionar títulos",
+  "bookshelfSearchHint": "Buscar por título o autor...",
+  "bookshelfCustomTitle": "Personalizar Estantería",
+  "bookshelfTabShelves": "Baldas",
+  "bookshelfTabWall": "Fondo",
+  "sortRecent": "Recientes",
+  "sortAlpha": "A → Z",
+  "sortAuthor": "Autor",
+  "sortPages": "Páginas",
+  "sortRating": "Valoración",
+  "shelfThemeClassic": "Clásica",
+  "shelfThemeModern": "Moderna",
+  "shelfThemeVintage": "Vintage",
+  "shelfThemeIndustrial": "Industrial",
+  "shelfThemePastel": "Pastel",
+  "wallThemePlaster": "Yeso",
+  "wallThemeBrick": "Ladrillo",
+  "wallThemePaper": "Papel",
+  "wallThemeWood": "Madera",
+  "wallThemeDark": "Oscuro",
+  "statsGeneralTitle": "Estadísticas generales",
+  "statsTotalBooks": "Libros totales",
+  "statsReadBooks": "Libros leídos",
+  "statsAvailable": "Disponibles",
+  "statsTotalLoans": "Préstamos totales",
+  "statsActiveLoans": "Préstamos activos",
+  "statsReturned": "Devueltos",
+  "statsExpired": "Expirados",
+  "statsViewReadingHistory": "Ver historial de lecturas",
+  "statsActiveLoansHeader": "Préstamos activos",
+  "statsTopBooksHeader": "Libros más prestados",
+  "statsNoTopBooksMessage": "Cuando registres préstamos aparecerán aquí tus libros más populares.",
+  "statsLoanCount": "Préstamos registrados: {count}",
+  "@statsLoanCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "statsErrorLoading": "No pudimos cargar las estadísticas.",
+  "statsRecommendationsTitle": "Recomendaciones para ti",
+  "statsUnknownAuthor": "Autor desconocido",
+  "loanManualTitle": "Nuevo Préstamo Manual",
+  "loanReceiveTitle": "Registrar libro prestado",
+  "loanReceiveDescription": "Registra un libro que alguien (fuera de la app) te ha prestado.",
+  "loanWhoLentIt": "¿Quién te lo prestó?",
+  "loanLenderNameRequired": "Nombre del propietario *",
+  "loanLenderNameRequiredError": "¿Quién es el guardián de este libro?",
+  "lenderLabel": "Propietario:",
+  "loanErrorRegister": "Error al registrar: {error}",
+  "@loanErrorRegister": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "isbnInvalid": "ISBN no válido",
+  "bookNotFound": "No se encontró el libro",
+  "searchPromptTitleOrIsbn": "Introduce título o ISBN",
+  "searchNoResults": "Sin resultados",
+  "searchSelectResult": "Selecciona un resultado",
+  "unknownAuthor": "Autor desconocido",
+  "permissionCameraDenied": "Permiso de cámara denegado",
+  "scanBarcode": "Escanear código",
+  "searching": "Buscando...",
+  "searchData": "Buscar datos",
+  "bookTitleRequired": "Título del libro *",
+  "bookTitleRequiredError": "¿Cómo se llama la historia?",
+  "loanBookToLend": "Libro a prestar",
+  "loanNoAvailableBooks": "No tienes libros disponibles para prestar.",
+  "loanSelectBook": "Selecciona un libro",
+  "loanErrorLoadingBooks": "Error cargando libros: {error}",
+  "@loanErrorLoadingBooks": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loanBorrowerData": "Datos del prestatario",
+  "loanFullName": "Nombre Completo",
+  "loanFullNameHint": "Ej. Juan Pérez",
+  "loanNameRequired": "El nombre es requerido",
+  "loanContactOptional": "Contacto (Opcional)",
+  "loanContactHint": "Teléfono, email o nota",
+  "loanDueDate": "Fecha de devolución",
+  "loanIndefinite": "Indefinido",
+  "loanNoDueDate": "Sin fecha límite",
+  "loanRegister": "Registrar Préstamo",
+  "loanRegisteredSuccess": "Préstamo registrado",
+  "bookLabel": "Libro:",
+  "borrowerLabel": "Prestatario:",
+  "dueLabel": "Vence:",
+  "understood": "Entendido",
+  "saving": "Guardando...",
+  "timelineStart": "Inicio",
+  "timelineProgress": "Progreso",
+  "timelinePause": "Pausa",
+  "timelineResume": "Reanudación",
+  "timelineFinish": "Finalizado",
+  "timelinePage": "Página {number}",
+  "@timelinePage": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "edit": "Editar",
+  "delete": "Eliminar",
+  "save": "Guardar",
+  "cancel": "Cancelar",
+  "close": "Cerrar",
+  "addTimelineDate": "Fecha",
+  "addTimelineCurrentPage": "Página actual (opcional)",
+  "addTimelineNote": "Nota personal (opcional)",
+  "addTimelineNoteHint": "Tus impresiones, pensamientos...",
+  "addTimelineInvalidPage": "Por favor, introduce un número de página válido",
+  "addTimelineEditTitle": "Editar progreso",
+  "addTimelineAddTitle": "Añadir progreso",
+  "addTimelineToday": "Hoy, {time}",
+  "@addTimelineToday": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "addTimelineYesterday": "Ayer, {time}",
+  "@addTimelineYesterday": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "addTimelineTotalPagesHint": "De {count} páginas",
+  "@addTimelineTotalPagesHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addTimelinePageNumberHint": "Número de página",
+  "addTimelineUpdateSuccess": "Progreso actualizado",
+  "addTimelineAddSuccess": "Progreso añadido",
+  "reviewDialogTitle": "¿Cómo recomendarías \"{title}\"?",
+  "@reviewDialogTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewDialogOptionalComment": "Escribe una reseña (opcional)",
+  "reviewDialogCommentHint": "Comparte tu opinión sobre este libro...",
+  "reviewDialogAdded": "Reseña añadida.",
+  "reviewDialogRecommendTitle": "¿A quién se lo recomiendas?",
+  "reviewDialogRecommendMessage": "Has dado una valoración positiva. ¿Quieres enviarle un mensaje a alguien para recomendárselo?",
+  "reviewDialogNotNow": "Ahora no",
+  "reviewDialogRecommend": "Recomendar",
+  "reviewDialogWriteTitle": "Escribe una reseña",
+  "reviewDialogByAuthor": "por {author}",
+  "@reviewDialogByAuthor": {
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewListEdit": "Editar reseña",
+  "readStatusFilterAll": "Todos los libros",
+  "readStatusFilterRead": "Leídos",
+  "readStatusFilterUnread": "No leídos",
+  "libraryEmpty": "Tu biblioteca está vacía",
+  "libraryEmptyMessage": "Registra tu primer libro para organizar préstamos y compartir lecturas con tu grupo.",
+  "libraryRegister": "Registrar libro",
+  "searchBarHint": "Buscar por título o autor...",
+  "exportCSV": "Exportar como CSV",
+  "exportJSON": "Exportar como JSON",
+  "exportPDF": "Exportar como PDF",
+  "export": "Exportar",
+  "exportNoBooks": "No hay libros para exportar.",
+  "exportError": "No se pudo exportar: {error}",
+  "@exportError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshMetadata": "Actualizar metadatos",
+  "refreshMetadataMessage": "Se buscarán portadas y datos faltantes (páginas, año, género) para tus libros.",
+  "refreshMetadataWaitMessage": "Se buscarán portadas y datos faltantes (páginas, año, género) para tus libros. Esto puede tardar varios minutos dependiendo de cuántos libros tengas.",
+  "refreshOnlyMissing": "Solo faltantes",
+  "refreshForceAll": "Forzar todo",
+  "refreshingMetadata": "Actualizando metadatos...",
+  "refreshMetadataNone": "Todos los libros ya tienen metadatos completos.",
+  "refreshMetadataSuccess": "Metadatos actualizados: {success} de {total}.",
+  "@refreshMetadataSuccess": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "refreshMetadataError": "Error al actualizar metadatos: {error}",
+  "@refreshMetadataError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "coverGallery": "Galería",
+  "coverCamera": "Cámara",
+  "coverDelete": "Eliminar",
+  "readingStatusTitle": "Estado de lectura",
+  "readingStatusChanged": "Estado cambiado a: {status}",
+  "@readingStatusChanged": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "readingStatusError": "Error al cambiar estado: {error}",
+  "@readingStatusError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "insightJustStarted": "Acabas de empezar este libro",
+  "insightNearlyFinished": "Estás a punto de terminar este libro",
+  "insightReflective": "Este libro parece invitar a pausas y reflexión",
+  "insightDevoured": "Has devorado este libro con entusiasmo",
+  "insightFastPace": "Una lectura vertiginosa, difícil de soltar",
+  "insightSlowPace": "Estás saboreando este libro con calma, sin prisas",
+  "insightSteadyPace": "Llevas un ritmo constante con este libro",
+  "insightFinishedFast": "¡Lo leíste de un tirón! Otra aventura vivida.",
+  "insightFinishedNormal": "Un viaje completado. Cada página, un paso más.",
+  "insightFinishedSlow": "Terminado. Las historias que duran también dejan huella.",
+  "recommendLevel1": "No lo recomendaría",
+  "recommendLevel2": "Está bien, pero no es para mí",
+  "recommendLevel3": "Lo recomiendo a gente como yo",
+  "recommendLevel4": "Todo el mundo debería leerlo",
+  "recommendLevel5": "Lo terminé, pero me costó",
+  "recommendLevel1Short": "No recomendado",
+  "recommendLevel2Short": "Ni fu ni fa",
+  "recommendLevel3Short": "Recomendado",
+  "recommendLevel4Short": "Imprescindible",
+  "recommendLevel5Short": "Terminado con esfuerzo",
+  "bookDetailsIsbn": "ISBN: {isbn}",
+  "@bookDetailsIsbn": {
+    "placeholders": {
+      "isbn": {
+        "type": "String"
+      }
+    }
+  },
+  "coverNoCover": "Sin portada",
+  "coverSelected": "Portada seleccionada",
+  "coverHelp": "Añade una imagen para identificar mejor tus libros.",
+  "coverNotAvailable": "Portadas no disponibles en esta plataforma",
+  "scanBarcode": "Escanear código",
+  "selectGenresTitle": "Seleccionar géneros",
+  "searchGenreHint": "Buscar género...",
+  "bookSourceFound": "Fuente: {source}",
+  "@bookSourceFound": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "manualLoanTitle": "Nuevo Préstamo Manual",
+  "manualLoanBookSection": "Libro a prestar",
+  "manualLoanNoBooksAvailable": "No tienes libros disponibles para prestar.",
+  "manualLoanSelectBook": "Selecciona un libro",
+  "manualLoanBorrowerSection": "Datos del prestatario",
+  "manualLoanFullName": "Nombre Completo",
+  "manualLoanFullNameHint": "Ej. Juan Pérez",
+  "manualLoanContact": "Contacto (Opcional)",
+  "manualLoanContactHint": "Teléfono, email o nota",
+  "manualLoanDueDate": "Fecha de devolución",
+  "manualLoanIndefinite": "Indefinido",
+  "manualLoanRegistered": "Préstamo registrado",
+  "receiveExternalTitle": "Registrar libro prestado",
+  "receiveExternalSubtitle": "Registra un libro que alguien (fuera de la app) te ha prestado.",
+  "receiveExternalBookSection": "Detalles del libro",
+  "receiveExternalTitleLabel": "Título del libro *",
+  "receiveExternalAuthor": "Autor",
+  "receiveExternalOwnerSection": "¿Quién te lo prestó?",
+  "receiveExternalOwnerLabel": "Nombre del propietario *",
+  "receiveExternalContact": "Contacto (Opcional)",
+  "receiveExternalContactHint": "Teléfono, email, etc.",
+  "receiveExternalDueDate": "Fecha de devolución",
+  "receiveExternalIndefinite": "Indefinido",
+  "receiveExternalRegister": "Registrar préstamo",
+  "loanConfirmMarkReturned": "Marcar Devuelto",
+  "loanConfirmConfirmReturn": "Confirmar devolución",
+  "loanConfirmSendReminder": "Enviar recordatorio",
+  "loanConfirmForceFinish": "Forzar finalización",
+  "loanConfirmFinish": "Confirmar y finalizar",
+  "activeLoansEmpty": "No tienes préstamos pendientes o en curso en este momento.",
+  "loanStatsTitle": "Resumen de Actividad",
+  "loanStatsMade": "Realizados",
+  "loanStatsRequests": "Solicitudes",
+  "loanStatsAccepted": "Aceptados",
+  "wishlistAddTitle": "Nuevo Deseo",
+  "wishlistTitleLabel": "Título del libro",
+  "wishlistScanBarcode": "Escanear código de barras",
+  "wishlistAuthorOptional": "Autor (opcional)",
+  "wishlistAddButton": "Añadir a deseos",
+  "readingStatsThisWeek": "Esta semana",
+  "readingStatsThisMonth": "Este mes",
+  "readingStatsTime": "Tiempo",
+  "readingStatsPages": "Páginas",
+  "readingStatsFinished": "Terminados",
+  "readingRhythmEmpty": "El silencio antes de la historia...",
+  "importBooksTitle": "Importar libros",
+  "importBooksMessage": "Selecciona un archivo CSV o JSON para importar tus libros.",
+  "importSelectFile": "Seleccionar archivo",
+  "releaseNotesTitle": "¡Nuevos Capítulos!",
+  "releaseNotesClose": "¡A seguir leyendo!",
+  "reviewWidgetActiveUser": "Necesitas un usuario activo",
+  "reviewDialogListTitle": "Opiniones de \"{title}\"",
+  "@reviewDialogListTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewWidgetError": "Error al guardar reseña: {error}",
+  "@reviewWidgetError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewWidgetErrorLoad": "Error al cargar opiniones: {error}",
+  "@reviewWidgetErrorLoad": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewWidgetRating": "Valoración",
+  "reviewWidgetComment": "Comentario (opcional)",
+  "reviewWidgetCommentHint": "Comparte tu opinión sobre este libro...",
+  "actionSeeAll": "Ver todas",
+  "actionManage": "Gestionar",
+  "clubRoleOwner": "Dueño",
+  "clubRoleAdmin": "Admin",
+  "clubStatusActive": "Activo",
+  "clubStatusInactive": "Inactivo"
+}

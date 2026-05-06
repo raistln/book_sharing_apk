@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/local/database.dart';
 import '../../../providers/book_providers.dart';
 import '../../../providers/reading_providers.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 /// Bottom sheet for adding or editing timeline entries
 class AddTimelineEntrySheet extends ConsumerStatefulWidget {
@@ -70,7 +71,7 @@ class _AddTimelineEntrySheetState extends ConsumerState<AddTimelineEntrySheet> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  isEditing ? 'Editar progreso' : 'Añadir progreso',
+                  isEditing ? S.of(context).addTimelineEditTitle : S.of(context).addTimelineAddTitle,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -87,7 +88,7 @@ class _AddTimelineEntrySheetState extends ConsumerState<AddTimelineEntrySheet> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_today_outlined),
-              title: const Text('Fecha'),
+              title: Text(S.of(context).addTimelineDate),
               subtitle: Text(
                 _formatDate(_selectedDate),
                 style: theme.textTheme.bodyLarge,
@@ -99,10 +100,10 @@ class _AddTimelineEntrySheetState extends ConsumerState<AddTimelineEntrySheet> {
             TextField(
               controller: _pageController,
               decoration: InputDecoration(
-                labelText: 'Página actual (opcional)',
+                labelText: S.of(context).addTimelineCurrentPage,
                 hintText: widget.book.pageCount != null
-                    ? 'De ${widget.book.pageCount} páginas'
-                    : 'Número de página',
+                    ? S.of(context).addTimelineTotalPagesHint(widget.book.pageCount!)
+                    : S.of(context).addTimelinePageNumberHint,
                 prefixIcon: const Icon(Icons.bookmark_outline),
                 border: const OutlineInputBorder(),
               ),
@@ -112,11 +113,11 @@ class _AddTimelineEntrySheetState extends ConsumerState<AddTimelineEntrySheet> {
             // Note
             TextField(
               controller: _noteController,
-              decoration: const InputDecoration(
-                labelText: 'Nota personal (opcional)',
-                hintText: 'Tus impresiones, pensamientos...',
-                prefixIcon: Icon(Icons.edit_note_outlined),
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: S.of(context).addTimelineNote,
+                hintText: S.of(context).addTimelineNoteHint,
+                prefixIcon: const Icon(Icons.edit_note_outlined),
+                border: const OutlineInputBorder(),
               ),
               maxLines: 3,
               textCapitalization: TextCapitalization.sentences,
@@ -128,7 +129,7 @@ class _AddTimelineEntrySheetState extends ConsumerState<AddTimelineEntrySheet> {
               child: FilledButton.icon(
                 onPressed: _save,
                 icon: const Icon(Icons.check),
-                label: Text(isEditing ? 'Guardar cambios' : 'Añadir'),
+                label: Text(isEditing ? S.of(context).save : S.of(context).addTimelineAddTitle),
               ),
             ),
           ],
@@ -142,12 +143,14 @@ class _AddTimelineEntrySheetState extends ConsumerState<AddTimelineEntrySheet> {
     final today = DateTime(now.year, now.month, now.day);
     final dateToCheck = DateTime(date.year, date.month, date.day);
 
+    final timeStr = '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+
     if (dateToCheck == today) {
-      return 'Hoy, ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+      return S.of(context).addTimelineToday(timeStr);
     } else if (dateToCheck == today.subtract(const Duration(days: 1))) {
-      return 'Ayer, ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+      return S.of(context).addTimelineYesterday(timeStr);
     } else {
-      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+      return '${date.day}/${date.month}/${date.year} $timeStr';
     }
   }
 
@@ -188,8 +191,8 @@ class _AddTimelineEntrySheetState extends ConsumerState<AddTimelineEntrySheet> {
       currentPage = int.tryParse(pageText);
       if (currentPage == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor, introduce un número de página válido'),
+          SnackBar(
+            content: Text(S.of(context).addTimelineInvalidPage),
           ),
         );
         return;
@@ -234,8 +237,8 @@ class _AddTimelineEntrySheetState extends ConsumerState<AddTimelineEntrySheet> {
         SnackBar(
           content: Text(
             widget.existingEntry != null
-                ? 'Progreso actualizado'
-                : 'Progreso añadido',
+                ? S.of(context).addTimelineUpdateSuccess
+                : S.of(context).addTimelineAddSuccess,
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -244,7 +247,7 @@ class _AddTimelineEntrySheetState extends ConsumerState<AddTimelineEntrySheet> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $error'),
+          content: Text(S.of(context).errorGeneric(error.toString())),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );

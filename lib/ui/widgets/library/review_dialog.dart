@@ -6,6 +6,7 @@ import '../../../data/local/database.dart';
 import '../../../models/recommendation_level.dart';
 import '../../../providers/book_providers.dart';
 import '../../../utils/share_utils.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import 'library_utils.dart';
 import 'recommendation_selector.dart';
 
@@ -34,8 +35,9 @@ Future<void> showAddReviewDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) {
+          final l10n = S.of(context);
           return AlertDialog(
-            title: Text('¿Cómo recomendarías "${book.title}"?'),
+            title: Text(l10n.reviewDialogTitle(book.title)),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -52,9 +54,9 @@ Future<void> showAddReviewDialog(
                     controller: controller,
                     minLines: 2,
                     maxLines: 5,
-                    decoration: const InputDecoration(
-                      labelText: 'Escribe una reseña (opcional)',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.reviewDialogOptionalComment,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ],
@@ -63,7 +65,7 @@ Future<void> showAddReviewDialog(
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
+                child: Text(l10n.cancel),
               ),
               FilledButton(
                 onPressed: () {
@@ -76,7 +78,7 @@ Future<void> showAddReviewDialog(
                     ),
                   );
                 },
-                child: const Text('Guardar'),
+                child: Text(l10n.save),
               ),
             ],
           );
@@ -96,7 +98,7 @@ Future<void> showAddReviewDialog(
     if (!context.mounted) return;
     showFeedbackSnackBar(
       context: context,
-      message: 'Crea un usuario antes de añadir reseñas.',
+      message: S.of(context).reviewWidgetActiveUser,
       isError: true,
     );
     return;
@@ -112,7 +114,7 @@ Future<void> showAddReviewDialog(
     if (!context.mounted) return;
     showFeedbackSnackBar(
       context: context,
-      message: 'Reseña añadida.',
+      message: S.of(context).reviewDialogAdded,
       isError: false,
     );
 
@@ -123,22 +125,24 @@ Future<void> showAddReviewDialog(
 
       final bool? wantToShare = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('¿A quién se lo recomiendas?'),
-          content: const Text(
-              'Has dado una valoración positiva. ¿Quieres enviarle un mensaje a alguien para recomendárselo?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Ahora no'),
-            ),
-            FilledButton.icon(
-              onPressed: () => Navigator.pop(context, true),
-              icon: const Icon(Icons.share_outlined),
-              label: const Text('Recomendar'),
-            ),
-          ],
-        ),
+        builder: (context) {
+          final l10n = S.of(context);
+          return AlertDialog(
+            title: Text(l10n.reviewDialogRecommendTitle),
+            content: Text(l10n.reviewDialogRecommendMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l10n.reviewDialogNotNow),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.share_outlined),
+                label: Text(l10n.reviewDialogRecommend),
+              ),
+            ],
+          );
+        },
       );
 
       if (wantToShare == true) {
@@ -149,7 +153,7 @@ Future<void> showAddReviewDialog(
     if (!context.mounted) return;
     showFeedbackSnackBar(
       context: context,
-      message: 'Error al guardar reseña: $err',
+      message: S.of(context).reviewWidgetError(err.toString()),
       isError: true,
     );
   }
@@ -165,7 +169,7 @@ Future<void> showReviewsListDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: Text('Opiniones de "${book.title}"'),
+        title: Text(S.of(context).reviewDialogListTitle(book.title)),
         content: SizedBox(
           width: double.maxFinite,
           child: Consumer(
@@ -176,15 +180,15 @@ Future<void> showReviewsListDialog(
               return reviewsAsync.when(
                 data: (reviews) {
                   if (reviews.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.all(32),
+                    return Padding(
+                      padding: const EdgeInsets.all(32),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.reviews_outlined, size: 48),
-                          SizedBox(height: 16),
+                          const Icon(Icons.reviews_outlined, size: 48),
+                          const SizedBox(height: 16),
                           Text(
-                            'No hay opiniones todavía',
+                            S.of(context).noReviewsYet,
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -227,7 +231,7 @@ Future<void> showReviewsListDialog(
                                     color: level.color.withValues(alpha: 0.2)),
                               ),
                               child: Text(
-                                level.shortLabel,
+                                level.shortLabel(context),
                                 style: theme.textTheme.labelSmall
                                     ?.copyWith(color: level.color),
                               ),
@@ -270,7 +274,7 @@ Future<void> showReviewsListDialog(
                       const Icon(Icons.error_outline, size: 48),
                       const SizedBox(height: 16),
                       Text(
-                        'Error al cargar opiniones: $error',
+                        S.of(context).reviewWidgetErrorLoad(error.toString()),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -283,7 +287,7 @@ Future<void> showReviewsListDialog(
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
+            child: Text(S.of(context).close),
           ),
         ],
       );

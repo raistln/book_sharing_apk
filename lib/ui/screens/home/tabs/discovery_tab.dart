@@ -7,6 +7,7 @@ import '../../../../providers/book_providers.dart';
 import '../../../../utils/group_utils.dart';
 import '../../../widgets/empty_state.dart';
 import 'discover_group_page.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 /// Helper to perform sync
 Future<void> _performSync(BuildContext context, WidgetRef ref) async {
@@ -23,7 +24,7 @@ Future<void> _performSync(BuildContext context, WidgetRef ref) async {
   } else {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sincronización completada')),
+      SnackBar(content: Text(S.of(context).successSync)),
     );
   }
 }
@@ -45,10 +46,10 @@ class DiscoverTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Descubrir', style: theme.textTheme.headlineMedium),
+          Text(S.of(context).discoverTabTitle, style: theme.textTheme.headlineMedium),
           const SizedBox(height: 8),
           Text(
-            'Explora los grupos a los que perteneces y descubre libros disponibles para solicitar préstamo.',
+            S.of(context).discoverTabDesc,
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
@@ -63,11 +64,10 @@ class DiscoverTab extends ConsumerWidget {
                 if (discoverableGroups.isEmpty) {
                   return EmptyState(
                     icon: Icons.groups_outlined,
-                    title: 'Aún no perteneces a ningún grupo',
-                    message:
-                        'Crea un grupo o únete con un código para empezar a compartir libros y gestionar préstamos.',
+                    title: S.of(context).noGroupsTitle,
+                    message: S.of(context).noGroupsMessage,
                     action: EmptyStateAction(
-                      label: 'Unirme o sincronizar',
+                      label: S.of(context).actionJoinOrSync,
                       icon: Icons.sync_outlined,
                       variant: EmptyStateActionVariant.text,
                       onPressed: () => unawaited(_syncNow(context, ref)),
@@ -112,7 +112,7 @@ class DiscoverTab extends ConsumerWidget {
                     const Icon(Icons.error_outline, size: 48),
                     const SizedBox(height: 12),
                     Text(
-                      'No pudimos cargar tus grupos.',
+                      S.of(context).errorLoadingGroups,
                       style: theme.textTheme.titleMedium,
                       textAlign: TextAlign.center,
                     ),
@@ -126,7 +126,7 @@ class DiscoverTab extends ConsumerWidget {
                     FilledButton.icon(
                       onPressed: () => _syncNow(context, ref),
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Reintentar'),
+                      label: Text(S.of(context).actionRetry),
                     ),
                   ],
                 ),

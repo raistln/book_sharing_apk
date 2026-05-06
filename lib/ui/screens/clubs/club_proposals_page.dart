@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/local/database.dart';
 import '../../../providers/book_providers.dart';
 import '../../../providers/clubs_provider.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ClubProposalsPage extends ConsumerWidget {
   const ClubProposalsPage({super.key, required this.clubUuid});
@@ -11,20 +12,21 @@ class ClubProposalsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = S.of(context);
     final proposalsAsync = ref.watch(clubProposalsProvider(clubUuid));
     final activeUser = ref.watch(activeUserProvider).value;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Propuestas de Lectura'),
+        title: Text(l10n.clubProposalsTitle),
       ),
       body: proposalsAsync.when(
         data: (proposals) {
           if (proposals.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                'No hay propuestas activas',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
+                l10n.clubProposalsEmpty,
+                style: const TextStyle(color: Colors.grey, fontSize: 16),
               ),
             );
           }
@@ -52,7 +54,7 @@ class ClubProposalsPage extends ConsumerWidget {
           // We need to import ProposeBookDialog.
           // But usually better to keep logic in one place.
         },
-        label: const Text('Proponer'),
+        label: Text(l10n.clubProposalsPropose),
         icon: const Icon(Icons.add),
       ),
     );
@@ -76,9 +78,10 @@ class _ProposalCardState extends ConsumerState<_ProposalCard> {
   bool _isVoting = false;
 
   Future<void> _toggleVote() async {
+    final l10n = S.of(context);
     if (widget.userUuid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes iniciar sesión para votar')),
+        SnackBar(content: Text(l10n.clubProposalsLoginRequired)),
       );
       return;
     }
@@ -109,6 +112,7 @@ class _ProposalCardState extends ConsumerState<_ProposalCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context);
     final hasVoted = widget.userUuid != null &&
         widget.proposal.votes.split(',').contains(widget.userUuid);
 
@@ -145,7 +149,7 @@ class _ProposalCardState extends ConsumerState<_ProposalCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.proposal.title ?? 'Sin título',
+                    widget.proposal.title ?? l10n.bookNoTitle,
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.bold),
                     maxLines: 2,
@@ -153,7 +157,7 @@ class _ProposalCardState extends ConsumerState<_ProposalCard> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    widget.proposal.author ?? 'Autor desconocido',
+                    widget.proposal.author ?? l10n.clubDetailUnknownAuthor,
                     style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
                   const SizedBox(height: 12),
@@ -163,7 +167,7 @@ class _ProposalCardState extends ConsumerState<_ProposalCard> {
                           size: 16, color: Colors.grey[500]),
                       const SizedBox(width: 4),
                       Text(
-                        '${widget.proposal.totalChapters} caps',
+                        l10n.clubProposalsChapters(widget.proposal.totalChapters),
                         style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                     ],

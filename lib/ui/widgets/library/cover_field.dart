@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../cover_preview.dart';
 
 /// Cover field widget for book form
@@ -34,13 +35,13 @@ class CoverField extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                coverPath == null ? 'Sin portada' : 'Portada seleccionada',
+                coverPath == null ? S.of(context).coverNoCover : S.of(context).coverSelected,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 4),
               Text(
                 coverPath ??
-                    'Añade una imagen para identificar mejor tus libros.',
+                    S.of(context).coverHelp,
                 style: Theme.of(context).textTheme.bodySmall,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -53,24 +54,24 @@ class CoverField extends StatelessWidget {
                     FilledButton.tonalIcon(
                       onPressed: onPick,
                       icon: const Icon(Icons.photo_library_outlined, size: 20),
-                      label: const Text('Galería'),
+                      label: Text(S.of(context).coverGallery),
                     ),
                     FilledButton.tonalIcon(
                       onPressed: onPickFromCamera,
                       icon: const Icon(Icons.camera_alt_outlined, size: 20),
-                      label: const Text('Cámara'),
+                      label: Text(S.of(context).coverCamera),
                     ),
                   ],
                   if (!pickingSupported)
-                    const Chip(
-                      avatar: Icon(Icons.info_outline, size: 18),
-                      label: Text('Portadas no disponibles en esta plataforma'),
+                    Chip(
+                      avatar: const Icon(Icons.info_outline, size: 18),
+                      label: Text(S.of(context).coverNotAvailable),
                     ),
                   if (coverPath != null && onRemove != null)
                     OutlinedButton.icon(
                       onPressed: onRemove,
                       icon: const Icon(Icons.delete_outline),
-                      label: const Text('Eliminar'),
+                      label: Text(S.of(context).coverDelete),
                     ),
                 ],
               ),

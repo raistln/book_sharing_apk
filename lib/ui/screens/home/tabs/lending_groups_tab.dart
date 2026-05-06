@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -61,7 +62,7 @@ class LendingGroupsTab extends ConsumerWidget {
                       ? null
                       : () => _handleCreateGroup(context, ref, activeUser),
                   icon: const Icon(Icons.group_add_outlined),
-                  label: const Text('Crear grupo'),
+                  label: Text(S.of(context).actionCreateGroup),
                 ),
               ),
               const SizedBox(width: 12),
@@ -71,7 +72,7 @@ class LendingGroupsTab extends ConsumerWidget {
                       ? null
                       : () => _handleJoinGroupByCode(context, ref, activeUser),
                   icon: const Icon(Icons.qr_code_2_outlined),
-                  label: const Text('Unirse por código'),
+                  label: Text(S.of(context).actionJoinByCode),
                 ),
               ),
               if (isGroupBusy) ...[
@@ -135,11 +136,11 @@ class _EmptyCommunityState extends StatelessWidget {
   Widget build(BuildContext context) {
     return EmptyState(
       icon: Icons.groups_outlined,
-      title: 'Sincroniza tus grupos',
+      title: S.of(context).syncGroupsTitle,
       message:
-          'Conecta con Supabase para traer tus comunidades, miembros y libros compartidos.',
+          S.of(context).syncGroupsMessage,
       action: EmptyStateAction(
-        label: 'Sincronizar ahora',
+        label: S.of(context).actionSyncNow,
         icon: Icons.sync_outlined,
         onPressed: () => unawaited(onSync()),
       ),
@@ -165,7 +166,7 @@ class _ErrorCommunityState extends StatelessWidget {
             Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             const SizedBox(height: 12),
             Text(
-              'No pudimos cargar tus grupos.',
+              S.of(context).errorLoadingGroups,
               style: theme.textTheme.titleLarge
                   ?.copyWith(color: theme.colorScheme.error),
               textAlign: TextAlign.center,
@@ -180,7 +181,7 @@ class _ErrorCommunityState extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar sincronización'),
+              label: Text(S.of(context).actionRetrySync),
             ),
           ],
         ),
@@ -216,7 +217,7 @@ Future<void> _handleCreateGroup(
     }
     _showFeedbackSnackBar(
       context: context,
-      message: 'No se pudo crear el grupo: $error',
+      message: S.of(context).errorCreatingGroup(error.toString()),
       isError: true,
     );
   }
@@ -260,20 +261,19 @@ Future<void> _handleJoinGroupByCode(
       final joinedGroup = groups.isNotEmpty ? groups.last : null;
       final genres = BookGenre.allowedFromJson(joinedGroup?.allowedGenres);
       if (genres.isNotEmpty && context.mounted) {
-        final genreNames = genres.map((g) => g.label).join(', ');
+        final genreNames = genres.map((g) => g.localizedLabel(context)).join(', ');
         await showDialog<void>(
           context: context,
           builder: (_) => AlertDialog(
             icon: const Icon(Icons.local_library_outlined),
-            title: const Text('Grupo temático'),
+            title: Text(S.of(context).thematicGroupTitle),
             content: Text(
-              'Este grupo tiene un filtro activo de géneros: $genreNames.\n\n'
-              'Solo los libros físicos de esos géneros serán visibles en este grupo.',
+              S.of(context).thematicGroupMessage(genreNames),
             ),
             actions: [
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Entendido'),
+                child: Text(S.of(context).actionGotIt),
               ),
             ],
           ),
@@ -292,7 +292,7 @@ Future<void> _performSync(BuildContext context, WidgetRef ref) async {
   if (state.lastError != null) {
     _showFeedbackSnackBar(
       context: context,
-      message: 'Error de sincronización: ${state.lastError}',
+      message: S.of(context).errorSyncing(state.lastError!),
       isError: true,
     );
     return;
@@ -300,7 +300,7 @@ Future<void> _performSync(BuildContext context, WidgetRef ref) async {
 
   _showFeedbackSnackBar(
     context: context,
-    message: 'Sincronización completada.',
+    message: S.of(context).syncCompleted,
     isError: false,
   );
 }
@@ -334,9 +334,9 @@ Future<void> _showJoinGroupByCodeDialog(
     barrierDismissible: false,
     builder: (_) => JoinByCodeDialog(
       onJoin: onJoin,
-      title: 'Unirse a grupo',
-      labelText: 'Código de grupo',
-      successMessage: '¡Te has unido al grupo exitosamente!',
+      title: S.of(context).joinGroupTitle,
+      labelText: S.of(context).groupCodeLabel,
+      successMessage: S.of(context).successJoinedGroup,
     ),
   );
 }

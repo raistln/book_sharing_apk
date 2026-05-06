@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class LibraryFilters extends StatelessWidget {
   const LibraryFilters({
@@ -31,7 +32,7 @@ class ExportButton extends StatelessWidget {
     return FilledButton.icon(
       onPressed: onExport,
       icon: const Icon(Icons.share_outlined),
-      label: const Text('Exportar'),
+      label: Text(S.of(context).export),
     );
   }
 }
@@ -46,7 +47,7 @@ class RefreshCoversButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: onRefresh,
       icon: const Icon(Icons.refresh),
-      label: const Text('Actualizar portadas'),
+      label: Text(S.of(context).tooltipRefreshCovers),
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../info_pop.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 import '../../../providers/book_providers.dart';
 // ignore: unused_import
@@ -37,7 +38,7 @@ class ActiveLoansList extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'No tienes préstamos pendientes o en curso en este momento.',
+                  S.of(context).loanNoActiveLoans,
                   style: theme.textTheme.bodyMedium,
                 ),
               ),
@@ -55,7 +56,7 @@ class ActiveLoansList extends ConsumerWidget {
       itemBuilder: (context, index) {
         final loan = loans[index];
         final dueDate = loan.dueDate;
-        final statusLabel = _statusLabel(loan.status);
+        final statusLabel = _statusLabel(context, loan.status);
         final statusColor = _statusColor(context, loan.status);
 
         return Card(
@@ -69,15 +70,15 @@ class ActiveLoansList extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(loan.isExternalReceived
-                        ? 'Prestamista: ${loan.lenderName}'
-                        : 'Solicitante: ${loan.borrowerName}'),
-                    Text('Estado: $statusLabel'),
+                        ? S.of(context).loanLenderName(loan.lenderName ?? S.of(context).ownerFallback)
+                        : S.of(context).loanBorrowerName(loan.borrowerName)),
+                    Text(S.of(context).loanStatusLabel(statusLabel)),
                     Text(
-                        'Solicitado: ${DateFormat.yMMMd().format(loan.requestedAt)}'),
+                        S.of(context).loanRequestedDate(DateFormat.yMMMd().format(loan.requestedAt))),
                     Text(
                       dueDate != null
-                          ? 'Vence: ${DateFormat.yMMMd().format(dueDate)}'
-                          : 'Sin fecha límite',
+                          ? S.of(context).loanDueDateValue(DateFormat.yMMMd().format(dueDate))
+                          : S.of(context).loanNoDueDate,
                     ),
                   ],
                 ),
@@ -86,7 +87,7 @@ class ActiveLoansList extends ConsumerWidget {
                   // This requires importing the book detail page widget and navigation logic
                   // For now, show a message to the user
                   InfoPop.show(context,
-                      message: 'Navegación a detalle de préstamo');
+                      message: S.of(context).loanNavigationDetail);
                 },
               ),
               if (loan.status == 'active')
@@ -98,7 +99,7 @@ class ActiveLoansList extends ConsumerWidget {
                       FilledButton.icon(
                         onPressed: () => _markReturned(context, ref, loan),
                         icon: const Icon(Icons.assignment_turned_in_outlined),
-                        label: const Text('Marcar devuelto'),
+                        label: Text(S.of(context).loanMarkReturned),
                       ),
                     ],
                   ),
@@ -120,30 +121,31 @@ class ActiveLoansList extends ConsumerWidget {
 
       if (!context.mounted) return;
       if (!context.mounted) return;
-      InfoPop.success(context, 'Préstamo marcado como devuelto');
+      InfoPop.success(context, S.of(context).loanMarkReturnedSuccess);
     } catch (e) {
       if (!context.mounted) return;
       if (!context.mounted) return;
-      InfoPop.error(context, 'Error: $e');
+      InfoPop.error(context, S.of(context).errorGeneric(e.toString()));
     }
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(BuildContext context, String status) {
+    final s = S.of(context);
     switch (status) {
       case 'requested':
-        return 'Solicitado';
+        return s.loanStatusRequested;
       case 'active':
-        return 'En curso';
+        return s.loanStatusActive;
       case 'returned':
-        return 'Devuelto';
+        return s.loanStatusReturned;
       case 'cancelled':
-        return 'Cancelado';
+        return s.loanStatusCancelled;
       case 'rejected':
-        return 'Rechazado';
+        return s.loanStatusRejected;
       case 'completed':
-        return 'Completado';
+        return s.loanStatusCompleted;
       case 'expired':
-        return 'Expirado';
+        return s.loanStatusExpired;
       default:
         return status;
     }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ReadStatusFilter extends StatelessWidget {
   const ReadStatusFilter({
@@ -25,18 +26,18 @@ class ReadStatusFilter extends StatelessWidget {
           value: selectedFilter,
           onChanged: onChanged,
           style: theme.textTheme.bodyMedium,
-          items: const [
+          items: [
             DropdownMenuItem(
               value: null,
-              child: Text('Todos los libros'),
+              child: Text(S.of(context).readStatusFilterAll),
             ),
             DropdownMenuItem(
               value: true,
-              child: Text('Leídos'),
+              child: Text(S.of(context).readStatusFilterRead),
             ),
             DropdownMenuItem(
               value: false,
-              child: Text('No leídos'),
+              child: Text(S.of(context).readStatusFilterUnread),
             ),
           ],
         ),

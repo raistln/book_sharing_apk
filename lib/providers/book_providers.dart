@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Locale;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/local/book_dao.dart';
 import '../data/local/database.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../data/local/group_dao.dart';
 import '../data/local/notification_dao.dart';
 import '../data/local/user_dao.dart';
@@ -38,6 +40,7 @@ import '../services/reading_timeline_service.dart';
 import '../services/reading_rhythm_analyzer.dart';
 import 'notification_providers.dart';
 import 'sync_providers.dart';
+import 'locale_providers.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -562,11 +565,13 @@ final readingInsightProvider = FutureProvider.autoDispose
   if (timeline.isEmpty) return null;
 
   final userAverage = await ref.watch(userAveragePagesPerDayProvider.future);
+  final locale = ref.watch(appLocaleProvider) ?? const Locale('es');
 
   return ReadingRhythmAnalyzer.generateInsight(
     book: book,
     timeline: timeline,
     userAveragePagesPerDay: userAverage,
+    s: lookupS(locale),
   );
 });
 
@@ -686,11 +691,13 @@ final loanControllerProvider =
   final notificationClient = ref.watch(notificationServiceProvider);
   final notificationRepository = ref.watch(notificationRepositoryProvider);
   final syncCoordinator = ref.watch(unifiedSyncCoordinatorProvider);
+  final locale = ref.watch(appLocaleProvider) ?? const Locale('es');
   return LoanController(
     loanRepository: repository,
     notificationClient: notificationClient,
     notificationRepository: notificationRepository,
     syncCoordinator: syncCoordinator,
+    s: lookupS(locale),
   );
 });
 
@@ -703,6 +710,8 @@ final groupPushControllerProvider =
   final groupDao = ref.watch(groupDaoProvider);
   final syncCoordinator = ref.watch(unifiedSyncCoordinatorProvider);
   final notificationRepository = ref.watch(notificationRepositoryProvider);
+  final locale = ref.watch(appLocaleProvider) ?? const Locale('es');
+
   return GroupPushController(
     groupPushRepository: repository,
     groupSyncController: syncController,
@@ -711,6 +720,7 @@ final groupPushControllerProvider =
     groupDao: groupDao,
     syncCoordinator: syncCoordinator,
     notificationRepository: notificationRepository,
+    s: lookupS(locale),
   );
 });
 

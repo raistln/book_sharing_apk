@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ReadingCalendar extends StatelessWidget {
   const ReadingCalendar({super.key, required this.readBooks});
@@ -64,7 +65,7 @@ class ZenMonthTile extends StatelessWidget {
 
     return Tooltip(
       message:
-          '${DateFormat('MMMM yyyy', 'es').format(monthDate)}: $bookCount ${bookCount == 1 ? 'libro' : 'libros'}',
+          '${DateFormat('MMMM yyyy', Localizations.localeOf(context).languageCode).format(monthDate)}: ${S.of(context).booksCount(bookCount)}',
       child: Container(
         decoration: BoxDecoration(
           color: isDark
@@ -88,7 +89,7 @@ class ZenMonthTile extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              DateFormat('MMM', 'es').format(monthDate).toLowerCase(),
+              DateFormat('MMM', Localizations.localeOf(context).languageCode).format(monthDate).toLowerCase(),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: Theme.of(context)
                         .colorScheme

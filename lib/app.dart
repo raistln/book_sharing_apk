@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'l10n/generated/app_localizations.dart';
 
 import 'providers/auth_providers.dart';
 import 'providers/book_providers.dart';
+import 'providers/locale_providers.dart';
 import 'providers/notification_providers.dart';
 import 'providers/sync_providers.dart';
 import 'providers/theme_providers.dart';
@@ -132,24 +134,29 @@ class _BookSharingAppState extends ConsumerState<BookSharingApp>
     final theme = ref.watch(lightThemeProvider);
     final darkTheme = ref.watch(darkThemeProvider);
     final mode = ref.watch(themeModeProvider);
+    final locale = ref.watch(appLocaleProvider);
 
     return MaterialApp(
       restorationScopeId: 'app',
       navigatorKey: navigatorKey,
-      title: 'Book Sharing App',
+      title: 'PassTheBook',
       debugShowCheckedModeBanner: false,
       theme: theme,
       darkTheme: darkTheme,
       themeMode: mode,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('en'),
-        Locale('es'),
-      ],
+      locale: locale,
+      localizationsDelegates: S.localizationsDelegates,
+      supportedLocales: S.supportedLocales,
+      localeResolutionCallback: (deviceLocale, supportedLocales) {
+        // If user chose 'system', try to match device locale
+        // If no match, fall back to English
+        for (final supportedLocale in supportedLocales) {
+          if (supportedLocale.languageCode == deviceLocale?.languageCode) {
+            return supportedLocale;
+          }
+        }
+        return const Locale('en');
+      },
       builder: (context, child) {
         return CoachMarkOverlayHost(child: child ?? const SizedBox.shrink());
       },

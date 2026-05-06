@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/book_providers.dart';
 import '../widgets/profile/add_wishlist_item_sheet.dart';
 import '../widgets/textured_background.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 class WishlistScreen extends ConsumerWidget {
   const WishlistScreen({super.key});
@@ -14,8 +15,8 @@ class WishlistScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Lista de Deseos',
-            style: TextStyle(fontFamily: 'Georgia')),
+        title: Text(S.of(context).wishlistTitle,
+            style: const TextStyle(fontFamily: 'Georgia')),
       ),
       body: TexturedBackground(
         child: wishlistAsync.when(
@@ -31,13 +32,13 @@ class WishlistScreen extends ConsumerWidget {
                             theme.colorScheme.secondary.withValues(alpha: 0.5)),
                     const SizedBox(height: 16),
                     Text(
-                      'Tu lista de deseos está vacía.',
+                      S.of(context).wishlistEmpty,
                       style: theme.textTheme.bodyLarge
                           ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Añade libros que quieras leer o comprar.',
+                      S.of(context).wishlistEmptySub,
                       style: theme.textTheme.bodyMedium
                           ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
@@ -104,12 +105,12 @@ class WishlistScreen extends ConsumerWidget {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.library_add_outlined),
-                            tooltip: 'Añadir a mi biblioteca',
+                            tooltip: S.of(context).wishlistAddToLibrary,
                             onPressed: () => _moveToLibrary(context, ref, item),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline),
-                            tooltip: 'Eliminar deseo',
+                            tooltip: S.of(context).wishlistRemove,
                             onPressed: () {
                               _confirmDelete(context, ref, item);
                             },
@@ -123,13 +124,13 @@ class WishlistScreen extends ConsumerWidget {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, __) => Center(child: Text('Error: $e')),
+          error: (e, __) => Center(child: Text(S.of(context).errorGeneric(e.toString()))),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddSheet(context),
         icon: const Icon(Icons.add),
-        label: const Text('Nuevo deseo'),
+        label: Text(S.of(context).wishlistNew),
       ),
     );
   }
@@ -146,18 +147,18 @@ class WishlistScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Eliminar deseo?'),
-        content: Text('"${item.title}" se borrará de tu lista.'),
+        title: Text(S.of(context).wishlistDeleteConfirm),
+        content: Text(S.of(context).wishlistDeleteMessage(item.title)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar')),
+              child: Text(S.of(context).cancel)),
           TextButton(
             onPressed: () {
               ref.read(wishlistRepositoryProvider).removeItem(item.id);
               Navigator.pop(context);
             },
-            child: Text('Eliminar',
+            child: Text(S.of(context).delete,
                 style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
         ],
@@ -173,17 +174,17 @@ class WishlistScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Ya lo tienes?'),
+        title: Text(S.of(context).wishlistAlreadyHave),
         content: Text(
-            '¿Seguro que quieres pasar "${item.title}" a tu biblioteca personal? Se quitará de tu lista de deseos.'),
+            S.of(context).wishlistMoveToLibraryConfirm(item.title)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Aún no'),
+            child: Text(S.of(context).notYet),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('¡Sí, ya es mío!'),
+            child: Text(S.of(context).yesItsMine),
           ),
         ],
       ),
@@ -199,7 +200,7 @@ class WishlistScreen extends ConsumerWidget {
         isbn: item.isbn,
         barcode: null,
         coverPath: null,
-        description: item.notes ?? 'Añadido desde mi lista de deseos',
+        description: item.notes ?? S.of(context).wishlistDefaultDescription,
         status: 'private',
         isRead: false,
         owner: activeUser,
@@ -215,7 +216,7 @@ class WishlistScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('"${item.title}" añadido a tu biblioteca personal.'),
+            content: Text(S.of(context).wishlistAddedToLibrary(item.title)),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -225,7 +226,7 @@ class WishlistScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al mover a la biblioteca: $e'),
+            content: Text(S.of(context).wishlistErrorMoving(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),

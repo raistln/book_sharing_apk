@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/local/database.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 /// Widget to display a single book review
 class ReviewListTile extends StatelessWidget {
@@ -65,7 +66,7 @@ class ReviewListTile extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.edit),
                     onPressed: onEdit,
-                    tooltip: 'Editar reseña',
+                    tooltip: S.of(context).reviewListEdit,
                   ),
               ],
             ),

@@ -6,6 +6,7 @@ import 'package:path/path.dart' as path;
 
 import '../../providers/book_providers.dart';
 import '../../providers/import_providers.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 class ImportBooksDialog extends ConsumerStatefulWidget {
   const ImportBooksDialog({super.key});
@@ -47,7 +48,7 @@ class _ImportBooksDialogState extends ConsumerState<ImportBooksDialog> {
 
       if (activeUser == null) {
         setState(() {
-          _error = 'No hay usuario activo para importar los libros.';
+          _error = S.of(context).errorNoActiveUserImport;
         });
         return;
       }
@@ -56,23 +57,23 @@ class _ImportBooksDialogState extends ConsumerState<ImportBooksDialog> {
       final importResult = extension == '.csv'
           ? await importService.importFromCsv(fileData, owner: activeUser)
           : extension == '.json'
-              ? await importService.importFromJson(fileData, owner: activeUser)
-              : throw UnsupportedError('Formato de archivo no soportado');
+               ? await importService.importFromJson(fileData, owner: activeUser)
+               : throw UnsupportedError(S.of(context).errorUnsupportedFileFormat);
 
       setState(() {
         if (importResult.successCount > 0) {
           var message =
-              'Se importaron ${importResult.successCount} libros correctamente';
+              S.of(context).importSuccessCount(importResult.successCount.toString());
           if (importResult.failureCount > 0) {
-            message = '$message (${importResult.failureCount} fallidos)';
+            message = '$message${S.of(context).importFailureCount(importResult.failureCount.toString())}';
           }
           _successMessage = message;
         } else {
-          var error = 'No se pudo importar ningún libro';
+          var error = S.of(context).errorNoBooksImported;
           if (importResult.errors.isNotEmpty) {
             final errorMsg = importResult.errors.first;
             final moreErrors = importResult.errors.length > 1
-                ? ' (y ${importResult.errors.length - 1} más...)'
+                ? S.of(context).importMoreErrors((importResult.errors.length - 1).toString())
                 : '';
             error = '$errorMsg$moreErrors';
           }
@@ -81,7 +82,7 @@ class _ImportBooksDialogState extends ConsumerState<ImportBooksDialog> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Error al importar: $e';
+        _error = S.of(context).errorImporting(e.toString());
       });
     } finally {
       setState(() {
@@ -93,14 +94,14 @@ class _ImportBooksDialogState extends ConsumerState<ImportBooksDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Importar libros'),
+      title: Text(S.of(context).importBooksDialogTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-                'Selecciona un archivo CSV o JSON para importar tus libros.'),
+            Text(
+                S.of(context).importBooksDialogDesc),
             const SizedBox(height: 16),
             if (_error != null)
               Padding(
@@ -128,7 +129,7 @@ class _ImportBooksDialogState extends ConsumerState<ImportBooksDialog> {
       actions: [
         TextButton(
           onPressed: _isImporting ? null : () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+          child: Text(S.of(context).cancel),
         ),
         FilledButton(
           onPressed: _isImporting ? null : _importFile,
@@ -138,7 +139,7 @@ class _ImportBooksDialogState extends ConsumerState<ImportBooksDialog> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Seleccionar archivo'),
+               : Text(S.of(context).selectFile),
         ),
       ],
     );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../empty_state.dart';
-import '../../../design_system/evocative_texts.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 class EmptyLibraryState extends StatelessWidget {
   const EmptyLibraryState({super.key, required this.onAddBook});
@@ -11,10 +11,10 @@ class EmptyLibraryState extends StatelessWidget {
   Widget build(BuildContext context) {
     return EmptyState(
       icon: Icons.menu_book_outlined,
-      title: EvocativeTexts.emptyLibraryTitle,
-      message: EvocativeTexts.emptyLibraryMessage,
+      title: S.of(context).evocEmptyLibraryTitle,
+      message: S.of(context).evocEmptyLibraryMessage,
       action: EmptyStateAction(
-        label: EvocativeTexts.emptyLibraryAction,
+        label: S.of(context).evocEmptyLibraryAction,
         icon: Icons.add_circle_outline,
         onPressed: onAddBook,
       ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/local/database.dart';
 import '../../../models/club_enums.dart';
 import '../../../providers/clubs_provider.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ClubSettingsPage extends ConsumerStatefulWidget {
   const ClubSettingsPage({super.key, required this.club});
@@ -45,6 +46,7 @@ class _ClubSettingsPageState extends ConsumerState<ClubSettingsPage> {
   }
 
   Future<void> _saveSettings() async {
+    final l10n = S.of(context);
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -64,7 +66,7 @@ class _ClubSettingsPageState extends ConsumerState<ClubSettingsPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Configuración guardada')),
+          SnackBar(content: Text(l10n.clubSettingsSaved)),
         );
         Navigator.of(context).pop();
       }
@@ -81,9 +83,10 @@ class _ClubSettingsPageState extends ConsumerState<ClubSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Configuración del Club'),
+        title: Text(l10n.clubSettingsTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
@@ -102,9 +105,9 @@ class _ClubSettingsPageState extends ConsumerState<ClubSettingsPage> {
                   children: [
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre del Club',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.clubSettingsName,
+                        border: const OutlineInputBorder(),
                       ),
                       validator: (value) =>
                           value?.isEmpty == true ? 'Requerido' : null,
@@ -112,9 +115,9 @@ class _ClubSettingsPageState extends ConsumerState<ClubSettingsPage> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Descripción',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.clubSettingsDescription,
+                        border: const OutlineInputBorder(),
                       ),
                       maxLines: 3,
                       validator: (value) =>
@@ -123,18 +126,18 @@ class _ClubSettingsPageState extends ConsumerState<ClubSettingsPage> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _meetingPlaceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Lugar de reunión',
-                        border: OutlineInputBorder(),
-                        helperText: 'Opcional',
+                      decoration: InputDecoration(
+                        labelText: l10n.clubSettingsCity,
+                        border: const OutlineInputBorder(),
+                        helperText: 'Opcional', // TODO: Consider adding l10n for Opcional
                       ),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<ClubFrequency>(
                       initialValue: _frequency,
-                      decoration: const InputDecoration(
-                        labelText: 'Frecuencia de lectura',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.clubSettingsFrequency,
+                        border: const OutlineInputBorder(),
                       ),
                       items: ClubFrequency.values.map((freq) {
                         return DropdownMenuItem(
@@ -150,11 +153,11 @@ class _ClubSettingsPageState extends ConsumerState<ClubSettingsPage> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _frequencyDaysController,
-                        decoration: const InputDecoration(
-                          labelText: 'Periodicidad Personalizada',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.timer),
-                          helperText: 'Días asignados para leer cada sección',
+                        decoration: InputDecoration(
+                          labelText: l10n.clubSettingsCustomFrequency,
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.timer),
+                          helperText: l10n.clubSettingsCustomFrequencyDays,
                         ),
                         keyboardType: TextInputType.number,
                         validator: (value) {
@@ -176,7 +179,7 @@ class _ClubSettingsPageState extends ConsumerState<ClubSettingsPage> {
                         foregroundColor: Colors.red,
                       ),
                       icon: const Icon(Icons.delete_forever),
-                      label: const Text('Eliminar Club'),
+                      label: Text(l10n.clubSettingsDeleteButton),
                       onPressed: _confirmDelete,
                     ),
                   ],
@@ -187,21 +190,21 @@ class _ClubSettingsPageState extends ConsumerState<ClubSettingsPage> {
   }
 
   Future<void> _confirmDelete() async {
+    final l10n = S.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Eliminar Club?'),
-        content: const Text(
-            'Esta acción no se puede deshacer. Todos los datos del club serán eliminados.'),
+        title: Text(l10n.clubSettingsDeleteTitle),
+        content: Text(l10n.clubSettingsDeleteMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
+            child: Text(l10n.actionDelete),
           ),
         ],
       ),
@@ -213,12 +216,13 @@ class _ClubSettingsPageState extends ConsumerState<ClubSettingsPage> {
   }
 
   Future<void> _deleteClub() async {
+    final l10n = S.of(context);
     setState(() => _isLoading = true);
     try {
       await ref.read(clubServiceProvider).deleteClub(widget.club.uuid);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Club eliminado')),
+          SnackBar(content: Text(l10n.clubSettingsDeleteSuccess)),
         );
         // Pop settings and detail page, returning to list
         Navigator.of(context).pop(); // Settings

@@ -15,7 +15,7 @@ import '../../../../ui/dialogs/group_form_dialog.dart';
 import '../../../../ui/widgets/coach_mark_target.dart';
 import '../../../../utils/group_utils.dart';
 import '../../../../design_system/literary_shadows.dart';
-import '../../../../design_system/evocative_texts.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../ui/utils/library_transition.dart';
 import 'group_stats_chips.dart';
 import 'group_menu.dart';
@@ -145,7 +145,7 @@ class _GroupCardState extends ConsumerState<GroupCard> {
     // ---- Allowed genres list (for subtitle) -------------------------
     final allowedGenres = BookGenre.allowedFromJson(group.allowedGenres);
     final genreSubtitle = allowedGenres.isNotEmpty
-        ? allowedGenres.map((g) => g.label).join(' · ')
+        ? allowedGenres.map((g) => g.localizedLabel(context)).join(' · ')
         : null;
 
     // ---- Owner excluded-books count ---------------------------------
@@ -215,10 +215,11 @@ class _GroupCardState extends ConsumerState<GroupCard> {
                                             group.ownerUserId,
                                         orElse: () => null,
                                       );
+                              final s = S.of(context);
                               final ownerName =
-                                  ownerMember?.user?.username ?? 'Desconocido';
+                                  ownerMember?.user?.username ?? s.unknown;
                               return Text(
-                                'Lector@ Maest@: $ownerName (Dueño)',
+                                s.groupLibrarian(ownerName),
                                 style: theme.textTheme.bodySmall,
                               );
                             },
@@ -253,7 +254,7 @@ class _GroupCardState extends ConsumerState<GroupCard> {
                         ],
                         const SizedBox(height: 4),
                         Text(
-                            'Última actualización: ${DateFormat.yMd().add_Hm().format(group.updatedAt)}',
+                            S.of(context).lastUpdate(DateFormat.yMd().add_Hm().format(group.updatedAt)),
                             style: theme.textTheme.bodySmall),
                       ],
                     ),
@@ -264,7 +265,7 @@ class _GroupCardState extends ConsumerState<GroupCard> {
                       IconButton(
                         onPressed: isGroupBusy ? null : () => widget.onSync(),
                         icon: const Icon(Icons.sync_outlined),
-                        tooltip: 'Sincronizar grupo',
+                        tooltip: S.of(context).tooltipSyncGroup,
                       ),
                       if (menuButton != null) menuButton,
                     ],
@@ -303,7 +304,7 @@ class _GroupCardState extends ConsumerState<GroupCard> {
                       );
                     },
                     icon: const Icon(Icons.auto_stories), // Library icon
-                    label: Text(EvocativeTexts.archiveButtonText(group.name)),
+                    label: Text(S.of(context).evocArchiveButton(group.name)),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
@@ -426,14 +427,14 @@ Future<void> _handleEditGroup(
     if (!context.mounted) return;
     _showFeedbackSnackBar(
       context: context,
-      message: 'Grupo actualizado correctamente',
+      message: S.of(context).successGroupUpdated,
       isError: false,
     );
   } catch (error) {
     if (!context.mounted) return;
     _showFeedbackSnackBar(
       context: context,
-      message: 'Error al actualizar grupo: $error',
+      message: S.of(context).errorUpdatingGroup(error.toString()),
       isError: true,
     );
   }
@@ -455,7 +456,7 @@ Future<void> _handleTransferOwnership(
   if (members.isEmpty) {
     _showFeedbackSnackBar(
       context: context,
-      message: 'No hay otros miembros a quienes transferir',
+      message: S.of(context).errorNoOtherMembers,
       isError: true,
     );
     return;
@@ -468,21 +469,22 @@ Future<void> _handleTransferOwnership(
 
   if (selectedMember == null || !context.mounted) return;
 
+  final s = S.of(context);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Transferir propiedad'),
+      title: Text(s.dialogTransferOwnershipTitle),
       content: Text(
-        '¿Estás seguro de transferir la propiedad del grupo a ${selectedMember.user?.username ?? "este usuario"}? Esta acción no se puede deshacer.',
+        s.dialogTransferOwnershipMessage(selectedMember.user?.username ?? s.unknown),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancelar'),
+          child: Text(s.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Transferir'),
+          child: Text(s.actionTransfer),
         ),
       ],
     ),
@@ -502,14 +504,14 @@ Future<void> _handleTransferOwnership(
     if (!context.mounted) return;
     _showFeedbackSnackBar(
       context: context,
-      message: 'Propiedad transferida correctamente',
+      message: S.of(context).successOwnershipTransferred(newOwner.username),
       isError: false,
     );
   } catch (error) {
     if (!context.mounted) return;
     _showFeedbackSnackBar(
       context: context,
-      message: 'Error al transferir propiedad: $error',
+      message: S.of(context).errorTransferringOwnership(error.toString()),
       isError: true,
     );
   }
@@ -520,24 +522,25 @@ Future<void> _handleDeleteGroup(
   WidgetRef ref,
   Group group,
 ) async {
+  final s = S.of(context);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Eliminar grupo'),
+      title: Text(s.dialogDeleteGroupTitle),
       content: Text(
-        '¿Estás seguro de eliminar el grupo "${group.name}"? Esta acción no se puede deshacer y se eliminarán todos los libros compartidos y préstamos asociados.',
+        s.dialogDeleteGroupMessage(group.name),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancelar'),
+          child: Text(s.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: FilledButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
-          child: const Text('Eliminar'),
+          child: Text(s.actionDelete),
         ),
       ],
     ),
@@ -551,14 +554,14 @@ Future<void> _handleDeleteGroup(
     if (!context.mounted) return;
     _showFeedbackSnackBar(
       context: context,
-      message: 'Grupo eliminado correctamente',
+      message: S.of(context).successGroupDeleted,
       isError: false,
     );
   } catch (error) {
     if (!context.mounted) return;
     _showFeedbackSnackBar(
       context: context,
-      message: 'Error al eliminar grupo: $error',
+      message: S.of(context).errorDeletingGroup(error.toString()),
       isError: true,
     );
   }
@@ -569,21 +572,22 @@ Future<void> _handleLeaveGroup(
   final activeUser = ref.read(activeUserProvider).value;
   if (activeUser == null) return;
 
+  final s = S.of(context);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Salir del grupo'),
+      title: Text(s.dialogLeaveGroupTitle),
       content: Text(
-        '¿Estás seguro de salir del grupo "${group.name}"? Perderás acceso a los libros compartidos.',
+        s.dialogLeaveGroupMessage(group.name),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancelar'),
+          child: Text(s.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Salir'),
+          child: Text(s.actionLeave),
         ),
       ],
     ),
@@ -604,14 +608,14 @@ Future<void> _handleLeaveGroup(
     if (!context.mounted) return;
     _showFeedbackSnackBar(
       context: context,
-      message: 'Has salido del grupo correctamente',
+      message: S.of(context).successGroupLeft,
       isError: false,
     );
   } catch (error) {
     if (!context.mounted) return;
     _showFeedbackSnackBar(
       context: context,
-      message: 'Error al salir del grupo: $error',
+      message: S.of(context).errorLeavingGroup(error.toString()),
       isError: true,
     );
   }
@@ -670,7 +674,7 @@ class _ExcludedBooksRow extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              '$excluded ${excluded == 1 ? 'libro excluido' : 'libros excluidos'} por el filtro de género · $passing visibles',
+              S.of(context).excludedByFilter(excluded, passing),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.onErrorContainer,
               ),
@@ -690,7 +694,7 @@ class _SelectMemberDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Seleccionar nuevo propietario'),
+      title: Text(S.of(context).selectNewOwnerTitle),
       content: SizedBox(
         width: double.maxFinite,
         child: ListView.builder(
@@ -796,22 +800,22 @@ class GroupMembersSheet extends ConsumerWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                user?.username ?? 'Usuario desconocido',
+                                user?.username ?? S.of(context).userUnknown,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (isStarMember)
-                              const Tooltip(
-                                message: 'Miembro Estrella (Máxima actividad)',
-                                child: Text(' ⭐'),
-                              ),
+                               Tooltip(
+                                 message: S.of(context).starMemberTooltip,
+                                 child: const Text(' ⭐'),
+                               ),
                           ],
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(_getRoleLabel(
-                                member.membership.role, isCurrentOwner)),
+                                context, member.membership.role, isCurrentOwner)),
                             if (activity != null && activity.score > 0)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
@@ -820,33 +824,33 @@ class GroupMembersSheet extends ConsumerWidget {
                                   runSpacing: 4,
                                   children: [
                                     if (activity.sharedCount >= 5)
-                                      const _ActivityBadge(
-                                        label: 'Bibliófilo',
+                                      _ActivityBadge(
+                                        label: S.of(context).badgeBibliophile,
                                         icon: Icons.auto_stories,
                                         color: Colors.blue,
                                       ),
                                     if (activity.sharedCount >= 20)
-                                      const _ActivityBadge(
-                                        label: 'Curador',
+                                      _ActivityBadge(
+                                        label: S.of(context).badgeCurator,
                                         icon:
                                             Icons.collections_bookmark_outlined,
                                         color: Colors.amber,
                                       ),
                                     if (activity.sharedCount >= 10)
-                                      const _ActivityBadge(
-                                        label: 'Bibliotecario',
+                                      _ActivityBadge(
+                                        label: S.of(context).badgeLibrarian,
                                         icon: Icons.account_balance,
                                         color: Colors.purple,
                                       ),
                                     if (activity.lendingCount >= 3)
-                                      const _ActivityBadge(
-                                        label: 'Lector Activo',
+                                      _ActivityBadge(
+                                        label: S.of(context).badgeActiveReader,
                                         icon: Icons.handshake_outlined,
                                         color: Colors.green,
                                       ),
                                     if (activity.lendingCount >= 8)
-                                      const _ActivityBadge(
-                                        label: 'Generoso',
+                                      _ActivityBadge(
+                                        label: S.of(context).badgeGenerous,
                                         icon: Icons.volunteer_activism_outlined,
                                         color: Colors.orange,
                                       ),
@@ -858,18 +862,18 @@ class GroupMembersSheet extends ConsumerWidget {
                         trailing: isAdmin && !isCurrentOwner
                             ? PopupMenuButton<String>(
                                 itemBuilder: (context) => [
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: 'admin',
-                                    child: Text('Hacer admin'),
+                                    child: Text(S.of(context).actionMakeAdmin),
                                   ),
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: 'member',
-                                    child: Text('Hacer miembro'),
+                                    child: Text(S.of(context).actionMakeMember),
                                   ),
                                   const PopupMenuDivider(),
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: 'remove',
-                                    child: Text('Eliminar'),
+                                    child: Text(S.of(context).actionDelete),
                                   ),
                                 ],
                                 onSelected: (value) => _handleMemberAction(
@@ -894,13 +898,14 @@ class GroupMembersSheet extends ConsumerWidget {
     );
   }
 
-  String _getRoleLabel(String role, bool isOwner) {
-    if (isOwner) return 'Propietario';
+  String _getRoleLabel(BuildContext context, String role, bool isOwner) {
+    final s = S.of(context);
+    if (isOwner) return s.roleOwner;
     switch (role) {
       case 'admin':
-        return 'Administrador';
+        return s.roleAdmin;
       case 'member':
-        return 'Miembro';
+        return s.roleMember;
       default:
         return role;
     }
@@ -922,7 +927,7 @@ class GroupMembersSheet extends ConsumerWidget {
         if (!context.mounted) return;
         _showFeedbackSnackBar(
           context: context,
-          message: 'Miembro eliminado',
+          message: S.of(context).successMemberRemoved,
           isError: false,
         );
       } else {
@@ -933,7 +938,7 @@ class GroupMembersSheet extends ConsumerWidget {
         if (!context.mounted) return;
         _showFeedbackSnackBar(
           context: context,
-          message: 'Rol actualizado',
+          message: S.of(context).successRoleUpdated,
           isError: false,
         );
       }
@@ -979,7 +984,7 @@ class _ManageInvitationsSheetState
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Text('Gestionar invitaciones',
+                  Text(S.of(context).actionManageInvitations,
                       style: theme.textTheme.titleLarge),
                   const Spacer(),
                   IconButton(
@@ -997,15 +1002,15 @@ class _ManageInvitationsSheetState
                     ? () => _createInvitation(activeUser)
                     : null,
                 icon: const Icon(Icons.add),
-                label: const Text('Crear invitación'),
+                label: Text(S.of(context).actionCreateInvitation),
               ),
             ),
             Expanded(
               child: invitationsAsync.when(
                 data: (invitations) {
                   if (invitations.isEmpty) {
-                    return const Center(
-                        child: Text('No hay invitaciones pendientes'));
+                    return Center(
+                        child: Text(S.of(context).noPendingInvitations));
                   }
                   return ListView.builder(
                     controller: scrollController,
@@ -1024,7 +1029,7 @@ class _ManageInvitationsSheetState
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      'Código: ${invitation.code}',
+                                      S.of(context).invitationCodeLabel(invitation.code),
                                       style: theme.textTheme.titleSmall,
                                     ),
                                   ),
@@ -1042,7 +1047,7 @@ class _ManageInvitationsSheetState
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Expira: ${DateFormat.yMd().add_Hm().format(invitation.expiresAt)}',
+                                S.of(context).invitationExpiresLabel(DateFormat.yMd().add_Hm().format(invitation.expiresAt)),
                                 style: theme.textTheme.bodySmall,
                               ),
                             ],
@@ -1072,7 +1077,7 @@ class _ManageInvitationsSheetState
       if (!mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'Invitación creada correctamente',
+        message: S.of(context).successInvitationCreated,
         isError: false,
       );
       // No auto-share - user will click share button manually
@@ -1080,7 +1085,7 @@ class _ManageInvitationsSheetState
       if (!mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'Error al crear invitación: $error',
+        message: S.of(context).errorCreatingInvitation(error.toString()),
         isError: true,
       );
     }
@@ -1088,18 +1093,18 @@ class _ManageInvitationsSheetState
 
   Future<void> _shareInvitation(String code) async {
     final message =
-        'Te envío esta invitación para unirte a mi grupo de lectores: $code';
+        S.of(context).shareInvitationMessage(code);
 
     try {
       await Share.share(
         message,
-        subject: 'Invitación a grupo de lectores',
+        subject: S.of(context).shareInvitationSubject,
       );
     } catch (error) {
       if (!mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'Error al compartir: $error',
+        message: S.of(context).errorSharing(error.toString()),
         isError: true,
       );
     }
@@ -1107,23 +1112,24 @@ class _ManageInvitationsSheetState
 
   Future<void> _cancelInvitation(int invitationId) async {
     // Add confirmation dialog
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancelar invitación'),
-        content: const Text('¿Estás seguro de cancelar esta invitación?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('No'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Sí, cancelar'),
-          ),
-        ],
-      ),
-    );
+  final s = S.of(context);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(s.dialogCancelInvitationTitle),
+      content: Text(s.dialogCancelInvitationMessage),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(s.noLabel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(s.actionCancelInvitationConfirm),
+        ),
+      ],
+    ),
+  );
 
     if (confirmed != true || !mounted) return;
 
@@ -1137,14 +1143,14 @@ class _ManageInvitationsSheetState
       if (!mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'Invitación cancelada',
+        message: S.of(context).successInvitationCancelled,
         isError: false,
       );
     } catch (error) {
       if (!mounted) return;
       _showFeedbackSnackBar(
         context: context,
-        message: 'Error al cancelar invitación: $error',
+        message: S.of(context).errorCancellingInvitation(error.toString()),
         isError: true,
       );
     }

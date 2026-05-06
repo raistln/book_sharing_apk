@@ -1,7 +1,7 @@
 name: book_sharing_app
 description: PassTheBook - A Flutter app for cataloging, sharing, and lending books within local communities.
 publish_to: "none"
-version: 1.9.1+5
+version: 1.9.1+6
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -69,6 +69,7 @@ dev_dependencies:
   matcher: ^0.12.16
 
 flutter:
+  generate: true
   uses-material-design: true
   assets:
     - .env

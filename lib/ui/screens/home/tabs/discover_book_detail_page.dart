@@ -20,57 +20,60 @@ import '../../../widgets/coach_mark_target.dart';
 import '../../../widgets/library/review_dialog.dart';
 import '../../../widgets/loan_feedback_banner.dart';
 import '../../../widgets/notifications/in_app_notification_banner.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 /// Helper to resolve owner name
-String _resolveOwnerName(LocalUser? ownerUser, int ownerIdFallback) {
+String _resolveOwnerName(BuildContext context, LocalUser? ownerUser, int ownerIdFallback) {
   if (ownerUser != null) {
     final username = ownerUser.username.trim();
     if (username.isNotEmpty) {
       return username;
     }
   }
-  return 'Usuario $ownerIdFallback';
+  return S.of(context).userFallback(ownerIdFallback);
 }
 
 /// Helper to resolve status display
 _DiscoverStatusDisplay _resolveStatusDisplay({
+  required BuildContext context,
   required ThemeData theme,
   required SharedBook sharedBook,
   LoanDetail? loanDetail,
 }) {
+  final s = S.of(context);
   final colors = theme.colorScheme;
 
   if (loanDetail != null) {
     final status = loanDetail.loan.status;
     if (status == 'requested') {
       return _DiscoverStatusDisplay(
-        label: 'Solicitado',
+        label: s.statusRequested,
         icon: Icons.schedule_outlined,
         background: colors.secondaryContainer,
         foreground: colors.onSecondaryContainer,
-        caption: 'Solicitud pendiente de aprobación',
+        caption: s.statusRequestedCaption,
       );
     } else if (status == 'active') {
       return _DiscoverStatusDisplay(
-        label: 'En préstamo',
+        label: s.statusOnLoan,
         icon: Icons.handshake_outlined,
         background: colors.primaryContainer,
         foreground: colors.onPrimaryContainer,
-        caption: 'Préstamo activo',
+        caption: s.statusOnLoanCaption,
       );
     }
   }
 
   if (sharedBook.isAvailable) {
     return _DiscoverStatusDisplay(
-      label: 'Disponible',
+      label: s.statusAvailable,
       icon: Icons.check_circle_outlined,
       background: colors.tertiaryContainer,
       foreground: colors.onTertiaryContainer,
     );
   } else {
     return _DiscoverStatusDisplay(
-      label: 'No disponible',
+      label: s.statusUnavailable,
       icon: Icons.block_outlined,
       background: colors.surfaceContainerHighest,
       foreground: colors.onSurface,
@@ -304,6 +307,7 @@ class _DiscoverBookDetailPageState
                 ? borrowerLoanDetail
                 : null;
 
+            final s = S.of(context);
             final author = (book?.author ?? '').trim();
             final isbn = book?.isbn?.trim();
             final description = book?.description?.trim();
@@ -354,7 +358,7 @@ class _DiscoverBookDetailPageState
                               children: [
                                 Expanded(
                                   child: Text(
-                                    book?.title ?? 'Libro sin título',
+                                    book?.title ?? s.bookNoTitle,
                                     style: theme.textTheme.headlineSmall,
                                   ),
                                 ),
@@ -362,6 +366,7 @@ class _DiscoverBookDetailPageState
                                 if (sharedBook != null)
                                   _DiscoverStatusChip(
                                     display: _resolveStatusDisplay(
+                                      context: context,
                                       theme: theme,
                                       sharedBook: sharedBook,
                                       loanDetail:
@@ -374,6 +379,7 @@ class _DiscoverBookDetailPageState
                               Builder(
                                 builder: (context) {
                                   final statusDisplay = _resolveStatusDisplay(
+                                    context: context,
                                     theme: theme,
                                     sharedBook: sharedBook,
                                     loanDetail: borrowerLoanDetail ?? otherActiveLoan,
@@ -419,7 +425,7 @@ class _DiscoverBookDetailPageState
                                     child: Text(
                                       [
                                         if (pageCount != null)
-                                          '$pageCount páginas',
+                                          s.bookPages(pageCount),
                                         if (publicationYear != null)
                                           '$publicationYear',
                                       ].join(' • '),
@@ -444,7 +450,7 @@ class _DiscoverBookDetailPageState
                                           return Row(
                                             children: [
                                               Text(
-                                                'Nadie ha opinado todavía',
+                                                s.noReviewsYet,
                                                 style: theme
                                                     .textTheme.bodyMedium
                                                     ?.copyWith(
@@ -455,7 +461,7 @@ class _DiscoverBookDetailPageState
                                               const Spacer(),
                                               if (activeUser != null)
                                                 _buildOpinarButton(
-                                                    context, ref, book, null),
+                                                    context, ref, book, null, s),
                                             ],
                                           );
                                         }
@@ -481,7 +487,7 @@ class _DiscoverBookDetailPageState
                                                       MainAxisSize.min,
                                                   children: [
                                                     Text(
-                                                      '$count ${count == 1 ? 'opinión' : 'opiniones'}',
+                                                      s.reviewCount(count),
                                                       style: theme
                                                           .textTheme.bodyMedium
                                                           ?.copyWith(
@@ -505,7 +511,7 @@ class _DiscoverBookDetailPageState
                                             const Spacer(),
                                             if (activeUser != null)
                                               _buildOpinarButton(context, ref,
-                                                  book, userReview),
+                                                  book, userReview, s),
                                           ],
                                         );
                                       },
@@ -527,6 +533,7 @@ class _DiscoverBookDetailPageState
                                     _selectedCopy = copy;
                                   });
                                 },
+                                s: s,
                               ),
                               const SizedBox(height: 16),
                             ] else if (sharedBook != null) ...[
@@ -537,7 +544,7 @@ class _DiscoverBookDetailPageState
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'Propietario: ${_resolveOwnerName(ownerUser, sharedBook.ownerUserId)}',
+                                      s.bookOwner(_resolveOwnerName(context, ownerUser, sharedBook.ownerUserId)),
                                       style: theme.textTheme.bodyMedium,
                                     ),
                                   ),
@@ -559,19 +566,19 @@ class _DiscoverBookDetailPageState
                                           size: 18),
                                       label: Text('ISBN $isbn'),
                                     ),
-                                  ...genres.map((g) => Chip(
+                                      ...genres.map((g) => Chip(
                                         avatar: const Icon(
                                             Icons.category_outlined,
                                             size: 18),
-                                        label: Text(g.label),
+                                        label: Text(g.localizedLabel(context)),
                                       )),
                                   if (book != null) ...[
                                     if (book.isPhysical)
                                       Chip(
                                         avatar: const Icon(Icons.book,
                                             size: 18, color: Colors.blue),
-                                        label: const Text('Físico',
-                                            style: TextStyle(
+                                        label: Text(s.bookFormatPhysical,
+                                            style: const TextStyle(
                                                 color: Colors.blue,
                                                 fontWeight: FontWeight.bold)),
                                         backgroundColor: Colors.blue.shade50,
@@ -582,8 +589,8 @@ class _DiscoverBookDetailPageState
                                       Chip(
                                         avatar: const Icon(Icons.tablet_mac,
                                             size: 18, color: Colors.purple),
-                                        label: const Text('Digital',
-                                            style: TextStyle(
+                                        label: Text(s.bookFormatDigital,
+                                            style: const TextStyle(
                                                 color: Colors.purple,
                                                 fontWeight: FontWeight.bold)),
                                         backgroundColor: Colors.purple.shade50,
@@ -606,7 +613,7 @@ class _DiscoverBookDetailPageState
                               child: Text(
                                 (description != null && description.isNotEmpty)
                                     ? description
-                                    : 'Este libro no tiene una descripción añadida.',
+                                    : s.bookNoDescription,
                                 style: theme.textTheme.bodyMedium,
                               ),
                             ),
@@ -629,24 +636,22 @@ class _DiscoverBookDetailPageState
                               ),
                               const SizedBox(height: 8),
                             ],
-                            Text('Acciones',
+                            Text(s.actionsTitle,
                                 style: theme.textTheme.titleMedium),
                             const SizedBox(height: 12),
                             if (otherActiveLoan != null)
                               _buildInformationMessage(
                                 icon: Icons.lock_clock_outlined,
                                 title:
-                                    'Reservado por ${_resolveUserName(otherActiveLoan.borrower)}',
+                                    s.reservedBy(_resolveUserName(otherActiveLoan.borrower)),
                                 subtitle:
-                                    'El préstamo está ${otherActiveLoan.loan.status == 'requested' ? 'pendiente de aprobación' : 'en curso'}. '
-                                    'Podrás solicitarlo cuando vuelva a estar disponible.',
+                                    s.loanStatusMessage(otherActiveLoan.loan.status == 'requested' ? s.loanPendingApproval : s.loanInProgress),
                               )
                             else if (activeUser == null)
                               _buildInformationMessage(
                                 icon: Icons.info_outline,
-                                title: 'Necesitas iniciar sesión local.',
-                                subtitle:
-                                    'Solo las personas registradas localmente pueden solicitar préstamos.',
+                                title: s.errorLocalSessionRequired,
+                                subtitle: s.errorLocalSessionMessage,
                               ),
                             if (pendingOwnerLoan != null && owner != null)
                               Padding(
@@ -661,12 +666,12 @@ class _DiscoverBookDetailPageState
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'Solicitud pendiente',
+                                          s.pendingRequestTitle,
                                           style: theme.textTheme.titleSmall,
                                         ),
                                         const SizedBox(height: 8),
                                         Text(
-                                          'Tienes una solicitud de ${_resolveUserName(pendingOwnerLoan.borrower)} para este libro.',
+                                          s.pendingRequestFrom(_resolveUserName(pendingOwnerLoan.borrower)),
                                           style: theme.textTheme.bodyMedium,
                                         ),
                                         const SizedBox(height: 12),
@@ -684,11 +689,11 @@ class _DiscoverBookDetailPageState
                                                           owner: owner,
                                                           detail:
                                                               pendingOwnerLoan,
+                                                          s: s,
                                                         ),
                                                 icon: const Icon(
                                                     Icons.check_circle_outline),
-                                                label: const Text(
-                                                    'Aceptar solicitud'),
+                                                label: Text(s.actionAcceptRequest),
                                               ),
                                             ),
                                             OutlinedButton.icon(
@@ -698,10 +703,11 @@ class _DiscoverBookDetailPageState
                                                         owner: owner,
                                                         detail:
                                                             pendingOwnerLoan,
+                                                        s: s,
                                                       ),
                                               icon: const Icon(
                                                   Icons.cancel_outlined),
-                                              label: const Text('Rechazar'),
+                                              label: Text(s.actionRejectRequest),
                                             ),
                                           ],
                                         ),
@@ -719,9 +725,10 @@ class _DiscoverBookDetailPageState
                                 loanState: loanState,
                                 sharedBook: sharedBook,
                                 originalBookMetadata: book,
+                                s: s,
                               ),
                             if (sharedBook == null && !hasOtherActiveLoan && activeUser != null)
-                              _buildDisabledActionButtons(theme),
+                              _buildDisabledActionButtons(theme, s),
                             if (sharedBook != null && !canRequest &&
                                 !canCancel &&
                                 otherActiveLoan == null &&
@@ -730,8 +737,8 @@ class _DiscoverBookDetailPageState
                                 padding: const EdgeInsets.only(top: 8),
                                 child: Text(
                                   borrowerLoanDetail != null
-                                      ? 'Ya enviaste una solicitud para este libro y está ${borrowerLoanDetail.loan.status == 'requested' ? 'pendiente de aprobación' : borrowerLoanDetail.loan.status}.'
-                                      : 'Este libro no está disponible en este momento.',
+                                      ? s.alreadyRequestedMessage(borrowerLoanDetail.loan.status == 'requested' ? s.loanPendingApproval : borrowerLoanDetail.loan.status)
+                                      : s.bookNotAvailableMessage,
                                   style: theme.textTheme.bodyMedium,
                                 ),
                               ),
@@ -745,17 +752,20 @@ class _DiscoverBookDetailPageState
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => _buildInformationMessage(
-            icon: Icons.error_outline,
-            title: 'No pudimos cargar este libro.',
-            subtitle: '$error',
-          ),
+          error: (error, _) {
+            final s = S.of(context);
+            return _buildInformationMessage(
+              icon: Icons.error_outline,
+              title: s.errorLoadingBook,
+              subtitle: '$error',
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildDisabledActionButtons(ThemeData theme) {
+  Widget _buildDisabledActionButtons(ThemeData theme, S s) {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Column(
@@ -763,18 +773,18 @@ class _DiscoverBookDetailPageState
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => _showNoOwnerWarning(),
+              onPressed: () => _showNoOwnerWarning(s),
               icon: const Icon(Icons.handshake_outlined),
-              label: const Text('Pedir prestado'),
+              label: Text(s.actionBorrow),
             ),
           ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => _showNoOwnerWarning(),
+              onPressed: () => _showNoOwnerWarning(s),
               icon: const Icon(Icons.library_add_outlined),
-              label: const Text('Añadir a mi biblioteca'),
+              label: Text(s.actionAddToLibrary),
             ),
           ),
         ],
@@ -782,10 +792,10 @@ class _DiscoverBookDetailPageState
     );
   }
 
-  void _showNoOwnerWarning() {
+  void _showNoOwnerWarning(S s) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Por favor, selecciona un dueño primero.'),
+      SnackBar(
+        content: Text(s.warningSelectOwner),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -798,12 +808,13 @@ class _DiscoverBookDetailPageState
     required List<GroupMemberDetail> members,
     required LocalUser? activeUser,
     required ValueChanged<SharedBookDetail> onSelected,
+    required S s,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '¿A quién quieres pedírselo?',
+          s.selectOwnerTitle,
           style: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -816,7 +827,7 @@ class _DiscoverBookDetailPageState
             final member = members.firstWhereOrNull(
               (m) => m.membership.memberUserId == detail.sharedBook.ownerUserId,
             );
-            final name = _resolveOwnerName(member?.user, detail.sharedBook.ownerUserId);
+            final name = _resolveOwnerName(context, member?.user, detail.sharedBook.ownerUserId);
             final isSelected = selectedCopy?.sharedBook.id == detail.sharedBook.id;
             final isAvailable = detail.sharedBook.isAvailable;
 
@@ -851,12 +862,11 @@ class _DiscoverBookDetailPageState
   }
 
   Future<void> _cancelLoan(
-      {required Loan loan, required LocalUser borrower}) async {
+      {required Loan loan, required LocalUser borrower, required S s}) async {
     final confirmed = await UIHelpers.showConfirmDialog(
       context: context,
-      title: '¿Cancelar solicitud?',
-      message:
-          '¿Estás seguro de que quieres cancelar esta solicitud de préstamo?',
+      title: s.dialogCancelRequestTitle,
+      message: s.dialogCancelRequestMessage,
       isDangerous: false,
     );
     if (!confirmed) return;
@@ -867,8 +877,11 @@ class _DiscoverBookDetailPageState
     } catch (_) {}
   }
 
-  Future<void> _handleOwnerAccept(
-      {required LocalUser owner, required LoanDetail detail}) async {
+  Future<void> _handleOwnerAccept({
+    required LocalUser owner,
+    required LoanDetail detail,
+    required S s,
+  }) async {
     final controller = ref.read(loanControllerProvider.notifier);
     try {
       await controller.acceptLoan(loan: detail.loan, owner: owner);
@@ -876,12 +889,11 @@ class _DiscoverBookDetailPageState
   }
 
   Future<void> _handleOwnerReject(
-      {required LocalUser owner, required LoanDetail detail}) async {
+      {required LocalUser owner, required LoanDetail detail, required S s}) async {
     final confirmed = await UIHelpers.showConfirmDialog(
       context: context,
-      title: '¿Rechazar solicitud?',
-      message:
-          '¿Estás seguro de que quieres rechazar esta solicitud de préstamo?',
+      title: s.dialogRejectRequestTitle,
+      message: s.dialogRejectRequestMessage,
       isDangerous: false,
     );
     if (!confirmed) return;
@@ -925,14 +937,14 @@ class _DiscoverBookDetailPageState
   }
 
   Widget _buildOpinarButton(BuildContext context, WidgetRef ref, Book book,
-      ReviewWithAuthor? userReview) {
+      ReviewWithAuthor? userReview, S s) {
     return TextButton.icon(
       onPressed: () => showAddReviewDialog(context, ref, book),
       icon: Icon(
         userReview != null ? Icons.edit_outlined : Icons.rate_review_outlined,
         size: 18,
       ),
-      label: Text(userReview != null ? 'Editar' : 'Opinar'),
+      label: Text(userReview != null ? s.edit : s.opinar),
       style: TextButton.styleFrom(
         visualDensity: VisualDensity.compact,
       ),
@@ -947,6 +959,7 @@ class _DiscoverBookDetailPageState
     required LoanActionState loanState,
     required SharedBook sharedBook,
     required Book? originalBookMetadata,
+    required S s,
   }) sync* {
     if (canRequest && borrower != null) {
       final LocalUser borrowerNonNull = borrower;
@@ -960,7 +973,7 @@ class _DiscoverBookDetailPageState
                     borrower: borrowerNonNull,
                   ),
           icon: const Icon(Icons.handshake_outlined),
-          label: const Text('Solicitar préstamo'),
+          label: Text(s.actionRequestLoan),
         ),
       );
     }
@@ -976,9 +989,10 @@ class _DiscoverBookDetailPageState
               : () => _cancelLoan(
                     loan: loanDetailNonNull.loan,
                     borrower: borrowerNonNull,
+                    s: s,
                   ),
           icon: const Icon(Icons.cancel_outlined),
-          label: const Text('Cancelar solicitud'),
+          label: Text(s.actionCancelRequest),
         ),
       );
     }
@@ -987,15 +1001,15 @@ class _DiscoverBookDetailPageState
     yield Padding(
       padding: const EdgeInsets.only(top: 12),
       child: OutlinedButton.icon(
-        onPressed: () => _copyToLibrary(sharedBook, originalBookMetadata),
+        onPressed: () => _copyToLibrary(sharedBook, originalBookMetadata, s),
         icon: const Icon(Icons.library_add_outlined),
-        label: const Text('Añadir a mi biblioteca'),
+        label: Text(s.actionAddToLibrary),
       ),
     );
   }
 
   Future<void> _copyToLibrary(
-      SharedBook sharedBook, Book? originalBookMetadata) async {
+      SharedBook sharedBook, Book? originalBookMetadata, S s) async {
     final activeUser = ref.read(activeUserProvider).value;
     if (activeUser == null) return;
 
@@ -1003,8 +1017,8 @@ class _DiscoverBookDetailPageState
 
     final confirmed = await UIHelpers.showConfirmDialog(
       context: context,
-      title: '¿Añadir a mi biblioteca?',
-      message: '¿Seguro que quieres pasar este libro a tu biblioteca personal?',
+      title: s.dialogAddToLibraryTitle,
+      message: s.dialogAddToLibraryMessage,
       isDangerous: false,
     );
     if (!confirmed) return;
@@ -1013,7 +1027,7 @@ class _DiscoverBookDetailPageState
 
     try {
       if (originalBookMetadata == null) {
-        throw Exception('No se encontraron los metadatos del libro original');
+        throw Exception(s.errorOriginalMetadataNotFound);
       }
 
       await repository.addBook(
@@ -1022,7 +1036,7 @@ class _DiscoverBookDetailPageState
         isbn: originalBookMetadata.isbn,
         barcode: originalBookMetadata.barcode,
         coverPath: null,
-        description: 'Añadido desde un grupo',
+        description: s.addedFromGroup,
         status: 'private',
         isRead: false,
         owner: activeUser,
@@ -1041,7 +1055,7 @@ class _DiscoverBookDetailPageState
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                      '"${originalBookMetadata.title}" añadido a tu biblioteca'),
+                      s.bookAddedToLibrary(originalBookMetadata.title)),
                 ),
               ],
             ),
@@ -1056,8 +1070,8 @@ class _DiscoverBookDetailPageState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage.contains('Ya tienes ese libro')
-                ? 'Ya tienes este libro en tu biblioteca'
-                : 'Error al añadir a la biblioteca: $e'),
+                ? s.errorAlreadyInLibrary
+                : s.errorAddingToLibrary(e.toString())),
             backgroundColor: errorMessage.contains('Ya tienes ese libro')
                 ? theme.colorScheme.primary
                 : theme.colorScheme.error,
@@ -1080,6 +1094,6 @@ class _DiscoverBookDetailPageState
   }
 
   String _resolveUserName(LocalUser? user) {
-    return user?.username ?? 'Usuario desconocido';
+    return user?.username ?? S.of(context).userUnknown;
   }
 }

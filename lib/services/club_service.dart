@@ -57,10 +57,15 @@ class ClubService {
 
     await dao.upsertClub(companion);
 
+    final createdClub = await dao.getClubByUuid(clubUuid);
+    if (createdClub == null) {
+      throw Exception('No se pudo crear el club localmente.');
+    }
+
     // Auto-add owner as member with 'dueño' role
     await dao.upsertClubMember(ClubMembersCompanion.insert(
       uuid: _uuid.v4(),
-      clubId: 0, // Will be set on sync
+      clubId: createdClub.id,
       clubUuid: clubUuid,
       memberUserId: ownerUserId,
       memberRemoteId: Value(ownerRemoteId),

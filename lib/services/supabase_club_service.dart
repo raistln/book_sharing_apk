@@ -835,7 +835,11 @@ class SupabaseClubService {
 
   Future<bool> updateClubBook({
     required String id,
+    required int orderPosition,
     required String status,
+    required String sectionMode,
+    required int totalChapters,
+    required String sections,
     DateTime? startDate,
     DateTime? endDate,
     required DateTime updatedAt,
@@ -847,7 +851,11 @@ class SupabaseClubService {
     );
 
     final payload = <String, dynamic>{
+      'order_position': orderPosition,
       'status': status,
+      'section_mode': sectionMode,
+      'total_chapters': totalChapters,
+      'sections': sections,
       'start_date': startDate?.toUtc().toIso8601String(),
       'end_date': endDate?.toUtc().toIso8601String(),
       'updated_at': updatedAt.toUtc().toIso8601String(),

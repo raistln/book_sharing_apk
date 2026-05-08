@@ -216,6 +216,24 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
     return into(clubBooks).insertOnConflictUpdate(book);
   }
 
+  /// Stream all non-deleted club books with the linked library book details.
+  Stream<List<ClubBookWithDetails>> watchClubBooksWithDetails(String clubUuid) {
+    return (select(clubBooks)
+          ..where(
+              (t) => t.clubUuid.equals(clubUuid) & t.isDeleted.equals(false))
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.orderPosition),
+          ]))
+        .join([
+      innerJoin(db.books, db.books.uuid.equalsExp(clubBooks.bookUuid)),
+    ]).map((row) {
+      return ClubBookWithDetails(
+        clubBook: row.readTable(clubBooks),
+        book: row.readTable(db.books),
+      );
+    }).watch();
+  }
+
   // =====================================================================
   // READING PROGRESS
   // =====================================================================

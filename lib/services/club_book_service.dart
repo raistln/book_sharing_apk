@@ -205,12 +205,10 @@ class ClubBookService {
 
   /// Get sections for a book
   Future<List<ReadingSection>> getSections(String bookUuid) async {
-    final book = await dao.watchClubBooks('').first.then(
-          (books) => books.firstWhere(
-            (b) => b.uuid == bookUuid,
-            orElse: () => throw Exception('Book not found'),
-          ),
-        );
+    final book = await dao.getClubBookByUuid(bookUuid);
+    if (book == null) {
+      throw Exception('Book not found');
+    }
 
     return ReadingSectionListHelper.fromJsonString(book.sections);
   }

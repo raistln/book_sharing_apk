@@ -126,6 +126,49 @@ class SupabaseBookService {
     );
   }
 
+  Future<SupabaseBookRecord?> fetchBookByUuid({
+    required String bookUuid,
+    String? accessToken,
+  }) async {
+    final config = await _loadConfig();
+    final uri = Uri.parse('${config.url}/rest/v1/shared_books').replace(
+      queryParameters: {
+        'select':
+            'id,group_id,owner_id,book_uuid,title,author,isbn,cover_url,visibility,is_available,is_physical,is_read,reading_status,description,barcode,read_at,is_borrowed_external,external_lender_name,is_on_shelf,is_on_shelf_at,is_deleted,genre,page_count,publication_year,created_at,updated_at',
+        'book_uuid': 'eq.$bookUuid',
+        'is_deleted': 'eq.false',
+        'order': 'updated_at.desc',
+        'limit': '1',
+      },
+    );
+
+    final response = await _client.get(
+      uri,
+      headers: _buildHeaders(
+        config,
+        accessToken: accessToken,
+      ),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final payload = jsonDecode(response.body);
+      if (payload is List && payload.isNotEmpty) {
+        final record = payload.first;
+        if (record is Map<String, dynamic>) {
+          return SupabaseBookRecord.fromJson(record);
+        }
+      } else if (payload is Map<String, dynamic>) {
+        return SupabaseBookRecord.fromJson(payload);
+      }
+      return null;
+    }
+
+    throw SupabaseBookServiceException(
+      'Error ${response.statusCode}: ${response.body}',
+      response.statusCode,
+    );
+  }
+
   Future<List<SupabaseBookReviewRecord>> fetchReviews({
     String? authorId,
     String? accessToken,

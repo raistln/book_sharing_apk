@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/local/club_dao.dart';
 import '../data/local/database.dart';
+import '../models/reading_section.dart';
 
 /// Service for managing section comments and moderation
 class SectionCommentService {
@@ -31,12 +32,27 @@ class SectionCommentService {
     final commentUuid = _uuid.v4();
 
     final club = await dao.getClubByUuid(clubUuid);
-    final book = await dao.getClubBookByUuid(bookUuid);
+    final book = await dao.getClubBookByBookUuid(clubUuid, bookUuid);
     final user = await dao.getClubMember(clubUuid, userUuid);
 
     if (club == null) throw Exception('Club no encontrado');
     if (book == null) throw Exception('Libro no encontrado en el club');
     if (user == null) throw Exception('Usuario no es miembro del club');
+
+    final sections = ReadingSectionListHelper.fromJsonString(book.sections);
+    if (sections.isNotEmpty) {
+      final matchingSections = sections.where((s) => s.numero == sectionNumber);
+      if (matchingSections.isEmpty) {
+        throw Exception('La sección seleccionada no existe para este libro.');
+      }
+
+      final section = matchingSections.first;
+      if (DateTime.now().isBefore(section.fechaApertura)) {
+        throw Exception(
+          'Esa sección todavía no está abierta. Así evitamos spoilers antes de tiempo.',
+        );
+      }
+    }
 
     final companion = SectionCommentsCompanion.insert(
       uuid: commentUuid,

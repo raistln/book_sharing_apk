@@ -155,7 +155,11 @@ class SupabaseClubBookSyncRepository {
           // Update existing
           final updated = await _clubService.updateClubBook(
             id: provisionalRemoteId,
+            orderPosition: book.orderPosition,
             status: book.status,
+            sectionMode: book.sectionMode,
+            totalChapters: book.totalChapters,
+            sections: book.sections,
             startDate: book.startDate,
             endDate: book.endDate,
             updatedAt: book.updatedAt,
@@ -314,7 +318,10 @@ class SupabaseClubBookSyncRepository {
     for (final progress in dirtyProgress) {
       try {
         // Get club book remote ID
-        final clubBook = await _clubDao.getClubBookByUuid(progress.bookUuid);
+        final clubBook = await _clubDao.getClubBookByBookUuid(
+          progress.clubUuid,
+          progress.bookUuid,
+        );
         if (clubBook == null || clubBook.remoteId == null) {
           if (kDebugMode) {
             debugPrint(
@@ -424,7 +431,10 @@ class SupabaseClubBookSyncRepository {
         }
 
         // Get club book remote ID
-        final clubBook = await _clubDao.getClubBookByUuid(comment.bookUuid);
+        final clubBook = await _clubDao.getClubBookByBookUuid(
+          comment.clubUuid,
+          comment.bookUuid,
+        );
         if (clubBook == null || clubBook.remoteId == null) {
           if (kDebugMode) {
             debugPrint(

@@ -65,6 +65,12 @@ final activeClubBookDetailsProvider =
   return dao.watchActiveClubBookWithDetails(clubUuid);
 });
 
+final clubBookQueueProvider =
+    StreamProvider.family<List<ClubBookWithDetails>, String>((ref, clubUuid) {
+  final dao = ref.watch(clubDaoProvider);
+  return dao.watchClubBooksWithDetails(clubUuid);
+});
+
 final activeBookUserProgressProvider =
     StreamProvider.family<ClubReadingProgressData?, String>((ref, clubUuid) {
   final activeBookAsync = ref.watch(activeClubBookDetailsProvider(clubUuid));

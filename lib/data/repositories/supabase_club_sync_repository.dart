@@ -5,6 +5,7 @@ import '../local/book_dao.dart';
 import '../local/club_dao.dart';
 import '../local/database.dart';
 import '../local/user_dao.dart';
+import '../../services/supabase_book_service.dart';
 import '../../services/supabase_club_service.dart';
 
 /// Repository for syncing reading clubs and members with Supabase
@@ -13,15 +14,18 @@ class SupabaseClubSyncRepository {
     required ClubDao clubDao,
     required UserDao userDao,
     required BookDao bookDao,
+    SupabaseBookService? bookService,
     SupabaseClubService? clubService,
   })  : _clubDao = clubDao,
         _userDao = userDao,
         _bookDao = bookDao,
+        _bookService = bookService ?? SupabaseBookService(),
         _clubService = clubService ?? SupabaseClubService();
 
   final ClubDao _clubDao;
   final UserDao _userDao;
   final BookDao _bookDao;
+  final SupabaseBookService _bookService;
   final SupabaseClubService _clubService;
 
   // =====================================================================
@@ -258,6 +262,12 @@ class SupabaseClubSyncRepository {
 
         // Sync club books (Bug #4: Implement downloading of club books)
         for (final remoteBook in remote.books) {
+          await _ensureLocalBookByUuid(
+            remoteBook.bookUuid,
+            createdAtFallback: remoteBook.createdAt,
+            accessToken: accessToken,
+          );
+
           final existingBook =
               await _clubDao.getClubBookByRemoteId(remoteBook.id);
           if (existingBook != null && existingBook.isDirty) {
@@ -663,6 +673,83 @@ class SupabaseClubSyncRepository {
     return user;
   }
 
+  Future<Book?> _ensureLocalBookByUuid(
+    String bookUuid, {
+    required DateTime createdAtFallback,
+    String? accessToken,
+  }) async {
+    var book = await _bookDao.findByUuid(bookUuid);
+    if (book != null) {
+      return book;
+    }
+
+    final remoteBook = await _bookService.fetchBookByUuid(
+      bookUuid: bookUuid,
+      accessToken: accessToken,
+    );
+    if (remoteBook == null) {
+      return null;
+    }
+
+    final owner = await _ensureLocalUser(
+      remoteId: remoteBook.ownerId,
+      createdAtFallback: remoteBook.createdAt,
+    );
+
+    final existingByContent = await _bookDao.findByTitleAndAuthor(
+      remoteBook.title,
+      remoteBook.author ?? '',
+      ownerUserId: owner?.id,
+    );
+    if (existingByContent != null) {
+      if (existingByContent.uuid != bookUuid) {
+        await _bookDao.updateBookFields(
+          bookId: existingByContent.id,
+          entry: BooksCompanion(
+            uuid: Value(bookUuid),
+            isDirty: const Value(false),
+            syncedAt: Value(DateTime.now()),
+          ),
+        );
+      }
+      return _bookDao.findById(existingByContent.id);
+    }
+
+    final insertedId = await _bookDao.insertBook(
+      BooksCompanion.insert(
+        uuid: bookUuid,
+        ownerUserId: owner != null ? Value(owner.id) : const Value.absent(),
+        ownerRemoteId: Value(remoteBook.ownerId),
+        title: remoteBook.title,
+        author: (remoteBook.author != null && remoteBook.author!.trim().isNotEmpty)
+            ? Value(remoteBook.author!.trim())
+            : const Value.absent(),
+        isbn: (remoteBook.isbn != null && remoteBook.isbn!.trim().isNotEmpty)
+            ? Value(remoteBook.isbn!.trim())
+            : const Value.absent(),
+        coverPath: Value(remoteBook.coverUrl),
+        status: Value(remoteBook.isAvailable == true ? 'available' : 'loaned'),
+        description: Value(remoteBook.description),
+        readingStatus: Value(remoteBook.readingStatus ?? 'pending'),
+        isRead: Value(remoteBook.isRead),
+        readAt: Value(remoteBook.readAt),
+        genre: Value(remoteBook.genre),
+        isPhysical: Value(remoteBook.isPhysical),
+        pageCount: Value(remoteBook.pageCount),
+        publicationYear: Value(remoteBook.publicationYear),
+        isBorrowedExternal: Value(remoteBook.isBorrowedExternal),
+        externalLenderName: Value(remoteBook.externalLenderName),
+        isOnShelf: Value(remoteBook.isOnShelf),
+        isOnShelfAt: Value(remoteBook.isOnShelfAt),
+        isDirty: const Value(false),
+        createdAt: Value(remoteBook.createdAt),
+        updatedAt: Value(remoteBook.updatedAt ?? createdAtFallback),
+        syncedAt: Value(DateTime.now()),
+      ),
+    );
+    return _bookDao.findById(insertedId);
+  }
+
   // Bug J Fix: Sync book proposals from remote
   Future<void> _syncBookProposals({
     required int localClubId,
@@ -671,6 +758,11 @@ class SupabaseClubSyncRepository {
     required DateTime syncedAt,
   }) async {
     for (final remote in remoteProposals) {
+      await _ensureLocalBookByUuid(
+        remote.bookUuid,
+        createdAtFallback: remote.createdAt,
+      );
+
       final existing = await (_clubDao.select(_clubDao.bookProposals)
             ..where((t) => t.uuid.equals(remote.id)))
           .getSingleOrNull();
@@ -761,7 +853,7 @@ class SupabaseClubSyncRepository {
       final existing = await (_clubDao.select(_clubDao.clubReadingProgress)
             ..where((t) =>
                 t.clubUuid.equals(localClubUuid) &
-                t.bookUuid.equals(clubBook.uuid) &
+                t.bookUuid.equals(clubBook.bookUuid) &
                 t.userId.equals(user.id)))
           .getSingleOrNull();
 
@@ -791,7 +883,7 @@ class SupabaseClubSyncRepository {
                 clubId: Value(club.id),
                 clubUuid: Value(localClubUuid),
                 bookId: Value(clubBook.id),
-                bookUuid: Value(clubBook.uuid),
+                bookUuid: Value(clubBook.bookUuid),
                 userId: Value(user.id),
                 userRemoteId: Value(remote.userId),
                 currentSection: Value(remote.currentSection),
@@ -853,7 +945,7 @@ class SupabaseClubSyncRepository {
           clubId: Value(localClubId),
           clubUuid: Value(localClubUuid),
           bookId: Value(clubBook.id),
-          bookUuid: Value(clubBook.uuid),
+          bookUuid: Value(clubBook.bookUuid),
           sectionNumber: Value(remote.sectionNumber),
           userId: Value(author.id),
           userRemoteId: Value(remote.authorUserId),
@@ -877,7 +969,7 @@ class SupabaseClubSyncRepository {
         clubId: localClubId,
         clubUuid: localClubUuid,
         bookId: clubBook.id,
-        bookUuid: clubBook.uuid,
+        bookUuid: clubBook.bookUuid,
         sectionNumber: remote.sectionNumber,
         userId: author.id,
         userRemoteId: Value(remote.authorUserId),

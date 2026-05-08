@@ -81,6 +81,17 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
       return;
     }
 
+    if (_sectionMode == SectionMode.manual) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'El modo manual todavía no tiene editor en esta pantalla. Usa el modo automático o completo.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final chapters = _sectionMode == SectionMode.total 
         ? 1 
         : int.tryParse(_chaptersController.text);
@@ -329,6 +340,17 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
             onChanged: (value) {
               if (value != null) setState(() => _sectionMode = value);
             },
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _sectionMode == SectionMode.total
+                ? 'Modo completo: el club hablará del libro en un único hilo, sin dividir por capítulos.'
+                : _sectionMode == SectionMode.manual
+                    ? 'Modo manual: esta pantalla todavía no tiene editor visual para tramos personalizados; el modo automático sí queda operativo.'
+                    : 'Modo automático: la app abrirá secciones progresivamente para evitar spoilers.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[700],
+                ),
           ),
           if (_sectionMode != SectionMode.total) ...[
             const SizedBox(height: 16),

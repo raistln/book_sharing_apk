@@ -5,6 +5,7 @@ import '../data/local/club_dao.dart';
 import '../data/local/database.dart';
 import '../models/club_enums.dart';
 import '../models/global_sync_state.dart' show SyncEntity;
+import '../models/reading_section.dart';
 import 'unified_sync_coordinator.dart';
 
 /// Service for managing reading clubs
@@ -269,6 +270,111 @@ class ClubService {
     return books.map((e) => e.orderPosition).reduce((a, b) => a > b ? a : b);
   }
 
+  List<ReadingSection> _generateAutomaticSections({
+    required int totalChapters,
+    required ClubFrequency frequency,
+    int? frequencyDays,
+    required DateTime startDate,
+  }) {
+    if (totalChapters <= 0) return const [];
+
+    final daysPerSection = frequencyDays ?? frequency.defaultDays ?? 30;
+    const idealSectionsCount = 4;
+    final chaptersPerSection = (totalChapters / idealSectionsCount).ceil();
+
+    final sections = <ReadingSection>[];
+    var currentChapter = 1;
+    var sectionNumber = 1;
+    var currentStartDate = startDate;
+
+    while (currentChapter <= totalChapters) {
+      final endChapter =
+          (currentChapter + chaptersPerSection - 1).clamp(1, totalChapters);
+      final closeDate = currentStartDate.add(Duration(days: daysPerSection));
+
+      sections.add(
+        ReadingSection(
+          numero: sectionNumber,
+          capituloInicio: currentChapter,
+          capituloFin: endChapter,
+          fechaApertura: currentStartDate,
+          fechaCierre: closeDate,
+        ),
+      );
+
+      currentChapter = endChapter + 1;
+      sectionNumber++;
+      currentStartDate = closeDate;
+    }
+
+    return sections;
+  }
+
+  String _buildSectionsJson({
+    required ReadingClub club,
+    required SectionMode sectionMode,
+    required int totalChapters,
+    String? sectionsJson,
+    DateTime? startDate,
+  }) {
+    if (sectionMode == SectionMode.manual) {
+      return sectionsJson ?? '[]';
+    }
+
+    final safeStartDate = startDate ?? DateTime.now();
+
+    if (sectionMode == SectionMode.total) {
+      return ReadingSectionListHelper.toJsonString([
+        ReadingSection(
+          numero: 1,
+          capituloInicio: 1,
+          capituloFin: totalChapters,
+          fechaApertura: safeStartDate,
+          fechaCierre: safeStartDate.add(
+            Duration(days: club.frequencyDays ?? 30),
+          ),
+        ),
+      ]);
+    }
+
+    final sections = _generateAutomaticSections(
+      totalChapters: totalChapters,
+      frequency: ClubFrequency.fromString(club.frequency),
+      frequencyDays: club.frequencyDays,
+      startDate: safeStartDate,
+    );
+    return ReadingSectionListHelper.toJsonString(sections);
+  }
+
+  Future<void> repairBookSectionsIfMissing(String clubBookUuid) async {
+    final clubBook = await dao.getClubBookByUuid(clubBookUuid);
+    if (clubBook == null) return;
+    if (clubBook.sections.trim().isNotEmpty && clubBook.sections.trim() != '[]') {
+      return;
+    }
+
+    final club = await dao.getClubByUuid(clubBook.clubUuid);
+    if (club == null) return;
+
+    final repairedSections = _buildSectionsJson(
+      club: club,
+      sectionMode: SectionMode.fromString(clubBook.sectionMode),
+      totalChapters: clubBook.totalChapters,
+      startDate: clubBook.startDate,
+    );
+
+    await dao.upsertClubBook(
+      ClubBooksCompanion(
+        uuid: Value(clubBook.uuid),
+        clubUuid: Value(clubBook.clubUuid),
+        sections: Value(repairedSections),
+        isDirty: const Value(true),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+    _markDirty();
+  }
+
   /// Add a book to a club (admin action)
   Future<void> addBookToClub({
     required String clubUuid,
@@ -280,6 +386,13 @@ class ClubService {
   }) async {
     final club = await _requireClub(clubUuid);
     final maxOrder = await _getMaxOrderPosition(clubUuid);
+    final resolvedSectionsJson = _buildSectionsJson(
+      club: club,
+      sectionMode: sectionMode,
+      totalChapters: totalChapters,
+      sectionsJson: sectionsJson,
+      startDate: startDate,
+    );
 
     // Check if there is an active book
     final currentBook = await dao.getCurrentBook(clubUuid);
@@ -295,7 +408,7 @@ class ClubService {
       status: Value(status.value),
       sectionMode: Value(sectionMode.value),
       totalChapters: totalChapters,
-      sections: sectionsJson ?? '[]',
+      sections: resolvedSectionsJson,
       startDate: startDate != null ? Value(startDate) : const Value.absent(),
       isDirty: const Value(true),
     ));

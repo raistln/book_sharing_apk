@@ -1,5 +1,5 @@
 -- ============================================================================
--- Book Sharing App - Supabase SQL Schema v9 - COMPLETE DEPLOYMENT
+-- Book Sharing App - Supabase SQL Schema v10 - COMPLETE DEPLOYMENT
 -- ============================================================================
 -- Including: Base Schema + Timeline Sync + Loan Hardening + Wishlist + Book Clubs
 -- + Thematic Groups (allowed_genres, primary_color)
@@ -84,6 +84,8 @@ DROP FUNCTION IF EXISTS public.cleanup_deleted_records() CASCADE;
 -- STEP 2: EXTENSIONS & CORE TABLES
 -- ============================================================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE SCHEMA IF NOT EXISTS internal;
+
 CREATE EXTENSION IF NOT EXISTS "pg_cron";
 
 -- PROFILES
@@ -261,8 +263,11 @@ CREATE TABLE public.reading_clubs (
   name TEXT NOT NULL,
   description TEXT NOT NULL,
   city TEXT NOT NULL,
+  meeting_place TEXT,
   frequency TEXT NOT NULL DEFAULT 'mensual',
+  frequency_days INTEGER,
   visibility TEXT NOT NULL DEFAULT 'privado',
+  next_books_visible INTEGER NOT NULL DEFAULT 1,
   owner_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   current_book_id UUID, 
   is_deleted BOOLEAN NOT NULL DEFAULT false,
@@ -273,23 +278,28 @@ CREATE TABLE public.reading_clubs (
 CREATE TABLE public.club_members (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   club_id UUID NOT NULL REFERENCES public.reading_clubs(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  member_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   role TEXT NOT NULL DEFAULT 'miembro',
   status TEXT NOT NULL DEFAULT 'activo',
+  last_activity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   is_deleted BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(club_id, user_id)
+  UNIQUE(club_id, member_id)
 );
 
 CREATE TABLE public.club_books (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   club_id UUID NOT NULL REFERENCES public.reading_clubs(id) ON DELETE CASCADE,
   book_uuid TEXT NOT NULL,
+  order_position INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'propuesto',
+  section_mode TEXT NOT NULL DEFAULT 'automatico',
   total_chapters INTEGER NOT NULL,
   sections JSONB NOT NULL DEFAULT '[]'::jsonb,
+  start_date TIMESTAMPTZ,
+  end_date TIMESTAMPTZ,
   is_deleted BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -302,20 +312,71 @@ CREATE TABLE public.club_reading_progress (
   club_id UUID NOT NULL REFERENCES public.reading_clubs(id) ON DELETE CASCADE,
   book_id UUID NOT NULL REFERENCES public.club_books(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  current_section INTEGER NOT NULL DEFAULT 0,
   current_chapter INTEGER NOT NULL DEFAULT 0,
+  progress_status TEXT NOT NULL DEFAULT 'no_empezado',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(club_id, book_id, user_id)
 );
 
-CREATE TABLE public.section_comments (
+CREATE TABLE public.book_proposals (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   club_id UUID NOT NULL REFERENCES public.reading_clubs(id) ON DELETE CASCADE,
+  book_uuid TEXT NOT NULL,
+  proposed_by_user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  author TEXT,
+  isbn TEXT,
+  cover_url TEXT,
+  votes TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'abierta',
+  closing_date TIMESTAMPTZ NOT NULL,
+  is_deleted BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE public.section_comments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   book_id UUID NOT NULL REFERENCES public.club_books(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  section_number INTEGER NOT NULL,
+  author_user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
+  report_count INTEGER NOT NULL DEFAULT 0,
   is_hidden BOOLEAN NOT NULL DEFAULT false,
+  is_deleted BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE public.comment_reports (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  comment_id UUID NOT NULL REFERENCES public.section_comments(id) ON DELETE CASCADE,
+  reported_by_user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(comment_id, reported_by_user_id)
+);
+
+CREATE TABLE public.moderation_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  club_id UUID NOT NULL REFERENCES public.reading_clubs(id) ON DELETE CASCADE,
+  action TEXT NOT NULL,
+  performed_by_user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  target_id TEXT NOT NULL,
+  reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_club_members_member_id ON public.club_members(member_id);
+CREATE INDEX IF NOT EXISTS idx_club_books_club_order ON public.club_books(club_id, order_position);
+CREATE INDEX IF NOT EXISTS idx_club_books_book_uuid ON public.club_books(book_uuid);
+CREATE INDEX IF NOT EXISTS idx_club_progress_book_user ON public.club_reading_progress(book_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_book_proposals_club_created ON public.book_proposals(club_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_section_comments_book_section_created ON public.section_comments(book_id, section_number, created_at);
+CREATE INDEX IF NOT EXISTS idx_comment_reports_comment_id ON public.comment_reports(comment_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_logs_club_created ON public.moderation_logs(club_id, created_at);
 
 -- ============================================================================
 -- STEP 4: SYSTEM & METADATA TABLES
@@ -358,6 +419,28 @@ CREATE TABLE public.system_metrics (
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+-- ----------------------------------------------------------------
+-- SYSTEM HELPERS
+-- ----------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.log_error(p_source TEXT, p_message TEXT, p_metadata JSONB DEFAULT NULL)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.system_logs (log_level, source, message, metadata)
+  VALUES ('error', p_source, p_message, p_metadata);
+END; $$;
+
+CREATE OR REPLACE FUNCTION public.update_system_metrics(p_name TEXT, p_value TEXT)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.system_metrics (metric_name, metric_value)
+  VALUES (p_name, p_value)
+  ON CONFLICT (metric_name, metric_hour) 
+  DO UPDATE SET metric_value = EXCLUDED.metric_value, recorded_at = NOW();
+END; $$;
+
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+
 RETURNS TRIGGER LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$;
 
@@ -418,77 +501,264 @@ BEGIN
   DELETE FROM public.reading_clubs WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
   DELETE FROM public.club_members WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
   DELETE FROM public.club_books WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.book_proposals WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
+  DELETE FROM public.section_comments WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
   -- reading_sessions added in v9 cleanup
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'reading_sessions' AND table_schema = 'public') THEN
     DELETE FROM public.reading_sessions WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '30 days';
-  END IF;
+-- ----------------------------------------------------------------
+-- RLS HELPERS (MOVED TO INTERNAL TO SILENCE LINTER)
+-- ----------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION internal.check_is_club_member(p_club_id UUID, p_user_id UUID)
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.reading_clubs rc
+    WHERE rc.id = p_club_id AND rc.owner_id = p_user_id AND rc.is_deleted = false
+  ) OR EXISTS (
+    SELECT 1 FROM public.club_members cm
+    WHERE cm.club_id = p_club_id AND cm.member_id = p_user_id AND cm.is_deleted = false
+  );
 END; $$;
 
-CREATE OR REPLACE FUNCTION public.cleanup_system_data()
-RETURNS void SECURITY DEFINER LANGUAGE plpgsql SET search_path = public AS $$
+CREATE OR REPLACE FUNCTION internal.check_is_club_admin(p_club_id UUID, p_user_id UUID)
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  DELETE FROM public.system_logs WHERE created_at < NOW() - INTERVAL '14 days';
-  DELETE FROM public.system_metrics WHERE recorded_at < NOW() - INTERVAL '60 days';
-  DELETE FROM public.group_invitations WHERE status = 'expired' OR (status = 'pending' AND expires_at < NOW());
+  RETURN EXISTS (
+    SELECT 1 FROM public.reading_clubs rc
+    WHERE rc.id = p_club_id AND rc.owner_id = p_user_id AND rc.is_deleted = false
+  ) OR EXISTS (
+    SELECT 1 FROM public.club_members cm
+    WHERE cm.club_id = p_club_id AND cm.member_id = p_user_id AND cm.role IN ('dueño', 'admin') AND cm.is_deleted = false
+  );
 END; $$;
 
-CREATE OR REPLACE FUNCTION public.cleanup_expired_content()
-RETURNS void SECURITY DEFINER LANGUAGE plpgsql SET search_path = public AS $$
+CREATE OR REPLACE FUNCTION internal.check_is_club_owner(p_club_id UUID, p_user_id UUID)
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  DELETE FROM public.literary_bulletins 
-  WHERE (year < (extract(year from NOW()) - 2))
-     OR (year = (extract(year from NOW()) - 2) AND month < extract(month from NOW()));
+  RETURN EXISTS (
+    SELECT 1 FROM public.reading_clubs rc
+    WHERE rc.id = p_club_id AND rc.owner_id = p_user_id AND rc.is_deleted = false
+  );
 END; $$;
 
-CREATE OR REPLACE FUNCTION public.handle_loan_updates()
-RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+CREATE OR REPLACE FUNCTION internal.check_is_group_member(p_group_id UUID, p_user_id UUID)
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  IF NEW.lender_returned_at IS NOT NULL AND NEW.borrower_returned_at IS NOT NULL THEN
-    IF NEW.status != 'completed' THEN NEW.status := 'completed'; NEW.returned_at := GREATEST(NEW.lender_returned_at, NEW.borrower_returned_at); END IF;
-  END IF;
-  IF OLD.status IN ('cancelled', 'rejected') AND NEW.status = 'active' THEN NEW.status := OLD.status; END IF;
-  IF OLD.status = 'active' AND NEW.status IN ('cancelled', 'rejected') THEN NEW.status := OLD.status; END IF;
-  RETURN NEW;
+  RETURN EXISTS (
+    SELECT 1 FROM public.groups g
+    WHERE g.id = p_group_id AND g.owner_id = p_user_id AND g.is_deleted = false
+  ) OR EXISTS (
+    SELECT 1 FROM public.group_members gm
+    WHERE gm.group_id = p_group_id AND gm.member_id = p_user_id AND gm.is_deleted = false
+  );
+END; $$;
+
+CREATE OR REPLACE FUNCTION internal.check_is_group_owner(p_group_id UUID, p_user_id UUID)
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.groups g
+    WHERE g.id = p_group_id AND g.owner_id = p_user_id AND g.is_deleted = false
+  );
 END; $$;
 
 -- ============================================================================
 -- STEP 6: RLS POLICIES (OPTIMIZED & LINTER-FRIENDLY)
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION public.check_is_group_member(p_group_id UUID, p_user_id UUID) 
-RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN RETURN EXISTS (SELECT 1 FROM public.group_members WHERE group_id = p_group_id AND user_id = p_user_id AND is_deleted = false); END; $$;
-
-CREATE OR REPLACE FUNCTION public.check_is_club_member(p_club_id UUID, p_user_id UUID) 
-RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN RETURN EXISTS (SELECT 1 FROM public.club_members WHERE club_id = p_club_id AND user_id = p_user_id AND is_deleted = false); END; $$;
-
--- PROFILES: Fixed SELECT conflict by splitting actions
+-- PROFILES
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "profiles_select" ON public.profiles FOR SELECT USING (true);
 CREATE POLICY "profiles_update_own" ON public.profiles FOR UPDATE USING (id = (select auth.uid())) WITH CHECK (id = (select auth.uid()));
 CREATE POLICY "profiles_insert_own" ON public.profiles FOR INSERT WITH CHECK (id = (select auth.uid()));
 
+-- GROUPS
 ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "groups_access" ON public.groups FOR ALL USING (owner_id = (select auth.uid()) OR check_is_group_member(id, (select auth.uid())));
+CREATE POLICY "groups_access" ON public.groups FOR ALL USING (owner_id = (select auth.uid()) OR internal.check_is_group_member(id, (select auth.uid())));
 
+-- SHARED_BOOKS
 ALTER TABLE public.shared_books ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "books_access" ON public.shared_books FOR ALL USING (owner_id = (select auth.uid()) OR check_is_group_member(group_id, (select auth.uid())));
+CREATE POLICY "books_access" ON public.shared_books FOR ALL USING (owner_id = (select auth.uid()) OR internal.check_is_group_member(group_id, (select auth.uid())));
 
+-- READING_TIMELINE
 ALTER TABLE public.reading_timeline_entries ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "timeline_access" ON public.reading_timeline_entries FOR ALL USING (owner_id = (select auth.uid()));
 
+-- READING_SESSIONS
 ALTER TABLE public.reading_sessions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "sessions_access" ON public.reading_sessions FOR ALL USING (owner_id = (select auth.uid()));
 
+-- LOANS
 ALTER TABLE public.loans ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "loans_access" ON public.loans FOR ALL USING (lender_user_id = (select auth.uid()) OR borrower_user_id = (select auth.uid()));
 
+-- WISHLIST
 ALTER TABLE public.wishlist_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "wishlist_access" ON public.wishlist_items FOR ALL USING (user_id = (select auth.uid()));
 
+-- CLUBS
 ALTER TABLE public.reading_clubs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "clubs_access" ON public.reading_clubs FOR ALL USING (owner_id = (select auth.uid()) OR check_is_club_member(id, (select auth.uid())));
+CREATE POLICY "clubs_select" ON public.reading_clubs
+  FOR SELECT USING (owner_id = (select auth.uid()) OR internal.check_is_club_member(id, (select auth.uid())));
+CREATE POLICY "clubs_insert" ON public.reading_clubs
+  FOR INSERT WITH CHECK (owner_id = (select auth.uid()));
+CREATE POLICY "clubs_update" ON public.reading_clubs
+  FOR UPDATE USING (internal.check_is_club_admin(id, (select auth.uid())))
+  WITH CHECK (internal.check_is_club_admin(id, (select auth.uid())));
+CREATE POLICY "clubs_delete" ON public.reading_clubs
+  FOR DELETE USING (owner_id = (select auth.uid()));
+
+-- CLUB_MEMBERS
+ALTER TABLE public.club_members ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "club_members_select" ON public.club_members
+  FOR SELECT USING (internal.check_is_club_member(club_id, (select auth.uid())));
+CREATE POLICY "club_members_insert" ON public.club_members
+  FOR INSERT WITH CHECK (internal.check_is_club_admin(club_id, (select auth.uid())) OR member_id = (select auth.uid()));
+CREATE POLICY "club_members_update" ON public.club_members
+  FOR UPDATE USING (internal.check_is_club_admin(club_id, (select auth.uid())) OR member_id = (select auth.uid()))
+  WITH CHECK (internal.check_is_club_admin(club_id, (select auth.uid())) OR member_id = (select auth.uid()));
+CREATE POLICY "club_members_delete" ON public.club_members
+  FOR DELETE USING (internal.check_is_club_admin(club_id, (select auth.uid())) OR member_id = (select auth.uid()));
+
+-- CLUB_BOOKS
+ALTER TABLE public.club_books ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "club_books_select" ON public.club_books
+  FOR SELECT USING (internal.check_is_club_member(club_id, (select auth.uid())));
+CREATE POLICY "club_books_modify" ON public.club_books
+  FOR ALL USING (internal.check_is_club_admin(club_id, (select auth.uid())));
+
+-- CLUB_READING_PROGRESS
+ALTER TABLE public.club_reading_progress ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "club_reading_progress_select" ON public.club_reading_progress
+  FOR SELECT USING (internal.check_is_club_member(club_id, (select auth.uid())));
+CREATE POLICY "club_reading_progress_modify" ON public.club_reading_progress
+  FOR ALL USING (user_id = (select auth.uid()) OR internal.check_is_club_admin(club_id, (select auth.uid())));
+
+-- BOOK_PROPOSALS
+ALTER TABLE public.book_proposals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "book_proposals_select" ON public.book_proposals
+  FOR SELECT USING (internal.check_is_club_member(club_id, (select auth.uid())));
+CREATE POLICY "book_proposals_insert" ON public.book_proposals
+  FOR INSERT WITH CHECK (internal.check_is_club_member(club_id, (select auth.uid())) AND proposed_by_user_id = (select auth.uid())));
+CREATE POLICY "book_proposals_delete" ON public.book_proposals
+
+ALTER TABLE public.club_reading_progress ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "club_progress_select" ON public.club_reading_progress
+  FOR SELECT USING (check_is_club_member(club_id, (select auth.uid())));
+CREATE POLICY "club_progress_insert" ON public.club_reading_progress
+  FOR INSERT WITH CHECK (
+    check_is_club_member(club_id, (select auth.uid()))
+    AND user_id = (select auth.uid())
+  );
+CREATE POLICY "club_progress_update" ON public.club_reading_progress
+  FOR UPDATE USING (
+    check_is_club_member(club_id, (select auth.uid()))
+    AND user_id = (select auth.uid())
+  )
+  WITH CHECK (
+    check_is_club_member(club_id, (select auth.uid()))
+    AND user_id = (select auth.uid())
+  );
+CREATE POLICY "club_progress_delete" ON public.club_reading_progress
+  FOR DELETE USING (
+    check_is_club_admin(club_id, (select auth.uid()))
+    OR user_id = (select auth.uid())
+  );
+
+ALTER TABLE public.section_comments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "section_comments_select" ON public.section_comments
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1
+      FROM public.club_books cb
+      WHERE cb.id = section_comments.book_id
+        AND check_is_club_member(cb.club_id, (select auth.uid()))
+    )
+  );
+CREATE POLICY "section_comments_insert" ON public.section_comments
+  FOR INSERT WITH CHECK (
+    author_user_id = (select auth.uid())
+    AND EXISTS (
+      SELECT 1
+      FROM public.club_books cb
+      WHERE cb.id = book_id
+        AND check_is_club_member(cb.club_id, (select auth.uid()))
+    )
+  );
+CREATE POLICY "section_comments_update" ON public.section_comments
+  FOR UPDATE USING (
+    author_user_id = (select auth.uid())
+    OR EXISTS (
+      SELECT 1
+      FROM public.club_books cb
+      WHERE cb.id = section_comments.book_id
+        AND check_is_club_admin(cb.club_id, (select auth.uid()))
+    )
+  )
+  WITH CHECK (
+    author_user_id = (select auth.uid())
+    OR EXISTS (
+      SELECT 1
+      FROM public.club_books cb
+      WHERE cb.id = book_id
+        AND check_is_club_admin(cb.club_id, (select auth.uid()))
+    )
+  );
+CREATE POLICY "section_comments_delete" ON public.section_comments
+  FOR DELETE USING (
+    author_user_id = (select auth.uid())
+    OR EXISTS (
+      SELECT 1
+      FROM public.club_books cb
+      WHERE cb.id = section_comments.book_id
+        AND check_is_club_admin(cb.club_id, (select auth.uid()))
+    )
+  );
+
+ALTER TABLE public.comment_reports ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "comment_reports_select" ON public.comment_reports
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1
+      FROM public.section_comments sc
+      JOIN public.club_books cb ON cb.id = sc.book_id
+      WHERE sc.id = comment_reports.comment_id
+        AND check_is_club_member(cb.club_id, (select auth.uid()))
+    )
+  );
+CREATE POLICY "comment_reports_insert" ON public.comment_reports
+  FOR INSERT WITH CHECK (
+    reported_by_user_id = (select auth.uid())
+    AND EXISTS (
+      SELECT 1
+      FROM public.section_comments sc
+      JOIN public.club_books cb ON cb.id = sc.book_id
+      WHERE sc.id = comment_id
+        AND check_is_club_member(cb.club_id, (select auth.uid()))
+    )
+  );
+CREATE POLICY "comment_reports_delete" ON public.comment_reports
+  FOR DELETE USING (
+    reported_by_user_id = (select auth.uid())
+    OR EXISTS (
+      SELECT 1
+      FROM public.section_comments sc
+      JOIN public.club_books cb ON cb.id = sc.book_id
+      WHERE sc.id = comment_reports.comment_id
+        AND check_is_club_admin(cb.club_id, (select auth.uid()))
+    )
+  );
+
+ALTER TABLE public.moderation_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "moderation_logs_select" ON public.moderation_logs
+  FOR SELECT USING (check_is_club_member(club_id, (select auth.uid())));
+CREATE POLICY "moderation_logs_insert" ON public.moderation_logs
+  FOR INSERT WITH CHECK (
+    check_is_club_admin(club_id, (select auth.uid()))
+    AND performed_by_user_id = (select auth.uid())
+  );
 
 ALTER TABLE public.literary_bulletins ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "bulletins_public_read" ON public.literary_bulletins FOR SELECT USING (true);
@@ -504,6 +774,18 @@ CREATE TRIGGER update_loans_at BEFORE UPDATE ON public.loans FOR EACH ROW EXECUT
 CREATE TRIGGER update_timeline_at BEFORE UPDATE ON public.reading_timeline_entries FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_sessions_at BEFORE UPDATE ON public.reading_sessions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_wishlist_at BEFORE UPDATE ON public.wishlist_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_clubs_at BEFORE UPDATE ON public.reading_clubs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_club_members_at BEFORE UPDATE ON public.club_members FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_club_books_at BEFORE UPDATE ON public.club_books FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_club_progress_at BEFORE UPDATE ON public.club_reading_progress FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_book_proposals_at BEFORE UPDATE ON public.book_proposals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_section_comments_at BEFORE UPDATE ON public.section_comments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER loan_updates_handler BEFORE UPDATE ON public.loans FOR EACH ROW EXECUTE FUNCTION handle_loan_updates();
+
+SELECT cron.schedule('expire-overdue-loans', '0 * * * *', $$SELECT public.expire_overdue_loans()$$);
+SELECT cron.schedule('send-loan-reminders', '0 9 * * *', $$SELECT public.send_loan_reminders()$$);
+SELECT cron.schedule('cleanup-notifications', '0 0 * * *', $$SELECT public.cleanup_old_notifications()$$);
 
 CREATE TRIGGER loan_updates_handler BEFORE UPDATE ON public.loans FOR EACH ROW EXECUTE FUNCTION handle_loan_updates();
 
@@ -515,5 +797,42 @@ SELECT cron.schedule('cleanup-system', '0 2 * * *', $$SELECT public.cleanup_syst
 SELECT cron.schedule('cleanup-bulletins', '0 3 1 * *', $$SELECT public.cleanup_expired_content()$$);
 
 -- ============================================================================
--- DEPLOYMENT COMPLETE (v8 - FULL - LINTER CLEAN)
+-- ============================================================================
+-- STEP 8: SECURITY HARDENING (Linter Fixes)
+-- ============================================================================
+
+-- 1. Revoke EXECUTE from everyone by default for all existing functions
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM anon;
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM authenticated;
+
+-- 2. Ensure future functions don't have default PUBLIC execute permissions
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM authenticated;
+
+-- 3. Grant EXECUTE only to 'authenticated' for necessary RPCs and RLS helpers
+GRANT EXECUTE ON FUNCTION public.accept_loan(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.check_is_club_admin(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.check_is_club_member(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.check_is_club_owner(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.check_is_group_member(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.check_is_group_owner(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.log_error(TEXT, TEXT, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_system_metrics(TEXT, TEXT) TO authenticated;
+
+-- 4. Grant EXECUTE to 'service_role' for internal/automated tasks (Cron/Triggers)
+GRANT EXECUTE ON FUNCTION public.cleanup_deleted_records() TO service_role;
+GRANT EXECUTE ON FUNCTION public.cleanup_expired_content() TO service_role;
+GRANT EXECUTE ON FUNCTION public.cleanup_old_notifications() TO service_role;
+GRANT EXECUTE ON FUNCTION public.cleanup_system_data() TO service_role;
+GRANT EXECUTE ON FUNCTION public.expire_overdue_loans() TO service_role;
+GRANT EXECUTE ON FUNCTION public.send_loan_reminders() TO service_role;
+GRANT EXECUTE ON FUNCTION public.handle_loan_updates() TO service_role;
+GRANT EXECUTE ON FUNCTION public.auto_hide_reported_comments() TO service_role;
+GRANT EXECUTE ON FUNCTION public.notify_loan_status_change() TO service_role;
+GRANT EXECUTE ON FUNCTION public.purge_in_app_notifications() TO service_role;
+
+-- ============================================================================
+-- DEPLOYMENT COMPLETE (v10 - FULL - CLUBS ALIGNED + SECURITY HARDENED)
 -- ============================================================================

@@ -45,10 +45,12 @@ final supabaseClubSyncRepositoryProvider =
   final clubDao = ref.watch(clubDaoForSyncProvider);
   final userDao = ref.watch(userDaoProvider);
   final bookDao = ref.watch(bookDaoProvider);
+  final bookService = ref.watch(supabaseBookServiceProvider);
   return SupabaseClubSyncRepository(
     clubDao: clubDao,
     userDao: userDao,
     bookDao: bookDao,
+    bookService: bookService,
   );
 });
 

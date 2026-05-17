@@ -75,16 +75,6 @@ class _ProposeBookDialogState extends ConsumerState<ProposeBookDialog> {
       return;
     }
 
-    final chaptersText = _chaptersController.text.trim();
-    final chapters = chaptersText.isEmpty ? 1 : int.tryParse(chaptersText);
-
-    if (chapters == null || chapters <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingresa un número válido de capítulos o déjalo vacío para modo total')),
-      );
-      return;
-    }
-
     final user = ref.read(activeUserProvider).value;
     if (user == null || user.remoteId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,18 +88,20 @@ class _ProposeBookDialogState extends ConsumerState<ProposeBookDialog> {
 
     try {
       String bookUuid;
+      String title = _selectedBook?.title ?? _selectedGoogleBook?.title ?? '';
+      String author = _selectedBook?.author ?? _selectedGoogleBook?.authors.join(', ') ?? '';
+      String? isbn = _selectedBook?.isbn ?? _selectedGoogleBook?.primaryIsbn;
+      String? coverUrl = _selectedBook?.coverPath ?? _selectedGoogleBook?.thumbnailUrl;
 
       if (_selectedGoogleBook != null) {
         final repo = ref.read(bookRepositoryProvider);
 
         try {
           final bookId = await repo.addBook(
-            title: _selectedGoogleBook!.title,
-            author: _selectedGoogleBook!.authors.isNotEmpty
-                ? _selectedGoogleBook!.authors.first
-                : null,
-            isbn: _selectedGoogleBook!.primaryIsbn,
-            coverPath: _selectedGoogleBook!.thumbnailUrl,
+            title: title,
+            author: author.isNotEmpty ? author : null,
+            isbn: isbn,
+            coverPath: coverUrl,
             status: 'available',
             description: _selectedGoogleBook!.description,
             pageCount: _selectedGoogleBook!.pageCount,
@@ -126,7 +118,7 @@ class _ProposeBookDialogState extends ConsumerState<ProposeBookDialog> {
         } catch (e) {
           if (e.toString().contains('Ya tienes ese libro') ||
               e.toString().contains('UNIQUE constraint failed')) {
-            final existing = await repo.searchBooks(_selectedGoogleBook!.title);
+            final existing = await repo.searchBooks(title);
             if (existing.isNotEmpty) {
               bookUuid = existing.first.uuid;
             } else {
@@ -145,7 +137,11 @@ class _ProposeBookDialogState extends ConsumerState<ProposeBookDialog> {
         clubUuid: widget.clubUuid,
         bookUuid: bookUuid,
         userUuid: user.remoteId!,
-        totalChapters: chapters,
+        totalChapters: 1, // Capítulos ya no son obligatorios en la propuesta
+        title: title,
+        author: author,
+        isbn: isbn,
+        coverUrl: coverUrl,
       );
 
       if (mounted) {
@@ -304,14 +300,9 @@ class _ProposeBookDialogState extends ConsumerState<ProposeBookDialog> {
           ),
           const Divider(),
           const SizedBox(height: 16),
-          TextFormField(
-            controller: _chaptersController,
-            decoration: const InputDecoration(
-              labelText: 'Número de Capítulos (Opcional)',
-              hintText: 'Déjalo vacío si no quieres usar secciones',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.number,
+          const Text(
+            'Se ha eliminado el requisito de añadir capítulos al proponer. Si el libro gana la votación, se podrán configurar las secciones al añadirlo al club.',
+            style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
           ),
           const SizedBox(height: 24),
           Row(

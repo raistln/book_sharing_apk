@@ -13,6 +13,19 @@ class ClubProposalsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final proposalsAsync = ref.watch(clubProposalsProvider(clubUuid));
     final activeUser = ref.watch(activeUserProvider).value;
+    final membersAsync = ref.watch(clubMembersProvider(clubUuid));
+
+    bool isOwner = false;
+    if (activeUser?.remoteId != null) {
+      membersAsync.whenData((members) {
+        final member = members
+            .where((m) => m.member.memberRemoteId == activeUser!.remoteId)
+            .firstOrNull;
+        if (member != null) {
+          isOwner = member.member.role == 'dueño' || member.member.role == 'admin';
+        }
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -37,6 +50,7 @@ class ClubProposalsPage extends ConsumerWidget {
               return _ProposalCard(
                 proposal: proposal,
                 userUuid: activeUser?.remoteId,
+                isOwner: isOwner,
               );
             },
           );
@@ -46,11 +60,7 @@ class ClubProposalsPage extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // Navigation to ProposeBookDialog should be handled here if needed,
-          // or maybe just keep it in the main page.
-          // For now, let's allow proposing from here too.
-          // We need to import ProposeBookDialog.
-          // But usually better to keep logic in one place.
+          // Navigation to ProposeBookDialog should be handled here if needed
         },
         label: const Text('Proponer'),
         icon: const Icon(Icons.add),
@@ -63,10 +73,12 @@ class _ProposalCard extends ConsumerStatefulWidget {
   const _ProposalCard({
     required this.proposal,
     required this.userUuid,
+    required this.isOwner,
   });
 
   final BookProposal proposal;
   final String? userUuid;
+  final bool isOwner;
 
   @override
   ConsumerState<_ProposalCard> createState() => _ProposalCardState();
@@ -88,6 +100,8 @@ class _ProposalCardState extends ConsumerState<_ProposalCard> {
       final service = ref.read(bookProposalServiceProvider);
       final hasVoted =
           await service.hasUserVoted(widget.proposal.uuid, widget.userUuid!);
+
+      if (!mounted) return;
 
       if (hasVoted) {
         await service.removeVote(
@@ -187,6 +201,50 @@ class _ProposalCardState extends ConsumerState<_ProposalCard> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                if (widget.isOwner)
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Eliminar propuesta'),
+                          content: const Text(
+                              '¿Estás seguro de que quieres eliminar esta propuesta?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('Cancelar'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text('Eliminar',
+                                  style: TextStyle(color: Colors.red)),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true && mounted) {
+                        try {
+                          await ref
+                              .read(bookProposalServiceProvider)
+                              .deleteProposal(widget.proposal.uuid);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Propuesta eliminada')),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error al eliminar: $e')),
+                            );
+                          }
+                        }
+                      }
+                    },
+                  ),
               ],
             ),
           ],

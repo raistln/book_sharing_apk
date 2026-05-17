@@ -880,46 +880,55 @@ class _MembersSection extends StatelessWidget {
     return membersAsync.when(
       data: (members) {
         final displayMembers = members.take(5).toList();
-        return Row(
-          children: [
-            ...displayMembers.map((memberWithUser) {
-              final member = memberWithUser.member;
-              final user = memberWithUser.user;
-              final initials = user.username.isNotEmpty
-                  ? user.username.substring(0, 1).toUpperCase()
-                  : '?';
+        return SizedBox(
+          height: 65,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ...displayMembers.map((memberWithUser) {
+                  final member = memberWithUser.member;
+                  final user = memberWithUser.user;
+                  final initials = user.username.isNotEmpty
+                      ? user.username.substring(0, 1).toUpperCase()
+                      : '?';
 
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.indigo.shade100,
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.indigo.shade100,
+                          child: Text(
+                            initials,
+                            style: TextStyle(color: Colors.indigo.shade800),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          ClubMemberRole.fromString(member.role).isOwner
+                              ? 'Admin'
+                              : 'Miem.',
+                          style: const TextStyle(fontSize: 10, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                if (members.length > 5)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: CircleAvatar(
+                      backgroundColor: Colors.grey.shade200,
                       child: Text(
-                        initials,
-                        style: TextStyle(color: Colors.indigo.shade800),
+                        '+${members.length - 5}',
+                        style: const TextStyle(color: Colors.black54),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      ClubMemberRole.fromString(member.role).isOwner
-                          ? 'Admin'
-                          : 'Miem.',
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              );
-            }),
-            if (members.length > 5)
-              CircleAvatar(
-                backgroundColor: Colors.grey.shade200,
-                child: Text(
-                  '+${members.length - 5}',
-                  style: const TextStyle(color: Colors.black54),
-                ),
-              ),
-          ],
+                  ),
+              ],
+            ),
+          ),
         );
       },
       loading: () => const SizedBox(

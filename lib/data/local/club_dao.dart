@@ -309,6 +309,11 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
     return into(bookProposals).insertOnConflictUpdate(proposal);
   }
 
+  /// Update a proposal (partial updates)
+  Future<void> updateProposal(String proposalUuid, BookProposalsCompanion proposal) {
+    return (update(bookProposals)..where((t) => t.uuid.equals(proposalUuid))).write(proposal);
+  }
+
   /// Close a proposal (update status)
   Future<void> closeProposal(String proposalUuid, String newStatus) {
     return (update(bookProposals)..where((t) => t.uuid.equals(proposalUuid)))

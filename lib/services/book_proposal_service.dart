@@ -92,13 +92,15 @@ class BookProposalService {
     existingVotes.add(userUuid);
     final newVotesString = existingVotes.join(',');
 
-    await dao.upsertProposal(BookProposalsCompanion(
-      uuid: Value(proposalUuid),
-      votes: Value(newVotesString),
-      voteCount: Value(existingVotes.length),
-      isDirty: const Value(true),
-      updatedAt: Value(DateTime.now()),
-    ));
+    await dao.updateProposal(
+      proposalUuid,
+      BookProposalsCompanion(
+        votes: Value(newVotesString),
+        voteCount: Value(existingVotes.length),
+        isDirty: const Value(true),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
 
     return true;
   }
@@ -125,13 +127,15 @@ class BookProposalService {
     existingVotes.remove(userUuid);
     final newVotesString = existingVotes.join(',');
 
-    await dao.upsertProposal(BookProposalsCompanion(
-      uuid: Value(proposalUuid),
-      votes: Value(newVotesString),
-      voteCount: Value(existingVotes.length),
-      isDirty: const Value(true),
-      updatedAt: Value(DateTime.now()),
-    ));
+    await dao.updateProposal(
+      proposalUuid,
+      BookProposalsCompanion(
+        votes: Value(newVotesString),
+        voteCount: Value(existingVotes.length),
+        isDirty: const Value(true),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
 
     return true;
   }
@@ -265,6 +269,18 @@ class BookProposalService {
     }
 
     return closedCount;
+  }
+
+  /// Soft delete a proposal (owner action)
+  Future<void> deleteProposal(String proposalUuid) async {
+    await dao.updateProposal(
+      proposalUuid,
+      BookProposalsCompanion(
+        isDeleted: const Value(true),
+        updatedAt: Value(DateTime.now()),
+        isDirty: const Value(true),
+      ),
+    );
   }
 
   // =====================================================================

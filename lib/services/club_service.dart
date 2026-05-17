@@ -275,12 +275,23 @@ class ClubService {
     required ClubFrequency frequency,
     int? frequencyDays,
     required DateTime startDate,
+    DateTime? endDate,
   }) {
     if (totalChapters <= 0) return const [];
 
-    final daysPerSection = frequencyDays ?? frequency.defaultDays ?? 30;
     const idealSectionsCount = 4;
     final chaptersPerSection = (totalChapters / idealSectionsCount).ceil();
+    final totalSections = (totalChapters / chaptersPerSection).ceil();
+
+    final bookTotalDays = endDate != null
+        ? endDate.difference(startDate).inDays
+        : (frequencyDays ?? frequency.defaultDays ?? 30);
+    
+    // Si totalDays <= 0, por defecto 30 dias.
+    final validTotalDays = bookTotalDays > 0 ? bookTotalDays : 30;
+    
+    // Dividir los días totales entre las secciones.
+    final daysPerSection = validTotalDays / totalSections;
 
     final sections = <ReadingSection>[];
     var currentChapter = 1;
@@ -290,7 +301,8 @@ class ClubService {
     while (currentChapter <= totalChapters) {
       final endChapter =
           (currentChapter + chaptersPerSection - 1).clamp(1, totalChapters);
-      final closeDate = currentStartDate.add(Duration(days: daysPerSection));
+      // Close date es startDate + (días por sección) - aproximado
+      final closeDate = currentStartDate.add(Duration(hours: (daysPerSection * 24).round()));
 
       sections.add(
         ReadingSection(
@@ -316,12 +328,18 @@ class ClubService {
     required int totalChapters,
     String? sectionsJson,
     DateTime? startDate,
+    DateTime? endDate,
   }) {
     if (sectionMode == SectionMode.manual) {
       return sectionsJson ?? '[]';
     }
 
     final safeStartDate = startDate ?? DateTime.now();
+    final bookTotalDays = endDate != null
+        ? endDate.difference(safeStartDate).inDays
+        : (club.frequencyDays ?? ClubFrequency.fromString(club.frequency).defaultDays ?? 30);
+    final validTotalDays = bookTotalDays > 0 ? bookTotalDays : 30;
+    final safeEndDate = endDate ?? safeStartDate.add(Duration(days: validTotalDays));
 
     if (sectionMode == SectionMode.total) {
       return ReadingSectionListHelper.toJsonString([
@@ -330,9 +348,7 @@ class ClubService {
           capituloInicio: 1,
           capituloFin: totalChapters,
           fechaApertura: safeStartDate,
-          fechaCierre: safeStartDate.add(
-            Duration(days: club.frequencyDays ?? 30),
-          ),
+          fechaCierre: safeEndDate,
         ),
       ]);
     }
@@ -342,6 +358,7 @@ class ClubService {
       frequency: ClubFrequency.fromString(club.frequency),
       frequencyDays: club.frequencyDays,
       startDate: safeStartDate,
+      endDate: safeEndDate,
     );
     return ReadingSectionListHelper.toJsonString(sections);
   }
@@ -361,6 +378,7 @@ class ClubService {
       sectionMode: SectionMode.fromString(clubBook.sectionMode),
       totalChapters: clubBook.totalChapters,
       startDate: clubBook.startDate,
+      endDate: clubBook.endDate,
     );
 
     await dao.upsertClubBook(
@@ -375,6 +393,7 @@ class ClubService {
     _markDirty();
   }
 
+
   /// Add a book to a club (admin action)
   Future<void> addBookToClub({
     required String clubUuid,
@@ -383,6 +402,7 @@ class ClubService {
     required SectionMode sectionMode,
     String? sectionsJson, // For manual mode
     DateTime? startDate,
+    DateTime? endDate,
   }) async {
     final club = await _requireClub(clubUuid);
     final maxOrder = await _getMaxOrderPosition(clubUuid);
@@ -392,6 +412,7 @@ class ClubService {
       totalChapters: totalChapters,
       sectionsJson: sectionsJson,
       startDate: startDate,
+      endDate: endDate,
     );
 
     // Check if there is an active book
@@ -410,6 +431,7 @@ class ClubService {
       totalChapters: totalChapters,
       sections: resolvedSectionsJson,
       startDate: startDate != null ? Value(startDate) : const Value.absent(),
+      endDate: endDate != null ? Value(endDate) : const Value.absent(),
       isDirty: const Value(true),
     ));
     _markDirty();
@@ -449,6 +471,10 @@ class ClubService {
     required String bookUuid,
     required String userUuid,
     required int totalChapters,
+    String? title,
+    String? author,
+    String? isbn,
+    String? coverUrl,
   }) async {
     final club = await _requireClub(clubUuid);
     final proposerMember = await dao.getClubMember(clubUuid, userUuid);
@@ -456,16 +482,16 @@ class ClubService {
       throw Exception('Debes ser miembro del club para proponer libros.');
     }
 
-    // Check if already proposed using dao query if needed, or rely on unique constraints if any.
-    // Assuming UI handles duplicate check or we allow multiple proposals but maybe checking first is better.
-
     // For now simple insert
     await dao.upsertProposal(BookProposalsCompanion.insert(
       uuid: _uuid.v4(),
       clubId: club.id,
       clubUuid: clubUuid,
-      // bookId removed as it doesn't exist
       bookUuid: bookUuid,
+      title: title != null ? Value(title) : const Value.absent(),
+      author: author != null ? Value(author) : const Value.absent(),
+      isbn: isbn != null ? Value(isbn) : const Value.absent(),
+      coverUrl: coverUrl != null ? Value(coverUrl) : const Value.absent(),
       proposedByUserId: proposerMember.memberUserId,
       proposedByRemoteId: Value(userUuid),
       status: const Value('abierta'),
@@ -475,8 +501,6 @@ class ClubService {
     ));
     _markDirty();
   }
-
-  // =====================================================================
   // READING PROGRESS
   // =====================================================================
 

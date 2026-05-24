@@ -15,6 +15,8 @@ part 'club_dao.g.dart';
   CommentReports,
   ModerationLogs,
   LocalUsers,
+  ClubPolls,
+  ClubChronicles,
 ])
 class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
   ClubDao(super.db);
@@ -57,8 +59,14 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
   }
 
   /// Insert or update a club
-  Future<void> upsertClub(ReadingClubsCompanion club) {
-    return into(readingClubs).insertOnConflictUpdate(club);
+  Future<void> upsertClub(ReadingClubsCompanion club) async {
+    if (club.uuid.present) {
+      final rowsAffected = await (update(readingClubs)
+            ..where((t) => t.uuid.equals(club.uuid.value)))
+          .write(club);
+      if (rowsAffected > 0) return;
+    }
+    await into(readingClubs).insertOnConflictUpdate(club);
   }
 
   /// Soft delete a club
@@ -212,8 +220,14 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
   }
 
   /// Insert or update a club book
-  Future<void> upsertClubBook(ClubBooksCompanion book) {
-    return into(clubBooks).insertOnConflictUpdate(book);
+  Future<void> upsertClubBook(ClubBooksCompanion book) async {
+    if (book.uuid.present) {
+      final rowsAffected = await (update(clubBooks)
+            ..where((t) => t.uuid.equals(book.uuid.value)))
+          .write(book);
+      if (rowsAffected > 0) return;
+    }
+    await into(clubBooks).insertOnConflictUpdate(book);
   }
 
   /// Stream all non-deleted club books with the linked library book details.
@@ -274,8 +288,14 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
   }
 
   /// Insert or update reading progress
-  Future<void> upsertProgress(ClubReadingProgressCompanion progress) {
-    return into(clubReadingProgress).insertOnConflictUpdate(progress);
+  Future<void> upsertProgress(ClubReadingProgressCompanion progress) async {
+    if (progress.uuid.present) {
+      final rowsAffected = await (update(clubReadingProgress)
+            ..where((t) => t.uuid.equals(progress.uuid.value)))
+          .write(progress);
+      if (rowsAffected > 0) return;
+    }
+    await into(clubReadingProgress).insertOnConflictUpdate(progress);
   }
 
   // =====================================================================
@@ -305,8 +325,14 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
   }
 
   /// Insert or update a proposal
-  Future<void> upsertProposal(BookProposalsCompanion proposal) {
-    return into(bookProposals).insertOnConflictUpdate(proposal);
+  Future<void> upsertProposal(BookProposalsCompanion proposal) async {
+    if (proposal.uuid.present) {
+      final rowsAffected = await (update(bookProposals)
+            ..where((t) => t.uuid.equals(proposal.uuid.value)))
+          .write(proposal);
+      if (rowsAffected > 0) return;
+    }
+    await into(bookProposals).insertOnConflictUpdate(proposal);
   }
 
   /// Update a proposal (partial updates)
@@ -547,12 +573,18 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
   }
 
   Stream<List<CommentWithUser>> watchSectionComments(
-      String bookUuid, int sectionNumber) {
+      String clubUuid, String? bookUuid, int sectionNumber) {
     return (select(sectionComments)
-          ..where((t) =>
-              t.bookUuid.equals(bookUuid) &
-              t.sectionNumber.equals(sectionNumber) &
-              (t.isDeleted.equals(false) | t.isDeleted.isNull()))
+          ..where((t) {
+            final clubCondition = t.clubUuid.equals(clubUuid);
+            final bookCondition = bookUuid != null 
+                ? t.bookUuid.equals(bookUuid) 
+                : t.bookUuid.isNull();
+            final sectionCondition = t.sectionNumber.equals(sectionNumber);
+            final deletedCondition = t.isDeleted.equals(false) | t.isDeleted.isNull();
+            
+            return clubCondition & bookCondition & sectionCondition & deletedCondition;
+          })
           ..orderBy([
             (t) => OrderingTerm.asc(t.createdAt),
           ]))
@@ -564,6 +596,56 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
         user: row.readTable(localUsers),
       );
     }).watch();
+  }
+
+  // =====================================================================
+  // CLUB POLLS
+  // =====================================================================
+
+  Stream<List<ClubPoll>> watchClubPolls(String clubUuid) {
+    return (select(clubPolls)
+          ..where((t) => t.clubUuid.equals(clubUuid) & t.isDeleted.equals(false))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .watch();
+  }
+
+  Future<void> upsertPoll(ClubPollsCompanion poll) async {
+    if (poll.uuid.present) {
+      final rowsAffected = await (update(clubPolls)
+            ..where((t) => t.uuid.equals(poll.uuid.value)))
+          .write(poll);
+      if (rowsAffected > 0) return;
+    }
+    await into(clubPolls).insertOnConflictUpdate(poll);
+  }
+
+  Future<ClubPoll?> getPollByUuid(String pollUuid) {
+    return (select(clubPolls)..where((t) => t.uuid.equals(pollUuid))).getSingleOrNull();
+  }
+
+  // =====================================================================
+  // CLUB CHRONICLES
+  // =====================================================================
+
+  Stream<List<ClubChronicle>> watchClubChronicles(String clubUuid) {
+    return (select(clubChronicles)
+          ..where((t) => t.clubUuid.equals(clubUuid) & t.isDeleted.equals(false))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .watch();
+  }
+
+  Future<void> upsertChronicle(ClubChroniclesCompanion chronicle) async {
+    if (chronicle.uuid.present) {
+      final rowsAffected = await (update(clubChronicles)
+            ..where((t) => t.uuid.equals(chronicle.uuid.value)))
+          .write(chronicle);
+      if (rowsAffected > 0) return;
+    }
+    await into(clubChronicles).insertOnConflictUpdate(chronicle);
+  }
+
+  Future<ClubChronicle?> getChronicleByUuid(String chronicleUuid) {
+    return (select(clubChronicles)..where((t) => t.uuid.equals(chronicleUuid))).getSingleOrNull();
   }
 }
 

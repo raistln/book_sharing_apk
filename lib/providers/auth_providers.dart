@@ -105,27 +105,48 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<void> checkAuth() async {
+    developer.log('[AuthController] checkAuth started', name: 'AuthController');
     state = state.copyWith(
         status: AuthStatus.loading,
         failedAttempts: 0,
         lockUntil: AuthState._lockUntilSentinel);
-    final hasPin = await _authService.hasConfiguredPin();
-    if (!hasPin) {
+    
+    try {
+      final hasPin = await _authService.hasConfiguredPin();
+      developer.log('[AuthController] hasConfiguredPin result: $hasPin', name: 'AuthController');
+      if (!hasPin) {
+        state = state.copyWith(
+          status: AuthStatus.needsPin,
+          failedAttempts: 0,
+          lockUntil: null,
+        );
+        developer.log('[AuthController] Transitioned to needsPin', name: 'AuthController');
+        return;
+      }
+
+      await _authService.lockSession();
+      _cancelLockTimer();
+      state = state.copyWith(
+        status: AuthStatus.locked,
+        failedAttempts: 0,
+        lockUntil: null,
+      );
+      developer.log('[AuthController] Transitioned to locked', name: 'AuthController');
+    } catch (e, stack) {
+      developer.log(
+        '[AuthController] CRITICAL: checkAuth failed with error: $e',
+        name: 'AuthController',
+        error: e,
+        stackTrace: stack,
+      );
+      // Fallback: Transition to needsPin so the app does not remain hanging
       state = state.copyWith(
         status: AuthStatus.needsPin,
         failedAttempts: 0,
         lockUntil: null,
       );
-      return;
+      developer.log('[AuthController] Fallback: transitioned to needsPin due to initialization error', name: 'AuthController');
     }
-
-    await _authService.lockSession();
-    _cancelLockTimer();
-    state = state.copyWith(
-      status: AuthStatus.locked,
-      failedAttempts: 0,
-      lockUntil: null,
-    );
   }
 
   Future<AuthAttemptResult> unlockWithPin(String pin) async {

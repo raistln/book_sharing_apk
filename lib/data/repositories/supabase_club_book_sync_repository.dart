@@ -431,14 +431,27 @@ class SupabaseClubBookSyncRepository {
         }
 
         // Get club book remote ID
-        final clubBook = await _clubDao.getClubBookByBookUuid(
-          comment.clubUuid,
-          comment.bookUuid,
-        );
-        if (clubBook == null || clubBook.remoteId == null) {
+        ClubBook? clubBook;
+        if (comment.bookUuid != null) {
+          clubBook = await _clubDao.getClubBookByBookUuid(
+            comment.clubUuid,
+            comment.bookUuid!,
+          );
+          if (clubBook == null || clubBook.remoteId == null) {
+            if (kDebugMode) {
+              debugPrint(
+                '[ClubBookSync] Skipping comment ${comment.uuid}: club book lacks remoteId',
+              );
+            }
+            continue;
+          }
+        }
+
+        final club = await _clubDao.getClubByUuid(comment.clubUuid);
+        if (club == null || club.remoteId == null) {
           if (kDebugMode) {
             debugPrint(
-              '[ClubBookSync] Skipping comment ${comment.uuid}: club book lacks remoteId',
+              '[ClubBookSync] Skipping comment ${comment.uuid}: club lacks remoteId',
             );
           }
           continue;
@@ -451,7 +464,10 @@ class SupabaseClubBookSyncRepository {
           // Create new
           ensuredRemoteId = await _clubService.createSectionComment(
             id: provisionalRemoteId,
-            bookId: clubBook.remoteId!,
+            clubId: club.remoteId!,
+            bookId: clubBook?.remoteId,
+            parentId: comment.parentId,
+            isSpoiler: comment.isSpoiler,
             sectionNumber: comment.sectionNumber,
             authorUserId: comment.userRemoteId ?? '',
             content: comment.content,
@@ -477,7 +493,10 @@ class SupabaseClubBookSyncRepository {
             // Recreate if not found
             ensuredRemoteId = await _clubService.createSectionComment(
               id: provisionalRemoteId,
-              bookId: clubBook.remoteId!,
+              clubId: club.remoteId!,
+              bookId: clubBook?.remoteId,
+              parentId: comment.parentId,
+              isSpoiler: comment.isSpoiler,
               sectionNumber: comment.sectionNumber,
               authorUserId: comment.userRemoteId ?? '',
               content: comment.content,

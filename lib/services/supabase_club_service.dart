@@ -16,6 +16,8 @@ class SupabaseClubRecord {
     required this.description,
     required this.city,
     this.meetingPlace,
+    this.nextMeetingDate,
+    this.nextMeetingPlace,
     required this.frequency,
     required this.frequencyDays,
     required this.visibility,
@@ -33,6 +35,8 @@ class SupabaseClubRecord {
   final String description;
   final String city;
   final String? meetingPlace;
+  final DateTime? nextMeetingDate;
+  final String? nextMeetingPlace;
   final String frequency;
   final int frequencyDays;
   final String visibility;
@@ -54,6 +58,8 @@ class SupabaseClubRecord {
       description: json['description'] as String? ?? '',
       city: json['city'] as String,
       meetingPlace: json['meeting_place'] as String?,
+      nextMeetingDate: json['next_meeting_date'] != null ? DateTime.tryParse(json['next_meeting_date'] as String) : null,
+      nextMeetingPlace: json['next_meeting_place'] as String?,
       frequency: json['frequency'] as String,
       frequencyDays: json['frequency_days'] as int? ?? 30,
       visibility: json['visibility'] as String? ?? 'privado',
@@ -255,10 +261,13 @@ class SupabaseReadingProgressRecord {
 class SupabaseSectionCommentRecord {
   SupabaseSectionCommentRecord({
     required this.id,
-    required this.bookId,
+    required this.clubId,
+    this.bookId,
     required this.sectionNumber,
     required this.authorUserId,
     required this.content,
+    this.parentId,
+    required this.isSpoiler,
     required this.reportCount,
     required this.isHidden,
     required this.createdAt,
@@ -266,10 +275,13 @@ class SupabaseSectionCommentRecord {
   });
 
   final String id;
-  final String bookId;
+  final String clubId;
+  final String? bookId;
   final int sectionNumber;
   final String authorUserId;
   final String content;
+  final String? parentId;
+  final bool isSpoiler;
   final int reportCount;
   final bool isHidden;
   final DateTime createdAt;
@@ -278,10 +290,13 @@ class SupabaseSectionCommentRecord {
   factory SupabaseSectionCommentRecord.fromJson(Map<String, dynamic> json) {
     return SupabaseSectionCommentRecord(
       id: json['id'] as String,
-      bookId: json['book_id'] as String,
+      clubId: json['club_id'] as String,
+      bookId: json['book_id'] as String?,
       sectionNumber: json['section_number'] as int,
       authorUserId: json['author_user_id'] as String,
       content: json['content'] as String,
+      parentId: json['parent_id'] as String?,
+      isSpoiler: json['is_spoiler'] as bool? ?? false,
       reportCount: json['report_count'] as int? ?? 0,
       isHidden: json['is_hidden'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -428,17 +443,15 @@ class SupabaseClubService {
   }
 
   Future<List<SupabaseSectionCommentRecord>> fetchSectionComments({
-    required List<String> bookIds,
+    required String clubId,
     String? accessToken,
   }) async {
-    if (bookIds.isEmpty) return [];
-
     final config = await _loadConfig();
     final uri = Uri.parse('${config.url}/rest/v1/section_comments').replace(
       queryParameters: {
         'select':
-            'id,book_id,section_number,author_user_id,content,report_count,is_hidden,created_at,updated_at',
-        'book_id': 'in.(${bookIds.join(',')})',
+            'id,club_id,book_id,parent_id,is_spoiler,section_number,author_user_id,content,report_count,is_hidden,created_at,updated_at',
+        'club_id': 'eq.$clubId',
         'order': 'updated_at.asc',
       },
     );
@@ -539,6 +552,8 @@ class SupabaseClubService {
     required String description,
     required String city,
     String? meetingPlace,
+    DateTime? nextMeetingDate,
+    String? nextMeetingPlace,
     required String frequency,
     required int frequencyDays,
     required String visibility,
@@ -557,6 +572,8 @@ class SupabaseClubService {
       'description': description,
       'city': city,
       'meeting_place': meetingPlace,
+      'next_meeting_date': nextMeetingDate?.toUtc().toIso8601String(),
+      'next_meeting_place': nextMeetingPlace,
       'frequency': frequency,
       'frequency_days': frequencyDays,
       'visibility': visibility,
@@ -603,6 +620,8 @@ class SupabaseClubService {
     required String city,
     required String visibility,
     String? meetingPlace,
+    DateTime? nextMeetingDate,
+    String? nextMeetingPlace,
     required String frequency,
     required int frequencyDays,
     required int nextBooksVisible,
@@ -620,6 +639,8 @@ class SupabaseClubService {
       'city': city,
       'visibility': visibility,
       'meeting_place': meetingPlace,
+      'next_meeting_date': nextMeetingDate?.toUtc().toIso8601String(),
+      'next_meeting_place': nextMeetingPlace,
       'frequency': frequency,
       'frequency_days': frequencyDays,
       'next_books_visible': nextBooksVisible,
@@ -1025,10 +1046,13 @@ class SupabaseClubService {
 
   Future<String> createSectionComment({
     required String id,
-    required String bookId,
+    required String clubId,
+    String? bookId,
     required int sectionNumber,
     required String authorUserId,
     required String content,
+    String? parentId,
+    bool isSpoiler = false,
     required DateTime createdAt,
     required DateTime updatedAt,
     String? accessToken,
@@ -1038,10 +1062,13 @@ class SupabaseClubService {
 
     final payload = <String, dynamic>{
       'id': id,
-      'book_id': bookId,
+      'club_id': clubId,
+      if (bookId != null) 'book_id': bookId,
       'section_number': sectionNumber,
       'author_user_id': authorUserId,
       'content': content,
+      if (parentId != null) 'parent_id': parentId,
+      'is_spoiler': isSpoiler,
       'report_count': 0,
       'is_hidden': false,
       'created_at': createdAt.toUtc().toIso8601String(),

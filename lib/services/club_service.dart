@@ -96,6 +96,8 @@ class ClubService {
     ClubFrequency? frequency,
     int? frequencyDays,
     int? nextBooksVisible,
+    Value<DateTime?> nextMeetingDate = const Value.absent(),
+    Value<String?> nextMeetingPlace = const Value.absent(),
   }) async {
     final updates = ReadingClubsCompanion(
       uuid: Value(clubUuid),
@@ -111,12 +113,22 @@ class ClubService {
       nextBooksVisible: nextBooksVisible != null
           ? Value(nextBooksVisible)
           : const Value.absent(),
+      nextMeetingDate: nextMeetingDate,
+      nextMeetingPlace: nextMeetingPlace,
       isDirty: const Value(true),
       updatedAt: Value(DateTime.now()),
     );
 
     await dao.upsertClub(updates);
     _markDirty();
+  }
+
+  Future<void> clearNextMeeting(String clubUuid) async {
+    await updateClubSettings(
+      clubUuid: clubUuid,
+      nextMeetingDate: const Value(null),
+      nextMeetingPlace: const Value(null),
+    );
   }
 
   /// Delete a club (soft delete)

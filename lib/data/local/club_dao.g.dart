@@ -15,6 +15,8 @@ mixin _$ClubDaoMixin on DatabaseAccessor<AppDatabase> {
   $SectionCommentsTable get sectionComments => attachedDatabase.sectionComments;
   $CommentReportsTable get commentReports => attachedDatabase.commentReports;
   $ModerationLogsTable get moderationLogs => attachedDatabase.moderationLogs;
+  $ClubPollsTable get clubPolls => attachedDatabase.clubPolls;
+  $ClubChroniclesTable get clubChronicles => attachedDatabase.clubChronicles;
   ClubDaoManager get managers => ClubDaoManager(this);
 }
 
@@ -45,4 +47,9 @@ class ClubDaoManager {
   $$ModerationLogsTableTableManager get moderationLogs =>
       $$ModerationLogsTableTableManager(
           _db.attachedDatabase, _db.moderationLogs);
+  $$ClubPollsTableTableManager get clubPolls =>
+      $$ClubPollsTableTableManager(_db.attachedDatabase, _db.clubPolls);
+  $$ClubChroniclesTableTableManager get clubChronicles =>
+      $$ClubChroniclesTableTableManager(
+          _db.attachedDatabase, _db.clubChronicles);
 }

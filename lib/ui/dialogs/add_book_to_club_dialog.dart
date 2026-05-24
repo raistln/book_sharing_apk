@@ -7,6 +7,8 @@ import '../../providers/book_providers.dart';
 import '../../providers/clubs_provider.dart';
 import '../../services/google_books_api_controller.dart';
 import '../../providers/api_providers.dart';
+import '../../providers/permission_providers.dart';
+import '../widgets/barcode_scanner_sheet.dart';
 
 class AddBookToClubDialog extends ConsumerStatefulWidget {
   const AddBookToClubDialog({super.key, required this.clubUuid});
@@ -21,6 +23,37 @@ class AddBookToClubDialog extends ConsumerStatefulWidget {
 class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
   final _chaptersController = TextEditingController();
   final _searchController = TextEditingController();
+
+  Future<void> _handleScan() async {
+    final permissionService = ref.read(permissionServiceProvider);
+    final granted = await permissionService.ensureCameraPermission();
+    if (!granted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Necesitas habilitar permisos de cámara para escanear.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
+    final scannedCode = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => BarcodeScannerSheet(onScanned: (_) {}),
+    );
+
+    if (scannedCode != null && mounted) {
+      _searchController.text = scannedCode;
+      _searchBooks(scannedCode);
+    }
+  }
 
   Book? _selectedBook;
   GoogleBook? _selectedGoogleBook;
@@ -50,26 +83,57 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
     }
 
     setState(() => _isSearching = true);
+    
+    List<Book> local = [];
+    List<GoogleBook> google = [];
+
     try {
       final repo = ref.read(bookRepositoryProvider);
+      local = await repo.searchBooks(query);
+    } catch (e) {
+      debugPrint('Error searching local books: $e');
+    }
+
+    try {
       final keyController = ref.read(googleBooksApiKeyControllerProvider);
       final apiKey = keyController.value;
-
-      final results = await Future.wait([
-        repo.searchBooks(query),
-        GoogleBooksApiController.searchBooks(query: query, apiKey: apiKey),
-      ]);
-
-      if (mounted) {
-        setState(() {
-          _localResults = results[0] as List<Book>;
-          _googleResults = results[1] as List<GoogleBook>;
-        });
+      if (apiKey != null && apiKey.trim().isNotEmpty) {
+        google = await GoogleBooksApiController.searchBooks(query: query, apiKey: apiKey);
+      } else {
+        // Fallback to searching without an API key (Google Books API permits some limited public queries)
+        google = await GoogleBooksApiController.searchBooks(query: query);
       }
     } catch (e) {
-      debugPrint('Error searching books: $e');
-    } finally {
-      if (mounted) setState(() => _isSearching = false);
+      debugPrint('Error searching Google Books: $e');
+    }
+
+    if (google.isEmpty) {
+      try {
+        debugPrint('Google Books returned no results or failed. Trying OpenLibrary fallback...');
+        final openLibrary = ref.read(openLibraryClientProvider);
+        final olResults = await openLibrary.search(query: query);
+        google = olResults.map((r) => GoogleBook(
+          id: r.key ?? r.editionKey ?? r.isbn ?? r.title,
+          title: r.title,
+          authors: r.author != null ? [r.author!] : const [],
+          publishedDate: r.publishYear != null ? '${r.publishYear}-01-01' : null,
+          description: r.description,
+          isbn: r.isbn,
+          pageCount: r.pageCount,
+          thumbnailUrl: r.coverUrl,
+          smallThumbnailUrl: r.coverUrl,
+        )).toList();
+      } catch (olErr) {
+        debugPrint('Error searching OpenLibrary: $olErr');
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _localResults = local;
+        _googleResults = google;
+        _isSearching = false;
+      });
     }
   }
 
@@ -81,16 +145,7 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
       return;
     }
 
-    if (_sectionMode == SectionMode.manual) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'El modo manual todavía no tiene editor en esta pantalla. Usa el modo automático o completo.',
-          ),
-        ),
-      );
-      return;
-    }
+
 
     final chapters = _sectionMode == SectionMode.total 
         ? 1 
@@ -222,9 +277,18 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
             decoration: InputDecoration(
               labelText: 'Buscar libro (Local o Google Books)',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () => _searchBooks(_searchController.text),
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.qr_code_scanner),
+                    onPressed: _handleScan,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () => _searchBooks(_searchController.text),
+                  ),
+                ],
               ),
               border: const OutlineInputBorder(),
             ),
@@ -331,7 +395,9 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
               labelText: 'Modo de Secciones',
               border: OutlineInputBorder(),
             ),
-            items: SectionMode.values.map((mode) {
+            items: SectionMode.values
+                .where((mode) => mode != SectionMode.manual)
+                .map((mode) {
               return DropdownMenuItem(
                 value: mode,
                 child: Text(mode.label),
@@ -345,9 +411,7 @@ class _AddBookToClubDialogState extends ConsumerState<AddBookToClubDialog> {
           Text(
             _sectionMode == SectionMode.total
                 ? 'Modo completo: el club hablará del libro en un único hilo, sin dividir por capítulos.'
-                : _sectionMode == SectionMode.manual
-                    ? 'Modo manual: esta pantalla todavía no tiene editor visual para tramos personalizados; el modo automático sí queda operativo.'
-                    : 'Modo automático: la app abrirá secciones progresivamente para evitar spoilers.',
+                : 'Modo automático: la app abrirá secciones progresivamente para evitar spoilers.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.grey[700],
                 ),

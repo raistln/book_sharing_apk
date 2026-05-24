@@ -363,6 +363,8 @@ class ReadingClubs extends Table {
   TextColumn get description => text().withLength(min: 1, max: 512)();
   TextColumn get city => text().withLength(min: 1, max: 128)();
   TextColumn get meetingPlace => text().nullable().withLength(max: 256)();
+  DateTimeColumn get nextMeetingDate => dateTime().nullable()();
+  TextColumn get nextMeetingPlace => text().nullable().withLength(max: 256)();
 
   // Frequency configuration
   TextColumn get frequency => text().withLength(
@@ -499,7 +501,7 @@ class ClubReadingProgress extends Table {
 
   @override
   List<Set<Column<Object>>>? get uniqueKeys => [
-        {clubId, bookId, userId},
+        {clubUuid, bookUuid, userRemoteId},
       ];
 }
 
@@ -547,6 +549,61 @@ class BookProposals extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+class ClubPolls extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get clubId =>
+      integer().references(ReadingClubs, #id, onDelete: KeyAction.cascade)();
+  TextColumn get clubUuid => text().withLength(min: 1, max: 36)();
+
+  TextColumn get question => text().withLength(min: 1, max: 256)();
+  TextColumn get options => text()(); // JSON array
+  TextColumn get votes => text().withDefault(const Constant('{}'))(); // JSON map
+
+  TextColumn get status => text()
+      .withDefault(const Constant('abierta'))
+      .withLength(min: 1, max: 32)(); // 'abierta', 'cerrada'
+
+  IntColumn get createdByUserId => integer().references(LocalUsers, #id)();
+  TextColumn get createdByRemoteId => text().nullable()();
+
+  DateTimeColumn get expiresAt => dateTime().nullable()();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class ClubChronicles extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
+  TextColumn get remoteId => text().nullable()();
+
+  IntColumn get clubId =>
+      integer().references(ReadingClubs, #id, onDelete: KeyAction.cascade)();
+  TextColumn get clubUuid => text().withLength(min: 1, max: 36)();
+
+  TextColumn get bookUuid => text().nullable().withLength(max: 36)();
+
+  TextColumn get title => text().withLength(min: 1, max: 256)();
+  TextColumn get content => text()();
+
+  IntColumn get authorUserId => integer().references(LocalUsers, #id)();
+  TextColumn get authorRemoteId => text().nullable()();
+
+  BoolColumn get isDirty => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get syncedAt => dateTime().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 class SectionComments extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get uuid => text().withLength(min: 1, max: 36).unique()();
@@ -556,9 +613,10 @@ class SectionComments extends Table {
       integer().references(ReadingClubs, #id, onDelete: KeyAction.cascade)();
   TextColumn get clubUuid => text().withLength(min: 1, max: 36)();
 
-  IntColumn get bookId =>
-      integer().references(ClubBooks, #id, onDelete: KeyAction.cascade)();
-  TextColumn get bookUuid => text().withLength(min: 1, max: 36)();
+  IntColumn get bookId => integer()
+      .nullable()
+      .references(ClubBooks, #id, onDelete: KeyAction.cascade)();
+  TextColumn get bookUuid => text().nullable().withLength(min: 1, max: 36)();
 
   IntColumn get sectionNumber => integer()();
 
@@ -569,6 +627,9 @@ class SectionComments extends Table {
       text().nullable()(); // Alias for userRemoteId for consistency
 
   TextColumn get content => text()();
+
+  TextColumn get parentId => text().nullable()();
+  BoolColumn get isSpoiler => boolean().withDefault(const Constant(false))();
 
   IntColumn get reportsCount => integer().withDefault(const Constant(0))();
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
@@ -745,6 +806,8 @@ class SyncCursors extends Table {
     ModerationLogs,
     ReadingSessions,
     SyncCursors,
+    ClubPolls,
+    ClubChronicles,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -753,7 +816,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.executor);
 
   @override
-  int get schemaVersion => 29;
+  int get schemaVersion => 31;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1029,6 +1092,31 @@ class AppDatabase extends _$AppDatabase {
             // Altering table applies the new CHECK (rating BETWEEN 1 AND 5) constraint
             await m.alterTable(TableMigration(bookReviews));
           }
+
+          if (from < 30) {
+            // Migration to v30: Club Discussion enhancements (threads, spoilers, general chat)
+            // alterTable handles dropping NOT NULL constraints and adding new columns
+            await m.alterTable(TableMigration(
+              sectionComments,
+              newColumns: [
+                sectionComments.parentId,
+                sectionComments.isSpoiler,
+                sectionComments.reportsCount,
+                sectionComments.isHidden,
+                sectionComments.deletedAt,
+              ],
+            ));
+          }
+
+          if (from < 31) {
+            // Migration to v31: Phase 1 of Implementation_plan_1.md.resolved
+            await m.createTable(clubPolls);
+            await m.createTable(clubChronicles);
+            await m.addColumn(readingClubs, readingClubs.nextMeetingDate);
+            await m.addColumn(readingClubs, readingClubs.nextMeetingPlace);
+            // Updating uniqueKeys constraint in ClubReadingProgress
+            await m.alterTable(TableMigration(clubReadingProgress));
+          }
         },
       );
 
@@ -1040,6 +1128,8 @@ class AppDatabase extends _$AppDatabase {
       await delete(moderationLogs).go();
       await delete(commentReports).go();
       await delete(sectionComments).go();
+      await delete(clubPolls).go();
+      await delete(clubChronicles).go();
       await delete(bookProposals).go();
       await delete(clubReadingProgress).go();
       await delete(clubBooks).go();

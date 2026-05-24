@@ -44,10 +44,10 @@ class SupabaseClubSyncRepository {
         <String, List<SupabaseReadingProgressRecord>>{};
 
     for (final remote in remoteClubs) {
-      final bookIds =
+            final bookIds =
           remote.books.map((book) => book.id).toList(growable: false);
       final comments = await _clubService.fetchSectionComments(
-        bookIds: bookIds,
+        clubId: remote.id,
         accessToken: accessToken,
       );
       remoteCommentsByClub[remote.id] = comments;
@@ -136,6 +136,8 @@ class SupabaseClubSyncRepository {
               description: Value(remote.description),
               city: Value(remote.city),
               meetingPlace: Value(remote.meetingPlace),
+              nextMeetingDate: Value(remote.nextMeetingDate),
+              nextMeetingPlace: Value(remote.nextMeetingPlace),
               frequency: Value(remote.frequency),
               frequencyDays: Value(remote.frequencyDays),
               visibility: Value(remote.visibility),
@@ -161,6 +163,8 @@ class SupabaseClubSyncRepository {
             description: remote.description,
             city: remote.city,
             meetingPlace: Value(remote.meetingPlace),
+            nextMeetingDate: Value(remote.nextMeetingDate),
+            nextMeetingPlace: Value(remote.nextMeetingPlace),
             frequency: remote.frequency,
             frequencyDays: Value(remote.frequencyDays),
             visibility: Value(remote.visibility),
@@ -449,6 +453,8 @@ class SupabaseClubSyncRepository {
             frequencyDays: club.frequencyDays ?? 7,
             visibility: club.visibility,
             nextBooksVisible: club.nextBooksVisible,
+            nextMeetingDate: club.nextMeetingDate,
+            nextMeetingPlace: club.nextMeetingPlace,
             ownerId: ownerRemoteId,
             createdAt: club.createdAt,
             updatedAt: club.updatedAt,
@@ -471,6 +477,8 @@ class SupabaseClubSyncRepository {
             frequency: club.frequency,
             frequencyDays: club.frequencyDays ?? 7,
             nextBooksVisible: club.nextBooksVisible,
+            nextMeetingDate: club.nextMeetingDate,
+            nextMeetingPlace: club.nextMeetingPlace,
             updatedAt: club.updatedAt,
             accessToken: accessToken,
           );
@@ -917,10 +925,13 @@ class SupabaseClubSyncRepository {
     required List<SupabaseSectionCommentRecord> remoteComments,
     required DateTime syncedAt,
   }) async {
-    for (final remote in remoteComments) {
-      final clubBook = await _clubDao.getClubBookByRemoteId(remote.bookId);
-      if (clubBook == null) {
-        continue;
+        for (final remote in remoteComments) {
+      ClubBook? clubBook;
+      if (remote.bookId != null) {
+        clubBook = await _clubDao.getClubBookByRemoteId(remote.bookId!);
+        if (clubBook == null) {
+          continue;
+        }
       }
 
       final author = await _ensureLocalUser(
@@ -944,8 +955,10 @@ class SupabaseClubSyncRepository {
             .write(SectionCommentsCompanion(
           clubId: Value(localClubId),
           clubUuid: Value(localClubUuid),
-          bookId: Value(clubBook.id),
-          bookUuid: Value(clubBook.bookUuid),
+          bookId: clubBook != null ? Value(clubBook.id) : const Value.absent(),
+          bookUuid: clubBook != null ? Value(clubBook.bookUuid) : const Value.absent(),
+          parentId: remote.parentId != null ? Value(remote.parentId) : const Value.absent(),
+          isSpoiler: Value(remote.isSpoiler),
           sectionNumber: Value(remote.sectionNumber),
           userId: Value(author.id),
           userRemoteId: Value(remote.authorUserId),
@@ -968,8 +981,10 @@ class SupabaseClubSyncRepository {
         remoteId: Value(remote.id),
         clubId: localClubId,
         clubUuid: localClubUuid,
-        bookId: clubBook.id,
-        bookUuid: clubBook.bookUuid,
+        bookId: clubBook != null ? Value(clubBook.id) : const Value.absent(),
+        bookUuid: clubBook != null ? Value(clubBook.bookUuid) : const Value.absent(),
+        parentId: remote.parentId != null ? Value(remote.parentId) : const Value.absent(),
+        isSpoiler: Value(remote.isSpoiler),
         sectionNumber: remote.sectionNumber,
         userId: author.id,
         userRemoteId: Value(remote.authorUserId),

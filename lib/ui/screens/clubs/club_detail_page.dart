@@ -8,6 +8,7 @@ import '../../../models/club_enums.dart';
 import '../../../models/reading_section.dart';
 import '../../../providers/book_providers.dart';
 import '../../../providers/clubs_provider.dart';
+import 'package:drift/drift.dart' show Value;
 import '../../dialogs/add_book_to_club_dialog.dart';
 import '../../dialogs/propose_book_dialog.dart';
 import '../../dialogs/update_reading_progress_dialog.dart';
@@ -49,6 +50,28 @@ class ClubDetailPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _InfoSection(club: club),
+                  const SizedBox(height: 16),
+                  _NextMeetingSection(club: club, isOwner: isOwner),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => SectionDiscussionPage(
+                              clubUuid: club.uuid,
+                              bookUuid: null,
+                              sectionNumber: 0,
+                              totalChapters: 0,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.forum),
+                      label: const Text('Chat General del Club'),
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   _CurrentBookSection(
                     activeBookAsync: activeBookAsync,
@@ -971,3 +994,324 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
+
+class _NextMeetingSection extends ConsumerWidget {
+  const _NextMeetingSection({required this.club, required this.isOwner});
+
+  final ReadingClub club;
+  final bool isOwner;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final date = club.nextMeetingDate;
+    final place = club.nextMeetingPlace;
+
+    if (date == null && place == null && !isOwner) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.primaryColor.withValues(alpha: 0.1)),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              theme.primaryColor.withValues(alpha: 0.05),
+              theme.primaryColor.withValues(alpha: 0.01),
+            ],
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.event, color: theme.primaryColor, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'PRÓXIMA REUNIÓN',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.1,
+                        color: theme.primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+                if (isOwner)
+                  IconButton(
+                    icon: const Icon(Icons.edit_calendar_outlined, size: 20),
+                    onPressed: () => _showEditMeetingDialog(context, ref),
+                    tooltip: 'Editar reunión',
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (date != null) ...[
+              Row(
+                children: [
+                  const Icon(Icons.access_time_outlined, size: 16, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Text(
+                    DateFormat('EEEE, d \'de\' MMMM \'a las\' HH:mm', 'es').format(date),
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+            ],
+            if (place != null && place.isNotEmpty) ...[
+              Row(
+                children: [
+                  const Icon(Icons.place_outlined, size: 16, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      place,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (date != null) ...[
+              Row(
+                children: [
+                  const Icon(Icons.place_outlined, size: 16, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Lugar no especificado',
+                    style: theme.textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ],
+            if (date == null && place == null && isOwner) ...[
+              Text(
+                'No hay reunión programada. Haz clic en el lápiz para agendar la próxima reunión.',
+                style: theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic, color: Colors.grey[600]),
+              ),
+            ],
+            if (isOwner && (date != null || place != null)) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => _clearMeeting(context, ref),
+                  icon: const Icon(Icons.clear, size: 16, color: Colors.red),
+                  label: const Text('Cancelar reunión', style: TextStyle(color: Colors.red, fontSize: 12)),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditMeetingDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => _EditMeetingDialog(club: club),
+    );
+  }
+
+  void _clearMeeting(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar Reunión'),
+        content: const Text('¿Estás seguro de que deseas cancelar y borrar la próxima reunión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Sí, cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(clubServiceProvider).clearNextMeeting(club.uuid);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Reunión cancelada')),
+        );
+      }
+    }
+  }
+}
+
+class _EditMeetingDialog extends ConsumerStatefulWidget {
+  const _EditMeetingDialog({required this.club});
+
+  final ReadingClub club;
+
+  @override
+  ConsumerState<_EditMeetingDialog> createState() => _EditMeetingDialogState();
+}
+
+class _EditMeetingDialogState extends ConsumerState<_EditMeetingDialog> {
+  late DateTime? _selectedDate;
+  late TimeOfDay? _selectedTime;
+  final _placeController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = widget.club.nextMeetingDate;
+    _selectedTime = widget.club.nextMeetingDate != null
+        ? TimeOfDay.fromDateTime(widget.club.nextMeetingDate!)
+        : null;
+    _placeController.text = widget.club.nextMeetingPlace ?? '';
+  }
+
+  @override
+  void dispose() {
+    _placeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date != null) {
+      setState(() => _selectedDate = date);
+      if (_selectedTime == null) {
+        _selectTime();
+      }
+    }
+  }
+
+  Future<void> _selectTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? TimeOfDay.now(),
+    );
+    if (time != null) {
+      setState(() => _selectedTime = time);
+    }
+  }
+
+  Future<void> _save() async {
+    if (_selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona una fecha')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final time = _selectedTime ?? const TimeOfDay(hour: 18, minute: 0);
+      final finalDateTime = DateTime(
+        _selectedDate!.year,
+        _selectedDate!.month,
+        _selectedDate!.day,
+        time.hour,
+        time.minute,
+      );
+
+      final clubService = ref.read(clubServiceProvider);
+      await clubService.updateClubSettings(
+        clubUuid: widget.club.uuid,
+        nextMeetingDate: Value(finalDateTime),
+        nextMeetingPlace: Value(_placeController.text.trim()),
+      );
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Reunión agendada con éxito')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Programar Reunión'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_today),
+              title: Text(_selectedDate == null
+                  ? 'Seleccionar Fecha'
+                  : DateFormat('dd/MM/yyyy').format(_selectedDate!)),
+              trailing: const Icon(Icons.arrow_drop_down),
+              onTap: _selectDate,
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.access_time),
+              title: Text(_selectedTime == null
+                  ? 'Seleccionar Hora'
+                  : _selectedTime!.format(context)),
+              trailing: const Icon(Icons.arrow_drop_down),
+              onTap: _selectTime,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _placeController,
+              decoration: const InputDecoration(
+                labelText: 'Lugar / Enlace (Zoom, Meet...)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.place_outlined),
+              ),
+              textCapitalization: TextCapitalization.sentences,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _isLoading ? null : _save,
+          child: _isLoading
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+}
+

@@ -9430,6 +9430,20 @@ class $ReadingClubsTable extends ReadingClubs
       additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 256),
       type: DriftSqlType.string,
       requiredDuringInsert: false);
+  static const VerificationMeta _nextMeetingDateMeta =
+      const VerificationMeta('nextMeetingDate');
+  @override
+  late final GeneratedColumn<DateTime> nextMeetingDate =
+      GeneratedColumn<DateTime>('next_meeting_date', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _nextMeetingPlaceMeta =
+      const VerificationMeta('nextMeetingPlace');
+  @override
+  late final GeneratedColumn<String> nextMeetingPlace = GeneratedColumn<String>(
+      'next_meeting_place', aliasedName, true,
+      additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 256),
+      type: DriftSqlType.string,
+      requiredDuringInsert: false);
   static const VerificationMeta _frequencyMeta =
       const VerificationMeta('frequency');
   @override
@@ -9541,6 +9555,8 @@ class $ReadingClubsTable extends ReadingClubs
         description,
         city,
         meetingPlace,
+        nextMeetingDate,
+        nextMeetingPlace,
         frequency,
         frequencyDays,
         visibility,
@@ -9603,6 +9619,18 @@ class $ReadingClubsTable extends ReadingClubs
           _meetingPlaceMeta,
           meetingPlace.isAcceptableOrUnknown(
               data['meeting_place']!, _meetingPlaceMeta));
+    }
+    if (data.containsKey('next_meeting_date')) {
+      context.handle(
+          _nextMeetingDateMeta,
+          nextMeetingDate.isAcceptableOrUnknown(
+              data['next_meeting_date']!, _nextMeetingDateMeta));
+    }
+    if (data.containsKey('next_meeting_place')) {
+      context.handle(
+          _nextMeetingPlaceMeta,
+          nextMeetingPlace.isAcceptableOrUnknown(
+              data['next_meeting_place']!, _nextMeetingPlaceMeta));
     }
     if (data.containsKey('frequency')) {
       context.handle(_frequencyMeta,
@@ -9697,6 +9725,10 @@ class $ReadingClubsTable extends ReadingClubs
           .read(DriftSqlType.string, data['${effectivePrefix}city'])!,
       meetingPlace: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}meeting_place']),
+      nextMeetingDate: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}next_meeting_date']),
+      nextMeetingPlace: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}next_meeting_place']),
       frequency: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}frequency'])!,
       frequencyDays: attachedDatabase.typeMapping
@@ -9740,6 +9772,8 @@ class ReadingClub extends DataClass implements Insertable<ReadingClub> {
   final String description;
   final String city;
   final String? meetingPlace;
+  final DateTime? nextMeetingDate;
+  final String? nextMeetingPlace;
   final String frequency;
   final int? frequencyDays;
   final String visibility;
@@ -9761,6 +9795,8 @@ class ReadingClub extends DataClass implements Insertable<ReadingClub> {
       required this.description,
       required this.city,
       this.meetingPlace,
+      this.nextMeetingDate,
+      this.nextMeetingPlace,
       required this.frequency,
       this.frequencyDays,
       required this.visibility,
@@ -9787,6 +9823,12 @@ class ReadingClub extends DataClass implements Insertable<ReadingClub> {
     map['city'] = Variable<String>(city);
     if (!nullToAbsent || meetingPlace != null) {
       map['meeting_place'] = Variable<String>(meetingPlace);
+    }
+    if (!nullToAbsent || nextMeetingDate != null) {
+      map['next_meeting_date'] = Variable<DateTime>(nextMeetingDate);
+    }
+    if (!nullToAbsent || nextMeetingPlace != null) {
+      map['next_meeting_place'] = Variable<String>(nextMeetingPlace);
     }
     map['frequency'] = Variable<String>(frequency);
     if (!nullToAbsent || frequencyDays != null) {
@@ -9827,6 +9869,12 @@ class ReadingClub extends DataClass implements Insertable<ReadingClub> {
       meetingPlace: meetingPlace == null && nullToAbsent
           ? const Value.absent()
           : Value(meetingPlace),
+      nextMeetingDate: nextMeetingDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextMeetingDate),
+      nextMeetingPlace: nextMeetingPlace == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextMeetingPlace),
       frequency: Value(frequency),
       frequencyDays: frequencyDays == null && nullToAbsent
           ? const Value.absent()
@@ -9864,6 +9912,8 @@ class ReadingClub extends DataClass implements Insertable<ReadingClub> {
       description: serializer.fromJson<String>(json['description']),
       city: serializer.fromJson<String>(json['city']),
       meetingPlace: serializer.fromJson<String?>(json['meetingPlace']),
+      nextMeetingDate: serializer.fromJson<DateTime?>(json['nextMeetingDate']),
+      nextMeetingPlace: serializer.fromJson<String?>(json['nextMeetingPlace']),
       frequency: serializer.fromJson<String>(json['frequency']),
       frequencyDays: serializer.fromJson<int?>(json['frequencyDays']),
       visibility: serializer.fromJson<String>(json['visibility']),
@@ -9890,6 +9940,8 @@ class ReadingClub extends DataClass implements Insertable<ReadingClub> {
       'description': serializer.toJson<String>(description),
       'city': serializer.toJson<String>(city),
       'meetingPlace': serializer.toJson<String?>(meetingPlace),
+      'nextMeetingDate': serializer.toJson<DateTime?>(nextMeetingDate),
+      'nextMeetingPlace': serializer.toJson<String?>(nextMeetingPlace),
       'frequency': serializer.toJson<String>(frequency),
       'frequencyDays': serializer.toJson<int?>(frequencyDays),
       'visibility': serializer.toJson<String>(visibility),
@@ -9914,6 +9966,8 @@ class ReadingClub extends DataClass implements Insertable<ReadingClub> {
           String? description,
           String? city,
           Value<String?> meetingPlace = const Value.absent(),
+          Value<DateTime?> nextMeetingDate = const Value.absent(),
+          Value<String?> nextMeetingPlace = const Value.absent(),
           String? frequency,
           Value<int?> frequencyDays = const Value.absent(),
           String? visibility,
@@ -9936,6 +9990,12 @@ class ReadingClub extends DataClass implements Insertable<ReadingClub> {
         city: city ?? this.city,
         meetingPlace:
             meetingPlace.present ? meetingPlace.value : this.meetingPlace,
+        nextMeetingDate: nextMeetingDate.present
+            ? nextMeetingDate.value
+            : this.nextMeetingDate,
+        nextMeetingPlace: nextMeetingPlace.present
+            ? nextMeetingPlace.value
+            : this.nextMeetingPlace,
         frequency: frequency ?? this.frequency,
         frequencyDays:
             frequencyDays.present ? frequencyDays.value : this.frequencyDays,
@@ -9967,6 +10027,12 @@ class ReadingClub extends DataClass implements Insertable<ReadingClub> {
       meetingPlace: data.meetingPlace.present
           ? data.meetingPlace.value
           : this.meetingPlace,
+      nextMeetingDate: data.nextMeetingDate.present
+          ? data.nextMeetingDate.value
+          : this.nextMeetingDate,
+      nextMeetingPlace: data.nextMeetingPlace.present
+          ? data.nextMeetingPlace.value
+          : this.nextMeetingPlace,
       frequency: data.frequency.present ? data.frequency.value : this.frequency,
       frequencyDays: data.frequencyDays.present
           ? data.frequencyDays.value
@@ -10005,6 +10071,8 @@ class ReadingClub extends DataClass implements Insertable<ReadingClub> {
           ..write('description: $description, ')
           ..write('city: $city, ')
           ..write('meetingPlace: $meetingPlace, ')
+          ..write('nextMeetingDate: $nextMeetingDate, ')
+          ..write('nextMeetingPlace: $nextMeetingPlace, ')
           ..write('frequency: $frequency, ')
           ..write('frequencyDays: $frequencyDays, ')
           ..write('visibility: $visibility, ')
@@ -10023,27 +10091,30 @@ class ReadingClub extends DataClass implements Insertable<ReadingClub> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      uuid,
-      remoteId,
-      name,
-      description,
-      city,
-      meetingPlace,
-      frequency,
-      frequencyDays,
-      visibility,
-      nextBooksVisible,
-      ownerUserId,
-      ownerRemoteId,
-      currentBookId,
-      currentBookUuid,
-      isDirty,
-      isDeleted,
-      syncedAt,
-      createdAt,
-      updatedAt);
+  int get hashCode => Object.hashAll([
+        id,
+        uuid,
+        remoteId,
+        name,
+        description,
+        city,
+        meetingPlace,
+        nextMeetingDate,
+        nextMeetingPlace,
+        frequency,
+        frequencyDays,
+        visibility,
+        nextBooksVisible,
+        ownerUserId,
+        ownerRemoteId,
+        currentBookId,
+        currentBookUuid,
+        isDirty,
+        isDeleted,
+        syncedAt,
+        createdAt,
+        updatedAt
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -10055,6 +10126,8 @@ class ReadingClub extends DataClass implements Insertable<ReadingClub> {
           other.description == this.description &&
           other.city == this.city &&
           other.meetingPlace == this.meetingPlace &&
+          other.nextMeetingDate == this.nextMeetingDate &&
+          other.nextMeetingPlace == this.nextMeetingPlace &&
           other.frequency == this.frequency &&
           other.frequencyDays == this.frequencyDays &&
           other.visibility == this.visibility &&
@@ -10078,6 +10151,8 @@ class ReadingClubsCompanion extends UpdateCompanion<ReadingClub> {
   final Value<String> description;
   final Value<String> city;
   final Value<String?> meetingPlace;
+  final Value<DateTime?> nextMeetingDate;
+  final Value<String?> nextMeetingPlace;
   final Value<String> frequency;
   final Value<int?> frequencyDays;
   final Value<String> visibility;
@@ -10099,6 +10174,8 @@ class ReadingClubsCompanion extends UpdateCompanion<ReadingClub> {
     this.description = const Value.absent(),
     this.city = const Value.absent(),
     this.meetingPlace = const Value.absent(),
+    this.nextMeetingDate = const Value.absent(),
+    this.nextMeetingPlace = const Value.absent(),
     this.frequency = const Value.absent(),
     this.frequencyDays = const Value.absent(),
     this.visibility = const Value.absent(),
@@ -10121,6 +10198,8 @@ class ReadingClubsCompanion extends UpdateCompanion<ReadingClub> {
     required String description,
     required String city,
     this.meetingPlace = const Value.absent(),
+    this.nextMeetingDate = const Value.absent(),
+    this.nextMeetingPlace = const Value.absent(),
     required String frequency,
     this.frequencyDays = const Value.absent(),
     this.visibility = const Value.absent(),
@@ -10148,6 +10227,8 @@ class ReadingClubsCompanion extends UpdateCompanion<ReadingClub> {
     Expression<String>? description,
     Expression<String>? city,
     Expression<String>? meetingPlace,
+    Expression<DateTime>? nextMeetingDate,
+    Expression<String>? nextMeetingPlace,
     Expression<String>? frequency,
     Expression<int>? frequencyDays,
     Expression<String>? visibility,
@@ -10170,6 +10251,8 @@ class ReadingClubsCompanion extends UpdateCompanion<ReadingClub> {
       if (description != null) 'description': description,
       if (city != null) 'city': city,
       if (meetingPlace != null) 'meeting_place': meetingPlace,
+      if (nextMeetingDate != null) 'next_meeting_date': nextMeetingDate,
+      if (nextMeetingPlace != null) 'next_meeting_place': nextMeetingPlace,
       if (frequency != null) 'frequency': frequency,
       if (frequencyDays != null) 'frequency_days': frequencyDays,
       if (visibility != null) 'visibility': visibility,
@@ -10194,6 +10277,8 @@ class ReadingClubsCompanion extends UpdateCompanion<ReadingClub> {
       Value<String>? description,
       Value<String>? city,
       Value<String?>? meetingPlace,
+      Value<DateTime?>? nextMeetingDate,
+      Value<String?>? nextMeetingPlace,
       Value<String>? frequency,
       Value<int?>? frequencyDays,
       Value<String>? visibility,
@@ -10215,6 +10300,8 @@ class ReadingClubsCompanion extends UpdateCompanion<ReadingClub> {
       description: description ?? this.description,
       city: city ?? this.city,
       meetingPlace: meetingPlace ?? this.meetingPlace,
+      nextMeetingDate: nextMeetingDate ?? this.nextMeetingDate,
+      nextMeetingPlace: nextMeetingPlace ?? this.nextMeetingPlace,
       frequency: frequency ?? this.frequency,
       frequencyDays: frequencyDays ?? this.frequencyDays,
       visibility: visibility ?? this.visibility,
@@ -10254,6 +10341,12 @@ class ReadingClubsCompanion extends UpdateCompanion<ReadingClub> {
     }
     if (meetingPlace.present) {
       map['meeting_place'] = Variable<String>(meetingPlace.value);
+    }
+    if (nextMeetingDate.present) {
+      map['next_meeting_date'] = Variable<DateTime>(nextMeetingDate.value);
+    }
+    if (nextMeetingPlace.present) {
+      map['next_meeting_place'] = Variable<String>(nextMeetingPlace.value);
     }
     if (frequency.present) {
       map['frequency'] = Variable<String>(frequency.value);
@@ -10307,6 +10400,8 @@ class ReadingClubsCompanion extends UpdateCompanion<ReadingClub> {
           ..write('description: $description, ')
           ..write('city: $city, ')
           ..write('meetingPlace: $meetingPlace, ')
+          ..write('nextMeetingDate: $nextMeetingDate, ')
+          ..write('nextMeetingPlace: $nextMeetingPlace, ')
           ..write('frequency: $frequency, ')
           ..write('frequencyDays: $frequencyDays, ')
           ..write('visibility: $visibility, ')
@@ -12187,7 +12282,7 @@ class $ClubReadingProgressTable extends ClubReadingProgress
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-        {clubId, bookId, userId},
+        {clubUuid, bookUuid, userRemoteId},
       ];
   @override
   ClubReadingProgressData map(Map<String, dynamic> data,
@@ -13802,20 +13897,20 @@ class $SectionCommentsTable extends SectionComments
   static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
   @override
   late final GeneratedColumn<int> bookId = GeneratedColumn<int>(
-      'book_id', aliasedName, false,
+      'book_id', aliasedName, true,
       type: DriftSqlType.int,
-      requiredDuringInsert: true,
+      requiredDuringInsert: false,
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'REFERENCES club_books (id) ON DELETE CASCADE'));
   static const VerificationMeta _bookUuidMeta =
       const VerificationMeta('bookUuid');
   @override
   late final GeneratedColumn<String> bookUuid = GeneratedColumn<String>(
-      'book_uuid', aliasedName, false,
+      'book_uuid', aliasedName, true,
       additionalChecks:
           GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
       type: DriftSqlType.string,
-      requiredDuringInsert: true);
+      requiredDuringInsert: false);
   static const VerificationMeta _sectionNumberMeta =
       const VerificationMeta('sectionNumber');
   @override
@@ -13848,6 +13943,22 @@ class $SectionCommentsTable extends SectionComments
   late final GeneratedColumn<String> content = GeneratedColumn<String>(
       'content', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _parentIdMeta =
+      const VerificationMeta('parentId');
+  @override
+  late final GeneratedColumn<String> parentId = GeneratedColumn<String>(
+      'parent_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isSpoilerMeta =
+      const VerificationMeta('isSpoiler');
+  @override
+  late final GeneratedColumn<bool> isSpoiler = GeneratedColumn<bool>(
+      'is_spoiler', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_spoiler" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _reportsCountMeta =
       const VerificationMeta('reportsCount');
   @override
@@ -13928,6 +14039,8 @@ class $SectionCommentsTable extends SectionComments
         userRemoteId,
         authorRemoteId,
         content,
+        parentId,
+        isSpoiler,
         reportsCount,
         isHidden,
         isDirty,
@@ -13975,14 +14088,10 @@ class $SectionCommentsTable extends SectionComments
     if (data.containsKey('book_id')) {
       context.handle(_bookIdMeta,
           bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta));
-    } else if (isInserting) {
-      context.missing(_bookIdMeta);
     }
     if (data.containsKey('book_uuid')) {
       context.handle(_bookUuidMeta,
           bookUuid.isAcceptableOrUnknown(data['book_uuid']!, _bookUuidMeta));
-    } else if (isInserting) {
-      context.missing(_bookUuidMeta);
     }
     if (data.containsKey('section_number')) {
       context.handle(
@@ -14015,6 +14124,14 @@ class $SectionCommentsTable extends SectionComments
           content.isAcceptableOrUnknown(data['content']!, _contentMeta));
     } else if (isInserting) {
       context.missing(_contentMeta);
+    }
+    if (data.containsKey('parent_id')) {
+      context.handle(_parentIdMeta,
+          parentId.isAcceptableOrUnknown(data['parent_id']!, _parentIdMeta));
+    }
+    if (data.containsKey('is_spoiler')) {
+      context.handle(_isSpoilerMeta,
+          isSpoiler.isAcceptableOrUnknown(data['is_spoiler']!, _isSpoilerMeta));
     }
     if (data.containsKey('reports_count')) {
       context.handle(
@@ -14070,9 +14187,9 @@ class $SectionCommentsTable extends SectionComments
       clubUuid: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}club_uuid'])!,
       bookId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}book_id'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}book_id']),
       bookUuid: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}book_uuid'])!,
+          .read(DriftSqlType.string, data['${effectivePrefix}book_uuid']),
       sectionNumber: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}section_number'])!,
       userId: attachedDatabase.typeMapping
@@ -14083,6 +14200,10 @@ class $SectionCommentsTable extends SectionComments
           DriftSqlType.string, data['${effectivePrefix}author_remote_id']),
       content: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}content'])!,
+      parentId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}parent_id']),
+      isSpoiler: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_spoiler'])!,
       reportsCount: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}reports_count'])!,
       isHidden: attachedDatabase.typeMapping
@@ -14114,13 +14235,15 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
   final String? remoteId;
   final int clubId;
   final String clubUuid;
-  final int bookId;
-  final String bookUuid;
+  final int? bookId;
+  final String? bookUuid;
   final int sectionNumber;
   final int userId;
   final String? userRemoteId;
   final String? authorRemoteId;
   final String content;
+  final String? parentId;
+  final bool isSpoiler;
   final int reportsCount;
   final bool isHidden;
   final bool isDirty;
@@ -14135,13 +14258,15 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
       this.remoteId,
       required this.clubId,
       required this.clubUuid,
-      required this.bookId,
-      required this.bookUuid,
+      this.bookId,
+      this.bookUuid,
       required this.sectionNumber,
       required this.userId,
       this.userRemoteId,
       this.authorRemoteId,
       required this.content,
+      this.parentId,
+      required this.isSpoiler,
       required this.reportsCount,
       required this.isHidden,
       required this.isDirty,
@@ -14160,8 +14285,12 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
     }
     map['club_id'] = Variable<int>(clubId);
     map['club_uuid'] = Variable<String>(clubUuid);
-    map['book_id'] = Variable<int>(bookId);
-    map['book_uuid'] = Variable<String>(bookUuid);
+    if (!nullToAbsent || bookId != null) {
+      map['book_id'] = Variable<int>(bookId);
+    }
+    if (!nullToAbsent || bookUuid != null) {
+      map['book_uuid'] = Variable<String>(bookUuid);
+    }
     map['section_number'] = Variable<int>(sectionNumber);
     map['user_id'] = Variable<int>(userId);
     if (!nullToAbsent || userRemoteId != null) {
@@ -14171,6 +14300,10 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
       map['author_remote_id'] = Variable<String>(authorRemoteId);
     }
     map['content'] = Variable<String>(content);
+    if (!nullToAbsent || parentId != null) {
+      map['parent_id'] = Variable<String>(parentId);
+    }
+    map['is_spoiler'] = Variable<bool>(isSpoiler);
     map['reports_count'] = Variable<int>(reportsCount);
     map['is_hidden'] = Variable<bool>(isHidden);
     map['is_dirty'] = Variable<bool>(isDirty);
@@ -14195,8 +14328,11 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
           : Value(remoteId),
       clubId: Value(clubId),
       clubUuid: Value(clubUuid),
-      bookId: Value(bookId),
-      bookUuid: Value(bookUuid),
+      bookId:
+          bookId == null && nullToAbsent ? const Value.absent() : Value(bookId),
+      bookUuid: bookUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bookUuid),
       sectionNumber: Value(sectionNumber),
       userId: Value(userId),
       userRemoteId: userRemoteId == null && nullToAbsent
@@ -14206,6 +14342,10 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
           ? const Value.absent()
           : Value(authorRemoteId),
       content: Value(content),
+      parentId: parentId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentId),
+      isSpoiler: Value(isSpoiler),
       reportsCount: Value(reportsCount),
       isHidden: Value(isHidden),
       isDirty: Value(isDirty),
@@ -14230,13 +14370,15 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
       remoteId: serializer.fromJson<String?>(json['remoteId']),
       clubId: serializer.fromJson<int>(json['clubId']),
       clubUuid: serializer.fromJson<String>(json['clubUuid']),
-      bookId: serializer.fromJson<int>(json['bookId']),
-      bookUuid: serializer.fromJson<String>(json['bookUuid']),
+      bookId: serializer.fromJson<int?>(json['bookId']),
+      bookUuid: serializer.fromJson<String?>(json['bookUuid']),
       sectionNumber: serializer.fromJson<int>(json['sectionNumber']),
       userId: serializer.fromJson<int>(json['userId']),
       userRemoteId: serializer.fromJson<String?>(json['userRemoteId']),
       authorRemoteId: serializer.fromJson<String?>(json['authorRemoteId']),
       content: serializer.fromJson<String>(json['content']),
+      parentId: serializer.fromJson<String?>(json['parentId']),
+      isSpoiler: serializer.fromJson<bool>(json['isSpoiler']),
       reportsCount: serializer.fromJson<int>(json['reportsCount']),
       isHidden: serializer.fromJson<bool>(json['isHidden']),
       isDirty: serializer.fromJson<bool>(json['isDirty']),
@@ -14256,13 +14398,15 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
       'remoteId': serializer.toJson<String?>(remoteId),
       'clubId': serializer.toJson<int>(clubId),
       'clubUuid': serializer.toJson<String>(clubUuid),
-      'bookId': serializer.toJson<int>(bookId),
-      'bookUuid': serializer.toJson<String>(bookUuid),
+      'bookId': serializer.toJson<int?>(bookId),
+      'bookUuid': serializer.toJson<String?>(bookUuid),
       'sectionNumber': serializer.toJson<int>(sectionNumber),
       'userId': serializer.toJson<int>(userId),
       'userRemoteId': serializer.toJson<String?>(userRemoteId),
       'authorRemoteId': serializer.toJson<String?>(authorRemoteId),
       'content': serializer.toJson<String>(content),
+      'parentId': serializer.toJson<String?>(parentId),
+      'isSpoiler': serializer.toJson<bool>(isSpoiler),
       'reportsCount': serializer.toJson<int>(reportsCount),
       'isHidden': serializer.toJson<bool>(isHidden),
       'isDirty': serializer.toJson<bool>(isDirty),
@@ -14280,13 +14424,15 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
           Value<String?> remoteId = const Value.absent(),
           int? clubId,
           String? clubUuid,
-          int? bookId,
-          String? bookUuid,
+          Value<int?> bookId = const Value.absent(),
+          Value<String?> bookUuid = const Value.absent(),
           int? sectionNumber,
           int? userId,
           Value<String?> userRemoteId = const Value.absent(),
           Value<String?> authorRemoteId = const Value.absent(),
           String? content,
+          Value<String?> parentId = const Value.absent(),
+          bool? isSpoiler,
           int? reportsCount,
           bool? isHidden,
           bool? isDirty,
@@ -14301,8 +14447,8 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
         remoteId: remoteId.present ? remoteId.value : this.remoteId,
         clubId: clubId ?? this.clubId,
         clubUuid: clubUuid ?? this.clubUuid,
-        bookId: bookId ?? this.bookId,
-        bookUuid: bookUuid ?? this.bookUuid,
+        bookId: bookId.present ? bookId.value : this.bookId,
+        bookUuid: bookUuid.present ? bookUuid.value : this.bookUuid,
         sectionNumber: sectionNumber ?? this.sectionNumber,
         userId: userId ?? this.userId,
         userRemoteId:
@@ -14310,6 +14456,8 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
         authorRemoteId:
             authorRemoteId.present ? authorRemoteId.value : this.authorRemoteId,
         content: content ?? this.content,
+        parentId: parentId.present ? parentId.value : this.parentId,
+        isSpoiler: isSpoiler ?? this.isSpoiler,
         reportsCount: reportsCount ?? this.reportsCount,
         isHidden: isHidden ?? this.isHidden,
         isDirty: isDirty ?? this.isDirty,
@@ -14339,6 +14487,8 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
           ? data.authorRemoteId.value
           : this.authorRemoteId,
       content: data.content.present ? data.content.value : this.content,
+      parentId: data.parentId.present ? data.parentId.value : this.parentId,
+      isSpoiler: data.isSpoiler.present ? data.isSpoiler.value : this.isSpoiler,
       reportsCount: data.reportsCount.present
           ? data.reportsCount.value
           : this.reportsCount,
@@ -14367,6 +14517,8 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
           ..write('userRemoteId: $userRemoteId, ')
           ..write('authorRemoteId: $authorRemoteId, ')
           ..write('content: $content, ')
+          ..write('parentId: $parentId, ')
+          ..write('isSpoiler: $isSpoiler, ')
           ..write('reportsCount: $reportsCount, ')
           ..write('isHidden: $isHidden, ')
           ..write('isDirty: $isDirty, ')
@@ -14380,27 +14532,30 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      uuid,
-      remoteId,
-      clubId,
-      clubUuid,
-      bookId,
-      bookUuid,
-      sectionNumber,
-      userId,
-      userRemoteId,
-      authorRemoteId,
-      content,
-      reportsCount,
-      isHidden,
-      isDirty,
-      isDeleted,
-      deletedAt,
-      syncedAt,
-      createdAt,
-      updatedAt);
+  int get hashCode => Object.hashAll([
+        id,
+        uuid,
+        remoteId,
+        clubId,
+        clubUuid,
+        bookId,
+        bookUuid,
+        sectionNumber,
+        userId,
+        userRemoteId,
+        authorRemoteId,
+        content,
+        parentId,
+        isSpoiler,
+        reportsCount,
+        isHidden,
+        isDirty,
+        isDeleted,
+        deletedAt,
+        syncedAt,
+        createdAt,
+        updatedAt
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -14417,6 +14572,8 @@ class SectionComment extends DataClass implements Insertable<SectionComment> {
           other.userRemoteId == this.userRemoteId &&
           other.authorRemoteId == this.authorRemoteId &&
           other.content == this.content &&
+          other.parentId == this.parentId &&
+          other.isSpoiler == this.isSpoiler &&
           other.reportsCount == this.reportsCount &&
           other.isHidden == this.isHidden &&
           other.isDirty == this.isDirty &&
@@ -14433,13 +14590,15 @@ class SectionCommentsCompanion extends UpdateCompanion<SectionComment> {
   final Value<String?> remoteId;
   final Value<int> clubId;
   final Value<String> clubUuid;
-  final Value<int> bookId;
-  final Value<String> bookUuid;
+  final Value<int?> bookId;
+  final Value<String?> bookUuid;
   final Value<int> sectionNumber;
   final Value<int> userId;
   final Value<String?> userRemoteId;
   final Value<String?> authorRemoteId;
   final Value<String> content;
+  final Value<String?> parentId;
+  final Value<bool> isSpoiler;
   final Value<int> reportsCount;
   final Value<bool> isHidden;
   final Value<bool> isDirty;
@@ -14461,6 +14620,8 @@ class SectionCommentsCompanion extends UpdateCompanion<SectionComment> {
     this.userRemoteId = const Value.absent(),
     this.authorRemoteId = const Value.absent(),
     this.content = const Value.absent(),
+    this.parentId = const Value.absent(),
+    this.isSpoiler = const Value.absent(),
     this.reportsCount = const Value.absent(),
     this.isHidden = const Value.absent(),
     this.isDirty = const Value.absent(),
@@ -14476,13 +14637,15 @@ class SectionCommentsCompanion extends UpdateCompanion<SectionComment> {
     this.remoteId = const Value.absent(),
     required int clubId,
     required String clubUuid,
-    required int bookId,
-    required String bookUuid,
+    this.bookId = const Value.absent(),
+    this.bookUuid = const Value.absent(),
     required int sectionNumber,
     required int userId,
     this.userRemoteId = const Value.absent(),
     this.authorRemoteId = const Value.absent(),
     required String content,
+    this.parentId = const Value.absent(),
+    this.isSpoiler = const Value.absent(),
     this.reportsCount = const Value.absent(),
     this.isHidden = const Value.absent(),
     this.isDirty = const Value.absent(),
@@ -14494,8 +14657,6 @@ class SectionCommentsCompanion extends UpdateCompanion<SectionComment> {
   })  : uuid = Value(uuid),
         clubId = Value(clubId),
         clubUuid = Value(clubUuid),
-        bookId = Value(bookId),
-        bookUuid = Value(bookUuid),
         sectionNumber = Value(sectionNumber),
         userId = Value(userId),
         content = Value(content);
@@ -14512,6 +14673,8 @@ class SectionCommentsCompanion extends UpdateCompanion<SectionComment> {
     Expression<String>? userRemoteId,
     Expression<String>? authorRemoteId,
     Expression<String>? content,
+    Expression<String>? parentId,
+    Expression<bool>? isSpoiler,
     Expression<int>? reportsCount,
     Expression<bool>? isHidden,
     Expression<bool>? isDirty,
@@ -14534,6 +14697,8 @@ class SectionCommentsCompanion extends UpdateCompanion<SectionComment> {
       if (userRemoteId != null) 'user_remote_id': userRemoteId,
       if (authorRemoteId != null) 'author_remote_id': authorRemoteId,
       if (content != null) 'content': content,
+      if (parentId != null) 'parent_id': parentId,
+      if (isSpoiler != null) 'is_spoiler': isSpoiler,
       if (reportsCount != null) 'reports_count': reportsCount,
       if (isHidden != null) 'is_hidden': isHidden,
       if (isDirty != null) 'is_dirty': isDirty,
@@ -14551,13 +14716,15 @@ class SectionCommentsCompanion extends UpdateCompanion<SectionComment> {
       Value<String?>? remoteId,
       Value<int>? clubId,
       Value<String>? clubUuid,
-      Value<int>? bookId,
-      Value<String>? bookUuid,
+      Value<int?>? bookId,
+      Value<String?>? bookUuid,
       Value<int>? sectionNumber,
       Value<int>? userId,
       Value<String?>? userRemoteId,
       Value<String?>? authorRemoteId,
       Value<String>? content,
+      Value<String?>? parentId,
+      Value<bool>? isSpoiler,
       Value<int>? reportsCount,
       Value<bool>? isHidden,
       Value<bool>? isDirty,
@@ -14579,6 +14746,8 @@ class SectionCommentsCompanion extends UpdateCompanion<SectionComment> {
       userRemoteId: userRemoteId ?? this.userRemoteId,
       authorRemoteId: authorRemoteId ?? this.authorRemoteId,
       content: content ?? this.content,
+      parentId: parentId ?? this.parentId,
+      isSpoiler: isSpoiler ?? this.isSpoiler,
       reportsCount: reportsCount ?? this.reportsCount,
       isHidden: isHidden ?? this.isHidden,
       isDirty: isDirty ?? this.isDirty,
@@ -14629,6 +14798,12 @@ class SectionCommentsCompanion extends UpdateCompanion<SectionComment> {
     if (content.present) {
       map['content'] = Variable<String>(content.value);
     }
+    if (parentId.present) {
+      map['parent_id'] = Variable<String>(parentId.value);
+    }
+    if (isSpoiler.present) {
+      map['is_spoiler'] = Variable<bool>(isSpoiler.value);
+    }
     if (reportsCount.present) {
       map['reports_count'] = Variable<int>(reportsCount.value);
     }
@@ -14671,6 +14846,8 @@ class SectionCommentsCompanion extends UpdateCompanion<SectionComment> {
           ..write('userRemoteId: $userRemoteId, ')
           ..write('authorRemoteId: $authorRemoteId, ')
           ..write('content: $content, ')
+          ..write('parentId: $parentId, ')
+          ..write('isSpoiler: $isSpoiler, ')
           ..write('reportsCount: $reportsCount, ')
           ..write('isHidden: $isHidden, ')
           ..write('isDirty: $isDirty, ')
@@ -17000,6 +17177,1537 @@ class SyncCursorsCompanion extends UpdateCompanion<SyncCursor> {
   }
 }
 
+class $ClubPollsTable extends ClubPolls
+    with TableInfo<$ClubPollsTable, ClubPoll> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ClubPollsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+      'uuid', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _remoteIdMeta =
+      const VerificationMeta('remoteId');
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+      'remote_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _clubIdMeta = const VerificationMeta('clubId');
+  @override
+  late final GeneratedColumn<int> clubId = GeneratedColumn<int>(
+      'club_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES reading_clubs (id) ON DELETE CASCADE'));
+  static const VerificationMeta _clubUuidMeta =
+      const VerificationMeta('clubUuid');
+  @override
+  late final GeneratedColumn<String> clubUuid = GeneratedColumn<String>(
+      'club_uuid', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _questionMeta =
+      const VerificationMeta('question');
+  @override
+  late final GeneratedColumn<String> question = GeneratedColumn<String>(
+      'question', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 256),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _optionsMeta =
+      const VerificationMeta('options');
+  @override
+  late final GeneratedColumn<String> options = GeneratedColumn<String>(
+      'options', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _votesMeta = const VerificationMeta('votes');
+  @override
+  late final GeneratedColumn<String> votes = GeneratedColumn<String>(
+      'votes', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('{}'));
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 32),
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('abierta'));
+  static const VerificationMeta _createdByUserIdMeta =
+      const VerificationMeta('createdByUserId');
+  @override
+  late final GeneratedColumn<int> createdByUserId = GeneratedColumn<int>(
+      'created_by_user_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES local_users (id)'));
+  static const VerificationMeta _createdByRemoteIdMeta =
+      const VerificationMeta('createdByRemoteId');
+  @override
+  late final GeneratedColumn<String> createdByRemoteId =
+      GeneratedColumn<String>('created_by_remote_id', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _expiresAtMeta =
+      const VerificationMeta('expiresAt');
+  @override
+  late final GeneratedColumn<DateTime> expiresAt = GeneratedColumn<DateTime>(
+      'expires_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _isDirtyMeta =
+      const VerificationMeta('isDirty');
+  @override
+  late final GeneratedColumn<bool> isDirty = GeneratedColumn<bool>(
+      'is_dirty', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_dirty" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _isDeletedMeta =
+      const VerificationMeta('isDeleted');
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+      'is_deleted', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_deleted" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _syncedAtMeta =
+      const VerificationMeta('syncedAt');
+  @override
+  late final GeneratedColumn<DateTime> syncedAt = GeneratedColumn<DateTime>(
+      'synced_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        uuid,
+        remoteId,
+        clubId,
+        clubUuid,
+        question,
+        options,
+        votes,
+        status,
+        createdByUserId,
+        createdByRemoteId,
+        expiresAt,
+        isDirty,
+        isDeleted,
+        syncedAt,
+        createdAt,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'club_polls';
+  @override
+  VerificationContext validateIntegrity(Insertable<ClubPoll> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+          _uuidMeta, uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta));
+    } else if (isInserting) {
+      context.missing(_uuidMeta);
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(_remoteIdMeta,
+          remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta));
+    }
+    if (data.containsKey('club_id')) {
+      context.handle(_clubIdMeta,
+          clubId.isAcceptableOrUnknown(data['club_id']!, _clubIdMeta));
+    } else if (isInserting) {
+      context.missing(_clubIdMeta);
+    }
+    if (data.containsKey('club_uuid')) {
+      context.handle(_clubUuidMeta,
+          clubUuid.isAcceptableOrUnknown(data['club_uuid']!, _clubUuidMeta));
+    } else if (isInserting) {
+      context.missing(_clubUuidMeta);
+    }
+    if (data.containsKey('question')) {
+      context.handle(_questionMeta,
+          question.isAcceptableOrUnknown(data['question']!, _questionMeta));
+    } else if (isInserting) {
+      context.missing(_questionMeta);
+    }
+    if (data.containsKey('options')) {
+      context.handle(_optionsMeta,
+          options.isAcceptableOrUnknown(data['options']!, _optionsMeta));
+    } else if (isInserting) {
+      context.missing(_optionsMeta);
+    }
+    if (data.containsKey('votes')) {
+      context.handle(
+          _votesMeta, votes.isAcceptableOrUnknown(data['votes']!, _votesMeta));
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    }
+    if (data.containsKey('created_by_user_id')) {
+      context.handle(
+          _createdByUserIdMeta,
+          createdByUserId.isAcceptableOrUnknown(
+              data['created_by_user_id']!, _createdByUserIdMeta));
+    } else if (isInserting) {
+      context.missing(_createdByUserIdMeta);
+    }
+    if (data.containsKey('created_by_remote_id')) {
+      context.handle(
+          _createdByRemoteIdMeta,
+          createdByRemoteId.isAcceptableOrUnknown(
+              data['created_by_remote_id']!, _createdByRemoteIdMeta));
+    }
+    if (data.containsKey('expires_at')) {
+      context.handle(_expiresAtMeta,
+          expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta));
+    }
+    if (data.containsKey('is_dirty')) {
+      context.handle(_isDirtyMeta,
+          isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(_isDeletedMeta,
+          isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta));
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(_syncedAtMeta,
+          syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ClubPoll map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ClubPoll(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      uuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
+      remoteId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}remote_id']),
+      clubId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}club_id'])!,
+      clubUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}club_uuid'])!,
+      question: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}question'])!,
+      options: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}options'])!,
+      votes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}votes'])!,
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      createdByUserId: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}created_by_user_id'])!,
+      createdByRemoteId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}created_by_remote_id']),
+      expiresAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}expires_at']),
+      isDirty: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
+      isDeleted: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_deleted'])!,
+      syncedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}synced_at']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $ClubPollsTable createAlias(String alias) {
+    return $ClubPollsTable(attachedDatabase, alias);
+  }
+}
+
+class ClubPoll extends DataClass implements Insertable<ClubPoll> {
+  final int id;
+  final String uuid;
+  final String? remoteId;
+  final int clubId;
+  final String clubUuid;
+  final String question;
+  final String options;
+  final String votes;
+  final String status;
+  final int createdByUserId;
+  final String? createdByRemoteId;
+  final DateTime? expiresAt;
+  final bool isDirty;
+  final bool isDeleted;
+  final DateTime? syncedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ClubPoll(
+      {required this.id,
+      required this.uuid,
+      this.remoteId,
+      required this.clubId,
+      required this.clubUuid,
+      required this.question,
+      required this.options,
+      required this.votes,
+      required this.status,
+      required this.createdByUserId,
+      this.createdByRemoteId,
+      this.expiresAt,
+      required this.isDirty,
+      required this.isDeleted,
+      this.syncedAt,
+      required this.createdAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    map['club_id'] = Variable<int>(clubId);
+    map['club_uuid'] = Variable<String>(clubUuid);
+    map['question'] = Variable<String>(question);
+    map['options'] = Variable<String>(options);
+    map['votes'] = Variable<String>(votes);
+    map['status'] = Variable<String>(status);
+    map['created_by_user_id'] = Variable<int>(createdByUserId);
+    if (!nullToAbsent || createdByRemoteId != null) {
+      map['created_by_remote_id'] = Variable<String>(createdByRemoteId);
+    }
+    if (!nullToAbsent || expiresAt != null) {
+      map['expires_at'] = Variable<DateTime>(expiresAt);
+    }
+    map['is_dirty'] = Variable<bool>(isDirty);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<DateTime>(syncedAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ClubPollsCompanion toCompanion(bool nullToAbsent) {
+    return ClubPollsCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+      clubId: Value(clubId),
+      clubUuid: Value(clubUuid),
+      question: Value(question),
+      options: Value(options),
+      votes: Value(votes),
+      status: Value(status),
+      createdByUserId: Value(createdByUserId),
+      createdByRemoteId: createdByRemoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdByRemoteId),
+      expiresAt: expiresAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expiresAt),
+      isDirty: Value(isDirty),
+      isDeleted: Value(isDeleted),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ClubPoll.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ClubPoll(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+      clubId: serializer.fromJson<int>(json['clubId']),
+      clubUuid: serializer.fromJson<String>(json['clubUuid']),
+      question: serializer.fromJson<String>(json['question']),
+      options: serializer.fromJson<String>(json['options']),
+      votes: serializer.fromJson<String>(json['votes']),
+      status: serializer.fromJson<String>(json['status']),
+      createdByUserId: serializer.fromJson<int>(json['createdByUserId']),
+      createdByRemoteId:
+          serializer.fromJson<String?>(json['createdByRemoteId']),
+      expiresAt: serializer.fromJson<DateTime?>(json['expiresAt']),
+      isDirty: serializer.fromJson<bool>(json['isDirty']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'remoteId': serializer.toJson<String?>(remoteId),
+      'clubId': serializer.toJson<int>(clubId),
+      'clubUuid': serializer.toJson<String>(clubUuid),
+      'question': serializer.toJson<String>(question),
+      'options': serializer.toJson<String>(options),
+      'votes': serializer.toJson<String>(votes),
+      'status': serializer.toJson<String>(status),
+      'createdByUserId': serializer.toJson<int>(createdByUserId),
+      'createdByRemoteId': serializer.toJson<String?>(createdByRemoteId),
+      'expiresAt': serializer.toJson<DateTime?>(expiresAt),
+      'isDirty': serializer.toJson<bool>(isDirty),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'syncedAt': serializer.toJson<DateTime?>(syncedAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ClubPoll copyWith(
+          {int? id,
+          String? uuid,
+          Value<String?> remoteId = const Value.absent(),
+          int? clubId,
+          String? clubUuid,
+          String? question,
+          String? options,
+          String? votes,
+          String? status,
+          int? createdByUserId,
+          Value<String?> createdByRemoteId = const Value.absent(),
+          Value<DateTime?> expiresAt = const Value.absent(),
+          bool? isDirty,
+          bool? isDeleted,
+          Value<DateTime?> syncedAt = const Value.absent(),
+          DateTime? createdAt,
+          DateTime? updatedAt}) =>
+      ClubPoll(
+        id: id ?? this.id,
+        uuid: uuid ?? this.uuid,
+        remoteId: remoteId.present ? remoteId.value : this.remoteId,
+        clubId: clubId ?? this.clubId,
+        clubUuid: clubUuid ?? this.clubUuid,
+        question: question ?? this.question,
+        options: options ?? this.options,
+        votes: votes ?? this.votes,
+        status: status ?? this.status,
+        createdByUserId: createdByUserId ?? this.createdByUserId,
+        createdByRemoteId: createdByRemoteId.present
+            ? createdByRemoteId.value
+            : this.createdByRemoteId,
+        expiresAt: expiresAt.present ? expiresAt.value : this.expiresAt,
+        isDirty: isDirty ?? this.isDirty,
+        isDeleted: isDeleted ?? this.isDeleted,
+        syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  ClubPoll copyWithCompanion(ClubPollsCompanion data) {
+    return ClubPoll(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      clubId: data.clubId.present ? data.clubId.value : this.clubId,
+      clubUuid: data.clubUuid.present ? data.clubUuid.value : this.clubUuid,
+      question: data.question.present ? data.question.value : this.question,
+      options: data.options.present ? data.options.value : this.options,
+      votes: data.votes.present ? data.votes.value : this.votes,
+      status: data.status.present ? data.status.value : this.status,
+      createdByUserId: data.createdByUserId.present
+          ? data.createdByUserId.value
+          : this.createdByUserId,
+      createdByRemoteId: data.createdByRemoteId.present
+          ? data.createdByRemoteId.value
+          : this.createdByRemoteId,
+      expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
+      isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ClubPoll(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('clubId: $clubId, ')
+          ..write('clubUuid: $clubUuid, ')
+          ..write('question: $question, ')
+          ..write('options: $options, ')
+          ..write('votes: $votes, ')
+          ..write('status: $status, ')
+          ..write('createdByUserId: $createdByUserId, ')
+          ..write('createdByRemoteId: $createdByRemoteId, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      uuid,
+      remoteId,
+      clubId,
+      clubUuid,
+      question,
+      options,
+      votes,
+      status,
+      createdByUserId,
+      createdByRemoteId,
+      expiresAt,
+      isDirty,
+      isDeleted,
+      syncedAt,
+      createdAt,
+      updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ClubPoll &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.remoteId == this.remoteId &&
+          other.clubId == this.clubId &&
+          other.clubUuid == this.clubUuid &&
+          other.question == this.question &&
+          other.options == this.options &&
+          other.votes == this.votes &&
+          other.status == this.status &&
+          other.createdByUserId == this.createdByUserId &&
+          other.createdByRemoteId == this.createdByRemoteId &&
+          other.expiresAt == this.expiresAt &&
+          other.isDirty == this.isDirty &&
+          other.isDeleted == this.isDeleted &&
+          other.syncedAt == this.syncedAt &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ClubPollsCompanion extends UpdateCompanion<ClubPoll> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<String?> remoteId;
+  final Value<int> clubId;
+  final Value<String> clubUuid;
+  final Value<String> question;
+  final Value<String> options;
+  final Value<String> votes;
+  final Value<String> status;
+  final Value<int> createdByUserId;
+  final Value<String?> createdByRemoteId;
+  final Value<DateTime?> expiresAt;
+  final Value<bool> isDirty;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> syncedAt;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const ClubPollsCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.clubId = const Value.absent(),
+    this.clubUuid = const Value.absent(),
+    this.question = const Value.absent(),
+    this.options = const Value.absent(),
+    this.votes = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdByUserId = const Value.absent(),
+    this.createdByRemoteId = const Value.absent(),
+    this.expiresAt = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  ClubPollsCompanion.insert({
+    this.id = const Value.absent(),
+    required String uuid,
+    this.remoteId = const Value.absent(),
+    required int clubId,
+    required String clubUuid,
+    required String question,
+    required String options,
+    this.votes = const Value.absent(),
+    this.status = const Value.absent(),
+    required int createdByUserId,
+    this.createdByRemoteId = const Value.absent(),
+    this.expiresAt = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  })  : uuid = Value(uuid),
+        clubId = Value(clubId),
+        clubUuid = Value(clubUuid),
+        question = Value(question),
+        options = Value(options),
+        createdByUserId = Value(createdByUserId);
+  static Insertable<ClubPoll> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<String>? remoteId,
+    Expression<int>? clubId,
+    Expression<String>? clubUuid,
+    Expression<String>? question,
+    Expression<String>? options,
+    Expression<String>? votes,
+    Expression<String>? status,
+    Expression<int>? createdByUserId,
+    Expression<String>? createdByRemoteId,
+    Expression<DateTime>? expiresAt,
+    Expression<bool>? isDirty,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? syncedAt,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (clubId != null) 'club_id': clubId,
+      if (clubUuid != null) 'club_uuid': clubUuid,
+      if (question != null) 'question': question,
+      if (options != null) 'options': options,
+      if (votes != null) 'votes': votes,
+      if (status != null) 'status': status,
+      if (createdByUserId != null) 'created_by_user_id': createdByUserId,
+      if (createdByRemoteId != null) 'created_by_remote_id': createdByRemoteId,
+      if (expiresAt != null) 'expires_at': expiresAt,
+      if (isDirty != null) 'is_dirty': isDirty,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  ClubPollsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? uuid,
+      Value<String?>? remoteId,
+      Value<int>? clubId,
+      Value<String>? clubUuid,
+      Value<String>? question,
+      Value<String>? options,
+      Value<String>? votes,
+      Value<String>? status,
+      Value<int>? createdByUserId,
+      Value<String?>? createdByRemoteId,
+      Value<DateTime?>? expiresAt,
+      Value<bool>? isDirty,
+      Value<bool>? isDeleted,
+      Value<DateTime?>? syncedAt,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt}) {
+    return ClubPollsCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      remoteId: remoteId ?? this.remoteId,
+      clubId: clubId ?? this.clubId,
+      clubUuid: clubUuid ?? this.clubUuid,
+      question: question ?? this.question,
+      options: options ?? this.options,
+      votes: votes ?? this.votes,
+      status: status ?? this.status,
+      createdByUserId: createdByUserId ?? this.createdByUserId,
+      createdByRemoteId: createdByRemoteId ?? this.createdByRemoteId,
+      expiresAt: expiresAt ?? this.expiresAt,
+      isDirty: isDirty ?? this.isDirty,
+      isDeleted: isDeleted ?? this.isDeleted,
+      syncedAt: syncedAt ?? this.syncedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    if (clubId.present) {
+      map['club_id'] = Variable<int>(clubId.value);
+    }
+    if (clubUuid.present) {
+      map['club_uuid'] = Variable<String>(clubUuid.value);
+    }
+    if (question.present) {
+      map['question'] = Variable<String>(question.value);
+    }
+    if (options.present) {
+      map['options'] = Variable<String>(options.value);
+    }
+    if (votes.present) {
+      map['votes'] = Variable<String>(votes.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (createdByUserId.present) {
+      map['created_by_user_id'] = Variable<int>(createdByUserId.value);
+    }
+    if (createdByRemoteId.present) {
+      map['created_by_remote_id'] = Variable<String>(createdByRemoteId.value);
+    }
+    if (expiresAt.present) {
+      map['expires_at'] = Variable<DateTime>(expiresAt.value);
+    }
+    if (isDirty.present) {
+      map['is_dirty'] = Variable<bool>(isDirty.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<DateTime>(syncedAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ClubPollsCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('clubId: $clubId, ')
+          ..write('clubUuid: $clubUuid, ')
+          ..write('question: $question, ')
+          ..write('options: $options, ')
+          ..write('votes: $votes, ')
+          ..write('status: $status, ')
+          ..write('createdByUserId: $createdByUserId, ')
+          ..write('createdByRemoteId: $createdByRemoteId, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ClubChroniclesTable extends ClubChronicles
+    with TableInfo<$ClubChroniclesTable, ClubChronicle> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ClubChroniclesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+      'uuid', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _remoteIdMeta =
+      const VerificationMeta('remoteId');
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+      'remote_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _clubIdMeta = const VerificationMeta('clubId');
+  @override
+  late final GeneratedColumn<int> clubId = GeneratedColumn<int>(
+      'club_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES reading_clubs (id) ON DELETE CASCADE'));
+  static const VerificationMeta _clubUuidMeta =
+      const VerificationMeta('clubUuid');
+  @override
+  late final GeneratedColumn<String> clubUuid = GeneratedColumn<String>(
+      'club_uuid', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _bookUuidMeta =
+      const VerificationMeta('bookUuid');
+  @override
+  late final GeneratedColumn<String> bookUuid = GeneratedColumn<String>(
+      'book_uuid', aliasedName, true,
+      additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 36),
+      type: DriftSqlType.string,
+      requiredDuringInsert: false);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 256),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _contentMeta =
+      const VerificationMeta('content');
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+      'content', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _authorUserIdMeta =
+      const VerificationMeta('authorUserId');
+  @override
+  late final GeneratedColumn<int> authorUserId = GeneratedColumn<int>(
+      'author_user_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES local_users (id)'));
+  static const VerificationMeta _authorRemoteIdMeta =
+      const VerificationMeta('authorRemoteId');
+  @override
+  late final GeneratedColumn<String> authorRemoteId = GeneratedColumn<String>(
+      'author_remote_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isDirtyMeta =
+      const VerificationMeta('isDirty');
+  @override
+  late final GeneratedColumn<bool> isDirty = GeneratedColumn<bool>(
+      'is_dirty', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_dirty" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _isDeletedMeta =
+      const VerificationMeta('isDeleted');
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+      'is_deleted', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_deleted" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _syncedAtMeta =
+      const VerificationMeta('syncedAt');
+  @override
+  late final GeneratedColumn<DateTime> syncedAt = GeneratedColumn<DateTime>(
+      'synced_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        uuid,
+        remoteId,
+        clubId,
+        clubUuid,
+        bookUuid,
+        title,
+        content,
+        authorUserId,
+        authorRemoteId,
+        isDirty,
+        isDeleted,
+        syncedAt,
+        createdAt,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'club_chronicles';
+  @override
+  VerificationContext validateIntegrity(Insertable<ClubChronicle> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+          _uuidMeta, uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta));
+    } else if (isInserting) {
+      context.missing(_uuidMeta);
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(_remoteIdMeta,
+          remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta));
+    }
+    if (data.containsKey('club_id')) {
+      context.handle(_clubIdMeta,
+          clubId.isAcceptableOrUnknown(data['club_id']!, _clubIdMeta));
+    } else if (isInserting) {
+      context.missing(_clubIdMeta);
+    }
+    if (data.containsKey('club_uuid')) {
+      context.handle(_clubUuidMeta,
+          clubUuid.isAcceptableOrUnknown(data['club_uuid']!, _clubUuidMeta));
+    } else if (isInserting) {
+      context.missing(_clubUuidMeta);
+    }
+    if (data.containsKey('book_uuid')) {
+      context.handle(_bookUuidMeta,
+          bookUuid.isAcceptableOrUnknown(data['book_uuid']!, _bookUuidMeta));
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(_contentMeta,
+          content.isAcceptableOrUnknown(data['content']!, _contentMeta));
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('author_user_id')) {
+      context.handle(
+          _authorUserIdMeta,
+          authorUserId.isAcceptableOrUnknown(
+              data['author_user_id']!, _authorUserIdMeta));
+    } else if (isInserting) {
+      context.missing(_authorUserIdMeta);
+    }
+    if (data.containsKey('author_remote_id')) {
+      context.handle(
+          _authorRemoteIdMeta,
+          authorRemoteId.isAcceptableOrUnknown(
+              data['author_remote_id']!, _authorRemoteIdMeta));
+    }
+    if (data.containsKey('is_dirty')) {
+      context.handle(_isDirtyMeta,
+          isDirty.isAcceptableOrUnknown(data['is_dirty']!, _isDirtyMeta));
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(_isDeletedMeta,
+          isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta));
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(_syncedAtMeta,
+          syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ClubChronicle map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ClubChronicle(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      uuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
+      remoteId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}remote_id']),
+      clubId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}club_id'])!,
+      clubUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}club_uuid'])!,
+      bookUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}book_uuid']),
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      content: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}content'])!,
+      authorUserId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}author_user_id'])!,
+      authorRemoteId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}author_remote_id']),
+      isDirty: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_dirty'])!,
+      isDeleted: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_deleted'])!,
+      syncedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}synced_at']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $ClubChroniclesTable createAlias(String alias) {
+    return $ClubChroniclesTable(attachedDatabase, alias);
+  }
+}
+
+class ClubChronicle extends DataClass implements Insertable<ClubChronicle> {
+  final int id;
+  final String uuid;
+  final String? remoteId;
+  final int clubId;
+  final String clubUuid;
+  final String? bookUuid;
+  final String title;
+  final String content;
+  final int authorUserId;
+  final String? authorRemoteId;
+  final bool isDirty;
+  final bool isDeleted;
+  final DateTime? syncedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ClubChronicle(
+      {required this.id,
+      required this.uuid,
+      this.remoteId,
+      required this.clubId,
+      required this.clubUuid,
+      this.bookUuid,
+      required this.title,
+      required this.content,
+      required this.authorUserId,
+      this.authorRemoteId,
+      required this.isDirty,
+      required this.isDeleted,
+      this.syncedAt,
+      required this.createdAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    map['club_id'] = Variable<int>(clubId);
+    map['club_uuid'] = Variable<String>(clubUuid);
+    if (!nullToAbsent || bookUuid != null) {
+      map['book_uuid'] = Variable<String>(bookUuid);
+    }
+    map['title'] = Variable<String>(title);
+    map['content'] = Variable<String>(content);
+    map['author_user_id'] = Variable<int>(authorUserId);
+    if (!nullToAbsent || authorRemoteId != null) {
+      map['author_remote_id'] = Variable<String>(authorRemoteId);
+    }
+    map['is_dirty'] = Variable<bool>(isDirty);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<DateTime>(syncedAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ClubChroniclesCompanion toCompanion(bool nullToAbsent) {
+    return ClubChroniclesCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+      clubId: Value(clubId),
+      clubUuid: Value(clubUuid),
+      bookUuid: bookUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bookUuid),
+      title: Value(title),
+      content: Value(content),
+      authorUserId: Value(authorUserId),
+      authorRemoteId: authorRemoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(authorRemoteId),
+      isDirty: Value(isDirty),
+      isDeleted: Value(isDeleted),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ClubChronicle.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ClubChronicle(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+      clubId: serializer.fromJson<int>(json['clubId']),
+      clubUuid: serializer.fromJson<String>(json['clubUuid']),
+      bookUuid: serializer.fromJson<String?>(json['bookUuid']),
+      title: serializer.fromJson<String>(json['title']),
+      content: serializer.fromJson<String>(json['content']),
+      authorUserId: serializer.fromJson<int>(json['authorUserId']),
+      authorRemoteId: serializer.fromJson<String?>(json['authorRemoteId']),
+      isDirty: serializer.fromJson<bool>(json['isDirty']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'remoteId': serializer.toJson<String?>(remoteId),
+      'clubId': serializer.toJson<int>(clubId),
+      'clubUuid': serializer.toJson<String>(clubUuid),
+      'bookUuid': serializer.toJson<String?>(bookUuid),
+      'title': serializer.toJson<String>(title),
+      'content': serializer.toJson<String>(content),
+      'authorUserId': serializer.toJson<int>(authorUserId),
+      'authorRemoteId': serializer.toJson<String?>(authorRemoteId),
+      'isDirty': serializer.toJson<bool>(isDirty),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'syncedAt': serializer.toJson<DateTime?>(syncedAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ClubChronicle copyWith(
+          {int? id,
+          String? uuid,
+          Value<String?> remoteId = const Value.absent(),
+          int? clubId,
+          String? clubUuid,
+          Value<String?> bookUuid = const Value.absent(),
+          String? title,
+          String? content,
+          int? authorUserId,
+          Value<String?> authorRemoteId = const Value.absent(),
+          bool? isDirty,
+          bool? isDeleted,
+          Value<DateTime?> syncedAt = const Value.absent(),
+          DateTime? createdAt,
+          DateTime? updatedAt}) =>
+      ClubChronicle(
+        id: id ?? this.id,
+        uuid: uuid ?? this.uuid,
+        remoteId: remoteId.present ? remoteId.value : this.remoteId,
+        clubId: clubId ?? this.clubId,
+        clubUuid: clubUuid ?? this.clubUuid,
+        bookUuid: bookUuid.present ? bookUuid.value : this.bookUuid,
+        title: title ?? this.title,
+        content: content ?? this.content,
+        authorUserId: authorUserId ?? this.authorUserId,
+        authorRemoteId:
+            authorRemoteId.present ? authorRemoteId.value : this.authorRemoteId,
+        isDirty: isDirty ?? this.isDirty,
+        isDeleted: isDeleted ?? this.isDeleted,
+        syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  ClubChronicle copyWithCompanion(ClubChroniclesCompanion data) {
+    return ClubChronicle(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      clubId: data.clubId.present ? data.clubId.value : this.clubId,
+      clubUuid: data.clubUuid.present ? data.clubUuid.value : this.clubUuid,
+      bookUuid: data.bookUuid.present ? data.bookUuid.value : this.bookUuid,
+      title: data.title.present ? data.title.value : this.title,
+      content: data.content.present ? data.content.value : this.content,
+      authorUserId: data.authorUserId.present
+          ? data.authorUserId.value
+          : this.authorUserId,
+      authorRemoteId: data.authorRemoteId.present
+          ? data.authorRemoteId.value
+          : this.authorRemoteId,
+      isDirty: data.isDirty.present ? data.isDirty.value : this.isDirty,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ClubChronicle(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('clubId: $clubId, ')
+          ..write('clubUuid: $clubUuid, ')
+          ..write('bookUuid: $bookUuid, ')
+          ..write('title: $title, ')
+          ..write('content: $content, ')
+          ..write('authorUserId: $authorUserId, ')
+          ..write('authorRemoteId: $authorRemoteId, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      uuid,
+      remoteId,
+      clubId,
+      clubUuid,
+      bookUuid,
+      title,
+      content,
+      authorUserId,
+      authorRemoteId,
+      isDirty,
+      isDeleted,
+      syncedAt,
+      createdAt,
+      updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ClubChronicle &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.remoteId == this.remoteId &&
+          other.clubId == this.clubId &&
+          other.clubUuid == this.clubUuid &&
+          other.bookUuid == this.bookUuid &&
+          other.title == this.title &&
+          other.content == this.content &&
+          other.authorUserId == this.authorUserId &&
+          other.authorRemoteId == this.authorRemoteId &&
+          other.isDirty == this.isDirty &&
+          other.isDeleted == this.isDeleted &&
+          other.syncedAt == this.syncedAt &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ClubChroniclesCompanion extends UpdateCompanion<ClubChronicle> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<String?> remoteId;
+  final Value<int> clubId;
+  final Value<String> clubUuid;
+  final Value<String?> bookUuid;
+  final Value<String> title;
+  final Value<String> content;
+  final Value<int> authorUserId;
+  final Value<String?> authorRemoteId;
+  final Value<bool> isDirty;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> syncedAt;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const ClubChroniclesCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.clubId = const Value.absent(),
+    this.clubUuid = const Value.absent(),
+    this.bookUuid = const Value.absent(),
+    this.title = const Value.absent(),
+    this.content = const Value.absent(),
+    this.authorUserId = const Value.absent(),
+    this.authorRemoteId = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  ClubChroniclesCompanion.insert({
+    this.id = const Value.absent(),
+    required String uuid,
+    this.remoteId = const Value.absent(),
+    required int clubId,
+    required String clubUuid,
+    this.bookUuid = const Value.absent(),
+    required String title,
+    required String content,
+    required int authorUserId,
+    this.authorRemoteId = const Value.absent(),
+    this.isDirty = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  })  : uuid = Value(uuid),
+        clubId = Value(clubId),
+        clubUuid = Value(clubUuid),
+        title = Value(title),
+        content = Value(content),
+        authorUserId = Value(authorUserId);
+  static Insertable<ClubChronicle> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<String>? remoteId,
+    Expression<int>? clubId,
+    Expression<String>? clubUuid,
+    Expression<String>? bookUuid,
+    Expression<String>? title,
+    Expression<String>? content,
+    Expression<int>? authorUserId,
+    Expression<String>? authorRemoteId,
+    Expression<bool>? isDirty,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? syncedAt,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (clubId != null) 'club_id': clubId,
+      if (clubUuid != null) 'club_uuid': clubUuid,
+      if (bookUuid != null) 'book_uuid': bookUuid,
+      if (title != null) 'title': title,
+      if (content != null) 'content': content,
+      if (authorUserId != null) 'author_user_id': authorUserId,
+      if (authorRemoteId != null) 'author_remote_id': authorRemoteId,
+      if (isDirty != null) 'is_dirty': isDirty,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  ClubChroniclesCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? uuid,
+      Value<String?>? remoteId,
+      Value<int>? clubId,
+      Value<String>? clubUuid,
+      Value<String?>? bookUuid,
+      Value<String>? title,
+      Value<String>? content,
+      Value<int>? authorUserId,
+      Value<String?>? authorRemoteId,
+      Value<bool>? isDirty,
+      Value<bool>? isDeleted,
+      Value<DateTime?>? syncedAt,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt}) {
+    return ClubChroniclesCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      remoteId: remoteId ?? this.remoteId,
+      clubId: clubId ?? this.clubId,
+      clubUuid: clubUuid ?? this.clubUuid,
+      bookUuid: bookUuid ?? this.bookUuid,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      authorUserId: authorUserId ?? this.authorUserId,
+      authorRemoteId: authorRemoteId ?? this.authorRemoteId,
+      isDirty: isDirty ?? this.isDirty,
+      isDeleted: isDeleted ?? this.isDeleted,
+      syncedAt: syncedAt ?? this.syncedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    if (clubId.present) {
+      map['club_id'] = Variable<int>(clubId.value);
+    }
+    if (clubUuid.present) {
+      map['club_uuid'] = Variable<String>(clubUuid.value);
+    }
+    if (bookUuid.present) {
+      map['book_uuid'] = Variable<String>(bookUuid.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (authorUserId.present) {
+      map['author_user_id'] = Variable<int>(authorUserId.value);
+    }
+    if (authorRemoteId.present) {
+      map['author_remote_id'] = Variable<String>(authorRemoteId.value);
+    }
+    if (isDirty.present) {
+      map['is_dirty'] = Variable<bool>(isDirty.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<DateTime>(syncedAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ClubChroniclesCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('clubId: $clubId, ')
+          ..write('clubUuid: $clubUuid, ')
+          ..write('bookUuid: $bookUuid, ')
+          ..write('title: $title, ')
+          ..write('content: $content, ')
+          ..write('authorUserId: $authorUserId, ')
+          ..write('authorRemoteId: $authorRemoteId, ')
+          ..write('isDirty: $isDirty, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -17030,6 +18738,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ReadingSessionsTable readingSessions =
       $ReadingSessionsTable(this);
   late final $SyncCursorsTable syncCursors = $SyncCursorsTable(this);
+  late final $ClubPollsTable clubPolls = $ClubPollsTable(this);
+  late final $ClubChroniclesTable clubChronicles = $ClubChroniclesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -17055,7 +18765,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         commentReports,
         moderationLogs,
         readingSessions,
-        syncCursors
+        syncCursors,
+        clubPolls,
+        clubChronicles
       ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
@@ -17184,6 +18896,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
                 limitUpdateKind: UpdateKind.delete),
             result: [
               TableUpdate('reading_sessions', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('reading_clubs',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('club_polls', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('reading_clubs',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('club_chronicles', kind: UpdateKind.delete),
             ],
           ),
         ],
@@ -17538,6 +19264,36 @@ final class $$LocalUsersTableReferences
 
     final cache =
         $_typedResult.readTableOrNull(_moderationPerformerTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$ClubPollsTable, List<ClubPoll>>
+      _clubPollsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.clubPolls,
+              aliasName: $_aliasNameGenerator(
+                  db.localUsers.id, db.clubPolls.createdByUserId));
+
+  $$ClubPollsTableProcessedTableManager get clubPollsRefs {
+    final manager = $$ClubPollsTableTableManager($_db, $_db.clubPolls).filter(
+        (f) => f.createdByUserId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_clubPollsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$ClubChroniclesTable, List<ClubChronicle>>
+      _clubChroniclesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.clubChronicles,
+              aliasName: $_aliasNameGenerator(
+                  db.localUsers.id, db.clubChronicles.authorUserId));
+
+  $$ClubChroniclesTableProcessedTableManager get clubChroniclesRefs {
+    final manager = $$ClubChroniclesTableTableManager($_db, $_db.clubChronicles)
+        .filter((f) => f.authorUserId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_clubChroniclesRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -18002,6 +19758,48 @@ class $$LocalUsersTableFilterComposer
             $$ModerationLogsTableFilterComposer(
               $db: $db,
               $table: $db.moderationLogs,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> clubPollsRefs(
+      Expression<bool> Function($$ClubPollsTableFilterComposer f) f) {
+    final $$ClubPollsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.clubPolls,
+        getReferencedColumn: (t) => t.createdByUserId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ClubPollsTableFilterComposer(
+              $db: $db,
+              $table: $db.clubPolls,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> clubChroniclesRefs(
+      Expression<bool> Function($$ClubChroniclesTableFilterComposer f) f) {
+    final $$ClubChroniclesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.clubChronicles,
+        getReferencedColumn: (t) => t.authorUserId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ClubChroniclesTableFilterComposer(
+              $db: $db,
+              $table: $db.clubChronicles,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -18528,6 +20326,48 @@ class $$LocalUsersTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> clubPollsRefs<T extends Object>(
+      Expression<T> Function($$ClubPollsTableAnnotationComposer a) f) {
+    final $$ClubPollsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.clubPolls,
+        getReferencedColumn: (t) => t.createdByUserId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ClubPollsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.clubPolls,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> clubChroniclesRefs<T extends Object>(
+      Expression<T> Function($$ClubChroniclesTableAnnotationComposer a) f) {
+    final $$ClubChroniclesTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.clubChronicles,
+        getReferencedColumn: (t) => t.authorUserId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ClubChroniclesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.clubChronicles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$LocalUsersTableTableManager extends RootTableManager<
@@ -18561,7 +20401,9 @@ class $$LocalUsersTableTableManager extends RootTableManager<
         bool proposalAuthor,
         bool commentAuthor,
         bool reportAuthor,
-        bool moderationPerformer})> {
+        bool moderationPerformer,
+        bool clubPollsRefs,
+        bool clubChroniclesRefs})> {
   $$LocalUsersTableTableManager(_$AppDatabase db, $LocalUsersTable table)
       : super(TableManagerState(
           db: db,
@@ -18654,7 +20496,9 @@ class $$LocalUsersTableTableManager extends RootTableManager<
               proposalAuthor = false,
               commentAuthor = false,
               reportAuthor = false,
-              moderationPerformer = false}) {
+              moderationPerformer = false,
+              clubPollsRefs = false,
+              clubChroniclesRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
@@ -18677,7 +20521,9 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                 if (proposalAuthor) db.bookProposals,
                 if (commentAuthor) db.sectionComments,
                 if (reportAuthor) db.commentReports,
-                if (moderationPerformer) db.moderationLogs
+                if (moderationPerformer) db.moderationLogs,
+                if (clubPollsRefs) db.clubPolls,
+                if (clubChroniclesRefs) db.clubChronicles
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -18940,6 +20786,32 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.performedByUserId == item.id),
+                        typedResults: items),
+                  if (clubPollsRefs)
+                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
+                            ClubPoll>(
+                        currentTable: table,
+                        referencedTable:
+                            $$LocalUsersTableReferences._clubPollsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LocalUsersTableReferences(db, table, p0)
+                                .clubPollsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.createdByUserId == item.id),
+                        typedResults: items),
+                  if (clubChroniclesRefs)
+                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
+                            ClubChronicle>(
+                        currentTable: table,
+                        referencedTable: $$LocalUsersTableReferences
+                            ._clubChroniclesRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LocalUsersTableReferences(db, table, p0)
+                                .clubChroniclesRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.authorUserId == item.id),
                         typedResults: items)
                 ];
               },
@@ -18979,7 +20851,9 @@ typedef $$LocalUsersTableProcessedTableManager = ProcessedTableManager<
         bool proposalAuthor,
         bool commentAuthor,
         bool reportAuthor,
-        bool moderationPerformer})>;
+        bool moderationPerformer,
+        bool clubPollsRefs,
+        bool clubChroniclesRefs})>;
 typedef $$BooksTableCreateCompanionBuilder = BooksCompanion Function({
   Value<int> id,
   required String uuid,
@@ -25584,6 +27458,8 @@ typedef $$ReadingClubsTableCreateCompanionBuilder = ReadingClubsCompanion
   required String description,
   required String city,
   Value<String?> meetingPlace,
+  Value<DateTime?> nextMeetingDate,
+  Value<String?> nextMeetingPlace,
   required String frequency,
   Value<int?> frequencyDays,
   Value<String> visibility,
@@ -25607,6 +27483,8 @@ typedef $$ReadingClubsTableUpdateCompanionBuilder = ReadingClubsCompanion
   Value<String> description,
   Value<String> city,
   Value<String?> meetingPlace,
+  Value<DateTime?> nextMeetingDate,
+  Value<String?> nextMeetingPlace,
   Value<String> frequency,
   Value<int?> frequencyDays,
   Value<String> visibility,
@@ -25735,6 +27613,36 @@ final class $$ReadingClubsTableReferences
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
+
+  static MultiTypedResultKey<$ClubPollsTable, List<ClubPoll>>
+      _clubPollsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+          db.clubPolls,
+          aliasName:
+              $_aliasNameGenerator(db.readingClubs.id, db.clubPolls.clubId));
+
+  $$ClubPollsTableProcessedTableManager get clubPollsRefs {
+    final manager = $$ClubPollsTableTableManager($_db, $_db.clubPolls)
+        .filter((f) => f.clubId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_clubPollsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$ClubChroniclesTable, List<ClubChronicle>>
+      _clubChroniclesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.clubChronicles,
+              aliasName: $_aliasNameGenerator(
+                  db.readingClubs.id, db.clubChronicles.clubId));
+
+  $$ClubChroniclesTableProcessedTableManager get clubChroniclesRefs {
+    final manager = $$ClubChroniclesTableTableManager($_db, $_db.clubChronicles)
+        .filter((f) => f.clubId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_clubChroniclesRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
 }
 
 class $$ReadingClubsTableFilterComposer
@@ -25766,6 +27674,14 @@ class $$ReadingClubsTableFilterComposer
 
   ColumnFilters<String> get meetingPlace => $composableBuilder(
       column: $table.meetingPlace, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get nextMeetingDate => $composableBuilder(
+      column: $table.nextMeetingDate,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get nextMeetingPlace => $composableBuilder(
+      column: $table.nextMeetingPlace,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get frequency => $composableBuilder(
       column: $table.frequency, builder: (column) => ColumnFilters(column));
@@ -25950,6 +27866,48 @@ class $$ReadingClubsTableFilterComposer
             ));
     return f(composer);
   }
+
+  Expression<bool> clubPollsRefs(
+      Expression<bool> Function($$ClubPollsTableFilterComposer f) f) {
+    final $$ClubPollsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.clubPolls,
+        getReferencedColumn: (t) => t.clubId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ClubPollsTableFilterComposer(
+              $db: $db,
+              $table: $db.clubPolls,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> clubChroniclesRefs(
+      Expression<bool> Function($$ClubChroniclesTableFilterComposer f) f) {
+    final $$ClubChroniclesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.clubChronicles,
+        getReferencedColumn: (t) => t.clubId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ClubChroniclesTableFilterComposer(
+              $db: $db,
+              $table: $db.clubChronicles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$ReadingClubsTableOrderingComposer
@@ -25981,6 +27939,14 @@ class $$ReadingClubsTableOrderingComposer
 
   ColumnOrderings<String> get meetingPlace => $composableBuilder(
       column: $table.meetingPlace,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get nextMeetingDate => $composableBuilder(
+      column: $table.nextMeetingDate,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get nextMeetingPlace => $composableBuilder(
+      column: $table.nextMeetingPlace,
       builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get frequency => $composableBuilder(
@@ -26074,6 +28040,12 @@ class $$ReadingClubsTableAnnotationComposer
 
   GeneratedColumn<String> get meetingPlace => $composableBuilder(
       column: $table.meetingPlace, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get nextMeetingDate => $composableBuilder(
+      column: $table.nextMeetingDate, builder: (column) => column);
+
+  GeneratedColumn<String> get nextMeetingPlace => $composableBuilder(
+      column: $table.nextMeetingPlace, builder: (column) => column);
 
   GeneratedColumn<String> get frequency =>
       $composableBuilder(column: $table.frequency, builder: (column) => column);
@@ -26258,6 +28230,48 @@ class $$ReadingClubsTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> clubPollsRefs<T extends Object>(
+      Expression<T> Function($$ClubPollsTableAnnotationComposer a) f) {
+    final $$ClubPollsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.clubPolls,
+        getReferencedColumn: (t) => t.clubId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ClubPollsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.clubPolls,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> clubChroniclesRefs<T extends Object>(
+      Expression<T> Function($$ClubChroniclesTableAnnotationComposer a) f) {
+    final $$ClubChroniclesTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.clubChronicles,
+        getReferencedColumn: (t) => t.clubId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ClubChroniclesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.clubChronicles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$ReadingClubsTableTableManager extends RootTableManager<
@@ -26278,7 +28292,9 @@ class $$ReadingClubsTableTableManager extends RootTableManager<
         bool clubReadingProgressRefs,
         bool bookProposalsRefs,
         bool sectionCommentsRefs,
-        bool moderationLogsRefs})> {
+        bool moderationLogsRefs,
+        bool clubPollsRefs,
+        bool clubChroniclesRefs})> {
   $$ReadingClubsTableTableManager(_$AppDatabase db, $ReadingClubsTable table)
       : super(TableManagerState(
           db: db,
@@ -26297,6 +28313,8 @@ class $$ReadingClubsTableTableManager extends RootTableManager<
             Value<String> description = const Value.absent(),
             Value<String> city = const Value.absent(),
             Value<String?> meetingPlace = const Value.absent(),
+            Value<DateTime?> nextMeetingDate = const Value.absent(),
+            Value<String?> nextMeetingPlace = const Value.absent(),
             Value<String> frequency = const Value.absent(),
             Value<int?> frequencyDays = const Value.absent(),
             Value<String> visibility = const Value.absent(),
@@ -26319,6 +28337,8 @@ class $$ReadingClubsTableTableManager extends RootTableManager<
             description: description,
             city: city,
             meetingPlace: meetingPlace,
+            nextMeetingDate: nextMeetingDate,
+            nextMeetingPlace: nextMeetingPlace,
             frequency: frequency,
             frequencyDays: frequencyDays,
             visibility: visibility,
@@ -26341,6 +28361,8 @@ class $$ReadingClubsTableTableManager extends RootTableManager<
             required String description,
             required String city,
             Value<String?> meetingPlace = const Value.absent(),
+            Value<DateTime?> nextMeetingDate = const Value.absent(),
+            Value<String?> nextMeetingPlace = const Value.absent(),
             required String frequency,
             Value<int?> frequencyDays = const Value.absent(),
             Value<String> visibility = const Value.absent(),
@@ -26363,6 +28385,8 @@ class $$ReadingClubsTableTableManager extends RootTableManager<
             description: description,
             city: city,
             meetingPlace: meetingPlace,
+            nextMeetingDate: nextMeetingDate,
+            nextMeetingPlace: nextMeetingPlace,
             frequency: frequency,
             frequencyDays: frequencyDays,
             visibility: visibility,
@@ -26390,7 +28414,9 @@ class $$ReadingClubsTableTableManager extends RootTableManager<
               clubReadingProgressRefs = false,
               bookProposalsRefs = false,
               sectionCommentsRefs = false,
-              moderationLogsRefs = false}) {
+              moderationLogsRefs = false,
+              clubPollsRefs = false,
+              clubChroniclesRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
@@ -26399,7 +28425,9 @@ class $$ReadingClubsTableTableManager extends RootTableManager<
                 if (clubReadingProgressRefs) db.clubReadingProgress,
                 if (bookProposalsRefs) db.bookProposals,
                 if (sectionCommentsRefs) db.sectionComments,
-                if (moderationLogsRefs) db.moderationLogs
+                if (moderationLogsRefs) db.moderationLogs,
+                if (clubPollsRefs) db.clubPolls,
+                if (clubChroniclesRefs) db.clubChronicles
               ],
               addJoins: <
                   T extends TableManagerState<
@@ -26506,6 +28534,32 @@ class $$ReadingClubsTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem: (item,
                                 referencedItems) =>
                             referencedItems.where((e) => e.clubId == item.id),
+                        typedResults: items),
+                  if (clubPollsRefs)
+                    await $_getPrefetchedData<ReadingClub, $ReadingClubsTable,
+                            ClubPoll>(
+                        currentTable: table,
+                        referencedTable: $$ReadingClubsTableReferences
+                            ._clubPollsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ReadingClubsTableReferences(db, table, p0)
+                                .clubPollsRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.clubId == item.id),
+                        typedResults: items),
+                  if (clubChroniclesRefs)
+                    await $_getPrefetchedData<ReadingClub, $ReadingClubsTable,
+                            ClubChronicle>(
+                        currentTable: table,
+                        referencedTable: $$ReadingClubsTableReferences
+                            ._clubChroniclesRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ReadingClubsTableReferences(db, table, p0)
+                                .clubChroniclesRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.clubId == item.id),
                         typedResults: items)
                 ];
               },
@@ -26532,7 +28586,9 @@ typedef $$ReadingClubsTableProcessedTableManager = ProcessedTableManager<
         bool clubReadingProgressRefs,
         bool bookProposalsRefs,
         bool sectionCommentsRefs,
-        bool moderationLogsRefs})>;
+        bool moderationLogsRefs,
+        bool clubPollsRefs,
+        bool clubChroniclesRefs})>;
 typedef $$ClubMembersTableCreateCompanionBuilder = ClubMembersCompanion
     Function({
   Value<int> id,
@@ -28894,13 +30950,15 @@ typedef $$SectionCommentsTableCreateCompanionBuilder = SectionCommentsCompanion
   Value<String?> remoteId,
   required int clubId,
   required String clubUuid,
-  required int bookId,
-  required String bookUuid,
+  Value<int?> bookId,
+  Value<String?> bookUuid,
   required int sectionNumber,
   required int userId,
   Value<String?> userRemoteId,
   Value<String?> authorRemoteId,
   required String content,
+  Value<String?> parentId,
+  Value<bool> isSpoiler,
   Value<int> reportsCount,
   Value<bool> isHidden,
   Value<bool> isDirty,
@@ -28917,13 +30975,15 @@ typedef $$SectionCommentsTableUpdateCompanionBuilder = SectionCommentsCompanion
   Value<String?> remoteId,
   Value<int> clubId,
   Value<String> clubUuid,
-  Value<int> bookId,
-  Value<String> bookUuid,
+  Value<int?> bookId,
+  Value<String?> bookUuid,
   Value<int> sectionNumber,
   Value<int> userId,
   Value<String?> userRemoteId,
   Value<String?> authorRemoteId,
   Value<String> content,
+  Value<String?> parentId,
+  Value<bool> isSpoiler,
   Value<int> reportsCount,
   Value<bool> isHidden,
   Value<bool> isDirty,
@@ -28958,9 +31018,9 @@ final class $$SectionCommentsTableReferences extends BaseReferences<
       db.clubBooks.createAlias(
           $_aliasNameGenerator(db.sectionComments.bookId, db.clubBooks.id));
 
-  $$ClubBooksTableProcessedTableManager get bookId {
-    final $_column = $_itemColumn<int>('book_id')!;
-
+  $$ClubBooksTableProcessedTableManager? get bookId {
+    final $_column = $_itemColumn<int>('book_id');
+    if ($_column == null) return null;
     final manager = $$ClubBooksTableTableManager($_db, $_db.clubBooks)
         .filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
@@ -29036,6 +31096,12 @@ class $$SectionCommentsTableFilterComposer
 
   ColumnFilters<String> get content => $composableBuilder(
       column: $table.content, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get parentId => $composableBuilder(
+      column: $table.parentId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isSpoiler => $composableBuilder(
+      column: $table.isSpoiler, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get reportsCount => $composableBuilder(
       column: $table.reportsCount, builder: (column) => ColumnFilters(column));
@@ -29182,6 +31248,12 @@ class $$SectionCommentsTableOrderingComposer
   ColumnOrderings<String> get content => $composableBuilder(
       column: $table.content, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get parentId => $composableBuilder(
+      column: $table.parentId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isSpoiler => $composableBuilder(
+      column: $table.isSpoiler, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get reportsCount => $composableBuilder(
       column: $table.reportsCount,
       builder: (column) => ColumnOrderings(column));
@@ -29303,6 +31375,12 @@ class $$SectionCommentsTableAnnotationComposer
 
   GeneratedColumn<String> get content =>
       $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get parentId =>
+      $composableBuilder(column: $table.parentId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSpoiler =>
+      $composableBuilder(column: $table.isSpoiler, builder: (column) => column);
 
   GeneratedColumn<int> get reportsCount => $composableBuilder(
       column: $table.reportsCount, builder: (column) => column);
@@ -29440,13 +31518,15 @@ class $$SectionCommentsTableTableManager extends RootTableManager<
             Value<String?> remoteId = const Value.absent(),
             Value<int> clubId = const Value.absent(),
             Value<String> clubUuid = const Value.absent(),
-            Value<int> bookId = const Value.absent(),
-            Value<String> bookUuid = const Value.absent(),
+            Value<int?> bookId = const Value.absent(),
+            Value<String?> bookUuid = const Value.absent(),
             Value<int> sectionNumber = const Value.absent(),
             Value<int> userId = const Value.absent(),
             Value<String?> userRemoteId = const Value.absent(),
             Value<String?> authorRemoteId = const Value.absent(),
             Value<String> content = const Value.absent(),
+            Value<String?> parentId = const Value.absent(),
+            Value<bool> isSpoiler = const Value.absent(),
             Value<int> reportsCount = const Value.absent(),
             Value<bool> isHidden = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
@@ -29469,6 +31549,8 @@ class $$SectionCommentsTableTableManager extends RootTableManager<
             userRemoteId: userRemoteId,
             authorRemoteId: authorRemoteId,
             content: content,
+            parentId: parentId,
+            isSpoiler: isSpoiler,
             reportsCount: reportsCount,
             isHidden: isHidden,
             isDirty: isDirty,
@@ -29484,13 +31566,15 @@ class $$SectionCommentsTableTableManager extends RootTableManager<
             Value<String?> remoteId = const Value.absent(),
             required int clubId,
             required String clubUuid,
-            required int bookId,
-            required String bookUuid,
+            Value<int?> bookId = const Value.absent(),
+            Value<String?> bookUuid = const Value.absent(),
             required int sectionNumber,
             required int userId,
             Value<String?> userRemoteId = const Value.absent(),
             Value<String?> authorRemoteId = const Value.absent(),
             required String content,
+            Value<String?> parentId = const Value.absent(),
+            Value<bool> isSpoiler = const Value.absent(),
             Value<int> reportsCount = const Value.absent(),
             Value<bool> isHidden = const Value.absent(),
             Value<bool> isDirty = const Value.absent(),
@@ -29513,6 +31597,8 @@ class $$SectionCommentsTableTableManager extends RootTableManager<
             userRemoteId: userRemoteId,
             authorRemoteId: authorRemoteId,
             content: content,
+            parentId: parentId,
+            isSpoiler: isSpoiler,
             reportsCount: reportsCount,
             isHidden: isHidden,
             isDirty: isDirty,
@@ -31138,6 +33224,1031 @@ typedef $$SyncCursorsTableProcessedTableManager = ProcessedTableManager<
     (SyncCursor, BaseReferences<_$AppDatabase, $SyncCursorsTable, SyncCursor>),
     SyncCursor,
     PrefetchHooks Function()>;
+typedef $$ClubPollsTableCreateCompanionBuilder = ClubPollsCompanion Function({
+  Value<int> id,
+  required String uuid,
+  Value<String?> remoteId,
+  required int clubId,
+  required String clubUuid,
+  required String question,
+  required String options,
+  Value<String> votes,
+  Value<String> status,
+  required int createdByUserId,
+  Value<String?> createdByRemoteId,
+  Value<DateTime?> expiresAt,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+typedef $$ClubPollsTableUpdateCompanionBuilder = ClubPollsCompanion Function({
+  Value<int> id,
+  Value<String> uuid,
+  Value<String?> remoteId,
+  Value<int> clubId,
+  Value<String> clubUuid,
+  Value<String> question,
+  Value<String> options,
+  Value<String> votes,
+  Value<String> status,
+  Value<int> createdByUserId,
+  Value<String?> createdByRemoteId,
+  Value<DateTime?> expiresAt,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+
+final class $$ClubPollsTableReferences
+    extends BaseReferences<_$AppDatabase, $ClubPollsTable, ClubPoll> {
+  $$ClubPollsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ReadingClubsTable _clubIdTable(_$AppDatabase db) =>
+      db.readingClubs.createAlias(
+          $_aliasNameGenerator(db.clubPolls.clubId, db.readingClubs.id));
+
+  $$ReadingClubsTableProcessedTableManager get clubId {
+    final $_column = $_itemColumn<int>('club_id')!;
+
+    final manager = $$ReadingClubsTableTableManager($_db, $_db.readingClubs)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_clubIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $LocalUsersTable _createdByUserIdTable(_$AppDatabase db) =>
+      db.localUsers.createAlias(
+          $_aliasNameGenerator(db.clubPolls.createdByUserId, db.localUsers.id));
+
+  $$LocalUsersTableProcessedTableManager get createdByUserId {
+    final $_column = $_itemColumn<int>('created_by_user_id')!;
+
+    final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_createdByUserIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$ClubPollsTableFilterComposer
+    extends Composer<_$AppDatabase, $ClubPollsTable> {
+  $$ClubPollsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get clubUuid => $composableBuilder(
+      column: $table.clubUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get question => $composableBuilder(
+      column: $table.question, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get options => $composableBuilder(
+      column: $table.options, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get votes => $composableBuilder(
+      column: $table.votes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get createdByRemoteId => $composableBuilder(
+      column: $table.createdByRemoteId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get expiresAt => $composableBuilder(
+      column: $table.expiresAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  $$ReadingClubsTableFilterComposer get clubId {
+    final $$ReadingClubsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.clubId,
+        referencedTable: $db.readingClubs,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ReadingClubsTableFilterComposer(
+              $db: $db,
+              $table: $db.readingClubs,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableFilterComposer get createdByUserId {
+    final $$LocalUsersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.createdByUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableFilterComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ClubPollsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ClubPollsTable> {
+  $$ClubPollsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get clubUuid => $composableBuilder(
+      column: $table.clubUuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get question => $composableBuilder(
+      column: $table.question, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get options => $composableBuilder(
+      column: $table.options, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get votes => $composableBuilder(
+      column: $table.votes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get createdByRemoteId => $composableBuilder(
+      column: $table.createdByRemoteId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get expiresAt => $composableBuilder(
+      column: $table.expiresAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  $$ReadingClubsTableOrderingComposer get clubId {
+    final $$ReadingClubsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.clubId,
+        referencedTable: $db.readingClubs,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ReadingClubsTableOrderingComposer(
+              $db: $db,
+              $table: $db.readingClubs,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableOrderingComposer get createdByUserId {
+    final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.createdByUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableOrderingComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ClubPollsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ClubPollsTable> {
+  $$ClubPollsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get clubUuid =>
+      $composableBuilder(column: $table.clubUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get question =>
+      $composableBuilder(column: $table.question, builder: (column) => column);
+
+  GeneratedColumn<String> get options =>
+      $composableBuilder(column: $table.options, builder: (column) => column);
+
+  GeneratedColumn<String> get votes =>
+      $composableBuilder(column: $table.votes, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get createdByRemoteId => $composableBuilder(
+      column: $table.createdByRemoteId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get expiresAt =>
+      $composableBuilder(column: $table.expiresAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDirty =>
+      $composableBuilder(column: $table.isDirty, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$ReadingClubsTableAnnotationComposer get clubId {
+    final $$ReadingClubsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.clubId,
+        referencedTable: $db.readingClubs,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ReadingClubsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.readingClubs,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableAnnotationComposer get createdByUserId {
+    final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.createdByUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ClubPollsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ClubPollsTable,
+    ClubPoll,
+    $$ClubPollsTableFilterComposer,
+    $$ClubPollsTableOrderingComposer,
+    $$ClubPollsTableAnnotationComposer,
+    $$ClubPollsTableCreateCompanionBuilder,
+    $$ClubPollsTableUpdateCompanionBuilder,
+    (ClubPoll, $$ClubPollsTableReferences),
+    ClubPoll,
+    PrefetchHooks Function({bool clubId, bool createdByUserId})> {
+  $$ClubPollsTableTableManager(_$AppDatabase db, $ClubPollsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ClubPollsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ClubPollsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ClubPollsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> uuid = const Value.absent(),
+            Value<String?> remoteId = const Value.absent(),
+            Value<int> clubId = const Value.absent(),
+            Value<String> clubUuid = const Value.absent(),
+            Value<String> question = const Value.absent(),
+            Value<String> options = const Value.absent(),
+            Value<String> votes = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<int> createdByUserId = const Value.absent(),
+            Value<String?> createdByRemoteId = const Value.absent(),
+            Value<DateTime?> expiresAt = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              ClubPollsCompanion(
+            id: id,
+            uuid: uuid,
+            remoteId: remoteId,
+            clubId: clubId,
+            clubUuid: clubUuid,
+            question: question,
+            options: options,
+            votes: votes,
+            status: status,
+            createdByUserId: createdByUserId,
+            createdByRemoteId: createdByRemoteId,
+            expiresAt: expiresAt,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String uuid,
+            Value<String?> remoteId = const Value.absent(),
+            required int clubId,
+            required String clubUuid,
+            required String question,
+            required String options,
+            Value<String> votes = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            required int createdByUserId,
+            Value<String?> createdByRemoteId = const Value.absent(),
+            Value<DateTime?> expiresAt = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              ClubPollsCompanion.insert(
+            id: id,
+            uuid: uuid,
+            remoteId: remoteId,
+            clubId: clubId,
+            clubUuid: clubUuid,
+            question: question,
+            options: options,
+            votes: votes,
+            status: status,
+            createdByUserId: createdByUserId,
+            createdByRemoteId: createdByRemoteId,
+            expiresAt: expiresAt,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$ClubPollsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({clubId = false, createdByUserId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (clubId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.clubId,
+                    referencedTable:
+                        $$ClubPollsTableReferences._clubIdTable(db),
+                    referencedColumn:
+                        $$ClubPollsTableReferences._clubIdTable(db).id,
+                  ) as T;
+                }
+                if (createdByUserId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.createdByUserId,
+                    referencedTable:
+                        $$ClubPollsTableReferences._createdByUserIdTable(db),
+                    referencedColumn:
+                        $$ClubPollsTableReferences._createdByUserIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$ClubPollsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $ClubPollsTable,
+    ClubPoll,
+    $$ClubPollsTableFilterComposer,
+    $$ClubPollsTableOrderingComposer,
+    $$ClubPollsTableAnnotationComposer,
+    $$ClubPollsTableCreateCompanionBuilder,
+    $$ClubPollsTableUpdateCompanionBuilder,
+    (ClubPoll, $$ClubPollsTableReferences),
+    ClubPoll,
+    PrefetchHooks Function({bool clubId, bool createdByUserId})>;
+typedef $$ClubChroniclesTableCreateCompanionBuilder = ClubChroniclesCompanion
+    Function({
+  Value<int> id,
+  required String uuid,
+  Value<String?> remoteId,
+  required int clubId,
+  required String clubUuid,
+  Value<String?> bookUuid,
+  required String title,
+  required String content,
+  required int authorUserId,
+  Value<String?> authorRemoteId,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+typedef $$ClubChroniclesTableUpdateCompanionBuilder = ClubChroniclesCompanion
+    Function({
+  Value<int> id,
+  Value<String> uuid,
+  Value<String?> remoteId,
+  Value<int> clubId,
+  Value<String> clubUuid,
+  Value<String?> bookUuid,
+  Value<String> title,
+  Value<String> content,
+  Value<int> authorUserId,
+  Value<String?> authorRemoteId,
+  Value<bool> isDirty,
+  Value<bool> isDeleted,
+  Value<DateTime?> syncedAt,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+
+final class $$ClubChroniclesTableReferences
+    extends BaseReferences<_$AppDatabase, $ClubChroniclesTable, ClubChronicle> {
+  $$ClubChroniclesTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $ReadingClubsTable _clubIdTable(_$AppDatabase db) =>
+      db.readingClubs.createAlias(
+          $_aliasNameGenerator(db.clubChronicles.clubId, db.readingClubs.id));
+
+  $$ReadingClubsTableProcessedTableManager get clubId {
+    final $_column = $_itemColumn<int>('club_id')!;
+
+    final manager = $$ReadingClubsTableTableManager($_db, $_db.readingClubs)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_clubIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $LocalUsersTable _authorUserIdTable(_$AppDatabase db) =>
+      db.localUsers.createAlias($_aliasNameGenerator(
+          db.clubChronicles.authorUserId, db.localUsers.id));
+
+  $$LocalUsersTableProcessedTableManager get authorUserId {
+    final $_column = $_itemColumn<int>('author_user_id')!;
+
+    final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_authorUserIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$ClubChroniclesTableFilterComposer
+    extends Composer<_$AppDatabase, $ClubChroniclesTable> {
+  $$ClubChroniclesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get clubUuid => $composableBuilder(
+      column: $table.clubUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get bookUuid => $composableBuilder(
+      column: $table.bookUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get content => $composableBuilder(
+      column: $table.content, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get authorRemoteId => $composableBuilder(
+      column: $table.authorRemoteId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  $$ReadingClubsTableFilterComposer get clubId {
+    final $$ReadingClubsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.clubId,
+        referencedTable: $db.readingClubs,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ReadingClubsTableFilterComposer(
+              $db: $db,
+              $table: $db.readingClubs,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableFilterComposer get authorUserId {
+    final $$LocalUsersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.authorUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableFilterComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ClubChroniclesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ClubChroniclesTable> {
+  $$ClubChroniclesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+      column: $table.remoteId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get clubUuid => $composableBuilder(
+      column: $table.clubUuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get bookUuid => $composableBuilder(
+      column: $table.bookUuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get content => $composableBuilder(
+      column: $table.content, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get authorRemoteId => $composableBuilder(
+      column: $table.authorRemoteId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDirty => $composableBuilder(
+      column: $table.isDirty, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+      column: $table.isDeleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get syncedAt => $composableBuilder(
+      column: $table.syncedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  $$ReadingClubsTableOrderingComposer get clubId {
+    final $$ReadingClubsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.clubId,
+        referencedTable: $db.readingClubs,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ReadingClubsTableOrderingComposer(
+              $db: $db,
+              $table: $db.readingClubs,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableOrderingComposer get authorUserId {
+    final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.authorUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableOrderingComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ClubChroniclesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ClubChroniclesTable> {
+  $$ClubChroniclesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get clubUuid =>
+      $composableBuilder(column: $table.clubUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get bookUuid =>
+      $composableBuilder(column: $table.bookUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get authorRemoteId => $composableBuilder(
+      column: $table.authorRemoteId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDirty =>
+      $composableBuilder(column: $table.isDirty, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$ReadingClubsTableAnnotationComposer get clubId {
+    final $$ReadingClubsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.clubId,
+        referencedTable: $db.readingClubs,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ReadingClubsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.readingClubs,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableAnnotationComposer get authorUserId {
+    final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.authorUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ClubChroniclesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ClubChroniclesTable,
+    ClubChronicle,
+    $$ClubChroniclesTableFilterComposer,
+    $$ClubChroniclesTableOrderingComposer,
+    $$ClubChroniclesTableAnnotationComposer,
+    $$ClubChroniclesTableCreateCompanionBuilder,
+    $$ClubChroniclesTableUpdateCompanionBuilder,
+    (ClubChronicle, $$ClubChroniclesTableReferences),
+    ClubChronicle,
+    PrefetchHooks Function({bool clubId, bool authorUserId})> {
+  $$ClubChroniclesTableTableManager(
+      _$AppDatabase db, $ClubChroniclesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ClubChroniclesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ClubChroniclesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ClubChroniclesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> uuid = const Value.absent(),
+            Value<String?> remoteId = const Value.absent(),
+            Value<int> clubId = const Value.absent(),
+            Value<String> clubUuid = const Value.absent(),
+            Value<String?> bookUuid = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String> content = const Value.absent(),
+            Value<int> authorUserId = const Value.absent(),
+            Value<String?> authorRemoteId = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              ClubChroniclesCompanion(
+            id: id,
+            uuid: uuid,
+            remoteId: remoteId,
+            clubId: clubId,
+            clubUuid: clubUuid,
+            bookUuid: bookUuid,
+            title: title,
+            content: content,
+            authorUserId: authorUserId,
+            authorRemoteId: authorRemoteId,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String uuid,
+            Value<String?> remoteId = const Value.absent(),
+            required int clubId,
+            required String clubUuid,
+            Value<String?> bookUuid = const Value.absent(),
+            required String title,
+            required String content,
+            required int authorUserId,
+            Value<String?> authorRemoteId = const Value.absent(),
+            Value<bool> isDirty = const Value.absent(),
+            Value<bool> isDeleted = const Value.absent(),
+            Value<DateTime?> syncedAt = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              ClubChroniclesCompanion.insert(
+            id: id,
+            uuid: uuid,
+            remoteId: remoteId,
+            clubId: clubId,
+            clubUuid: clubUuid,
+            bookUuid: bookUuid,
+            title: title,
+            content: content,
+            authorUserId: authorUserId,
+            authorRemoteId: authorRemoteId,
+            isDirty: isDirty,
+            isDeleted: isDeleted,
+            syncedAt: syncedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$ClubChroniclesTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({clubId = false, authorUserId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (clubId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.clubId,
+                    referencedTable:
+                        $$ClubChroniclesTableReferences._clubIdTable(db),
+                    referencedColumn:
+                        $$ClubChroniclesTableReferences._clubIdTable(db).id,
+                  ) as T;
+                }
+                if (authorUserId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.authorUserId,
+                    referencedTable:
+                        $$ClubChroniclesTableReferences._authorUserIdTable(db),
+                    referencedColumn: $$ClubChroniclesTableReferences
+                        ._authorUserIdTable(db)
+                        .id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$ClubChroniclesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $ClubChroniclesTable,
+    ClubChronicle,
+    $$ClubChroniclesTableFilterComposer,
+    $$ClubChroniclesTableOrderingComposer,
+    $$ClubChroniclesTableAnnotationComposer,
+    $$ClubChroniclesTableCreateCompanionBuilder,
+    $$ClubChroniclesTableUpdateCompanionBuilder,
+    (ClubChronicle, $$ClubChroniclesTableReferences),
+    ClubChronicle,
+    PrefetchHooks Function({bool clubId, bool authorUserId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -31185,4 +34296,8 @@ class $AppDatabaseManager {
       $$ReadingSessionsTableTableManager(_db, _db.readingSessions);
   $$SyncCursorsTableTableManager get syncCursors =>
       $$SyncCursorsTableTableManager(_db, _db.syncCursors);
+  $$ClubPollsTableTableManager get clubPolls =>
+      $$ClubPollsTableTableManager(_db, _db.clubPolls);
+  $$ClubChroniclesTableTableManager get clubChronicles =>
+      $$ClubChroniclesTableTableManager(_db, _db.clubChronicles);
 }

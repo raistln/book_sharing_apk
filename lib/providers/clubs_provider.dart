@@ -103,7 +103,11 @@ final clubProposalsProvider =
 });
 
 final sectionCommentsProvider = StreamProvider.family<List<CommentWithUser>,
-    ({String bookUuid, int sectionNumber})>((ref, params) {
+    ({String clubUuid, String? bookUuid, int sectionNumber})>((ref, params) {
   final dao = ref.watch(clubDaoProvider);
-  return dao.watchSectionComments(params.bookUuid, params.sectionNumber);
+  return dao.watchSectionComments(
+    params.clubUuid,
+    params.bookUuid,
+    params.sectionNumber,
+  );
 });

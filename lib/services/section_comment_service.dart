@@ -22,35 +22,43 @@ class SectionCommentService {
   // =====================================================================
 
   /// Post a new comment to a section
-  Future<String> postComment({
+    Future<String> postComment({
     required String clubUuid,
-    required String bookUuid,
+    String? bookUuid,
     required int sectionNumber,
     required String userUuid,
     required String content,
+    String? parentId,
+    bool isSpoiler = false,
   }) async {
     final commentUuid = _uuid.v4();
 
     final club = await dao.getClubByUuid(clubUuid);
-    final book = await dao.getClubBookByBookUuid(clubUuid, bookUuid);
     final user = await dao.getClubMember(clubUuid, userUuid);
 
     if (club == null) throw Exception('Club no encontrado');
-    if (book == null) throw Exception('Libro no encontrado en el club');
     if (user == null) throw Exception('Usuario no es miembro del club');
 
-    final sections = ReadingSectionListHelper.fromJsonString(book.sections);
-    if (sections.isNotEmpty) {
-      final matchingSections = sections.where((s) => s.numero == sectionNumber);
-      if (matchingSections.isEmpty) {
-        throw Exception('La sección seleccionada no existe para este libro.');
-      }
+    ClubBook? book;
+    if (bookUuid != null) {
+      book = await dao.getClubBookByBookUuid(clubUuid, bookUuid);
+      if (book == null) throw Exception('Libro no encontrado en el club');
+    }
 
-      final section = matchingSections.first;
-      if (DateTime.now().isBefore(section.fechaApertura)) {
-        throw Exception(
-          'Esa sección todavía no está abierta. Así evitamos spoilers antes de tiempo.',
-        );
+    if (book != null && sectionNumber > 0) {
+      final sections = ReadingSectionListHelper.fromJsonString(book.sections);
+      if (sections.isNotEmpty) {
+        final matchingSections = sections.where((s) => s.numero == sectionNumber);
+        if (matchingSections.isEmpty) {
+          throw Exception('La sección seleccionada no existe para este libro.');
+        }
+
+        final section = matchingSections.first;
+        if (DateTime.now().isBefore(section.fechaApertura)) {
+          throw Exception(
+            'Esa sección todavía no está abierta. Así evitamos spoilers antes de tiempo.',
+          );
+        }
       }
     }
 
@@ -58,13 +66,15 @@ class SectionCommentService {
       uuid: commentUuid,
       clubId: club.id,
       clubUuid: clubUuid,
-      bookId: book.id,
-      bookUuid: bookUuid,
+      bookId: book != null ? Value(book.id) : const Value.absent(),
+      bookUuid: bookUuid != null ? Value(bookUuid) : const Value.absent(),
       sectionNumber: sectionNumber,
       userId: user.memberUserId,
       userRemoteId: Value(userUuid),
       authorRemoteId: Value(userUuid), // Also set authorRemoteId as an alias
       content: content,
+      parentId: parentId != null ? Value(parentId) : const Value.absent(),
+      isSpoiler: Value(isSpoiler),
       reportsCount: const Value(0),
       isHidden: const Value(false),
       isDirty: const Value(true),
@@ -80,16 +90,12 @@ class SectionCommentService {
     required String commentUuid,
     required String userUuid,
   }) async {
-    // Verify ownership before deleting
-    final comment = await dao
-        .watchSectionComments('', 0)
-        .first
-        .then((comments) => comments.firstWhere(
-              (c) => c.comment.uuid == commentUuid,
-              orElse: () => throw Exception('Comment not found'),
-            ));
+        // Verify ownership before deleting
+    final comment = await dao.getCommentByUuid(commentUuid);
 
-    if (comment.comment.userRemoteId != userUuid) {
+    if (comment == null) throw Exception('Comment not found');
+
+    if (comment.userRemoteId != userUuid) {
       throw Exception('You can only delete your own comments');
     }
 
@@ -209,32 +215,35 @@ class SectionCommentService {
   // COMMENT QUERIES
   // =====================================================================
 
-  /// Stream comments for a section (excludes deleted, includes hidden with flag)
-  Stream<List<CommentWithUser>> watchSectionComments(
-    String bookUuid,
-    int sectionNumber,
-  ) {
-    return dao.watchSectionComments(bookUuid, sectionNumber);
+    /// Stream comments for a section (excludes deleted, includes hidden with flag)
+  Stream<List<CommentWithUser>> watchSectionComments({
+    required String clubUuid,
+    String? bookUuid,
+    required int sectionNumber,
+  }) {
+    return dao.watchSectionComments(clubUuid, bookUuid, sectionNumber);
   }
 
   /// Count total comments in a section
-  Future<int> countSectionComments(
-    String bookUuid,
-    int sectionNumber,
-  ) async {
+  Future<int> countSectionComments({
+    required String clubUuid,
+    String? bookUuid,
+    required int sectionNumber,
+  }) async {
     final comments =
-        await dao.watchSectionComments(bookUuid, sectionNumber).first;
+        await dao.watchSectionComments(clubUuid, bookUuid, sectionNumber).first;
     return comments.length;
   }
 
   /// Count user's comments in a section
-  Future<int> countUserComments(
-    String bookUuid,
-    int sectionNumber,
-    String userUuid,
-  ) async {
+  Future<int> countUserComments({
+    required String clubUuid,
+    String? bookUuid,
+    required int sectionNumber,
+    required String userUuid,
+  }) async {
     final comments =
-        await dao.watchSectionComments(bookUuid, sectionNumber).first;
+        await dao.watchSectionComments(clubUuid, bookUuid, sectionNumber).first;
     return comments.where((c) => c.comment.userRemoteId == userUuid).length;
   }
 

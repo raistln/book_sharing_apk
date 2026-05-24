@@ -47,9 +47,16 @@ void main() {
           10,
           (i) => createBook(i, 'Book $i',
               status: 'finished', isRead: true, readAt: now));
-      // Add entries for some to influence sorting if needed, but ProcessData sorts by activity
-      // For simplicity, let's assume they have no entries.
-      final result = ReadingRhythmHelper.processData(books, {});
+      
+      final entries = <int, List<ReadingTimelineEntry>>{};
+      for (int i = 0; i < 10; i++) {
+        entries[i] = [
+          createEntry(i * 2, i, 'start', now.subtract(Duration(days: 30 - i))),
+          createEntry(i * 2 + 1, i, 'finish', now.subtract(Duration(days: 29 - i))),
+        ];
+      }
+
+      final result = ReadingRhythmHelper.processData(books, entries);
 
       expect(result.rows.length, 7);
       // Logic takes last 7 based on activity.

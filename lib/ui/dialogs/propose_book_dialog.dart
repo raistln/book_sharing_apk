@@ -44,26 +44,57 @@ class _ProposeBookDialogState extends ConsumerState<ProposeBookDialog> {
     }
 
     setState(() => _isSearching = true);
+    
+    List<Book> local = [];
+    List<GoogleBook> google = [];
+
     try {
       final repo = ref.read(bookRepositoryProvider);
+      local = await repo.searchBooks(query);
+    } catch (e) {
+      debugPrint('Error searching local books: $e');
+    }
+
+    try {
       final keyController = ref.read(googleBooksApiKeyControllerProvider);
       final apiKey = keyController.value;
-
-      final results = await Future.wait([
-        repo.searchBooks(query),
-        GoogleBooksApiController.searchBooks(query: query, apiKey: apiKey),
-      ]);
-
-      if (mounted) {
-        setState(() {
-          _localResults = results[0] as List<Book>;
-          _googleResults = results[1] as List<GoogleBook>;
-        });
+      if (apiKey != null && apiKey.trim().isNotEmpty) {
+        google = await GoogleBooksApiController.searchBooks(query: query, apiKey: apiKey);
+      } else {
+        // Fallback to searching without an API key (Google Books API permits some limited public queries)
+        google = await GoogleBooksApiController.searchBooks(query: query);
       }
     } catch (e) {
-      debugPrint('Error searching books: $e');
-    } finally {
-      if (mounted) setState(() => _isSearching = false);
+      debugPrint('Error searching Google Books: $e');
+    }
+
+    if (google.isEmpty) {
+      try {
+        debugPrint('Google Books returned no results or failed. Trying OpenLibrary fallback...');
+        final openLibrary = ref.read(openLibraryClientProvider);
+        final olResults = await openLibrary.search(query: query);
+        google = olResults.map((r) => GoogleBook(
+          id: r.key ?? r.editionKey ?? r.isbn ?? r.title,
+          title: r.title,
+          authors: r.author != null ? [r.author!] : const [],
+          publishedDate: r.publishYear != null ? '${r.publishYear}-01-01' : null,
+          description: r.description,
+          isbn: r.isbn,
+          pageCount: r.pageCount,
+          thumbnailUrl: r.coverUrl,
+          smallThumbnailUrl: r.coverUrl,
+        )).toList();
+      } catch (olErr) {
+        debugPrint('Error searching OpenLibrary: $olErr');
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _localResults = local;
+        _googleResults = google;
+        _isSearching = false;
+      });
     }
   }
 

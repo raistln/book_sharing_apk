@@ -3,15 +3,23 @@ import 'package:uuid/uuid.dart';
 
 import '../data/local/club_dao.dart';
 import '../data/local/database.dart';
+import '../models/global_sync_state.dart' show SyncEntity;
+import 'unified_sync_coordinator.dart';
 
 /// Service for managing book proposals and voting
 class BookProposalService {
   BookProposalService({
     required this.dao,
+    this.syncCoordinator,
   });
 
   final ClubDao dao;
+  final UnifiedSyncCoordinator? syncCoordinator;
   final _uuid = const Uuid();
+
+  void _markDirty() {
+    syncCoordinator?.markPendingChanges(SyncEntity.clubs);
+  }
 
   // =====================================================================
   // PROPOSAL CREATION
@@ -26,6 +34,14 @@ class BookProposalService {
     int? closeDays, // Days until voting closes (default 7)
   }) async {
     final proposalUuid = _uuid.v4();
+    final club = await dao.getClubByUuid(clubUuid);
+    if (club == null) {
+      throw Exception('Club no encontrado');
+    }
+    final proposerMember = await dao.getClubMember(clubUuid, proposedByUuid);
+    if (proposerMember == null) {
+      throw Exception('Debes ser miembro del club para proponer libros');
+    }
 
     final closeDate = DateTime.now().add(
       Duration(days: closeDays ?? 7),
@@ -33,10 +49,10 @@ class BookProposalService {
 
     final companion = BookProposalsCompanion.insert(
       uuid: proposalUuid,
-      clubId: 0, // Will be set on sync
+      clubId: club.id,
       clubUuid: clubUuid,
       bookUuid: bookUuid,
-      proposedByUserId: 0, // Will be set on sync
+      proposedByUserId: proposerMember.memberUserId,
       proposedByRemoteId: Value(proposedByUuid),
       totalChapters: totalChapters,
       votes: const Value(''), // Empty CSV initially
@@ -47,6 +63,7 @@ class BookProposalService {
     );
 
     await dao.upsertProposal(companion);
+    _markDirty();
 
     return proposalUuid;
   }
@@ -101,6 +118,7 @@ class BookProposalService {
         updatedAt: Value(DateTime.now()),
       ),
     );
+    _markDirty();
 
     return true;
   }
@@ -136,6 +154,7 @@ class BookProposalService {
         updatedAt: Value(DateTime.now()),
       ),
     );
+    _markDirty();
 
     return true;
   }
@@ -171,6 +190,7 @@ class BookProposalService {
     }
 
     await dao.closeProposal(proposalUuid, 'cerrada');
+    _markDirty();
 
     // Log if closed by admin
     if (closedByAdmin) {
@@ -218,6 +238,7 @@ class BookProposalService {
         await dao.closeProposal(p.uuid, 'descartada');
       }
     }
+    _markDirty();
 
     return selectedUuid;
   }
@@ -281,6 +302,7 @@ class BookProposalService {
         isDirty: const Value(true),
       ),
     );
+    _markDirty();
   }
 
   // =====================================================================

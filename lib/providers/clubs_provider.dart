@@ -24,12 +24,14 @@ final clubServiceProvider = Provider<ClubService>((ref) {
 final bookProposalServiceProvider = Provider<BookProposalService>((ref) {
   return BookProposalService(
     dao: ref.watch(clubDaoProvider),
+    syncCoordinator: ref.watch(unifiedSyncCoordinatorProvider),
   );
 });
 
 final sectionCommentServiceProvider = Provider<SectionCommentService>((ref) {
   return SectionCommentService(
     dao: ref.watch(clubDaoProvider),
+    syncCoordinator: ref.watch(unifiedSyncCoordinatorProvider),
   );
 });
 

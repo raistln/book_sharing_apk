@@ -95,7 +95,7 @@ if (existing.isDirty) {
 
 ### Versiones
 
-- **SQLite/Drift:** versión **27** (`AppDatabase.schemaVersion = 27`)
+- **SQLite/Drift:** versión **31** (`AppDatabase.schemaVersion = 31`)
 - **Supabase:** versión **9** 
 
 ### Tablas locales (Drift) — `lib/data/local/database.dart`
@@ -118,10 +118,12 @@ ClubMembers             — Miembros de clubes
 ClubBooks               — Libros de clubes (sectionMode, sections JSON, orderPosition)
 ClubReadingProgress     — Progreso por sección/capítulo
 BookProposals           — Propuestas con votos CSV
-SectionComments         — Comentarios por sección
+SectionComments         — Comentarios por sección (threads, parentId, spoilers, hidden support)
 CommentReports          — Reportes de comentarios
 ModerationLogs          — Acciones de moderación
 SyncCursors             — Cursores incrementales (PK: entity TEXT)
+ClubPolls               — Encuestas internas de clubes
+ClubChronicles          — Crónicas escritas de clubes
 ```
 
 **Nota importante sobre `SharedBooks` en Drift:** `groupId` es FK obligatoria (no nullable). Los libros de backup personal (digitales) en Supabase tienen `group_id = NULL`, pero en SQLite local `SharedBooks` siempre tiene un `groupId`. Esto significa que **las filas de backup personal solo existen en Supabase**, no en la tabla local `SharedBooks`.
@@ -327,13 +329,13 @@ bookListProvider                // Stream<List<Book>> filtrado por usuario activ
 
 ### Migraciones de Drift
 
-- Versión actual: **27** — Próxima migración: bloque `if (from < 28)`
+- Versión actual: **31** — Próxima migración: bloque `if (from < 32)`
 - `try/catch` al añadir columnas (el usuario puede venir de cualquier versión previa)
 - Para recrear tabla: DROP → CREATE → migrar datos (ver migración v13 para ejemplo)
-- Borrado lógico: `isDeleted = true`. Nunca `DELETE` físico en operaciones de usuario
+- Borrado lógico: `isDeleted = true` (en tablas aplicables). Nunca `DELETE` físico en operaciones de usuario a menos que la tabla no tenga `isDeleted` (e.g. `ClubReadingProgress`, `CommentReports` se purgan físicamente).
 
 ```dart
-if (from < 28) {
+if (from < 32) {
   try {
     await m.addColumn(tableName, tableName.newColumn);
   } catch (_) {} // puede ya existir en dispositivos que hicieron createAll con nuevo schema
@@ -441,7 +443,7 @@ cleanup-bulletins     → 0 3 1 * *   → cleanup_expired_content() — boletine
 lib/
   data/
     local/
-      database.dart                    — Esquema Drift completo (v27) y migraciones
+      database.dart                    — Esquema Drift completo (v31) y migraciones
       database.g.dart                  — Generado por build_runner — NO editar manualmente
       book_dao.dart
       group_dao.dart                   — DAO de Groups, GroupMembers, SharedBooks, Loans
@@ -524,7 +526,11 @@ docs/
 - Escáner ISBN, PIN, backup/exportación, importación Goodreads CSV
 - Grupos temáticos con filtro de géneros (`allowedGenres` + `primaryColor`) ✅ Drift v26
 - Sync incremental con `SyncCursors` ✅ Drift v27
-- `UnifiedSyncCoordinator` con fases, debounce, retry y batería ✅
+- Estanterías manuales y enriquecimiento metadata `SharedBooks` ✅ Drift v28
+- Restricción ampliada de rating (1-5) para reseñas ✅ Drift v29
+- Hilos de comentarios, spoilers y moderación de comentarios ✅ Drift v30
+- Encuestas de clubes, crónicas y mejoras de ClubReadingProgress ✅ Drift v31
+- UnifiedSyncCoordinator con fases, debounce, retry y batería ✅
 - Wishlist con sync ✅ Drift v25
 - ReadingSessions ✅ Drift v24
 - Clubes de lectura completos (votaciones, moderación, progreso por sección) ✅ Drift v21
@@ -551,4 +557,4 @@ docs/
 
 ---
 
-*Última actualización: Marzo 2026 — Esquema local Drift v27, Supabase v9. Basado en auditoría directa de database.dart, book_repository.dart, supabase_book_sync_repository.dart, unified_sync_coordinator.dart y supabase_schema_v8_COMPLETE.sql.*
+*Última actualización: Mayo 2026 — Esquema local Drift v31, Supabase v9. Basado en auditoría directa de database.dart, book_repository.dart, supabase_book_sync_repository.dart, unified_sync_coordinator.dart y supabase_schema_v8_COMPLETE.sql.*

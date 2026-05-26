@@ -84,6 +84,8 @@ class _BookSharingAppState extends ConsumerState<BookSharingApp>
   Widget build(BuildContext context) {
     // Ensure notification intent notifier is instantiated.
     ref.watch(notificationIntentProvider);
+    // Trigger periodic local retention cleanup bootstrap.
+    ref.watch(localRetentionServiceProvider);
 
     // Listen to auth changes to start/stop auto-sync (must be in build)
     ref.listen<AuthState>(authControllerProvider, (previous, next) {

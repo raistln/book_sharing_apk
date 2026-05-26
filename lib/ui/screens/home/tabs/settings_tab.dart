@@ -139,6 +139,8 @@ class SettingsTab extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 const _BackupSection(),
+                const SizedBox(height: 16),
+                const _LocalRetentionSection(),
                 const SizedBox(height: 32),
 
                 // Sección de seguridad
@@ -1262,6 +1264,122 @@ class _BackupSection extends StatefulWidget {
 
   @override
   State<_BackupSection> createState() => _BackupSectionState();
+}
+
+class _LocalRetentionSection extends ConsumerStatefulWidget {
+  const _LocalRetentionSection();
+
+  @override
+  ConsumerState<_LocalRetentionSection> createState() =>
+      _LocalRetentionSectionState();
+}
+
+class _LocalRetentionSectionState extends ConsumerState<_LocalRetentionSection> {
+  bool _isLoading = true;
+  bool _enabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatus();
+  }
+
+  Future<void> _loadStatus() async {
+    final service = ref.read(localRetentionServiceProvider);
+    final enabled = await service.isEnabled();
+    if (!mounted) return;
+    setState(() {
+      _enabled = enabled;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _toggle(bool value) async {
+    setState(() => _isLoading = true);
+    try {
+      final service = ref.read(localRetentionServiceProvider);
+      await service.setEnabled(value);
+      if (!mounted) return;
+      setState(() {
+        _enabled = value;
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(value
+              ? 'Retención local automática activada.'
+              : 'Retención local automática desactivada.'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No se pudo actualizar la retención local: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _runNow() async {
+    setState(() => _isLoading = true);
+    try {
+      final service = ref.read(localRetentionServiceProvider);
+      await service.runNow();
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Limpieza local ejecutada correctamente.'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al ejecutar limpieza local: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Column(
+        children: [
+          SwitchListTile(
+            value: _enabled,
+            onChanged: _isLoading ? null : _toggle,
+            secondary: _isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.auto_delete_outlined),
+            title: const Text('Retención local automática'),
+            subtitle: const Text(
+              'Limpia datos locales caducados una vez al día para reducir basura.',
+            ),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.cleaning_services_outlined),
+            title: const Text('Ejecutar limpieza local ahora'),
+            subtitle: const Text(
+              'Purga datos locales caducados usando la política actual.',
+            ),
+            onTap: _isLoading ? null : _runNow,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _BackupSectionState extends State<_BackupSection> {

@@ -355,9 +355,19 @@ class SupabaseClubSyncRepository {
           remoteComments: remoteComments,
           syncedAt: now,
         );
+        await _reconcileSectionComments(
+          localClubUuid: localClubUuid,
+          remoteComments: remoteComments,
+          syncedAt: now,
+        );
 
         final remoteReports = remoteReportsByClub[remote.id] ?? [];
         await _syncCommentReports(
+          remoteReports: remoteReports,
+          syncedAt: now,
+        );
+        await _reconcileCommentReports(
+          localClubUuid: localClubUuid,
           remoteReports: remoteReports,
           syncedAt: now,
         );
@@ -365,6 +375,11 @@ class SupabaseClubSyncRepository {
         final remoteLogs = remoteLogsByClub[remote.id] ?? [];
         await _syncModerationLogs(
           localClubId: localClubId,
+          localClubUuid: localClubUuid,
+          remoteLogs: remoteLogs,
+          syncedAt: now,
+        );
+        await _reconcileModerationLogs(
           localClubUuid: localClubUuid,
           remoteLogs: remoteLogs,
           syncedAt: now,
@@ -378,10 +393,20 @@ class SupabaseClubSyncRepository {
           remoteProposals: remoteProposals,
           syncedAt: now,
         );
+        await _reconcileBookProposals(
+          localClubUuid: localClubUuid,
+          remoteProposals: remoteProposals,
+          syncedAt: now,
+        );
 
         // Bug K Fix: Sync reading progress
         final remoteProgress = remoteProgressByClub[remote.id] ?? [];
         await _syncReadingProgress(
+          localClubUuid: localClubUuid,
+          remoteProgress: remoteProgress,
+          syncedAt: now,
+        );
+        await _reconcileReadingProgress(
           localClubUuid: localClubUuid,
           remoteProgress: remoteProgress,
           syncedAt: now,
@@ -1117,6 +1142,156 @@ class SupabaseClubSyncRepository {
         syncedAt: Value(syncedAt),
         createdAt: Value(remote.createdAt),
       ));
+    }
+  }
+
+  Future<void> _reconcileSectionComments({
+    required String localClubUuid,
+    required List<SupabaseSectionCommentRecord> remoteComments,
+    required DateTime syncedAt,
+  }) async {
+    final remoteIds = remoteComments.map((e) => e.id).toSet();
+    final localComments = await (_clubDao.select(_clubDao.sectionComments)
+          ..where((t) => t.clubUuid.equals(localClubUuid)))
+        .get();
+
+    for (final local in localComments) {
+      final remoteId = local.remoteId;
+      if (remoteId == null ||
+          remoteId.isEmpty ||
+          local.isDirty ||
+          remoteIds.contains(remoteId)) {
+        continue;
+      }
+      await (_clubDao.update(_clubDao.sectionComments)
+            ..where((t) => t.id.equals(local.id)))
+          .write(SectionCommentsCompanion(
+        isDeleted: const Value(true),
+        isDirty: const Value(false),
+        syncedAt: Value(syncedAt),
+        deletedAt: Value(DateTime.now()),
+        updatedAt: Value(DateTime.now()),
+      ));
+    }
+  }
+
+  Future<void> _reconcileBookProposals({
+    required String localClubUuid,
+    required List<SupabaseBookProposalRecord> remoteProposals,
+    required DateTime syncedAt,
+  }) async {
+    final remoteIds = remoteProposals.map((e) => e.id).toSet();
+    final localProposals = await (_clubDao.select(_clubDao.bookProposals)
+          ..where((t) => t.clubUuid.equals(localClubUuid)))
+        .get();
+
+    for (final local in localProposals) {
+      final remoteId = local.remoteId;
+      if (remoteId == null ||
+          remoteId.isEmpty ||
+          local.isDirty ||
+          remoteIds.contains(remoteId)) {
+        continue;
+      }
+      await (_clubDao.update(_clubDao.bookProposals)
+            ..where((t) => t.id.equals(local.id)))
+          .write(BookProposalsCompanion(
+        isDeleted: const Value(true),
+        isDirty: const Value(false),
+        syncedAt: Value(syncedAt),
+        updatedAt: Value(DateTime.now()),
+      ));
+    }
+  }
+
+  Future<void> _reconcileReadingProgress({
+    required String localClubUuid,
+    required List<SupabaseReadingProgressRecord> remoteProgress,
+    required DateTime syncedAt,
+  }) async {
+    final remoteIds = remoteProgress.map((e) => e.id).toSet();
+    final localProgress =
+        await (_clubDao.select(_clubDao.clubReadingProgress)
+              ..where((t) => t.clubUuid.equals(localClubUuid)))
+            .get();
+
+    for (final local in localProgress) {
+      final remoteId = local.remoteId;
+      if (remoteId == null ||
+          remoteId.isEmpty ||
+          local.isDirty ||
+          remoteIds.contains(remoteId)) {
+        continue;
+      }
+      await (_clubDao.delete(_clubDao.clubReadingProgress)
+            ..where((t) => t.id.equals(local.id)))
+          .go();
+    }
+  }
+
+  Future<void> _reconcileModerationLogs({
+    required String localClubUuid,
+    required List<SupabaseModerationLogRecord> remoteLogs,
+    required DateTime syncedAt,
+  }) async {
+    final remoteIds = remoteLogs.map((e) => e.id).toSet();
+    final localLogs = await (_clubDao.select(_clubDao.moderationLogs)
+          ..where((t) => t.clubUuid.equals(localClubUuid)))
+        .get();
+
+    for (final local in localLogs) {
+      final remoteId = local.remoteId;
+      if (remoteId == null ||
+          remoteId.isEmpty ||
+          local.isDirty ||
+          remoteIds.contains(remoteId)) {
+        continue;
+      }
+      await (_clubDao.update(_clubDao.moderationLogs)
+            ..where((t) => t.id.equals(local.id)))
+          .write(ModerationLogsCompanion(
+        isDirty: const Value(false),
+        syncedAt: Value(syncedAt),
+      ));
+    }
+    // moderation_logs has no isDeleted column in local schema; we only mark as synced.
+  }
+
+  Future<void> _reconcileCommentReports({
+    required String localClubUuid,
+    required List<SupabaseCommentReportRecord> remoteReports,
+    required DateTime syncedAt,
+  }) async {
+    final remoteIds = remoteReports.map((e) => e.id).toSet();
+    final localComments = await (_clubDao.select(_clubDao.sectionComments)
+          ..where((t) => t.clubUuid.equals(localClubUuid)))
+        .get();
+    final localCommentIds = localComments.map((c) => c.id).toSet();
+
+    if (localCommentIds.isEmpty) {
+      return;
+    }
+
+    final localReports = await (_clubDao.select(_clubDao.commentReports)
+          ..where((t) => t.commentId.isIn(localCommentIds)))
+        .get();
+
+    for (final local in localReports) {
+      final remoteId = local.remoteId;
+      if (remoteId == null ||
+          remoteId.isEmpty ||
+          local.isDirty ||
+          remoteIds.contains(remoteId)) {
+        continue;
+      }
+      await (_clubDao.delete(_clubDao.commentReports)
+            ..where((t) => t.id.equals(local.id)))
+          .go();
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+          '[ClubSync] Reconciled comment reports for club=$localClubUuid at $syncedAt');
     }
   }
 }

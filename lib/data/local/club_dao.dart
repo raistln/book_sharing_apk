@@ -362,7 +362,10 @@ class ClubDao extends DatabaseAccessor<AppDatabase> with _$ClubDaoMixin {
   Future<void> deleteComment(String commentUuid) {
     return (update(sectionComments)..where((t) => t.uuid.equals(commentUuid)))
         .write(SectionCommentsCompanion(
+      isDeleted: const Value(true),
       deletedAt: Value(DateTime.now()),
+      isDirty: const Value(true),
+      updatedAt: Value(DateTime.now()),
     ));
   }
 

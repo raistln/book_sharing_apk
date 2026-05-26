@@ -69,3 +69,37 @@ Después de la limpieza, monitorear:
 - Los registros marcados como `is_deleted = true` son ignorados
 - Es recomendable ejecutar durante un período de bajo uso
 - Hacer backup siempre antes de operaciones de limpieza masiva
+
+## Migración recomendada para clubs/chats (v13)
+
+Si además quieres estabilizar sincronización de clubes/chats y reducir basura en nube, aplica:
+
+- `docs/supabase_sync_hardening_v13.sql`
+
+Esta migración:
+
+1. Unifica RLS de `section_comments`, `comment_reports` y `moderation_logs`.
+2. Alinea `section_comments` para chat de club y replies (`club_id`, `parent_id`, `is_spoiler`).
+3. Añade limpieza automática con TTL para soft-deletes y datos efímeros de discusión.
+4. Reprograma cronjobs con nombres estables para evitar duplicados.
+
+Orden recomendado en un proyecto existente:
+
+1. `docs/supabase_clubs_v10_migration.sql`
+2. `docs/supabase_discussion_v11_migration.sql`
+3. `docs/supabase_clubs_v12_migration.sql`
+4. `docs/supabase_sync_hardening_v13.sql`
+
+## Retención local automática (app)
+
+Además de la limpieza en Supabase, la app ahora ejecuta una limpieza local diaria
+(`LocalRetentionService`) para evitar crecimiento indefinido de datos temporales.
+
+Política local aplicada:
+
+- Soft-deletes de clubes/chats/progreso/libros/membresías: 90 días.
+- `comment_reports`: 180 días.
+- `moderation_logs`: 365 días.
+- Propuestas cerradas/descartadas/ganadoras no eliminadas: 180 días.
+
+Esto permite mantener copias locales útiles mientras la nube se limpia.

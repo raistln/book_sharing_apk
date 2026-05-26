@@ -3,16 +3,34 @@ import 'package:uuid/uuid.dart';
 
 import '../data/local/club_dao.dart';
 import '../data/local/database.dart';
+import '../models/global_sync_state.dart' show SyncEntity;
 import '../models/reading_section.dart';
+import 'unified_sync_coordinator.dart';
 
 /// Service for managing section comments and moderation
 class SectionCommentService {
   SectionCommentService({
     required this.dao,
+    this.syncCoordinator,
   });
 
   final ClubDao dao;
+  final UnifiedSyncCoordinator? syncCoordinator;
   final _uuid = const Uuid();
+
+  void _markDirty() {
+    syncCoordinator?.markPendingChanges(SyncEntity.clubs);
+  }
+
+  Future<LocalUser> _requireLocalUserByRemoteId(String remoteId) async {
+    final user = await (dao.db.select(dao.db.localUsers)
+          ..where((u) => u.remoteId.equals(remoteId)))
+        .getSingleOrNull();
+    if (user == null) {
+      throw Exception('Usuario local no encontrado para remoteId=$remoteId');
+    }
+    return user;
+  }
 
   // Auto-hide threshold (comments auto-hidden after this many reports)
   static const int autoHideThreshold = 3;
@@ -81,6 +99,7 @@ class SectionCommentService {
     );
 
     await dao.insertComment(companion);
+    _markDirty();
 
     return commentUuid;
   }
@@ -100,6 +119,7 @@ class SectionCommentService {
     }
 
     await dao.deleteComment(commentUuid);
+    _markDirty();
   }
 
   /// Hide a comment (admin action)
@@ -109,20 +129,28 @@ class SectionCommentService {
     required String performedByUuid,
     required String reason,
   }) async {
+    final club = await dao.getClubByUuid(clubUuid);
+    if (club == null) throw Exception('Club no encontrado');
+    final performer = await dao.getClubMember(clubUuid, performedByUuid);
+    if (performer == null) {
+      throw Exception('Usuario no es miembro del club');
+    }
+
     await dao.hideComment(commentUuid);
 
     // Log moderation action
     await dao.insertModerationLog(ModerationLogsCompanion.insert(
       uuid: _uuid.v4(),
-      clubId: 0, // Will be set on sync
+      clubId: club.id,
       clubUuid: clubUuid,
       action: 'ocultar_comentario',
-      performedByUserId: 0, // Will be set on sync
+      performedByUserId: performer.memberUserId,
       performedByRemoteId: Value(performedByUuid),
       targetId: commentUuid,
       reason: Value(reason),
       isDirty: const Value(true),
     ));
+    _markDirty();
   }
 
   /// Unhide a comment (admin action)
@@ -131,6 +159,13 @@ class SectionCommentService {
     required String clubUuid,
     required String performedByUuid,
   }) async {
+    final club = await dao.getClubByUuid(clubUuid);
+    if (club == null) throw Exception('Club no encontrado');
+    final performer = await dao.getClubMember(clubUuid, performedByUuid);
+    if (performer == null) {
+      throw Exception('Usuario no es miembro del club');
+    }
+
     // Unhiding requires direct DAO update to set isHidden = false
     await (dao.db.update(dao.db.sectionComments)
           ..where((c) => dao.db.sectionComments.uuid.equals(commentUuid)))
@@ -142,14 +177,15 @@ class SectionCommentService {
     // Log moderation action
     await dao.insertModerationLog(ModerationLogsCompanion.insert(
       uuid: _uuid.v4(),
-      clubId: 0,
+      clubId: club.id,
       clubUuid: clubUuid,
       action: 'mostrar_comentario',
-      performedByUserId: 0,
+      performedByUserId: performer.memberUserId,
       performedByRemoteId: Value(performedByUuid),
       targetId: commentUuid,
       isDirty: const Value(true),
     ));
+    _markDirty();
   }
 
   // =====================================================================
@@ -174,13 +210,14 @@ class SectionCommentService {
     final comment = await dao.getCommentByUuid(commentUuid);
 
     if (comment == null) return false;
+    final reporter = await _requireLocalUserByRemoteId(reportedByUuid);
 
     // Create report
     await dao.insertReport(CommentReportsCompanion.insert(
       uuid: _uuid.v4(),
       commentId: comment.id,
       commentUuid: commentUuid,
-      reportedByUserId: 0, // Will be set on sync
+      reportedByUserId: reporter.id,
       reportedByRemoteId: Value(reportedByUuid),
       reason: Value(reason),
       isDirty: const Value(true),
@@ -197,6 +234,7 @@ class SectionCommentService {
       // Auto-hide comment
       await dao.hideComment(commentUuid);
     }
+    _markDirty();
 
     return true;
   }

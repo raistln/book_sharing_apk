@@ -34,6 +34,7 @@ import '../data/repositories/group_push_repository.dart';
 import '../services/group_push_controller.dart';
 import '../services/discover_group_controller.dart';
 import '../services/onboarding_service.dart';
+import '../services/local_retention_service.dart';
 import '../services/reading_timeline_service.dart';
 import '../services/reading_rhythm_analyzer.dart';
 import 'notification_providers.dart';
@@ -43,6 +44,13 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
   ref.onDispose(db.close);
   return db;
+});
+
+final localRetentionServiceProvider = Provider<LocalRetentionService>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  final service = LocalRetentionService(db);
+  Future.microtask(() => service.runIfNeeded());
+  return service;
 });
 
 final timelineEntryDaoProvider = Provider<TimelineEntryDao>((ref) {

@@ -412,7 +412,7 @@ class SupabaseClubService {
             'frequency_days,visibility,next_books_visible,owner_id,'
             'current_book_id,created_at,updated_at,'
             'club_members(id,club_id,member_id,role,status,last_activity,created_at,updated_at,profiles(username)),'
-            'club_books(id,club_id,book_uuid,order_position,status,section_mode,total_chapters,sections,start_date,end_date,created_at,updated_at)',
+            'club_books!club_books_club_id_fkey(id,club_id,book_uuid,order_position,status,section_mode,total_chapters,sections,start_date,end_date,created_at,updated_at)',
       },
     );
 
@@ -583,6 +583,8 @@ class SupabaseClubService {
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
 
+    debugPrint('🔴🔴🔴 [SupabaseClubService] POST /reading_clubs payload: $payload');
+
     final response = await _client.post(
       uri,
       headers: _buildHeaders(
@@ -592,6 +594,7 @@ class SupabaseClubService {
       ),
       body: jsonEncode(payload),
     );
+    debugPrint('🔴🔴🔴 [SupabaseClubService] POST /reading_clubs response: ${response.statusCode} - ${response.body}');
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return id;

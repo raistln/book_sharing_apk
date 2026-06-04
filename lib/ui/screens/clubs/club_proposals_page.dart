@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/local/database.dart';
 import '../../../providers/book_providers.dart';
 import '../../../providers/clubs_provider.dart';
+import '../../widgets/library/generic_book_cover.dart';
+import '../../dialogs/propose_book_dialog.dart';
 
 class ClubProposalsPage extends ConsumerWidget {
   const ClubProposalsPage({super.key, required this.clubUuid});
@@ -60,7 +62,10 @@ class ClubProposalsPage extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // Navigation to ProposeBookDialog should be handled here if needed
+          showDialog(
+            context: context,
+            builder: (context) => ProposeBookDialog(clubUuid: clubUuid),
+          );
         },
         label: const Text('Proponer'),
         icon: const Icon(Icons.add),
@@ -134,25 +139,26 @@ class _ProposalCardState extends ConsumerState<_ProposalCard> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 70,
-              height: 100,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.grey.shade200,
-                image: widget.proposal.coverUrl != null
-                    ? DecorationImage(
+            widget.proposal.coverUrl != null
+                ? Container(
+                    width: 70,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      image: DecorationImage(
                         image: NetworkImage(widget.proposal.coverUrl!),
                         fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: widget.proposal.coverUrl == null
-                  ? const Center(
-                      child: Icon(Icons.book_outlined,
-                          color: Colors.grey, size: 30))
-                  : null,
-            ),
+                      ),
+                    ),
+                  )
+                : SizedBox(
+                    width: 70,
+                    height: 100,
+                    child: GenericBookCover(
+                      title: widget.proposal.title ?? 'Sin título',
+                      author: widget.proposal.author,
+                    ),
+                  ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(

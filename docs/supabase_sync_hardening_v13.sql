@@ -275,12 +275,36 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
+REVOKE EXECUTE ON FUNCTION public.cleanup_deleted_records_v13() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.cleanup_club_discussion_data_v13() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.cleanup_deleted_records_v13() TO service_role;
 GRANT EXECUTE ON FUNCTION public.cleanup_club_discussion_data_v13() TO service_role;
 
 -- ---------------------------------------------------------------------------
--- 4) Cronjobs estables (evitar duplicados)
+-- 4) Endurecimiento de seguridad adicional (Linter warnings)
 -- ---------------------------------------------------------------------------
+
+-- Redefinir accept_loan como SECURITY INVOKER para que se ejecute con privilegios del llamante.
+-- Como el llamante es el lender, las políticas RLS de la tabla loans le permiten actualizar sus préstamos.
+CREATE OR REPLACE FUNCTION public.accept_loan(p_loan_id UUID, p_lender_user_id UUID)
+RETURNS JSONB LANGUAGE plpgsql SECURITY INVOKER SET search_path = public AS $$
+DECLARE v_loan RECORD; v_shared_book_id UUID; BEGIN
+  SELECT * INTO v_loan FROM public.loans WHERE id = p_loan_id FOR UPDATE;
+  IF v_loan IS NULL OR v_loan.status != 'requested' THEN RAISE EXCEPTION 'Invalid state'; END IF;
+  v_shared_book_id := v_loan.shared_book_id;
+  IF EXISTS (SELECT 1 FROM public.loans WHERE shared_book_id = v_shared_book_id AND status = 'active' AND id != p_loan_id) THEN
+    RAISE EXCEPTION 'Already on loan';
+  END IF;
+  UPDATE public.loans SET status = 'active', approved_at = NOW(), updated_at = NOW() WHERE id = p_loan_id;
+  UPDATE public.loans SET status = 'rejected', updated_at = NOW() WHERE shared_book_id = v_shared_book_id AND status = 'requested' AND id != p_loan_id;
+  RETURN jsonb_build_object('uuid', p_loan_id, 'status', 'active');
+END; $$;
+
+GRANT EXECUTE ON FUNCTION public.accept_loan(UUID, UUID) TO authenticated;
+
+-- Revocar ejecución pública de utilidades internas no utilizadas desde la app móvil
+REVOKE EXECUTE ON FUNCTION public.log_error(TEXT, TEXT, JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_system_metrics(TEXT, TEXT) FROM PUBLIC, anon, authenticated;
 
 DO $$
 BEGIN

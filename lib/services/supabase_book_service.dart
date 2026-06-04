@@ -813,7 +813,7 @@ class SupabaseBookService {
     final config = await _loadConfig();
     final query = <String, String>{
       'select':
-          'id,uuid,user_id,title,author,isbn,notes,is_deleted,created_at,updated_at',
+          'id,uuid,user_id,title,author,isbn,notes,created_at,updated_at',
       'user_id': 'eq.$userId',
       'order': 'updated_at.asc',
     };
@@ -854,7 +854,6 @@ class SupabaseBookService {
     String? author,
     String? isbn,
     String? notes,
-    bool isDeleted = false,
     required DateTime createdAt,
     required DateTime updatedAt,
     bool upsert = false,
@@ -871,7 +870,6 @@ class SupabaseBookService {
       'author': author,
       'isbn': isbn,
       'notes': notes,
-      'is_deleted': isDeleted,
       'created_at': createdAt.toUtc().toIso8601String(),
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
@@ -915,15 +913,9 @@ class SupabaseBookService {
     // Instead of hard delete, we update is_deleted = true if we want soft delete sync
     // But typical for wishlist is hard delete or soft delete.
     // Our sync uses is_deleted column.
-    final payload = {
-      'is_deleted': true,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-    };
-
-    final response = await _client.patch(
+    final response = await _client.delete(
       uri,
       headers: _buildHeaders(config, accessToken: accessToken),
-      body: jsonEncode(payload),
     );
 
     return response.statusCode >= 200 && response.statusCode < 300;
@@ -1097,7 +1089,7 @@ class SupabaseBookReviewRecord {
     this.review,
     required this.isDeleted,
     required this.createdAt,
-    this.updatedAt,
+    required this.updatedAt,
   });
 
   final String id;
@@ -1199,7 +1191,6 @@ class SupabaseWishlistItemRecord {
     this.author,
     this.isbn,
     this.notes,
-    required this.isDeleted,
     required this.createdAt,
     this.updatedAt,
   });
@@ -1211,7 +1202,6 @@ class SupabaseWishlistItemRecord {
   final String? author;
   final String? isbn;
   final String? notes;
-  final bool isDeleted;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -1231,7 +1221,6 @@ class SupabaseWishlistItemRecord {
       author: json['author'] as String?,
       isbn: json['isbn'] as String?,
       notes: json['notes'] as String?,
-      isDeleted: (json['is_deleted'] as bool?) ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: parseDate(json['updated_at']),
     );

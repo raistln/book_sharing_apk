@@ -1,16 +1,32 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/sync_providers.dart';
-import '../../data/local/club_dao.dart';
-import '../../data/local/database.dart';
-import '../../services/club_service.dart';
-import '../../services/book_proposal_service.dart';
-import '../../services/section_comment_service.dart';
+import 'sync_providers.dart';
+import '../data/local/club_dao.dart';
+import '../data/local/database.dart';
+import '../services/club_service.dart';
+import '../services/book_proposal_service.dart';
+import '../services/section_comment_service.dart';
 import 'book_providers.dart';
 
 // DAO Provider
 final clubDaoProvider = Provider<ClubDao>((ref) {
   final database = ref.watch(appDatabaseProvider);
   return ClubDao(database);
+});
+
+final userClubsProvider = StreamProvider.autoDispose<List<ReadingClub>>((ref) {
+  final activeUserAsync = ref.watch(activeUserProvider);
+  final dao = ref.watch(clubDaoProvider);
+
+  return activeUserAsync.when<Stream<List<ReadingClub>>>(
+    data: (user) {
+      if (user?.remoteId == null) {
+        return Stream.value(const <ReadingClub>[]);
+      }
+      return dao.watchUserClubs(user!.remoteId!);
+    },
+    loading: () => Stream.value(const <ReadingClub>[]),
+    error: (_, __) => Stream.value(const <ReadingClub>[]),
+  );
 });
 
 // Service Providers
@@ -35,20 +51,7 @@ final sectionCommentServiceProvider = Provider<SectionCommentService>((ref) {
   );
 });
 
-// Stream Providers for UI
-final userClubsProvider = StreamProvider<List<ReadingClub>>((ref) {
-  final userAsync = ref.watch(activeUserProvider);
-  return userAsync.when(
-    data: (user) {
-      if (user == null || user.remoteId == null) return Stream.value([]);
-      final dao = ref.watch(clubDaoProvider);
-      return dao.watchUserClubs(user.remoteId!);
-    },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
-  );
-});
-
+// Club members with user details
 final clubMembersProvider =
     StreamProvider.family<List<ClubMemberWithUser>, String>((ref, clubUuid) {
   final dao = ref.watch(clubDaoProvider);

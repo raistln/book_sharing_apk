@@ -163,11 +163,11 @@ class _ProposeBookDialogState extends ConsumerState<ProposeBookDialog> {
         bookUuid = _selectedBook!.uuid;
       }
 
-      final clubService = ref.read(clubServiceProvider);
-      await clubService.proposeBook(
+      final proposalService = ref.read(bookProposalServiceProvider);
+      await proposalService.createProposal(
         clubUuid: widget.clubUuid,
         bookUuid: bookUuid,
-        userUuid: user.remoteId!,
+        proposedByUuid: user.remoteId!,
         totalChapters: 1, // Capítulos ya no son obligatorios en la propuesta
         title: title,
         author: author,

@@ -17,6 +17,7 @@ import 'club_members_page.dart';
 import 'club_proposals_page.dart';
 import 'club_settings_page.dart';
 import 'section_discussion_page.dart';
+import '../../widgets/library/generic_book_cover.dart';
 
 class ClubDetailPage extends ConsumerWidget {
   const ClubDetailPage({super.key, required this.club});
@@ -363,27 +364,26 @@ class _CurrentBookSection extends ConsumerWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 80,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: Colors.grey.shade200,
-                              image: book.coverPath != null
-                                  ? DecorationImage(
+                          book.coverPath != null
+                              ? Container(
+                                  width: 80,
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    image: DecorationImage(
                                       image: NetworkImage(book.coverPath!),
                                       fit: BoxFit.cover,
-                                    )
-                                  : null,
-                            ),
-                            child: book.coverPath == null
-                                ? const Icon(
-                                    Icons.book,
-                                    size: 40,
-                                    color: Colors.grey,
-                                  )
-                                : null,
-                          ),
+                                    ),
+                                  ),
+                                )
+                              : SizedBox(
+                                  width: 80,
+                                  height: 120,
+                                  child: GenericBookCover(
+                                    title: book.title,
+                                    author: book.author,
+                                  ),
+                                ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Column(
@@ -612,22 +612,21 @@ class _QueuedBookCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: Colors.grey.shade200,
-                      image: item.book.coverPath != null
-                          ? DecorationImage(
+                  child: item.book.coverPath != null
+                      ? Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            image: DecorationImage(
                               image: NetworkImage(item.book.coverPath!),
                               fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: item.book.coverPath == null
-                        ? const Icon(Icons.book_outlined, color: Colors.grey)
-                        : null,
-                  ),
+                            ),
+                          ),
+                        )
+                      : GenericBookCover(
+                          title: item.book.title,
+                          author: item.book.author,
+                        ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -818,28 +817,27 @@ class _ProposalsSection extends ConsumerWidget {
                     children: [
                       Expanded(
                         flex: 3,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(11),
-                            ),
-                            image: proposal.coverUrl != null
-                                ? DecorationImage(
+                        child: proposal.coverUrl != null
+                            ? Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(11),
+                                  ),
+                                  image: DecorationImage(
                                     image: NetworkImage(proposal.coverUrl!),
                                     fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: proposal.coverUrl == null
-                              ? const Center(
-                                  child: Icon(
-                                    Icons.book_outlined,
-                                    color: Colors.grey,
                                   ),
-                                )
-                              : null,
-                        ),
+                                ),
+                              )
+                            : ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(11),
+                                ),
+                                child: GenericBookCover(
+                                  title: proposal.title ?? 'Sin título',
+                                  author: proposal.author,
+                                ),
+                              ),
                       ),
                       Expanded(
                         flex: 2,

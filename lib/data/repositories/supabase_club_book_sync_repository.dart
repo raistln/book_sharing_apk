@@ -119,11 +119,7 @@ class SupabaseClubBookSyncRepository {
         // Get club remote ID
         final club = await _clubDao.getClubByUuid(book.clubUuid);
         if (club == null || club.remoteId == null) {
-          if (kDebugMode) {
-            debugPrint(
-              '[ClubBookSync] Skipping book ${book.uuid}: club lacks remoteId',
-            );
-          }
+          debugPrint('🔴🔴🔴 [ClubBookSync] Skipping book ${book.uuid}: club lacks remoteId');
           continue;
         }
 
@@ -198,11 +194,9 @@ class SupabaseClubBookSyncRepository {
             syncedAt: Value(DateTime.now()),
           ),
         );
-      } catch (error) {
-        if (kDebugMode) {
-          debugPrint(
-              '[ClubBookSync] Failed to push club book ${book.uuid}: $error');
-        }
+      } catch (error, stackTrace) {
+        debugPrint('🔴🔴🔴 [ClubBookSync] Failed to push club book ${book.uuid}: $error');
+        debugPrint('🔴🔴🔴 [ClubBookSync] StackTrace: $stackTrace');
         continue;
       }
     }
@@ -221,11 +215,7 @@ class SupabaseClubBookSyncRepository {
         // Get club remote ID
         final club = await _clubDao.getClubByUuid(proposal.clubUuid);
         if (club == null || club.remoteId == null) {
-          if (kDebugMode) {
-            debugPrint(
-              '[ClubBookSync] Skipping proposal ${proposal.uuid}: club lacks remoteId',
-            );
-          }
+          debugPrint('🔴🔴🔴 [ClubBookSync] Skipping proposal ${proposal.uuid}: club lacks remoteId');
           continue;
         }
 
@@ -295,12 +285,9 @@ class SupabaseClubBookSyncRepository {
             syncedAt: Value(DateTime.now()),
           ),
         );
-      } catch (error) {
-        if (kDebugMode) {
-          debugPrint(
-            '[ClubBookSync] Failed to push proposal ${proposal.uuid}: $error',
-          );
-        }
+      } catch (error, stackTrace) {
+        debugPrint('🔴🔴🔴 [ClubBookSync] Failed to push proposal ${proposal.uuid}: $error');
+        debugPrint('🔴🔴🔴 [ClubBookSync] StackTrace: $stackTrace');
         continue;
       }
     }
@@ -333,11 +320,7 @@ class SupabaseClubBookSyncRepository {
 
         final club = await _clubDao.getClubByUuid(progress.clubUuid);
         if (club == null || club.remoteId == null) {
-          if (kDebugMode) {
-            debugPrint(
-              '[ClubBookSync] Skipping progress ${progress.uuid}: club lacks remoteId',
-            );
-          }
+          debugPrint('🔴🔴🔴 [ClubBookSync] Skipping progress ${progress.uuid}: club lacks remoteId');
           continue;
         }
 
@@ -385,12 +368,9 @@ class SupabaseClubBookSyncRepository {
         if (kDebugMode) {
           debugPrint('[ClubBookSync] Upserted progress ${progress.uuid}');
         }
-      } catch (error) {
-        if (kDebugMode) {
-          debugPrint(
-            '[ClubBookSync] Failed to push progress ${progress.uuid}: $error',
-          );
-        }
+      } catch (error, stackTrace) {
+        debugPrint('🔴🔴🔴 [ClubBookSync] Failed to push progress ${progress.uuid}: $error');
+        debugPrint('🔴🔴🔴 [ClubBookSync] StackTrace: $stackTrace');
         continue;
       }
     }
@@ -449,11 +429,7 @@ class SupabaseClubBookSyncRepository {
 
         final club = await _clubDao.getClubByUuid(comment.clubUuid);
         if (club == null || club.remoteId == null) {
-          if (kDebugMode) {
-            debugPrint(
-              '[ClubBookSync] Skipping comment ${comment.uuid}: club lacks remoteId',
-            );
-          }
+          debugPrint('🔴🔴🔴 [ClubBookSync] Skipping comment ${comment.uuid}: club lacks remoteId');
           continue;
         }
 
@@ -519,33 +495,22 @@ class SupabaseClubBookSyncRepository {
             syncedAt: Value(DateTime.now()),
           ),
         );
-      } catch (error) {
-        if (kDebugMode) {
-          debugPrint(
-            '[ClubBookSync] Failed to push comment ${comment.uuid}: $error',
-          );
-        }
+      } catch (error, stackTrace) {
+        debugPrint('🔴🔴🔴 [ClubBookSync] Failed to push comment ${comment.uuid}: $error');
+        debugPrint('🔴🔴🔴 [ClubBookSync] StackTrace: $stackTrace');
         continue;
       }
     }
 
     final dirtyReports = allDirty['reports'] as List<CommentReport>? ?? [];
 
-    if (kDebugMode) {
-      debugPrint(
-        '[ClubBookSync] Found ${dirtyReports.length} dirty reports',
-      );
-    }
-
     for (final report in dirtyReports) {
       try {
         final comment = await _clubDao.getCommentByUuid(report.commentUuid);
         if (comment == null || comment.remoteId == null) {
-          if (kDebugMode) {
-            debugPrint(
-              '[ClubBookSync] Skipping report ${report.uuid}: comment lacks remoteId',
-            );
-          }
+          debugPrint(
+            '[ClubBookSync] Skipping report ${report.uuid}: comment lacks remoteId',
+          );
           continue;
         }
 
@@ -589,12 +554,9 @@ class SupabaseClubBookSyncRepository {
         if (kDebugMode) {
           debugPrint('[ClubBookSync] Created report ${report.uuid}');
         }
-      } catch (error) {
-        if (kDebugMode) {
-          debugPrint(
-            '[ClubBookSync] Failed to push report ${report.uuid}: $error',
-          );
-        }
+      } catch (error, stackTrace) {
+        debugPrint('🔴🔴🔴 [ClubBookSync] Failed to push report ${report.uuid}: $error');
+        debugPrint('🔴🔴🔴 [ClubBookSync] StackTrace: $stackTrace');
         continue;
       }
     }
@@ -611,11 +573,7 @@ class SupabaseClubBookSyncRepository {
       try {
         final club = await _clubDao.getClubByUuid(log.clubUuid);
         if (club == null || club.remoteId == null) {
-          if (kDebugMode) {
-            debugPrint(
-              '[ClubBookSync] Skipping moderation log ${log.uuid}: club lacks remoteId',
-            );
-          }
+          debugPrint('🔴🔴🔴 [ClubBookSync] Skipping moderation log ${log.uuid}: club lacks remoteId');
           continue;
         }
 
@@ -661,12 +619,9 @@ class SupabaseClubBookSyncRepository {
         if (kDebugMode) {
           debugPrint('[ClubBookSync] Created moderation log ${log.uuid}');
         }
-      } catch (error) {
-        if (kDebugMode) {
-          debugPrint(
-            '[ClubBookSync] Failed to push moderation log ${log.uuid}: $error',
-          );
-        }
+      } catch (error, stackTrace) {
+        debugPrint('🔴🔴🔴 [ClubBookSync] Failed to push moderation log ${log.uuid}: $error');
+        debugPrint('🔴🔴🔴 [ClubBookSync] StackTrace: $stackTrace');
         continue;
       }
     }

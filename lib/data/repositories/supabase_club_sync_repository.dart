@@ -425,9 +425,7 @@ class SupabaseClubSyncRepository {
     // Push dirty clubs
     final dirtyClubs = await _clubDao.getDirtyClubs();
 
-    if (kDebugMode) {
-      debugPrint('[ClubSync] Found ${dirtyClubs.length} dirty clubs');
-    }
+    debugPrint('🔴🔴🔴 [ClubSync] Found ${dirtyClubs.length} dirty clubs');
 
     for (final club in dirtyClubs) {
       try {
@@ -455,11 +453,7 @@ class SupabaseClubSyncRepository {
         final ownerRemoteId = club.ownerRemoteId ?? owner?.remoteId;
 
         if (ownerRemoteId == null || ownerRemoteId.isEmpty) {
-          if (kDebugMode) {
-            debugPrint(
-              '[ClubSync] Skipping club ${club.uuid}: owner lacks remoteId',
-            );
-          }
+          debugPrint('🔴🔴🔴 [ClubSync] Skipping club ${club.uuid}: owner lacks remoteId');
           continue;
         }
 
@@ -535,10 +529,9 @@ class SupabaseClubSyncRepository {
         // Mark as synced
         await _clubDao.markClubSynced(club.uuid,
             syncedAt: syncTime, remoteId: ensuredRemoteId);
-      } catch (error) {
-        if (kDebugMode) {
-          debugPrint('[ClubSync] Failed to push club ${club.uuid}: $error');
-        }
+      } catch (error, stackTrace) {
+        debugPrint('🔴🔴🔴 [ClubSync] Failed to push club ${club.uuid}: $error');
+        debugPrint('🔴🔴🔴 [ClubSync] StackTrace: $stackTrace');
         continue; // ✅ Bug #8: Continue instead of rethrow
       }
     }
@@ -546,9 +539,7 @@ class SupabaseClubSyncRepository {
     // Push dirty members
     final dirtyMembers = await _clubDao.getDirtyMembers();
 
-    if (kDebugMode) {
-      debugPrint('[ClubSync] Found ${dirtyMembers.length} dirty members');
-    }
+    debugPrint('🔴🔴🔴 [ClubSync] Found ${dirtyMembers.length} dirty members');
 
     for (final member in dirtyMembers) {
       try {
@@ -579,11 +570,7 @@ class SupabaseClubSyncRepository {
         // Get club and member remote IDs
         final club = await _clubDao.getClubByUuid(member.clubUuid);
         if (club == null || club.remoteId == null) {
-          if (kDebugMode) {
-            debugPrint(
-              '[ClubSync] Skipping member ${member.uuid}: club lacks remoteId',
-            );
-          }
+          debugPrint('🔴🔴🔴 [ClubSync] Skipping member ${member.uuid}: club lacks remoteId');
           continue;
         }
 
@@ -593,11 +580,7 @@ class SupabaseClubSyncRepository {
 
         final memberRemoteId = member.memberRemoteId ?? memberUser?.remoteId;
         if (memberRemoteId == null || memberRemoteId.isEmpty) {
-          if (kDebugMode) {
-            debugPrint(
-              '[ClubSync] Skipping member ${member.uuid}: user lacks remoteId',
-            );
-          }
+          debugPrint('🔴🔴🔴 [ClubSync] Skipping member ${member.uuid}: user lacks remoteId');
           continue;
         }
 
@@ -661,10 +644,9 @@ class SupabaseClubSyncRepository {
           isDirty: const Value(false),
           syncedAt: Value(syncTime),
         ));
-      } catch (error) {
-        if (kDebugMode) {
-          debugPrint('[ClubSync] Failed to push member ${member.uuid}: $error');
-        }
+      } catch (error, stackTrace) {
+        debugPrint('🔴🔴🔴 [ClubSync] Failed to push member ${member.uuid}: $error');
+        debugPrint('🔴🔴🔴 [ClubSync] StackTrace: $stackTrace');
         continue; // ✅ Bug #8: Continue instead of rethrow
       }
     }

@@ -32,6 +32,10 @@ class BookProposalService {
     required String proposedByUuid,
     required int totalChapters,
     int? closeDays, // Days until voting closes (default 7)
+    String? title,
+    String? author,
+    String? isbn,
+    String? coverUrl,
   }) async {
     final proposalUuid = _uuid.v4();
     final club = await dao.getClubByUuid(clubUuid);
@@ -54,6 +58,10 @@ class BookProposalService {
       bookUuid: bookUuid,
       proposedByUserId: proposerMember.memberUserId,
       proposedByRemoteId: Value(proposedByUuid),
+      title: title != null ? Value(title) : const Value.absent(),
+      author: author != null ? Value(author) : const Value.absent(),
+      isbn: isbn != null ? Value(isbn) : const Value.absent(),
+      coverUrl: coverUrl != null ? Value(coverUrl) : const Value.absent(),
       totalChapters: totalChapters,
       votes: const Value(''), // Empty CSV initially
       voteCount: const Value(0),

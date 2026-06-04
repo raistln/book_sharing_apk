@@ -418,13 +418,59 @@ class ClubService {
   }) async {
     final club = await _requireClub(clubUuid);
     final maxOrder = await _getMaxOrderPosition(clubUuid);
+
+    // Evitar solapamiento de fechas
+    final books = await (dao.select(dao.clubBooks)
+          ..where((t) => t.clubUuid.equals(clubUuid) & t.isDeleted.equals(false))
+          ..orderBy([(t) => OrderingTerm.desc(t.orderPosition)]))
+        .get();
+
+    DateTime finalStartDate;
+    DateTime finalEndDate;
+
+    if (books.isNotEmpty) {
+      final lastBook = books.first;
+      if (lastBook.endDate != null) {
+        final minStartDate = DateTime(
+          lastBook.endDate!.year,
+          lastBook.endDate!.month,
+          lastBook.endDate!.day,
+        ).add(const Duration(days: 1));
+
+        if (startDate != null) {
+          if (startDate.isBefore(minStartDate)) {
+            throw Exception(
+              'La fecha de inicio no puede solaparse con el libro anterior. Debe iniciar al menos el ${minStartDate.day}/${minStartDate.month}/${minStartDate.year}.',
+            );
+          }
+          finalStartDate = startDate;
+        } else {
+          finalStartDate = minStartDate;
+        }
+      } else {
+        finalStartDate = startDate ?? DateTime.now();
+      }
+    } else {
+      finalStartDate = startDate ?? DateTime.now();
+    }
+
+    if (endDate != null) {
+      if (endDate.isBefore(finalStartDate)) {
+        throw Exception('La fecha de fin no puede ser anterior a la fecha de inicio.');
+      }
+      finalEndDate = endDate;
+    } else {
+      final clubFrequencyDays = club.frequencyDays ?? 7;
+      finalEndDate = finalStartDate.add(Duration(days: clubFrequencyDays));
+    }
+
     final resolvedSectionsJson = _buildSectionsJson(
       club: club,
       sectionMode: sectionMode,
       totalChapters: totalChapters,
       sectionsJson: sectionsJson,
-      startDate: startDate,
-      endDate: endDate,
+      startDate: finalStartDate,
+      endDate: finalEndDate,
     );
 
     // Check if there is an active book
@@ -442,8 +488,8 @@ class ClubService {
       sectionMode: Value(sectionMode.value),
       totalChapters: totalChapters,
       sections: resolvedSectionsJson,
-      startDate: startDate != null ? Value(startDate) : const Value.absent(),
-      endDate: endDate != null ? Value(endDate) : const Value.absent(),
+      startDate: Value(finalStartDate),
+      endDate: Value(finalEndDate),
       isDirty: const Value(true),
     ));
     _markDirty();
@@ -477,42 +523,7 @@ class ClubService {
     return dao.watchCompletedBooks(clubUuid);
   }
 
-  /// Propose a book
-  Future<void> proposeBook({
-    required String clubUuid,
-    required String bookUuid,
-    required String userUuid,
-    required int totalChapters,
-    String? title,
-    String? author,
-    String? isbn,
-    String? coverUrl,
-  }) async {
-    final club = await _requireClub(clubUuid);
-    final proposerMember = await dao.getClubMember(clubUuid, userUuid);
-    if (proposerMember == null) {
-      throw Exception('Debes ser miembro del club para proponer libros.');
-    }
 
-    // For now simple insert
-    await dao.upsertProposal(BookProposalsCompanion.insert(
-      uuid: _uuid.v4(),
-      clubId: club.id,
-      clubUuid: clubUuid,
-      bookUuid: bookUuid,
-      title: title != null ? Value(title) : const Value.absent(),
-      author: author != null ? Value(author) : const Value.absent(),
-      isbn: isbn != null ? Value(isbn) : const Value.absent(),
-      coverUrl: coverUrl != null ? Value(coverUrl) : const Value.absent(),
-      proposedByUserId: proposerMember.memberUserId,
-      proposedByRemoteId: Value(userUuid),
-      status: const Value('abierta'),
-      voteCount: const Value(0),
-      totalChapters: totalChapters,
-      isDirty: const Value(true),
-    ));
-    _markDirty();
-  }
   // READING PROGRESS
   // =====================================================================
 

@@ -134,12 +134,8 @@ class SyncController extends StateNotifier<SyncState> {
         await _fetchRemoteChanges();
       }
 
-      if (state.hasPendingChanges) {
-        _log('pushing local changes…');
-        await _pushLocalChanges();
-      } else {
-        _log('no pending changes to push.');
-      }
+      _log('pushing local changes…');
+      await _pushLocalChanges();
 
       _updateStateSafely(() {
         state = state.copyWith(
